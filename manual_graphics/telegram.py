@@ -99,25 +99,21 @@ class Telegram:
             },
         )
 
-    def webapp_keyboard(self, url):
+    def webapp_launcher(self, url):
         parsed = urlparse(str(url).strip())
         if parsed.scheme != 'https' or not parsed.netloc:
             raise TelegramError('URL Mini App non HTTPS')
 
         keyboard = {
             'keyboard': [[{
-                'text': 'ImageGEN',
+                'text': 'Apri ImageGEN',
                 'web_app': {'url': str(url).strip()},
             }]],
             'resize_keyboard': True,
             'is_persistent': True,
             'input_field_placeholder': 'ImageGEN',
         }
-
-        # Telegram requires a message to attach a ReplyKeyboardMarkup.
-        # The service deletes this message immediately; the keyboard remains
-        # until ReplyKeyboardRemove is sent at cleanup.
-        return self.prompt('\u2063', keyboard)
+        return self.prompt('ImageGEN', keyboard)
 
     def remove_keyboard(self):
         return self.prompt('\u2063', {'remove_keyboard': True})

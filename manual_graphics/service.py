@@ -38,7 +38,7 @@ class Service:
         self.stopped = False
         self.generated_message_ids = []
         self.bot_message_ids = []
-        self.keyboard_message_id = None
+        self.launcher_message_id = None
 
     def _remember_bot_message(self, message_id):
         try:
@@ -172,6 +172,12 @@ class Service:
             except TelegramError:
                 pass
 
+        if self.launcher_message_id:
+            try:
+                self.telegram.delete(self.launcher_message_id)
+            except TelegramError:
+                pass
+
         cleanup_message_id = None
         try:
             cleanup_message_id = self.telegram.remove_keyboard()
@@ -212,17 +218,13 @@ class Service:
             )
         )
 
+        # make sure the old menu button near the paperclip is gone
         try:
             self.telegram.reset_menu_button()
         except TelegramError:
             pass
 
-        self.keyboard_message_id = self.telegram.webapp_keyboard(launch_url)
-        try:
-            self.telegram.delete(self.keyboard_message_id)
-        except TelegramError:
-            self._remember_bot_message(self.keyboard_message_id)
-
+        self.launcher_message_id = self.telegram.webapp_launcher(launch_url)
         deadline = time.monotonic() + min(SESSION_DURATION_SECONDS, max(1, duration))
 
         try:
