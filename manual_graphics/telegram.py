@@ -1,6 +1,5 @@
 """Telegram transport for the dedicated manual graphics bot."""
 import json
-from urllib.parse import urlparse
 import requests
 
 
@@ -87,30 +86,20 @@ class Telegram:
             data['reply_markup'] = json.dumps(keyboard)
         return self.call('sendMessage', data)['message_id']
 
-    def set_menu_button(self, url, text='Open'):
-        parsed = urlparse(str(url).strip())
-        if parsed.scheme != 'https' or not parsed.netloc:
-            raise TelegramError('URL Mini App non HTTPS')
-        return self.call(
-            'setChatMenuButton',
-            {
-                'chat_id': self.chat_id,
-                'menu_button': json.dumps({
-                    'type': 'web_app',
-                    'text': text,
-                    'web_app': {'url': str(url).strip()},
-                }),
-            },
-        )
+    def webapp_launcher(self, url):
+        keyboard = {
+            'keyboard': [[{
+                'text': 'Apri ImageGEN',
+                'web_app': {'url': str(url).strip()},
+            }]],
+            'resize_keyboard': True,
+            'is_persistent': True,
+            'input_field_placeholder': 'Apri il generatore',
+        }
+        return self.prompt('🎨 ImageGEN attivo per 30 minuti.', keyboard)
 
-    def reset_menu_button(self):
-        return self.call(
-            'setChatMenuButton',
-            {
-                'chat_id': self.chat_id,
-                'menu_button': json.dumps({'type': 'default'}),
-            },
-        )
+    def remove_keyboard(self):
+        return self.prompt('ImageGEN chiuso.', {'remove_keyboard': True})
 
     def delete(self, message_id):
         return self.call(

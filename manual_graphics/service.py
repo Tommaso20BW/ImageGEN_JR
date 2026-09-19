@@ -35,6 +35,7 @@ class Service:
         self.stopped = False
         self.generated_message_ids = []
         self.bot_message_ids = []
+        self.launcher_message_id = None
 
     def _remember_bot_message(self, message_id):
         try:
@@ -166,10 +167,23 @@ class Service:
             except TelegramError:
                 pass
 
+        if self.launcher_message_id:
+            try:
+                self.telegram.delete(self.launcher_message_id)
+            except TelegramError:
+                pass
+
+        cleanup_message_id = None
         try:
-            self.telegram.reset_menu_button()
+            cleanup_message_id = self.telegram.remove_keyboard()
         except TelegramError:
             pass
+
+        if cleanup_message_id:
+            try:
+                self.telegram.delete(cleanup_message_id)
+            except TelegramError:
+                pass
 
     def run(self, duration=1800):
         webapp_url = os.environ.get(
@@ -194,7 +208,7 @@ class Service:
             )
         )
 
-        self.telegram.set_menu_button(launch_url, text='🎨')
+        self.launcher_message_id = self.telegram.webapp_launcher(launch_url)
         deadline = time.monotonic() + min(1800, max(1, duration))
 
         try:
