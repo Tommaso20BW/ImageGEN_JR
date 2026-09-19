@@ -41,17 +41,42 @@ jobs:
         with:
           python-version: '3.14'
           cache: pip
+          cache-dependency-path: requirements.txt
 
-      - name: Cache Chromium
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
-
-      - name: Installa dipendenze
+      - name: Installa dipendenze Python
         run: |
           python -m pip install --disable-pip-version-check -q -r requirements.txt
-          playwright install --with-deps chromium
+
+      - name: Prepara browser per STATS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || true)"
+
+          if [ -n "$CHROME" ]; then
+            echo "Chrome di sistema trovato: $CHROME"
+            python - "$CHROME" <<'PY'
+          from pathlib import Path
+          import sys
+
+          chrome = sys.argv[1]
+          path = Path("_graphics_core/stats_graphics.py")
+          text = path.read_text(encoding="utf-8")
+
+          old = "browser = playwright.chromium.launch()"
+          new = f"browser = playwright.chromium.launch(executable_path={chrome!r})"
+
+          if old not in text:
+              raise SystemExit("Riga Playwright non trovata in stats_graphics.py")
+
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          print(f"STATS userà Chrome di sistema: {chrome}")
+          PY
+          else
+            echo "Chrome di sistema non trovato: installo Chromium Playwright come fallback."
+            playwright install --with-deps chromium
+          fi
 
       - name: Avvia generatore Telegram
         env:
