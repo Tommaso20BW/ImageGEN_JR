@@ -1,4 +1,4 @@
-"""Dedicated manually-started 10-minute Telegram Mini App service."""
+"Dedicated manually-started 10-minute Telegram Mini App service."
 import copy
 import os
 import queue
@@ -52,6 +52,7 @@ class Service:
             message_id = self.telegram.prompt(text)
         except TelegramError:
             return None
+
         self._remember_bot_message(message_id)
         return message_id
 
@@ -66,6 +67,7 @@ class Service:
                 continue
 
             message = update.get('message') or {}
+
             if not message.get('web_app_data'):
                 continue
 
@@ -76,12 +78,14 @@ class Service:
                 time.time(),
                 expected_session=self.session,
             )
+
             self.state = new_state
 
             for effect in effects:
                 self._prompt(effect['text'])
 
             message_id = message.get('message_id')
+
             if message_id:
                 try:
                     self.telegram.delete(message_id)
@@ -104,10 +108,17 @@ class Service:
                 self.results.put((request_id, png, None))
             except Exception as exc:
                 self.results.put(
-                    (request_id, None, f'{type(exc).__name__}: {exc}')
+                    (
+                        request_id,
+                        None,
+                        f'{type(exc).__name__}: {exc}',
+                    )
                 )
 
-        self.worker = threading.Thread(target=work, daemon=True)
+        self.worker = threading.Thread(
+            target=work,
+            daemon=True,
+        )
         self.worker.start()
 
     def rendering(self):
@@ -130,32 +141,41 @@ class Service:
         if error:
             self.state['status'] = 'failed'
             print(f'ERROR IMAGEGEN: {error}', flush=True)
-            self._prompt('Grafica non generata. Riapri ImageGEN e riprova.')
+            self._prompt(
+                'Grafica non generata. Riapri ImageGEN e riprova.'
+            )
             return
 
         self.state['status'] = 'sending'
 
         try:
-            message_id = self.telegram.document(
+            message_id = self.telegram.photo(
                 png,
                 f"{self.state['data']['kind']}-{request_id}.png",
             )
+
         except DeliveryUncertain:
             self.state['status'] = 'uncertain'
-            self._prompt('Invio incerto: controlla se il PNG è arrivato.')
+            self._prompt(
+                'Invio incerto: controlla se la foto è arrivata.'
+            )
+
         except TelegramError:
             self.state['status'] = 'failed'
             self._prompt(
-                'Telegram ha rifiutato il PNG. Riapri ImageGEN e riprova.'
+                'Telegram ha rifiutato la foto. Riapri ImageGEN e riprova.'
             )
+
         else:
             self.state.update(
                 status='completed',
                 message_id=message_id,
             )
+
             self.generated_message_ids.append(int(message_id))
+
             print(
-                f'INFO IMAGEGEN: PNG inviato | id={request_id}',
+                f'INFO IMAGEGEN: foto PNG inviata | id={request_id}',
                 flush=True,
             )
 
@@ -179,6 +199,7 @@ class Service:
                 pass
 
         cleanup_message_id = None
+
         try:
             cleanup_message_id = self.telegram.remove_keyboard()
         except TelegramError:
@@ -200,6 +221,7 @@ class Service:
             'MANUAL_GRAPHICS_WEBAPP_URL',
             '',
         ).strip()
+
         if not webapp_url:
             raise RuntimeError('MANUAL_GRAPHICS_WEBAPP_URL mancante')
 
@@ -208,6 +230,7 @@ class Service:
         parts = urlsplit(webapp_url)
         query = dict(parse_qsl(parts.query, keep_blank_values=True))
         query['session'] = self.session
+
         launch_url = urlunsplit(
             (
                 parts.scheme,
@@ -218,17 +241,25 @@ class Service:
             )
         )
 
-        # make sure the old menu button near the paperclip is gone
         try:
             self.telegram.reset_menu_button()
         except TelegramError:
             pass
 
-        self.launcher_message_id = self.telegram.webapp_launcher(launch_url)
-        deadline = time.monotonic() + min(SESSION_DURATION_SECONDS, max(1, duration))
+        self.launcher_message_id = self.telegram.webapp_launcher(
+            launch_url
+        )
+
+        deadline = (
+            time.monotonic()
+            + min(SESSION_DURATION_SECONDS, max(1, duration))
+        )
 
         try:
-            while not self.stopped and time.monotonic() < deadline:
+            while (
+                not self.stopped
+                and time.monotonic() < deadline
+            ):
                 self.receive()
                 self.rendering()
         finally:
@@ -236,8 +267,15 @@ class Service:
 
 
 def main():
-    token = os.environ.get('MANUAL_GRAPHICS_TELEGRAM_TOKEN', '')
-    chat_id = os.environ.get('MANUAL_GRAPHICS_TELEGRAM_CHAT_ID', '')
+    token = os.environ.get(
+        'MANUAL_GRAPHICS_TELEGRAM_TOKEN',
+        '',
+    )
+
+    chat_id = os.environ.get(
+        'MANUAL_GRAPHICS_TELEGRAM_CHAT_ID',
+        '',
+    )
 
     telegram = Telegram(token, chat_id)
     telegram.validate_private_chat()
