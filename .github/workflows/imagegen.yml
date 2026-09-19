@@ -5,7 +5,6 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 concurrency:
   group: imagegen-jr
@@ -61,15 +60,3 @@ jobs:
           MANUAL_GRAPHICS_WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/manual_graphics/webapp/
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/_graphics_core
         run: python -u -m manual_graphics.service
-
-      - name: Pulisci vecchi run conclusi
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          gh api "repos/${{ github.repository }}/actions/workflows/imagegen.yml/runs?status=completed&per_page=100" \
-            --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id' |
-          while read -r RUN_ID; do
-            [ -n "$RUN_ID" ] && gh api -X DELETE "repos/${{ github.repository }}/actions/runs/$RUN_ID" || true
-          done

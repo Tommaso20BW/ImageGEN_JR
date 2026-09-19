@@ -194,7 +194,7 @@ class Service:
             )
         )
 
-        self.telegram.set_menu_button(launch_url, text='Open')
+        self.telegram.set_menu_button(launch_url, text='🎨')
         deadline = time.monotonic() + min(1800, max(1, duration))
 
         try:
