@@ -87,26 +87,30 @@ class Telegram:
             data['reply_markup'] = json.dumps(keyboard)
         return self.call('sendMessage', data)['message_id']
 
-    def webapp_launcher(self, url):
+    def set_menu_button(self, url, text='Open'):
         parsed = urlparse(str(url).strip())
         if parsed.scheme != 'https' or not parsed.netloc:
             raise TelegramError('URL Mini App non HTTPS')
-        keyboard = {
-            'keyboard': [[{
-                'text': '🎨 Apri generatore',
-                'web_app': {'url': str(url).strip()},
-            }]],
-            'resize_keyboard': True,
-            'is_persistent': True,
-            'input_field_placeholder': 'Apri il generatore grafico',
-        }
-        return self.prompt(
-            '🎨 Generatore grafiche attivo per 30 minuti.',
-            keyboard,
+        return self.call(
+            'setChatMenuButton',
+            {
+                'chat_id': self.chat_id,
+                'menu_button': json.dumps({
+                    'type': 'web_app',
+                    'text': text,
+                    'web_app': {'url': str(url).strip()},
+                }),
+            },
         )
 
-    def remove_keyboard(self):
-        return self.prompt('Generatore chiuso.', {'remove_keyboard': True})
+    def reset_menu_button(self):
+        return self.call(
+            'setChatMenuButton',
+            {
+                'chat_id': self.chat_id,
+                'menu_button': json.dumps({'type': 'default'}),
+            },
+        )
 
     def delete(self, message_id):
         return self.call(

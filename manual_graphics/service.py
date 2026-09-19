@@ -33,6 +33,23 @@ class Service:
         self.worker = None
         self.results = queue.Queue()
         self.stopped = False
+        self.generated_message_ids = []
+        self.bot_message_ids = []
+
+    def _remember_bot_message(self, message_id):
+        try:
+            if message_id:
+                self.bot_message_ids.append(int(message_id))
+        except (TypeError, ValueError):
+            pass
+
+    def _prompt(self, text):
+        try:
+            message_id = self.telegram.prompt(text)
+        except TelegramError:
+            return None
+        self._remember_bot_message(message_id)
+        return message_id
 
     def receive(self):
         updates = self.telegram.poll(self.offset)
@@ -58,7 +75,7 @@ class Service:
             self.state = new_state
 
             for effect in effects:
-                self.telegram.prompt(effect['text'])
+                self._prompt(effect['text'])
 
             message_id = message.get('message_id')
             if message_id:
@@ -109,9 +126,7 @@ class Service:
         if error:
             self.state['status'] = 'failed'
             print(f'ERROR IMAGEGEN: {error}', flush=True)
-            self.telegram.prompt(
-                'Grafica non generata. Riapri la Mini App e riprova.'
-            )
+            self._prompt('Grafica non generata. Riapri la Mini App e riprova.')
             return
 
         self.state['status'] = 'sending'
@@ -123,23 +138,38 @@ class Service:
             )
         except DeliveryUncertain:
             self.state['status'] = 'uncertain'
-            self.telegram.prompt(
-                'Invio incerto: controlla se il PNG è arrivato.'
-            )
+            self._prompt('Invio incerto: controlla se il PNG è arrivato.')
         except TelegramError:
             self.state['status'] = 'failed'
-            self.telegram.prompt(
-                'Telegram ha rifiutato il PNG. Riapri la Mini App e riprova.'
-            )
+            self._prompt('Telegram ha rifiutato il PNG. Riapri la Mini App e riprova.')
         else:
             self.state.update(
                 status='completed',
                 message_id=message_id,
             )
+            self.generated_message_ids.append(int(message_id))
             print(
                 f'INFO IMAGEGEN: PNG inviato | id={request_id}',
                 flush=True,
             )
+
+    def cleanup(self):
+        for message_id in reversed(self.generated_message_ids):
+            try:
+                self.telegram.delete(message_id)
+            except TelegramError:
+                pass
+
+        for message_id in reversed(self.bot_message_ids):
+            try:
+                self.telegram.delete(message_id)
+            except TelegramError:
+                pass
+
+        try:
+            self.telegram.reset_menu_button()
+        except TelegramError:
+            pass
 
     def run(self, duration=1800):
         webapp_url = os.environ.get(
@@ -164,7 +194,7 @@ class Service:
             )
         )
 
-        launcher_message_id = self.telegram.webapp_launcher(launch_url)
+        self.telegram.set_menu_button(launch_url, text='Open')
         deadline = time.monotonic() + min(1800, max(1, duration))
 
         try:
@@ -172,23 +202,7 @@ class Service:
                 self.receive()
                 self.rendering()
         finally:
-            if launcher_message_id:
-                try:
-                    self.telegram.delete(launcher_message_id)
-                except TelegramError:
-                    pass
-
-            cleanup_id = None
-            try:
-                cleanup_id = self.telegram.remove_keyboard()
-            except TelegramError:
-                pass
-
-            if cleanup_id:
-                try:
-                    self.telegram.delete(cleanup_id)
-                except TelegramError:
-                    pass
+            self.cleanup()
 
 
 def main():
