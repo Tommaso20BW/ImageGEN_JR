@@ -113,9 +113,7 @@ class Telegram:
             'is_persistent': True,
             'input_field_placeholder': 'ImageGEN',
         }
-        return self.prompt('🎨 IMAGEGEN · JR
-
-⏱️ Sessione attiva per 10 minuti.', keyboard)
+        return self.prompt("🎨 IMAGEGEN · JR\n\n⏱️ Sessione attiva per 10 minuti.", keyboard)
 
     def remove_keyboard(self):
         return self.prompt('\u2063', {'remove_keyboard': True})
