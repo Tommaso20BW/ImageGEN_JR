@@ -1,0 +1,1 @@
+"""JR manual image generator."""

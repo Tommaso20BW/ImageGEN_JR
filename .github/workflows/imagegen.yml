@@ -1,0 +1,80 @@
+name: ImageGen
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: imagegen-jr
+  cancel-in-progress: false
+
+jobs:
+  generator:
+    name: Generatore manuale - 30 minuti
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout ImageGEN JR
+        uses: actions/checkout@v6
+
+      - name: Checkout motore grafico LiveScore JR
+        uses: actions/checkout@v6
+        with:
+          repository: Tommaso20BW/LiveScore_JR
+          path: _graphics_core
+          sparse-checkout: |
+            assets/goal_graphics
+            goal_graphics.py
+            goal_players.json
+            portrait_graphics.py
+            stats_graphics.py
+            stats.html
+            team_matching.py
+            canva_page_one.py
+            live_logging.py
+          sparse-checkout-cone-mode: false
+
+      - name: Configura Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+          cache: pip
+
+      - name: Cache Chromium
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
+      - name: Installa dipendenze
+        run: |
+          python -m pip install --disable-pip-version-check -q -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Avvia generatore Telegram
+        env:
+          MANUAL_GRAPHICS_TELEGRAM_TOKEN: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_TOKEN }}
+          MANUAL_GRAPHICS_TELEGRAM_CHAT_ID: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_CHAT_ID }}
+          MANUAL_GRAPHICS_WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/manual_graphics/webapp/
+          CANVA_CLIENT_ID: ${{ secrets.CANVA_CLIENT_ID }}
+          CANVA_CLIENT_SECRET: ${{ secrets.CANVA_CLIENT_SECRET }}
+          CANVA_REFRESH_TOKEN: ${{ secrets.CANVA_REFRESH_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/_graphics_core
+        run: python -u -m manual_graphics.service
+
+      - name: Pulisci vecchi run conclusi
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh api "repos/${{ github.repository }}/actions/workflows/imagegen.yml/runs?status=completed&per_page=100" \
+            --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id' |
+          while read -r RUN_ID; do
+            [ -n "$RUN_ID" ] && gh api -X DELETE "repos/${{ github.repository }}/actions/runs/$RUN_ID" || true
+          done

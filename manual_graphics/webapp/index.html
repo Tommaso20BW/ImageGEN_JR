@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f2f4f8">
+  <title>JR Graphics</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+  <style>
+    :root{
+      --bg:#eef1f6;--bg2:#f8f9fc;--text:#111216;--muted:#747b86;
+      --glass:rgba(255,255,255,.56);--glass2:rgba(255,255,255,.78);
+      --line:rgba(255,255,255,.76);--soft:rgba(24,28,35,.08);
+      --gold:#b89237;--gold2:#e0c77b;--focus:rgba(184,146,55,.28);
+      --danger:#b42336;--danger-bg:rgba(180,35,54,.09);
+      --shadow:0 20px 58px rgba(48,58,76,.13);
+    }
+    html[data-theme="dark"]{
+      --bg:#090a0c;--bg2:#111216;--text:#f7f7f8;--muted:#969ba5;
+      --glass:rgba(29,31,36,.56);--glass2:rgba(39,41,47,.76);
+      --line:rgba(255,255,255,.12);--soft:rgba(255,255,255,.07);
+      --gold:#d1b45e;--gold2:#f0d88a;--focus:rgba(209,180,94,.28);
+      --danger:#ff9aa6;--danger-bg:rgba(255,107,125,.10);
+      --shadow:0 24px 70px rgba(0,0,0,.34);
+    }
+    *{box-sizing:border-box}
+    html{background:var(--bg);min-height:100%}
+    body{
+      margin:0;min-height:100dvh;color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",sans-serif;
+      padding:18px 14px calc(118px + env(safe-area-inset-bottom));
+      background:
+        radial-gradient(circle at 12% -5%,rgba(215,188,109,.26),transparent 31%),
+        radial-gradient(circle at 105% 20%,rgba(112,145,218,.17),transparent 34%),
+        linear-gradient(145deg,var(--bg2),var(--bg));
+      background-attachment:fixed;
+    }
+    .wrap{width:min(760px,100%);margin:auto}
+    .hero{padding:8px 4px 18px}
+    .eyebrow{color:var(--gold);font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;margin-bottom:10px}
+    h1{margin:0 0 7px;font-size:clamp(34px,8vw,49px);line-height:1;letter-spacing:-.055em}
+    .sub{color:var(--muted);font-size:14px}
+    .card{
+      padding:15px;margin-bottom:12px;border:1px solid var(--line);border-radius:27px;
+      background:linear-gradient(145deg,var(--glass2),var(--glass));
+      box-shadow:var(--shadow);backdrop-filter:blur(28px) saturate(175%);
+      -webkit-backdrop-filter:blur(28px) saturate(175%);
+    }
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .full{grid-column:1/-1}
+    label{display:block;margin:0 0 7px 2px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+    input,select{
+      width:100%;min-height:50px;border:1px solid var(--soft);border-radius:17px;
+      background:rgba(255,255,255,.16);color:var(--text);padding:0 13px;
+      font:inherit;font-size:15px;font-weight:560;outline:none;
+    }
+    input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--focus)}
+    .score{display:grid;grid-template-columns:1fr 28px 1fr;align-items:center;gap:8px}
+    .score input{text-align:center;font-size:22px;font-weight:750}.dash{text-align:center;color:var(--muted)}
+    .hidden{display:none!important}
+    .stats{display:grid;gap:6px}
+    .stat{display:grid;grid-template-columns:minmax(115px,1fr) 78px 78px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--soft)}
+    .stat:last-child{border-bottom:0}.stat-name{font-size:12px;font-weight:700}.stat input{min-height:42px;text-align:center;padding:0 7px;font-size:13px}
+    .hint{color:var(--muted);font-size:12px;margin-top:9px}
+    .error{display:none;margin-bottom:12px;padding:12px 14px;border-radius:18px;background:var(--danger-bg);color:var(--danger);font-size:13px;font-weight:650}
+    .footer{position:fixed;left:0;right:0;bottom:0;padding:14px 14px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,var(--bg) 55%);pointer-events:none}
+    .footer-inner{width:min(760px,100%);margin:auto;padding:7px;border:1px solid var(--line);border-radius:23px;background:var(--glass);backdrop-filter:blur(28px);pointer-events:auto}
+    button{width:100%;min-height:55px;border:0;border-radius:17px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#171308;font-weight:900;letter-spacing:.08em}
+    button:disabled{opacity:.45}
+    @media(max-width:520px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.stat{grid-template-columns:1fr 66px 66px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="eyebrow">JUVENTUS REBORN</div>
+      <h1>JR Graphics</h1>
+      <div class="sub">Generatore manuale</div>
+    </div>
+
+    <div id="error" class="error"></div>
+
+    <div class="card grid">
+      <div>
+        <label>Grafica</label>
+        <select id="kind">
+          <option value="goal">GOAL</option>
+          <option value="saved">SAVED</option>
+          <option value="kick">KICK OFF</option>
+          <option value="half">HALF TIME</option>
+          <option value="end_of_90">END OF 90'</option>
+          <option value="full">FULL TIME</option>
+          <option value="stats">STATS</option>
+        </select>
+      </div>
+      <div>
+        <label>Competizione</label>
+        <select id="competition">
+          <option value="ita.1">Serie A</option>
+          <option value="ita.coppa_italia">Coppa Italia</option>
+          <option value="ita.super_cup">Supercoppa Italiana</option>
+          <option value="uefa.champions">Champions League</option>
+          <option value="uefa.europa">Europa League</option>
+          <option value="uefa.europa.conf">Conference League</option>
+          <option value="uefa.super_cup">Supercoppa UEFA</option>
+          <option value="fifa.cwc">Mondiale per Club</option>
+        </select>
+      </div>
+      <div>
+        <label>Kit Juventus</label>
+        <select id="kit">
+          <option value="home">Home</option>
+          <option value="away">Away</option>
+          <option value="third">Third</option>
+        </select>
+      </div>
+      <div>
+        <label>Juventus</label>
+        <select id="side">
+          <option value="home">In casa</option>
+          <option value="away">In trasferta</option>
+        </select>
+      </div>
+      <div class="full">
+        <label>Avversario</label>
+        <input id="opponent" list="teams" autocomplete="off" placeholder="Es. Atalanta">
+        <datalist id="teams"></datalist>
+      </div>
+    </div>
+
+    <div id="playerCard" class="card grid">
+      <div class="full">
+        <label id="playerLabel">Giocatore</label>
+        <input id="player" list="players" autocomplete="off" placeholder="Es. Kenan Yildiz">
+        <datalist id="players"></datalist>
+      </div>
+      <div>
+        <label>Minuto</label>
+        <input id="minute" inputmode="numeric" placeholder="67 o 90+4">
+      </div>
+      <div>
+        <label>Posa</label>
+        <select id="pose">
+          <option value="arms_crossed">Braccia incrociate</option>
+          <option value="pointing">Indica</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="scoreCard" class="card">
+      <label>Risultato casa - trasferta</label>
+      <div class="score">
+        <input id="homeScore" type="number" min="0" max="99" placeholder="0">
+        <div class="dash">−</div>
+        <input id="awayScore" type="number" min="0" max="99" placeholder="0">
+      </div>
+    </div>
+
+    <div id="shootoutCard" class="card hidden">
+      <label>Rigori casa - trasferta</label>
+      <div class="score">
+        <input id="homeShootout" type="number" min="0" max="99">
+        <div class="dash">−</div>
+        <input id="awayShootout" type="number" min="0" max="99">
+      </div>
+      <div class="hint">Lascia vuoto se non ci sono rigori.</div>
+    </div>
+
+    <div id="statsCard" class="card hidden">
+      <div style="margin-bottom:13px">
+        <label>Momento</label>
+        <select id="moment">
+          <option value="HT">HALF TIME</option>
+          <option value="2H_END">END OF 90'</option>
+          <option value="FT">FULL TIME</option>
+        </select>
+      </div>
+      <div id="stats" class="stats"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-inner">
+      <button id="generate">GENERA GRAFICA</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+
+  function theme() {
+    const value = tg && ['dark','light'].includes(tg.colorScheme)
+      ? tg.colorScheme
+      : (media.matches ? 'dark' : 'light');
+    document.documentElement.dataset.theme = value;
+    document.documentElement.style.colorScheme = value;
+    metaTheme.setAttribute('content', value === 'dark' ? '#090a0c' : '#eef1f6');
+  }
+
+  theme();
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    if (tg.onEvent) tg.onEvent('themeChanged', theme);
+  }
+  if (media.addEventListener) media.addEventListener('change', theme);
+
+  const PLAYERS_URL = 'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/goal_players.json';
+  const TEAMS_URL = 'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/assets/goal_graphics/team_logos/fclogo_cache/manifest.json';
+  const STATS = ['POSSESSO','xG','TIRI','TIRI IN PORTA','CORNER','FALLI','FUORIGIOCO','AMMONITI','ESPULSI','PARATE','PRECISIONE PASSAGGI','PASSAGGI'];
+  const session = new URLSearchParams(location.search).get('session') || '';
+  let players = [], teams = [];
+
+  const $ = id => document.getElementById(id);
+  const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const esc = v => String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function error(message) {
+    $('error').textContent = message;
+    $('error').style.display = 'block';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function clearError(){ $('error').style.display='none'; }
+
+  async function catalogs() {
+    try {
+      const [p,t] = await Promise.all([
+        fetch(PLAYERS_URL,{cache:'no-store'}),
+        fetch(TEAMS_URL,{cache:'no-store'})
+      ]);
+      if (!p.ok || !t.ok) throw new Error();
+      players = (await p.json()).players || [];
+      teams = ((await t.json()).teams || []).filter(x => !norm(x.name).includes('juventus'));
+      $('teams').innerHTML = teams.map(x=>`<option value="${esc(x.name)}"></option>`).join('');
+      refreshPlayers();
+    } catch (_) {
+      error('Impossibile caricare i cataloghi giocatori/squadre.');
+    }
+  }
+
+  function refreshPlayers(){
+    const keepers = $('kind').value === 'saved';
+    const list = players.filter(x => !keepers || x.role === 'goalkeeper');
+    $('players').innerHTML = list.map(x=>`<option value="${esc(x.name)}"></option>`).join('');
+    $('playerLabel').textContent = keepers ? 'Portiere' : 'Giocatore';
+  }
+
+  function team(value){
+    const q=norm(value);
+    return teams.find(x=>norm(x.name)===q || (x.aliases||[]).some(a=>norm(a)===q));
+  }
+
+  function player(value){
+    const q=norm(value), keepers=$('kind').value==='saved';
+    return players.find(x=>(!keepers || x.role==='goalkeeper') &&
+      (norm(x.name)===q || (x.aliases||[]).some(a=>norm(a)===q)));
+  }
+
+  function score(hId,aId,optional=false){
+    const h=$(hId).value.trim(), a=$(aId).value.trim();
+    if(!h && !a && optional) return null;
+    if(h==='' || a==='') throw new Error('Inserisci entrambi i valori del risultato.');
+    const out=[Number(h),Number(a)];
+    if(!out.every(Number.isInteger) || out.some(x=>x<0 || x>99)) throw new Error('Risultato non valido.');
+    return out;
+  }
+
+  function visibility(){
+    const k=$('kind').value;
+    $('playerCard').classList.toggle('hidden',!['goal','saved'].includes(k));
+    $('scoreCard').classList.toggle('hidden',!['goal','saved','half','full','end_of_90'].includes(k));
+    $('shootoutCard').classList.toggle('hidden',k!=='full');
+    $('statsCard').classList.toggle('hidden',k!=='stats');
+    refreshPlayers();
+  }
+
+  function payload(){
+    const k=$('kind').value, opponent=team($('opponent').value);
+    if(!opponent) throw new Error('Seleziona un avversario presente nell’elenco.');
+
+    const data={
+      kind:k,
+      competition:$('competition').value,
+      kit:$('kit').value,
+      side:$('side').value,
+      opponent:{name:opponent.name,id:String(opponent.espn_id||'')}
+    };
+
+    if(['goal','saved'].includes(k)){
+      const p=player($('player').value);
+      if(!p) throw new Error(k==='saved'?'Seleziona un portiere valido.':'Seleziona un giocatore valido.');
+      if(!$('minute').value.trim()) throw new Error('Inserisci il minuto.');
+      data.player=p.name;
+      data.minute=$('minute').value.trim();
+      data.pose=$('pose').value;
+      data.score=score('homeScore','awayScore');
+    } else if(['half','full','end_of_90'].includes(k)){
+      data.score=score('homeScore','awayScore');
+      if(k==='full'){
+        data.shootout=score('homeShootout','awayShootout',true);
+        if(data.shootout && data.shootout[0]===data.shootout[1]) throw new Error('I rigori devono avere un vincitore.');
+      }
+    } else if(k==='stats'){
+      data.moment=$('moment').value;
+      data.rows=STATS.map((label,i)=>({
+        label,
+        home:$(`s${i}h`).value.trim(),
+        away:$(`s${i}a`).value.trim()
+      })).filter(x=>x.home||x.away);
+      if(!data.rows.length) throw new Error('Inserisci almeno una statistica.');
+      if(data.rows.some(x=>!x.home||!x.away)) throw new Error('Completa entrambi i valori delle statistiche.');
+    }
+
+    if(!session) throw new Error('Sessione non attiva. Avvia ImageGen e apri il pulsante del bot.');
+    return {v:1,action:'render',session,data};
+  }
+
+  $('stats').innerHTML=STATS.map((label,i)=>`
+    <div class="stat">
+      <div class="stat-name">${label}</div>
+      <input id="s${i}h" inputmode="decimal" placeholder="Casa">
+      <input id="s${i}a" inputmode="decimal" placeholder="Trasf.">
+    </div>`).join('');
+
+  $('kind').addEventListener('change',visibility);
+
+  $('generate').addEventListener('click',()=>{
+    clearError();
+    if(!tg || typeof tg.sendData!=='function'){
+      error('Apri la Mini App dal pulsante del bot Telegram.');
+      return;
+    }
+    try{
+      const raw=JSON.stringify(payload());
+      if(new TextEncoder().encode(raw).length>4096) throw new Error('Troppi dati per Telegram.');
+      $('generate').disabled=true;
+      $('generate').textContent='INVIO…';
+      tg.sendData(raw);
+    }catch(e){
+      $('generate').disabled=false;
+      $('generate').textContent='GENERA GRAFICA';
+      error(e.message||'Dati non validi.');
+    }
+  });
+
+  visibility();
+  if(!session){
+    $('generate').disabled=true;
+    error('Generatore non attivo. Avvia il workflow ImageGen.');
+  }
+  catalogs();
+})();
+</script>
+</body>
+</html>
