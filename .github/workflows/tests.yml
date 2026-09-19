@@ -16,6 +16,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
     steps:
       - uses: actions/checkout@v6
 
@@ -23,6 +24,11 @@ jobs:
         with:
           python-version: '3.14'
           cache: pip
+          cache-dependency-path: requirements.txt
 
-      - run: python -m pip install --disable-pip-version-check -q -r requirements.txt
-      - run: python -m compileall -q manual_graphics
+      - name: Installa dipendenze
+        run: python -m pip install --disable-pip-version-check -q -r requirements.txt
+
+      - name: Controlla sintassi Python
+        run: |
+          python -m py_compile             canva.py             catalog.py             constants.py             refresh_canva_token.py             render.py             service.py             telegram.py             webapp_payload.py

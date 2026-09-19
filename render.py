@@ -1,4 +1,6 @@
 """Adapters to the production graphics core."""
+from functools import lru_cache
+import json
 from pathlib import Path
 import shutil
 import tempfile
@@ -22,6 +24,118 @@ def teams(data):
         'away_name': away['name'],
         'away_id': away.get('id', ''),
     }
+
+
+def _name_key(value):
+    return ' '.join(str(value or '').casefold().split())
+
+
+@lru_cache(maxsize=4)
+def _team_display_names(core_dir_text):
+    """Build display-name aliases from the LiveScore translation table.
+
+    Example:
+      AC Milan -> Milan
+      FC Inter Milan -> Inter  (via manifest alias "Internazionale")
+    """
+    core_dir = Path(core_dir_text)
+    teams_path = core_dir / 'teams.json'
+    manifest_path = (
+        core_dir
+        / 'assets'
+        / 'goal_graphics'
+        / 'team_logos'
+        / 'fclogo_cache'
+        / 'manifest.json'
+    )
+
+    translated = {}
+
+    try:
+        payload = json.loads(teams_path.read_text(encoding='utf-8'))
+    except (OSError, ValueError, TypeError):
+        payload = {}
+
+    if isinstance(payload, dict):
+        for source_name, values in payload.items():
+            display = None
+            if isinstance(values, (list, tuple)) and values:
+                display = values[0]
+            elif isinstance(values, str):
+                display = values
+
+            if display:
+                translated[_name_key(source_name)] = str(display).strip()
+
+    aliases = dict(translated)
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+        rows = manifest.get('teams', []) if isinstance(manifest, dict) else []
+    except (OSError, ValueError, TypeError):
+        rows = []
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+
+        variants = [
+            row.get('name'),
+            *(row.get('aliases') or []),
+        ]
+        variants = [str(value).strip() for value in variants if value]
+
+        display = None
+        for variant in variants:
+            display = translated.get(_name_key(variant))
+            if display:
+                break
+
+        if display:
+            for variant in variants:
+                aliases[_name_key(variant)] = display
+
+    return aliases
+
+
+def translated_team_name(name, portrait_module):
+    try:
+        core_dir = Path(portrait_module.__file__).resolve().parent
+        return _team_display_names(str(core_dir)).get(
+            _name_key(name),
+            str(name),
+        )
+    except Exception:
+        return str(name)
+
+
+def _phase_with_translated_shootout(p, *, shootout=None, **kwargs):
+    """Render a phase while translating only the shootout winner caption.
+
+    Team names used for crest resolution stay untouched. Only the textual
+    "X VINCE ... AI RIGORI" line is translated.
+    """
+    if not shootout:
+        return p.phase(shootout=shootout, **kwargs)
+
+    original_number = p.number
+
+    def number_with_translated_winner(value, *args, **number_kwargs):
+        text = str(value)
+        marker = ' VINCE '
+
+        if marker in text and text.endswith(' AI RIGORI'):
+            winner, rest = text.split(marker, 1)
+            display = translated_team_name(winner, p)
+            text = f'{display}{marker}{rest}'.upper()
+
+        return original_number(text, *args, **number_kwargs)
+
+    p.number = number_with_translated_winner
+    try:
+        return p.phase(shootout=shootout, **kwargs)
+    finally:
+        p.number = original_number
 
 
 class Renderer:
@@ -62,9 +176,11 @@ class Renderer:
 
         if kind in ('kick', 'half', 'full', 'end_of_90'):
             layers = None
+
             if kind != 'kick':
                 if not self.token_provider:
                     raise ValueError('Canva non configurato per questa grafica.')
+
                 with tempfile.TemporaryDirectory(prefix='jr_manual_') as cache:
                     with requests.Session() as session:
                         layers = export_page_one(
@@ -73,14 +189,27 @@ class Renderer:
                             self.design_id,
                             Path(cache),
                         )
-                    return p.phase(
+
+                    phase_args = {
                         **common,
-                        kind=kind,
-                        home_goals=score[0],
-                        away_goals=score[1],
-                        shootout=data.get('shootout') if kind == 'full' else None,
-                        layers=layers,
+                        'kind': kind,
+                        'home_goals': score[0],
+                        'away_goals': score[1],
+                        'layers': layers,
+                    }
+
+                    if kind == 'full' and data.get('shootout'):
+                        return _phase_with_translated_shootout(
+                            p,
+                            shootout=data.get('shootout'),
+                            **phase_args,
+                        )
+
+                    return p.phase(
+                        **phase_args,
+                        shootout=None,
                     )
+
             return p.phase(
                 **common,
                 kind='kick',
