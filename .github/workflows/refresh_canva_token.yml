@@ -1,0 +1,40 @@
+name: Refresh Canva Token
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: imagegen-canva-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Refresh token Canva ImageGEN
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout ImageGEN JR
+        uses: actions/checkout@v6
+
+      - name: Configura Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Installa dipendenze Python
+        run: |
+          python -m pip install --disable-pip-version-check -q -r requirements.txt
+
+      - name: Refresh manuale Canva
+        env:
+          IMAGEGEN_CANVA_CLIENT_ID: ${{ secrets.IMAGEGEN_CANVA_CLIENT_ID }}
+          IMAGEGEN_CANVA_CLIENT_SECRET: ${{ secrets.IMAGEGEN_CANVA_CLIENT_SECRET }}
+          IMAGEGEN_CANVA_REFRESH_TOKEN: ${{ secrets.IMAGEGEN_CANVA_REFRESH_TOKEN }}
+          IMAGEGEN_GH_PAT: ${{ secrets.IMAGEGEN_GH_PAT }}
+        run: python -u -m manual_graphics.refresh_canva_token

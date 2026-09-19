@@ -3,7 +3,6 @@ import json
 import math
 import uuid
 
-from .catalog import normalize_key
 from .constants import COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
 
 VALID_KINDS = {value for _, value in KINDS}
@@ -36,41 +35,28 @@ def _score(value, *, optional=False, shootout=False):
 def _canonical_team(catalog, value):
     if not isinstance(value, dict):
         raise ValueError('Avversario non valido.')
-
     name = str(value.get('name') or '').strip()
     if not name:
         raise ValueError('Avversario mancante.')
-
     matches = catalog.teams(name)
     if not matches:
         raise ValueError('Avversario non presente nel catalogo.')
-
-    wanted = normalize_key(name)
-    exact = [row for row in matches if normalize_key(row['name']) == wanted]
-    if exact:
-        return exact[0]
-    if len(matches) == 1:
-        return matches[0]
-
-    raise ValueError('Avversario ambiguo: selezionalo dall’elenco.')
+    exact = [row for row in matches if row['name'].casefold() == name.casefold()]
+    return exact[0] if exact else matches[0]
 
 
 def _canonical_player(catalog, value, *, goalkeeper=False):
     name = str(value or '').strip()
     if not name:
         raise ValueError('Giocatore mancante.')
-
     matches = catalog.players(name, goalkeeper=goalkeeper)
     if not matches:
         raise ValueError('Giocatore non presente nel catalogo.')
-
-    wanted = normalize_key(name)
-    exact = [candidate for candidate in matches if normalize_key(candidate) == wanted]
+    exact = [candidate for candidate in matches if candidate.casefold() == name.casefold()]
     if exact:
         return exact[0]
     if len(matches) == 1:
         return matches[0]
-
     raise ValueError('Giocatore ambiguo: selezionalo dall’elenco.')
 
 

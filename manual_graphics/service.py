@@ -1,4 +1,4 @@
-"Dedicated manually-started 10-minute Telegram Mini App service."
+"""Dedicated manually-started 10-minute Telegram Mini App service."""
 import copy
 import os
 import queue
@@ -8,6 +8,7 @@ import threading
 import time
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+from .canva import CanvaTokenProvider
 from .catalog import Catalog
 from .render import Renderer
 from .telegram import (
@@ -141,9 +142,7 @@ class Service:
         if error:
             self.state['status'] = 'failed'
             print(f'ERROR IMAGEGEN: {error}', flush=True)
-            self._prompt(
-                'Grafica non generata. Riapri ImageGEN e riprova.'
-            )
+            self._prompt('Grafica non generata. Riapri ImageGEN e riprova.')
             return
 
         self.state['status'] = 'sending'
@@ -153,31 +152,16 @@ class Service:
                 png,
                 f"{self.state['data']['kind']}-{request_id}.png",
             )
-
         except DeliveryUncertain:
             self.state['status'] = 'uncertain'
-            self._prompt(
-                'Invio incerto: controlla se la foto è arrivata.'
-            )
-
+            self._prompt('Invio incerto: controlla se la foto è arrivata.')
         except TelegramError:
             self.state['status'] = 'failed'
-            self._prompt(
-                'Telegram ha rifiutato la foto. Riapri ImageGEN e riprova.'
-            )
-
+            self._prompt('Telegram ha rifiutato la foto. Riapri ImageGEN e riprova.')
         else:
-            self.state.update(
-                status='completed',
-                message_id=message_id,
-            )
-
+            self.state.update(status='completed', message_id=message_id)
             self.generated_message_ids.append(int(message_id))
-
-            print(
-                f'INFO IMAGEGEN: foto PNG inviata | id={request_id}',
-                flush=True,
-            )
+            print(f'INFO IMAGEGEN: foto PNG inviata | id={request_id}', flush=True)
 
     def cleanup(self):
         for message_id in reversed(self.generated_message_ids):
@@ -199,7 +183,6 @@ class Service:
                 pass
 
         cleanup_message_id = None
-
         try:
             cleanup_message_id = self.telegram.remove_keyboard()
         except TelegramError:
@@ -217,11 +200,7 @@ class Service:
             pass
 
     def run(self, duration=SESSION_DURATION_SECONDS):
-        webapp_url = os.environ.get(
-            'MANUAL_GRAPHICS_WEBAPP_URL',
-            '',
-        ).strip()
-
+        webapp_url = os.environ.get('MANUAL_GRAPHICS_WEBAPP_URL', '').strip()
         if not webapp_url:
             raise RuntimeError('MANUAL_GRAPHICS_WEBAPP_URL mancante')
 
@@ -232,13 +211,7 @@ class Service:
         query['session'] = self.session
 
         launch_url = urlunsplit(
-            (
-                parts.scheme,
-                parts.netloc,
-                parts.path,
-                urlencode(query),
-                parts.fragment,
-            )
+            (parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment)
         )
 
         try:
@@ -246,20 +219,12 @@ class Service:
         except TelegramError:
             pass
 
-        self.launcher_message_id = self.telegram.webapp_launcher(
-            launch_url
-        )
+        self.launcher_message_id = self.telegram.webapp_launcher(launch_url)
 
-        deadline = (
-            time.monotonic()
-            + min(SESSION_DURATION_SECONDS, max(1, duration))
-        )
+        deadline = time.monotonic() + min(SESSION_DURATION_SECONDS, max(1, duration))
 
         try:
-            while (
-                not self.stopped
-                and time.monotonic() < deadline
-            ):
+            while not self.stopped and time.monotonic() < deadline:
                 self.receive()
                 self.rendering()
         finally:
@@ -267,22 +232,18 @@ class Service:
 
 
 def main():
-    token = os.environ.get(
-        'MANUAL_GRAPHICS_TELEGRAM_TOKEN',
-        '',
-    )
-
-    chat_id = os.environ.get(
-        'MANUAL_GRAPHICS_TELEGRAM_CHAT_ID',
-        '',
-    )
+    token = os.environ.get('MANUAL_GRAPHICS_TELEGRAM_TOKEN', '')
+    chat_id = os.environ.get('MANUAL_GRAPHICS_TELEGRAM_CHAT_ID', '')
 
     telegram = Telegram(token, chat_id)
     telegram.validate_private_chat()
 
+    canva = CanvaTokenProvider()
+    renderer = Renderer(token_provider=canva.refresh_access_token)
+
     service = Service(
         telegram,
-        Renderer(),
+        renderer,
         Catalog(),
         chat_id,
     )
@@ -300,8 +261,5 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as exc:
-        print(
-            f'ERROR IMAGEGEN: {type(exc).__name__}: {exc}',
-            flush=True,
-        )
+        print(f'ERROR IMAGEGEN: {type(exc).__name__}: {exc}', flush=True)
         raise SystemExit(1)

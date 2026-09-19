@@ -17,7 +17,6 @@
       --control:rgba(255,255,255,.16);
       --control-strong:rgba(255,255,255,.22);
     }
-
     html[data-theme="dark"]{
       --bg:#090a0c;--bg2:#111216;--text:#f7f7f8;--muted:#969ba5;
       --glass:rgba(29,31,36,.56);--glass2:rgba(39,41,47,.76);
@@ -28,7 +27,6 @@
       --control:rgba(255,255,255,.08);
       --control-strong:rgba(255,255,255,.11);
     }
-
     *{box-sizing:border-box}
     html{background:var(--bg);min-height:100%}
     body{
@@ -42,19 +40,11 @@
       background-attachment:fixed;
       transition:background-color .2s ease,color .2s ease;
     }
-
     .wrap{width:min(760px,100%);margin:auto}
     .hero{padding:8px 4px 18px}
-    .eyebrow{
-      color:var(--gold);font-size:10px;font-weight:800;letter-spacing:.2em;
-      text-transform:uppercase;margin-bottom:10px
-    }
-    h1{
-      margin:0 0 7px;font-size:clamp(34px,8vw,49px);
-      line-height:1;letter-spacing:-.055em
-    }
+    .eyebrow{color:var(--gold);font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;margin-bottom:10px}
+    h1{margin:0 0 7px;font-size:clamp(34px,8vw,49px);line-height:1;letter-spacing:-.055em}
     .sub{color:var(--muted);font-size:14px}
-
     .card{
       padding:15px;margin-bottom:12px;border:1px solid var(--line);border-radius:27px;
       background:linear-gradient(145deg,var(--glass2),var(--glass));
@@ -62,14 +52,13 @@
       backdrop-filter:blur(28px) saturate(175%);
       -webkit-backdrop-filter:blur(28px) saturate(175%);
     }
-
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .full{grid-column:1/-1}
+    .hidden{display:none!important}
     label{
       display:block;margin:0 0 7px 2px;color:var(--muted);
       font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase
     }
-
     input,select{
       width:100%;min-height:50px;border:1px solid var(--soft);border-radius:17px;
       background:var(--control);color:var(--text);padding:0 13px;
@@ -81,12 +70,14 @@
       box-shadow:0 0 0 4px var(--focus)
     }
     input::placeholder{color:var(--muted);opacity:.72}
-
     .score{display:grid;grid-template-columns:1fr 28px 1fr;align-items:center;gap:8px}
     .score input{text-align:center;font-size:22px;font-weight:750}
     .dash{text-align:center;color:var(--muted)}
-    .hidden{display:none!important}
-
+    .hint{margin-top:7px;color:var(--muted);font-size:11px;line-height:1.35}
+    .error{
+      display:none;margin-bottom:12px;padding:12px 14px;border-radius:18px;
+      background:var(--danger-bg);color:var(--danger);font-size:13px;font-weight:650
+    }
     .stats{display:grid;gap:6px}
     .stat{
       display:grid;grid-template-columns:minmax(115px,1fr) 78px 78px;
@@ -95,13 +86,6 @@
     .stat:last-child{border-bottom:0}
     .stat-name{font-size:12px;font-weight:700}
     .stat input{min-height:42px;text-align:center;padding:0 7px;font-size:13px}
-
-    .error{
-      display:none;margin-bottom:12px;padding:12px 14px;border-radius:18px;
-      background:var(--danger-bg);color:var(--danger);font-size:13px;font-weight:650
-    }
-
-    /* Ricerca + select nativo iOS: nessun overlay HTML. */
     .smart-picker{min-width:0}
     .smart-shell{
       overflow:hidden;border:1px solid var(--soft);border-radius:19px;
@@ -113,10 +97,7 @@
       box-shadow:0 0 0 4px var(--focus);
       background:var(--control-strong)
     }
-
-    .smart-search{
-      position:relative;display:flex;align-items:center;min-height:52px
-    }
+    .smart-search{position:relative;display:flex;align-items:center;min-height:52px}
     .smart-search-icon{
       position:absolute;left:14px;top:50%;transform:translateY(-50%);
       width:17px;height:17px;color:var(--muted);pointer-events:none
@@ -128,22 +109,17 @@
     .smart-clear{
       position:absolute;right:9px;top:50%;transform:translateY(-50%);
       width:32px;height:32px;min-height:0;border:0;border-radius:50%;
-      display:grid;place-items:center;padding:0;
-      color:var(--muted);background:transparent;
-      font-size:22px;line-height:1;letter-spacing:0;
-      opacity:0;pointer-events:none;
-      transition:opacity .14s ease,background .14s ease,color .14s ease
+      display:grid;place-items:center;padding:0;color:var(--muted);
+      background:transparent;font-size:22px;line-height:1;letter-spacing:0;
+      opacity:0;pointer-events:none;transition:opacity .14s ease,background .14s ease,color .14s ease
     }
     .smart-clear.show{opacity:1;pointer-events:auto}
     .smart-clear:active{background:var(--soft);color:var(--text)}
-
     .smart-divider{height:1px;background:var(--soft);margin:0 12px}
-
     .native-choice{
       position:relative;display:grid;grid-template-columns:1fr 30px;
       align-items:center;gap:8px;min-height:61px;padding:9px 12px 9px 14px;
-      user-select:none;-webkit-user-select:none;
-      transition:opacity .16s ease,background .16s ease
+      user-select:none;-webkit-user-select:none;transition:opacity .16s ease,background .16s ease
     }
     .native-choice.ready:active{background:var(--soft)}
     .native-choice.disabled{opacity:.56}
@@ -157,31 +133,19 @@
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis
     }
     .native-value.placeholder{color:var(--muted);font-weight:560}
-    .native-chevron{
-      display:grid;place-items:center;color:var(--muted);
-      font-size:20px;line-height:1;transform:translateY(-1px)
-    }
-
-    /* Il select copre invisibilmente la riga: il tap apre il picker nativo iPhone. */
+    .native-chevron{display:grid;place-items:center;color:var(--muted);font-size:20px;line-height:1;transform:translateY(-1px)}
     .native-choice select.native-select{
       position:absolute;inset:0;width:100%;height:100%;min-height:0;
       opacity:0;border:0;border-radius:0;padding:0;margin:0;
-      appearance:auto;-webkit-appearance:menulist;
-      cursor:pointer
+      appearance:auto;-webkit-appearance:menulist;cursor:pointer
     }
     .native-choice select.native-select:disabled{cursor:default}
-
-    .smart-note{
-      margin:7px 2px 0;color:var(--muted);font-size:10px;font-weight:600;
-      line-height:1.35
-    }
-
+    .smart-note{margin:7px 2px 0;color:var(--muted);font-size:10px;font-weight:600;line-height:1.35}
     .footer{
       position:fixed;z-index:200;left:0;right:0;bottom:0;
       padding:14px 14px calc(14px + env(safe-area-inset-bottom));
       background:linear-gradient(180deg,transparent,var(--bg) 55%);
-      pointer-events:none;
-      opacity:1;transform:translateY(0);visibility:visible;
+      pointer-events:none;opacity:1;transform:translateY(0);visibility:visible;
       transition:opacity .16s ease,transform .22s ease,visibility .16s ease
     }
     body.keyboard-open .footer{
@@ -190,8 +154,7 @@
     .footer-inner{
       width:min(760px,100%);margin:auto;padding:7px;border:1px solid var(--line);
       border-radius:23px;background:var(--glass);
-      backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
-      pointer-events:auto
+      backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);pointer-events:auto
     }
     #generate{
       width:100%;min-height:55px;border:0;border-radius:17px;
@@ -200,20 +163,11 @@
     }
     #generate:active{transform:scale(.992)}
     #generate:disabled{opacity:.45}
-
     @media(max-width:520px){
       .grid{grid-template-columns:1fr}
       .full{grid-column:auto}
       .stat{grid-template-columns:1fr 66px 66px}
       .card{padding:15px}
-    }
-
-    @media(prefers-reduced-motion:reduce){
-      *,*::before,*::after{
-        animation-duration:.01ms!important;
-        animation-iteration-count:1!important;
-        transition-duration:.01ms!important
-      }
     }
   </style>
 </head>
@@ -234,6 +188,9 @@
         <option value="goal">GOAL</option>
         <option value="saved">SAVED</option>
         <option value="kick">KICK OFF</option>
+        <option value="half">HALF TIME</option>
+        <option value="end_of_90">END OF 90'</option>
+        <option value="full">FULL TIME</option>
         <option value="stats">STATS</option>
       </select>
     </div>
@@ -346,6 +303,16 @@
       <div class="dash">−</div>
       <input id="awayScore" type="number" min="0" max="99" placeholder="0">
     </div>
+  </div>
+
+  <div id="shootoutCard" class="card hidden">
+    <label>Rigori (opzionale)</label>
+    <div class="score">
+      <input id="homePens" type="number" min="0" max="99" placeholder="0">
+      <div class="dash">−</div>
+      <input id="awayPens" type="number" min="0" max="99" placeholder="0">
+    </div>
+    <div class="hint">Compilalo solo se il FULL TIME si chiude ai rigori.</div>
   </div>
 
   <div id="statsCard" class="card hidden">
@@ -499,7 +466,6 @@
     typeLabel
   }) {
     const normalizedQuery = norm(query);
-
     select.innerHTML = '';
 
     if (normalizedQuery.length < MIN_SEARCH) {
@@ -527,9 +493,7 @@
     }
 
     const placeholder = new Option(
-      matches.length === 1
-        ? '1 risultato · scegli'
-        : `${matches.length} risultati · scegli`,
+      matches.length === 1 ? '1 risultato · scegli' : `${matches.length} risultati · scegli`,
       ''
     );
     placeholder.disabled = true;
@@ -538,9 +502,7 @@
 
     matches.forEach((item, index) => {
       const option = new Option(item.name, String(index));
-      if (selected && item.name === selected.name) {
-        option.selected = true;
-      }
+      if (selected && item.name === selected.name) option.selected = true;
       select.appendChild(option);
     });
 
@@ -548,9 +510,7 @@
     choice.classList.remove('disabled');
     choice.classList.add('ready');
 
-    status.textContent = matches.length === 1
-      ? '1 risultato'
-      : `${matches.length} risultati`;
+    status.textContent = matches.length === 1 ? '1 risultato' : `${matches.length} risultati`;
 
     if (selected) {
       value.textContent = selected.name;
@@ -564,10 +524,7 @@
   function renderTeamChoice() {
     teamMatches = searchItems(teams, $('opponentSearch').value);
 
-    if (
-      selectedTeam &&
-      !teamMatches.some(item => item.name === selectedTeam.name)
-    ) {
+    if (selectedTeam && !teamMatches.some(item => item.name === selectedTeam.name)) {
       selectedTeam = null;
     }
 
@@ -582,19 +539,13 @@
       typeLabel: 'una squadra'
     });
 
-    $('opponentClear').classList.toggle(
-      'show',
-      Boolean($('opponentSearch').value)
-    );
+    $('opponentClear').classList.toggle('show', Boolean($('opponentSearch').value));
   }
 
   function renderPlayerChoice() {
     playerMatches = searchItems(currentPlayerPool(), $('playerSearch').value);
 
-    if (
-      selectedPlayer &&
-      !playerMatches.some(item => item.name === selectedPlayer.name)
-    ) {
+    if (selectedPlayer && !playerMatches.some(item => item.name === selectedPlayer.name)) {
       selectedPlayer = null;
     }
 
@@ -609,10 +560,7 @@
       typeLabel: $('kind').value === 'saved' ? 'un portiere' : 'un giocatore'
     });
 
-    $('playerClear').classList.toggle(
-      'show',
-      Boolean($('playerSearch').value)
-    );
+    $('playerClear').classList.toggle('show', Boolean($('playerSearch').value));
   }
 
   function clearTeamSearch() {
@@ -636,28 +584,17 @@
         fetch(TEAMS_URL, {cache:'no-store'})
       ]);
 
-      if (!playersResponse.ok || !teamsResponse.ok) {
-        throw new Error();
-      }
+      if (!playersResponse.ok || !teamsResponse.ok) throw new Error();
 
       players = (await playersResponse.json()).players || [];
-
       teams = ((await teamsResponse.json()).teams || [])
-        .filter(team =>
-          !namesFor(team).some(name => norm(name) === 'juventus')
-        );
+        .filter(team => !namesFor(team).some(name => norm(name) === 'juventus'));
 
-      players.sort((a, b) =>
-        a.name.localeCompare(b.name, 'it', {sensitivity:'base'})
-      );
-
-      teams.sort((a, b) =>
-        a.name.localeCompare(b.name, 'it', {sensitivity:'base'})
-      );
+      players.sort((a, b) => a.name.localeCompare(b.name, 'it', {sensitivity:'base'}));
+      teams.sort((a, b) => a.name.localeCompare(b.name, 'it', {sensitivity:'base'}));
 
       renderTeamChoice();
       renderPlayerChoice();
-
     } catch (_) {
       showError('Impossibile caricare giocatori e squadre.');
     }
@@ -665,11 +602,8 @@
 
   function refreshPlayers() {
     const keepers = $('kind').value === 'saved';
-
     $('playerLabel').textContent = keepers ? 'Portiere' : 'Giocatore';
-    $('playerSearch').placeholder = keepers
-      ? 'Cerca portiere…'
-      : 'Cerca giocatore…';
+    $('playerSearch').placeholder = keepers ? 'Cerca portiere…' : 'Cerca giocatore…';
 
     if (selectedPlayer && keepers && selectedPlayer.role !== 'goalkeeper') {
       selectedPlayer = null;
@@ -678,43 +612,34 @@
     renderPlayerChoice();
   }
 
-  function score() {
-    const home = $('homeScore').value.trim();
-    const away = $('awayScore').value.trim();
+  function score(required = true, a = 'homeScore', b = 'awayScore') {
+    const home = $(a).value.trim();
+    const away = $(b).value.trim();
 
+    if (home === '' && away === '') {
+      if (!required) return null;
+      throw new Error('Inserisci entrambi i valori del risultato.');
+    }
     if (home === '' || away === '') {
       throw new Error('Inserisci entrambi i valori del risultato.');
     }
 
     const result = [Number(home), Number(away)];
-
-    if (
-      !result.every(Number.isInteger) ||
-      result.some(value => value < 0 || value > 99)
-    ) {
+    if (!result.every(Number.isInteger) || result.some(value => value < 0 || value > 99)) {
       throw new Error('Risultato non valido.');
     }
-
     return result;
   }
 
   function updateVisibility() {
     const kind = $('kind').value;
+    const isPlayerKind = ['goal','saved'].includes(kind);
+    const isScoreKind = ['goal','saved','half','full','end_of_90'].includes(kind);
 
-    $('playerCard').classList.toggle(
-      'hidden',
-      !['goal','saved'].includes(kind)
-    );
-
-    $('scoreCard').classList.toggle(
-      'hidden',
-      !['goal','saved'].includes(kind)
-    );
-
-    $('statsCard').classList.toggle(
-      'hidden',
-      kind !== 'stats'
-    );
+    $('playerCard').classList.toggle('hidden', !isPlayerKind);
+    $('scoreCard').classList.toggle('hidden', !isScoreKind);
+    $('shootoutCard').classList.toggle('hidden', kind !== 'full');
+    $('statsCard').classList.toggle('hidden', kind !== 'stats');
 
     refreshPlayers();
   }
@@ -722,9 +647,7 @@
   function buildPayload() {
     const kind = $('kind').value;
 
-    if (!selectedTeam) {
-      throw new Error('Cerca l’avversario e selezionalo dal menu.');
-    }
+    if (!selectedTeam) throw new Error('Cerca l’avversario e selezionalo dal menu.');
 
     const data = {
       kind,
@@ -737,57 +660,43 @@
       }
     };
 
-    if (['goal','saved'].includes(kind)) {
+    if (['goal', 'saved'].includes(kind)) {
       if (!selectedPlayer) {
-        throw new Error(
-          kind === 'saved'
-            ? 'Cerca il portiere e selezionalo dal menu.'
-            : 'Cerca il giocatore e selezionalo dal menu.'
-        );
+        throw new Error(kind === 'saved'
+          ? 'Cerca il portiere e selezionalo dal menu.'
+          : 'Cerca il giocatore e selezionalo dal menu.');
       }
-
-      if (!$('minute').value.trim()) {
-        throw new Error('Inserisci il minuto.');
-      }
+      if (!$('minute').value.trim()) throw new Error('Inserisci il minuto.');
 
       data.player = selectedPlayer.name;
       data.minute = $('minute').value.trim();
       data.pose = $('pose').value;
-      data.score = score();
-    }
-
-    if (kind === 'stats') {
+      data.score = score(true);
+    } else if (['half', 'full', 'end_of_90'].includes(kind)) {
+      data.score = score(true);
+      if (kind === 'full') {
+        const pens = score(false, 'homePens', 'awayPens');
+        if (pens) data.shootout = pens;
+      }
+    } else if (kind === 'stats') {
       data.moment = $('moment').value;
-
       data.rows = STATS.map((label, index) => ({
         label,
         home: $(`s${index}h`).value.trim(),
         away: $(`s${index}a`).value.trim()
       })).filter(row => row.home || row.away);
 
-      if (!data.rows.length) {
-        throw new Error('Inserisci almeno una statistica.');
-      }
-
+      if (!data.rows.length) throw new Error('Inserisci almeno una statistica.');
       if (data.rows.some(row => !row.home || !row.away)) {
-        throw new Error(
-          'Completa entrambi i valori delle statistiche.'
-        );
+        throw new Error('Completa entrambi i valori delle statistiche.');
       }
     }
 
     if (!session) {
-      throw new Error(
-        'Sessione non attiva. Avvia ImageGen e apri il pulsante del bot.'
-      );
+      throw new Error('Sessione non attiva. Avvia ImageGen e apri il pulsante del bot.');
     }
 
-    return {
-      v:1,
-      action:'render',
-      session,
-      data
-    };
+    return {v:1, action:'render', session, data};
   }
 
   $('stats').innerHTML = STATS.map((label, index) => `
@@ -798,37 +707,21 @@
     </div>
   `).join('');
 
-  $('opponentSearch').addEventListener('input', () => {
-    selectedTeam = null;
-    renderTeamChoice();
-  });
-
-  $('playerSearch').addEventListener('input', () => {
-    selectedPlayer = null;
-    renderPlayerChoice();
-  });
-
+  $('opponentSearch').addEventListener('input', () => { selectedTeam = null; renderTeamChoice(); });
+  $('playerSearch').addEventListener('input', () => { selectedPlayer = null; renderPlayerChoice(); });
   $('opponentClear').addEventListener('click', clearTeamSearch);
   $('playerClear').addEventListener('click', clearPlayerSearch);
 
   $('opponentSelect').addEventListener('change', () => {
     const index = Number($('opponentSelect').value);
-
-    selectedTeam = Number.isInteger(index) && teamMatches[index]
-      ? teamMatches[index]
-      : null;
-
+    selectedTeam = Number.isInteger(index) && teamMatches[index] ? teamMatches[index] : null;
     renderTeamChoice();
     clearError();
   });
 
   $('playerSelect').addEventListener('change', () => {
     const index = Number($('playerSelect').value);
-
-    selectedPlayer = Number.isInteger(index) && playerMatches[index]
-      ? playerMatches[index]
-      : null;
-
+    selectedPlayer = Number.isInteger(index) && playerMatches[index] ? playerMatches[index] : null;
     renderPlayerChoice();
     clearError();
   });
@@ -837,7 +730,6 @@
 
   $('generate').addEventListener('click', () => {
     clearError();
-
     if (!tg || typeof tg.sendData !== 'function') {
       showError('Apri la Mini App dal pulsante del bot Telegram.');
       return;
@@ -845,16 +737,12 @@
 
     try {
       const raw = JSON.stringify(buildPayload());
-
       if (new TextEncoder().encode(raw).length > 4096) {
         throw new Error('Troppi dati per Telegram.');
       }
-
       $('generate').disabled = true;
       $('generate').textContent = 'INVIO…';
-
       tg.sendData(raw);
-
     } catch (error) {
       $('generate').disabled = false;
       $('generate').textContent = 'GENERA GRAFICA';
