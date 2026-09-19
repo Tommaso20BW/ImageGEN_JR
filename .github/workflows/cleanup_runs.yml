@@ -5,6 +5,7 @@ on:
     workflows:
       - ImageGen
       - ImageGen Check
+      - Refresh Canva Token
     types:
       - completed
 
