@@ -65,6 +65,14 @@
     .stat:last-child{border-bottom:0}.stat-name{font-size:12px;font-weight:700}.stat input{min-height:42px;text-align:center;padding:0 7px;font-size:13px}
     .error{display:none;margin-bottom:12px;padding:12px 14px;border-radius:18px;background:var(--danger-bg);color:var(--danger);font-size:13px;font-weight:650}
     .footer{position:fixed;left:0;right:0;bottom:0;padding:14px 14px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,var(--bg) 55%);pointer-events:none}
+    body.keyboard-open .footer {
+      opacity: 0;
+      transform: translateY(120%);
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity .16s ease, transform .22s ease, visibility .16s ease;
+    }
+
     .footer-inner{width:min(760px,100%);margin:auto;padding:7px;border:1px solid var(--line);border-radius:23px;background:var(--glass);backdrop-filter:blur(28px);pointer-events:auto}
     button{width:100%;min-height:55px;border:0;border-radius:17px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#171308;font-weight:900;letter-spacing:.08em}
     button:disabled{opacity:.45}
@@ -76,6 +84,8 @@
       font-size:19px;line-height:1;pointer-events:none;
     }
     .picker-panel{
+      position: fixed !important;
+      z-index: 99999 !important;
       display:none;position:absolute;z-index:50;left:0;right:0;top:calc(100% + 7px);
       max-height:310px;overflow-y:auto;overscroll-behavior:contain;
       border:1px solid var(--line);border-radius:18px;background:var(--picker);
@@ -224,6 +234,15 @@
   }
 
   applyTheme();
+  function updateKeyboardState() {
+    const active = document.activeElement;
+    const isKeyboardField = !!(active && active.matches && active.matches('input:not([type="hidden"])'));
+    document.body.classList.toggle('keyboard-open', isKeyboardField);
+  }
+
+  document.addEventListener('focusin', updateKeyboardState);
+  document.addEventListener('focusout', () => setTimeout(updateKeyboardState, 80));
+
   if (tg) {
     tg.ready();
     tg.expand();
@@ -243,6 +262,46 @@
   let selectedTeam = null;
 
   const $ = id => document.getElementById(id);
+  function floatPickerPanel(panel, input) {
+    if (!panel || !input) return;
+    if (!panel.dataset.originalParent) {
+      panel.dataset.originalParent = 'saved';
+      panel.__jrOriginalParent = panel.parentNode;
+      panel.__jrOriginalNext = panel.nextSibling;
+      document.body.appendChild(panel);
+    }
+    const rect = input.getBoundingClientRect();
+    const margin = 12;
+    const width = Math.min(rect.width, window.innerWidth - margin * 2);
+    let left = rect.left;
+    if (left + width > window.innerWidth - margin) left = window.innerWidth - margin - width;
+    if (left < margin) left = margin;
+    panel.style.left = left + 'px';
+    panel.style.top = Math.min(window.innerHeight - margin, rect.bottom + 7) + 'px';
+    panel.style.width = width + 'px';
+  }
+
+  function restorePickerPanel(panel) {
+    if (!panel || !panel.__jrOriginalParent) return;
+    const parent = panel.__jrOriginalParent;
+    const next = panel.__jrOriginalNext;
+    if (next && next.parentNode === parent) parent.insertBefore(panel, next);
+    else parent.appendChild(panel);
+    panel.style.left = '';
+    panel.style.top = '';
+    panel.style.width = '';
+  }
+
+  function syncOpenPickers() {
+    const pairs = [
+      [document.getElementById('teamResults'), document.getElementById('opponent')],
+      [document.getElementById('playerResults'), document.getElementById('player')],
+    ];
+    pairs.forEach(([panel, input]) => {
+      if (panel && input && panel.classList.contains('open')) floatPickerPanel(panel, input);
+    });
+  }
+
 
   const foldSpecial = value => String(value || '')
     .replace(/ı/g, 'i')
@@ -300,9 +359,11 @@
   }
 
   function closePickers(except=null) {
-    for (const panel of [$('teamResults'), $('playerResults')]) {
-      if (panel !== except) panel.classList.remove('open');
-    }
+    [document.getElementById('teamResults'), document.getElementById('playerResults')].forEach(panel => {
+      if (!panel) return;
+      if (panel !== except) { panel.classList.remove('open'); restorePickerPanel(panel); }
+    });
+  }
   }
 
   function renderPicker(panel, input, items, onSelect) {
@@ -317,6 +378,7 @@
       info.textContent = 'Nessun risultato';
       panel.appendChild(info);
       panel.classList.add('open');
+    floatPickerPanel(panel, input);
       return;
     }
 
@@ -356,6 +418,7 @@
       : `${matches.length} ${matches.length === 1 ? 'risultato' : 'risultati'}`;
     panel.appendChild(count);
     panel.classList.add('open');
+    floatPickerPanel(panel, input);
   }
 
   function exactItem(items, value) {
@@ -570,6 +633,9 @@
   });
 
   $('kind').addEventListener('change', updateVisibility);
+
+  window.addEventListener('resize', syncOpenPickers);
+  window.addEventListener('scroll', syncOpenPickers, true);
 
   $('generate').addEventListener('click', () => {
     clearError();
