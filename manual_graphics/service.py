@@ -8,7 +8,6 @@ import threading
 import time
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from .canva import CanvaTokenProvider
 from .catalog import Catalog
 from .render import Renderer
 from .telegram import (
@@ -199,11 +198,9 @@ def main():
     telegram = Telegram(token, chat_id)
     telegram.validate_private_chat()
 
-    canva = CanvaTokenProvider()
-    renderer = Renderer(canva.get)
     service = Service(
         telegram,
-        renderer,
+        Renderer(),
         Catalog(),
         chat_id,
     )

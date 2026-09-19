@@ -34,7 +34,6 @@ jobs:
             stats_graphics.py
             stats.html
             team_matching.py
-            canva_page_one.py
             live_logging.py
           sparse-checkout-cone-mode: false
 
@@ -60,10 +59,6 @@ jobs:
           MANUAL_GRAPHICS_TELEGRAM_TOKEN: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_TOKEN }}
           MANUAL_GRAPHICS_TELEGRAM_CHAT_ID: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_CHAT_ID }}
           MANUAL_GRAPHICS_WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/manual_graphics/webapp/
-          CANVA_CLIENT_ID: ${{ secrets.CANVA_CLIENT_ID }}
-          CANVA_CLIENT_SECRET: ${{ secrets.CANVA_CLIENT_SECRET }}
-          CANVA_REFRESH_TOKEN: ${{ secrets.CANVA_REFRESH_TOKEN }}
-          GH_PAT: ${{ secrets.GH_PAT }}
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/_graphics_core
         run: python -u -m manual_graphics.service
 

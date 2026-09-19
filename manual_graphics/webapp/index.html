@@ -61,7 +61,6 @@
     .stats{display:grid;gap:6px}
     .stat{display:grid;grid-template-columns:minmax(115px,1fr) 78px 78px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--soft)}
     .stat:last-child{border-bottom:0}.stat-name{font-size:12px;font-weight:700}.stat input{min-height:42px;text-align:center;padding:0 7px;font-size:13px}
-    .hint{color:var(--muted);font-size:12px;margin-top:9px}
     .error{display:none;margin-bottom:12px;padding:12px 14px;border-radius:18px;background:var(--danger-bg);color:var(--danger);font-size:13px;font-weight:650}
     .footer{position:fixed;left:0;right:0;bottom:0;padding:14px 14px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,var(--bg) 55%);pointer-events:none}
     .footer-inner{width:min(760px,100%);margin:auto;padding:7px;border:1px solid var(--line);border-radius:23px;background:var(--glass);backdrop-filter:blur(28px);pointer-events:auto}
@@ -71,119 +70,112 @@
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="hero">
-      <div class="eyebrow">JUVENTUS REBORN</div>
-      <h1>JR Graphics</h1>
-      <div class="sub">Generatore manuale</div>
+<div class="wrap">
+  <div class="hero">
+    <div class="eyebrow">JUVENTUS REBORN</div>
+    <h1>JR Graphics</h1>
+    <div class="sub">Generatore manuale</div>
+  </div>
+
+  <div id="error" class="error"></div>
+
+  <div class="card grid">
+    <div>
+      <label>Grafica</label>
+      <select id="kind">
+        <option value="goal">GOAL</option>
+        <option value="saved">SAVED</option>
+        <option value="kick">KICK OFF</option>
+        <option value="stats">STATS</option>
+      </select>
     </div>
 
-    <div id="error" class="error"></div>
-
-    <div class="card grid">
-      <div>
-        <label>Grafica</label>
-        <select id="kind">
-          <option value="goal">GOAL</option>
-          <option value="saved">SAVED</option>
-          <option value="kick">KICK OFF</option>
-          <option value="half">HALF TIME</option>
-          <option value="end_of_90">END OF 90'</option>
-          <option value="full">FULL TIME</option>
-          <option value="stats">STATS</option>
-        </select>
-      </div>
-      <div>
-        <label>Competizione</label>
-        <select id="competition">
-          <option value="ita.1">Serie A</option>
-          <option value="ita.coppa_italia">Coppa Italia</option>
-          <option value="ita.super_cup">Supercoppa Italiana</option>
-          <option value="uefa.champions">Champions League</option>
-          <option value="uefa.europa">Europa League</option>
-          <option value="uefa.europa.conf">Conference League</option>
-          <option value="uefa.super_cup">Supercoppa UEFA</option>
-          <option value="fifa.cwc">Mondiale per Club</option>
-        </select>
-      </div>
-      <div>
-        <label>Kit Juventus</label>
-        <select id="kit">
-          <option value="home">Home</option>
-          <option value="away">Away</option>
-          <option value="third">Third</option>
-        </select>
-      </div>
-      <div>
-        <label>Juventus</label>
-        <select id="side">
-          <option value="home">In casa</option>
-          <option value="away">In trasferta</option>
-        </select>
-      </div>
-      <div class="full">
-        <label>Avversario</label>
-        <input id="opponent" list="teams" autocomplete="off" placeholder="Es. Atalanta">
-        <datalist id="teams"></datalist>
-      </div>
+    <div>
+      <label>Competizione</label>
+      <select id="competition">
+        <option value="ita.1">Serie A</option>
+        <option value="ita.coppa_italia">Coppa Italia</option>
+        <option value="ita.super_cup">Supercoppa Italiana</option>
+        <option value="uefa.champions">Champions League</option>
+        <option value="uefa.europa">Europa League</option>
+        <option value="uefa.europa.conf">Conference League</option>
+        <option value="uefa.super_cup">Supercoppa UEFA</option>
+        <option value="fifa.cwc">Mondiale per Club</option>
+      </select>
     </div>
 
-    <div id="playerCard" class="card grid">
-      <div class="full">
-        <label id="playerLabel">Giocatore</label>
-        <input id="player" list="players" autocomplete="off" placeholder="Es. Kenan Yildiz">
-        <datalist id="players"></datalist>
-      </div>
-      <div>
-        <label>Minuto</label>
-        <input id="minute" inputmode="numeric" placeholder="67 o 90+4">
-      </div>
-      <div>
-        <label>Posa</label>
-        <select id="pose">
-          <option value="arms_crossed">Braccia incrociate</option>
-          <option value="pointing">Indica</option>
-        </select>
-      </div>
+    <div>
+      <label>Kit Juventus</label>
+      <select id="kit">
+        <option value="home">Home</option>
+        <option value="away">Away</option>
+        <option value="third">Third</option>
+      </select>
     </div>
 
-    <div id="scoreCard" class="card">
-      <label>Risultato casa - trasferta</label>
-      <div class="score">
-        <input id="homeScore" type="number" min="0" max="99" placeholder="0">
-        <div class="dash">−</div>
-        <input id="awayScore" type="number" min="0" max="99" placeholder="0">
-      </div>
+    <div>
+      <label>Juventus</label>
+      <select id="side">
+        <option value="home">In casa</option>
+        <option value="away">In trasferta</option>
+      </select>
     </div>
 
-    <div id="shootoutCard" class="card hidden">
-      <label>Rigori casa - trasferta</label>
-      <div class="score">
-        <input id="homeShootout" type="number" min="0" max="99">
-        <div class="dash">−</div>
-        <input id="awayShootout" type="number" min="0" max="99">
-      </div>
-      <div class="hint">Lascia vuoto se non ci sono rigori.</div>
-    </div>
-
-    <div id="statsCard" class="card hidden">
-      <div style="margin-bottom:13px">
-        <label>Momento</label>
-        <select id="moment">
-          <option value="HT">HALF TIME</option>
-          <option value="2H_END">END OF 90'</option>
-          <option value="FT">FULL TIME</option>
-        </select>
-      </div>
-      <div id="stats" class="stats"></div>
+    <div class="full">
+      <label>Avversario</label>
+      <input id="opponent" list="teams" autocomplete="off" placeholder="Es. Atalanta">
+      <datalist id="teams"></datalist>
     </div>
   </div>
 
-  <div class="footer">
-    <div class="footer-inner">
-      <button id="generate">GENERA GRAFICA</button>
+  <div id="playerCard" class="card grid">
+    <div class="full">
+      <label id="playerLabel">Giocatore</label>
+      <input id="player" list="players" autocomplete="off" placeholder="Es. Kenan Yildiz">
+      <datalist id="players"></datalist>
+    </div>
+
+    <div>
+      <label>Minuto</label>
+      <input id="minute" inputmode="numeric" placeholder="67 o 90+4">
+    </div>
+
+    <div>
+      <label>Posa</label>
+      <select id="pose">
+        <option value="arms_crossed">Braccia incrociate</option>
+        <option value="pointing">Indica</option>
+      </select>
     </div>
   </div>
+
+  <div id="scoreCard" class="card">
+    <label>Risultato casa - trasferta</label>
+    <div class="score">
+      <input id="homeScore" type="number" min="0" max="99" placeholder="0">
+      <div class="dash">−</div>
+      <input id="awayScore" type="number" min="0" max="99" placeholder="0">
+    </div>
+  </div>
+
+  <div id="statsCard" class="card hidden">
+    <div style="margin-bottom:13px">
+      <label>Momento</label>
+      <select id="moment">
+        <option value="HT">HALF TIME</option>
+        <option value="2H_END">END OF 90'</option>
+        <option value="FT">FULL TIME</option>
+      </select>
+    </div>
+    <div id="stats" class="stats"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-inner">
+    <button id="generate">GENERA GRAFICA</button>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -191,7 +183,7 @@
   const media = window.matchMedia('(prefers-color-scheme: dark)');
   const metaTheme = document.querySelector('meta[name="theme-color"]');
 
-  function theme() {
+  function applyTheme() {
     const value = tg && ['dark','light'].includes(tg.colorScheme)
       ? tg.colorScheme
       : (media.matches ? 'dark' : 'light');
@@ -200,158 +192,253 @@
     metaTheme.setAttribute('content', value === 'dark' ? '#090a0c' : '#eef1f6');
   }
 
-  theme();
+  applyTheme();
   if (tg) {
     tg.ready();
     tg.expand();
-    if (tg.onEvent) tg.onEvent('themeChanged', theme);
+    if (tg.onEvent) tg.onEvent('themeChanged', applyTheme);
   }
-  if (media.addEventListener) media.addEventListener('change', theme);
+  if (media.addEventListener) media.addEventListener('change', applyTheme);
 
   const PLAYERS_URL = 'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/goal_players.json';
   const TEAMS_URL = 'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/assets/goal_graphics/team_logos/fclogo_cache/manifest.json';
   const STATS = ['POSSESSO','xG','TIRI','TIRI IN PORTA','CORNER','FALLI','FUORIGIOCO','AMMONITI','ESPULSI','PARATE','PRECISIONE PASSAGGI','PASSAGGI'];
   const session = new URLSearchParams(location.search).get('session') || '';
-  let players = [], teams = [];
+
+  let players = [];
+  let teams = [];
 
   const $ = id => document.getElementById(id);
-  const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  const esc = v => String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const norm = v => String(v || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g,' ')
+    .trim();
 
-  function error(message) {
+  const esc = v => String(v).replace(
+    /[&<>"]/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])
+  );
+
+  function showError(message) {
     $('error').textContent = message;
     $('error').style.display = 'block';
-    window.scrollTo({top:0,behavior:'smooth'});
+    window.scrollTo({top:0, behavior:'smooth'});
   }
-  function clearError(){ $('error').style.display='none'; }
 
-  async function catalogs() {
+  function clearError() {
+    $('error').style.display = 'none';
+  }
+
+  async function loadCatalogs() {
     try {
       const [p,t] = await Promise.all([
         fetch(PLAYERS_URL,{cache:'no-store'}),
         fetch(TEAMS_URL,{cache:'no-store'})
       ]);
+
       if (!p.ok || !t.ok) throw new Error();
+
       players = (await p.json()).players || [];
-      teams = ((await t.json()).teams || []).filter(x => !norm(x.name).includes('juventus'));
-      $('teams').innerHTML = teams.map(x=>`<option value="${esc(x.name)}"></option>`).join('');
+      teams = ((await t.json()).teams || [])
+        .filter(x => !norm(x.name).includes('juventus'));
+
+      $('teams').innerHTML = teams
+        .map(x => `<option value="${esc(x.name)}"></option>`)
+        .join('');
+
       refreshPlayers();
     } catch (_) {
-      error('Impossibile caricare i cataloghi giocatori/squadre.');
+      showError('Impossibile caricare giocatori e squadre.');
     }
   }
 
-  function refreshPlayers(){
+  function refreshPlayers() {
     const keepers = $('kind').value === 'saved';
     const list = players.filter(x => !keepers || x.role === 'goalkeeper');
-    $('players').innerHTML = list.map(x=>`<option value="${esc(x.name)}"></option>`).join('');
+
+    $('players').innerHTML = list
+      .map(x => `<option value="${esc(x.name)}"></option>`)
+      .join('');
+
     $('playerLabel').textContent = keepers ? 'Portiere' : 'Giocatore';
   }
 
-  function team(value){
-    const q=norm(value);
-    return teams.find(x=>norm(x.name)===q || (x.aliases||[]).some(a=>norm(a)===q));
+  function findTeam(value) {
+    const q = norm(value);
+    return teams.find(
+      x => norm(x.name) === q ||
+      (x.aliases || []).some(a => norm(a) === q)
+    );
   }
 
-  function player(value){
-    const q=norm(value), keepers=$('kind').value==='saved';
-    return players.find(x=>(!keepers || x.role==='goalkeeper') &&
-      (norm(x.name)===q || (x.aliases||[]).some(a=>norm(a)===q)));
+  function findPlayer(value) {
+    const q = norm(value);
+    const keepers = $('kind').value === 'saved';
+
+    return players.find(
+      x => (!keepers || x.role === 'goalkeeper') &&
+      (
+        norm(x.name) === q ||
+        (x.aliases || []).some(a => norm(a) === q)
+      )
+    );
   }
 
-  function score(hId,aId,optional=false){
-    const h=$(hId).value.trim(), a=$(aId).value.trim();
-    if(!h && !a && optional) return null;
-    if(h==='' || a==='') throw new Error('Inserisci entrambi i valori del risultato.');
-    const out=[Number(h),Number(a)];
-    if(!out.every(Number.isInteger) || out.some(x=>x<0 || x>99)) throw new Error('Risultato non valido.');
+  function score() {
+    const h = $('homeScore').value.trim();
+    const a = $('awayScore').value.trim();
+
+    if (h === '' || a === '') {
+      throw new Error('Inserisci entrambi i valori del risultato.');
+    }
+
+    const out = [Number(h), Number(a)];
+
+    if (!out.every(Number.isInteger) || out.some(x => x < 0 || x > 99)) {
+      throw new Error('Risultato non valido.');
+    }
+
     return out;
   }
 
-  function visibility(){
-    const k=$('kind').value;
-    $('playerCard').classList.toggle('hidden',!['goal','saved'].includes(k));
-    $('scoreCard').classList.toggle('hidden',!['goal','saved','half','full','end_of_90'].includes(k));
-    $('shootoutCard').classList.toggle('hidden',k!=='full');
-    $('statsCard').classList.toggle('hidden',k!=='stats');
+  function updateVisibility() {
+    const kind = $('kind').value;
+
+    $('playerCard').classList.toggle(
+      'hidden',
+      !['goal','saved'].includes(kind)
+    );
+
+    $('scoreCard').classList.toggle(
+      'hidden',
+      !['goal','saved'].includes(kind)
+    );
+
+    $('statsCard').classList.toggle(
+      'hidden',
+      kind !== 'stats'
+    );
+
     refreshPlayers();
   }
 
-  function payload(){
-    const k=$('kind').value, opponent=team($('opponent').value);
-    if(!opponent) throw new Error('Seleziona un avversario presente nell’elenco.');
+  function buildPayload() {
+    const kind = $('kind').value;
+    const opponent = findTeam($('opponent').value);
 
-    const data={
-      kind:k,
-      competition:$('competition').value,
-      kit:$('kit').value,
-      side:$('side').value,
-      opponent:{name:opponent.name,id:String(opponent.espn_id||'')}
-    };
-
-    if(['goal','saved'].includes(k)){
-      const p=player($('player').value);
-      if(!p) throw new Error(k==='saved'?'Seleziona un portiere valido.':'Seleziona un giocatore valido.');
-      if(!$('minute').value.trim()) throw new Error('Inserisci il minuto.');
-      data.player=p.name;
-      data.minute=$('minute').value.trim();
-      data.pose=$('pose').value;
-      data.score=score('homeScore','awayScore');
-    } else if(['half','full','end_of_90'].includes(k)){
-      data.score=score('homeScore','awayScore');
-      if(k==='full'){
-        data.shootout=score('homeShootout','awayShootout',true);
-        if(data.shootout && data.shootout[0]===data.shootout[1]) throw new Error('I rigori devono avere un vincitore.');
-      }
-    } else if(k==='stats'){
-      data.moment=$('moment').value;
-      data.rows=STATS.map((label,i)=>({
-        label,
-        home:$(`s${i}h`).value.trim(),
-        away:$(`s${i}a`).value.trim()
-      })).filter(x=>x.home||x.away);
-      if(!data.rows.length) throw new Error('Inserisci almeno una statistica.');
-      if(data.rows.some(x=>!x.home||!x.away)) throw new Error('Completa entrambi i valori delle statistiche.');
+    if (!opponent) {
+      throw new Error('Seleziona un avversario presente nell’elenco.');
     }
 
-    if(!session) throw new Error('Sessione non attiva. Avvia ImageGen e apri il pulsante del bot.');
-    return {v:1,action:'render',session,data};
+    const data = {
+      kind,
+      competition: $('competition').value,
+      kit: $('kit').value,
+      side: $('side').value,
+      opponent: {
+        name: opponent.name,
+        id: String(opponent.espn_id || '')
+      }
+    };
+
+    if (['goal','saved'].includes(kind)) {
+      const p = findPlayer($('player').value);
+
+      if (!p) {
+        throw new Error(
+          kind === 'saved'
+            ? 'Seleziona un portiere valido.'
+            : 'Seleziona un giocatore valido.'
+        );
+      }
+
+      if (!$('minute').value.trim()) {
+        throw new Error('Inserisci il minuto.');
+      }
+
+      data.player = p.name;
+      data.minute = $('minute').value.trim();
+      data.pose = $('pose').value;
+      data.score = score();
+    }
+
+    if (kind === 'stats') {
+      data.moment = $('moment').value;
+      data.rows = STATS.map((label,i) => ({
+        label,
+        home: $(`s${i}h`).value.trim(),
+        away: $(`s${i}a`).value.trim()
+      })).filter(x => x.home || x.away);
+
+      if (!data.rows.length) {
+        throw new Error('Inserisci almeno una statistica.');
+      }
+
+      if (data.rows.some(x => !x.home || !x.away)) {
+        throw new Error('Completa entrambi i valori delle statistiche.');
+      }
+    }
+
+    if (!session) {
+      throw new Error(
+        'Sessione non attiva. Avvia ImageGen e apri il pulsante del bot.'
+      );
+    }
+
+    return {
+      v:1,
+      action:'render',
+      session,
+      data
+    };
   }
 
-  $('stats').innerHTML=STATS.map((label,i)=>`
+  $('stats').innerHTML = STATS.map((label,i) => `
     <div class="stat">
       <div class="stat-name">${label}</div>
       <input id="s${i}h" inputmode="decimal" placeholder="Casa">
       <input id="s${i}a" inputmode="decimal" placeholder="Trasf.">
-    </div>`).join('');
+    </div>
+  `).join('');
 
-  $('kind').addEventListener('change',visibility);
+  $('kind').addEventListener('change', updateVisibility);
 
-  $('generate').addEventListener('click',()=>{
+  $('generate').addEventListener('click', () => {
     clearError();
-    if(!tg || typeof tg.sendData!=='function'){
-      error('Apri la Mini App dal pulsante del bot Telegram.');
+
+    if (!tg || typeof tg.sendData !== 'function') {
+      showError('Apri la Mini App dal pulsante del bot Telegram.');
       return;
     }
-    try{
-      const raw=JSON.stringify(payload());
-      if(new TextEncoder().encode(raw).length>4096) throw new Error('Troppi dati per Telegram.');
-      $('generate').disabled=true;
-      $('generate').textContent='INVIO…';
+
+    try {
+      const raw = JSON.stringify(buildPayload());
+
+      if (new TextEncoder().encode(raw).length > 4096) {
+        throw new Error('Troppi dati per Telegram.');
+      }
+
+      $('generate').disabled = true;
+      $('generate').textContent = 'INVIO…';
       tg.sendData(raw);
-    }catch(e){
-      $('generate').disabled=false;
-      $('generate').textContent='GENERA GRAFICA';
-      error(e.message||'Dati non validi.');
+
+    } catch (e) {
+      $('generate').disabled = false;
+      $('generate').textContent = 'GENERA GRAFICA';
+      showError(e.message || 'Dati non validi.');
     }
   });
 
-  visibility();
-  if(!session){
-    $('generate').disabled=true;
-    error('Generatore non attivo. Avvia il workflow ImageGen.');
+  updateVisibility();
+
+  if (!session) {
+    $('generate').disabled = true;
+    showError('Generatore non attivo. Avvia il workflow ImageGen.');
   }
-  catalogs();
+
+  loadCatalogs();
 })();
 </script>
 </body>

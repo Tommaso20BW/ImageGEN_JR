@@ -1,8 +1,6 @@
-"""Adapters to the production graphics core."""
+"""Adapters to the production graphics core. Canva-free version."""
 from pathlib import Path
 import shutil
-import tempfile
-import requests
 
 from .constants import COMPETITIONS
 
@@ -24,14 +22,9 @@ def teams(data):
 
 
 class Renderer:
-    def __init__(self, token_provider, design_id='DAHI3ytu6yQ'):
-        self.token_provider = token_provider
-        self.design_id = design_id
-
     def render(self, data):
         import goal_graphics as g
         import portrait_graphics as p
-        from canva_page_one import export_page_one
 
         kind = data['kind']
         common = {
@@ -59,25 +52,15 @@ class Renderer:
                 goalkeeper_name=data['player'],
             ).png
 
-        if kind in ('kick', 'half', 'full', 'end_of_90'):
-            with tempfile.TemporaryDirectory(prefix='jr_manual_') as cache:
-                layers = None
-                if kind != 'kick':
-                    with requests.Session() as session:
-                        layers = export_page_one(
-                            session,
-                            self.token_provider(),
-                            self.design_id,
-                            Path(cache),
-                        )
-                return p.phase(
-                    **common,
-                    kind=kind,
-                    home_goals=score[0],
-                    away_goals=score[1],
-                    shootout=data.get('shootout') if kind == 'full' else None,
-                    layers=layers,
-                )
+        if kind == 'kick':
+            return p.phase(
+                **common,
+                kind='kick',
+                home_goals=0,
+                away_goals=0,
+                shootout=None,
+                layers=None,
+            )
 
         if kind == 'stats':
             import stats_graphics as stats
@@ -100,4 +83,4 @@ class Renderer:
                 ):
                     shutil.rmtree(target.parent)
 
-        raise ValueError('Tipo grafica non supportato')
+        raise ValueError('Tipo grafica non supportato in modalità senza Canva')
