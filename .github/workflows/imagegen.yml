@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   generator:
-    name: Generatore manuale - 30 minuti
+    name: Generatore manuale
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
