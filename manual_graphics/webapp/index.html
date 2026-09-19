@@ -14,6 +14,7 @@
       --gold:#b89237;--gold2:#e0c77b;--focus:rgba(184,146,55,.28);
       --danger:#b42336;--danger-bg:rgba(180,35,54,.09);
       --shadow:0 20px 58px rgba(48,58,76,.13);
+      --picker:rgba(249,250,252,.97);
     }
     html[data-theme="dark"]{
       --bg:#090a0c;--bg2:#111216;--text:#f7f7f8;--muted:#969ba5;
@@ -22,6 +23,7 @@
       --gold:#d1b45e;--gold2:#f0d88a;--focus:rgba(209,180,94,.28);
       --danger:#ff9aa6;--danger-bg:rgba(255,107,125,.10);
       --shadow:0 24px 70px rgba(0,0,0,.34);
+      --picker:rgba(25,27,31,.98);
     }
     *{box-sizing:border-box}
     html{background:var(--bg);min-height:100%}
@@ -66,7 +68,36 @@
     .footer-inner{width:min(760px,100%);margin:auto;padding:7px;border:1px solid var(--line);border-radius:23px;background:var(--glass);backdrop-filter:blur(28px);pointer-events:auto}
     button{width:100%;min-height:55px;border:0;border-radius:17px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#171308;font-weight:900;letter-spacing:.08em}
     button:disabled{opacity:.45}
-    @media(max-width:520px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.stat{grid-template-columns:1fr 66px 66px}}
+
+    .picker{position:relative;min-width:0}
+    .picker input{padding-right:40px}
+    .picker::after{
+      content:'⌄';position:absolute;right:15px;top:38px;color:var(--muted);
+      font-size:19px;line-height:1;pointer-events:none;
+    }
+    .picker-panel{
+      display:none;position:absolute;z-index:50;left:0;right:0;top:calc(100% + 7px);
+      max-height:310px;overflow-y:auto;overscroll-behavior:contain;
+      border:1px solid var(--line);border-radius:18px;background:var(--picker);
+      box-shadow:0 18px 50px rgba(0,0,0,.18);padding:6px;
+      -webkit-overflow-scrolling:touch;
+    }
+    .picker-panel.open{display:block}
+    .picker-item{
+      width:100%;min-height:48px;text-align:left;padding:9px 11px;border:0;border-radius:13px;
+      background:transparent;color:var(--text);letter-spacing:0;font-weight:650;
+      display:block;
+    }
+    .picker-item:active,.picker-item.active{background:var(--soft)}
+    .picker-main{font-size:14px;line-height:1.25;display:block}
+    .picker-sub{display:block;color:var(--muted);font-size:11px;font-weight:550;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .picker-info{padding:10px 11px;color:var(--muted);font-size:12px;font-weight:650}
+    .picker-count{padding:6px 11px 8px;color:var(--muted);font-size:10px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;border-top:1px solid var(--soft);margin-top:4px}
+
+    @media(max-width:520px){
+      .grid{grid-template-columns:1fr}.full{grid-column:auto}.stat{grid-template-columns:1fr 66px 66px}
+      .picker-panel{max-height:270px}
+    }
   </style>
 </head>
 <body>
@@ -121,18 +152,18 @@
       </select>
     </div>
 
-    <div class="full">
-      <label>Avversario</label>
-      <input id="opponent" list="teams" autocomplete="off" placeholder="Es. Atalanta">
-      <datalist id="teams"></datalist>
+    <div class="full picker" id="teamPicker">
+      <label for="opponent">Avversario</label>
+      <input id="opponent" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Cerca squadra…">
+      <div id="teamResults" class="picker-panel" role="listbox" aria-label="Risultati squadre"></div>
     </div>
   </div>
 
   <div id="playerCard" class="card grid">
-    <div class="full">
-      <label id="playerLabel">Giocatore</label>
-      <input id="player" list="players" autocomplete="off" placeholder="Es. Kenan Yildiz">
-      <datalist id="players"></datalist>
+    <div class="full picker" id="playerPicker">
+      <label id="playerLabel" for="player">Giocatore</label>
+      <input id="player" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Cerca giocatore…">
+      <div id="playerResults" class="picker-panel" role="listbox" aria-label="Risultati giocatori"></div>
     </div>
 
     <div>
@@ -204,22 +235,59 @@
   const TEAMS_URL = 'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/assets/goal_graphics/team_logos/fclogo_cache/manifest.json';
   const STATS = ['POSSESSO','xG','TIRI','TIRI IN PORTA','CORNER','FALLI','FUORIGIOCO','AMMONITI','ESPULSI','PARATE','PRECISIONE PASSAGGI','PASSAGGI'];
   const session = new URLSearchParams(location.search).get('session') || '';
+  const MAX_RESULTS = 80;
 
   let players = [];
   let teams = [];
+  let selectedPlayer = null;
+  let selectedTeam = null;
 
   const $ = id => document.getElementById(id);
-  const norm = v => String(v || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g,'')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g,' ')
+
+  const foldSpecial = value => String(value || '')
+    .replace(/ı/g, 'i')
+    .replace(/ł/g, 'l')
+    .replace(/đ/g, 'd')
+    .replace(/ð/g, 'd')
+    .replace(/þ/g, 'th')
+    .replace(/ø/g, 'o')
+    .replace(/æ/g, 'ae')
+    .replace(/œ/g, 'oe')
+    .replace(/ß/g, 'ss');
+
+  const norm = value => foldSpecial(String(value || '').toLowerCase())
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
-  const esc = v => String(v).replace(
-    /[&<>"]/g,
-    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])
-  );
+  function namesFor(item) {
+    return [item.name, ...(item.aliases || [])].filter(Boolean);
+  }
+
+  function rankItem(item, query) {
+    if (!query) return 20;
+    const names = namesFor(item).map(norm).filter(Boolean);
+    if (names.some(x => x === query)) return 0;
+    if (names.some(x => x.startsWith(query))) return 1;
+    if (names.some(x => x.split(' ').some(word => word.startsWith(query)))) return 2;
+    if (names.some(x => x.includes(query))) return 3;
+    return Infinity;
+  }
+
+  function searchItems(items, rawQuery) {
+    const query = norm(rawQuery);
+    return items
+      .map(item => ({item, rank: rankItem(item, query)}))
+      .filter(row => Number.isFinite(row.rank))
+      .sort((a,b) => a.rank - b.rank || a.item.name.localeCompare(b.item.name, 'it', {sensitivity:'base'}))
+      .map(row => row.item);
+  }
+
+  function shortAlias(item) {
+    const canonical = norm(item.name);
+    return (item.aliases || []).find(alias => norm(alias) !== canonical) || '';
+  }
 
   function showError(message) {
     $('error').textContent = message;
@@ -229,6 +297,113 @@
 
   function clearError() {
     $('error').style.display = 'none';
+  }
+
+  function closePickers(except=null) {
+    for (const panel of [$('teamResults'), $('playerResults')]) {
+      if (panel !== except) panel.classList.remove('open');
+    }
+  }
+
+  function renderPicker(panel, input, items, onSelect) {
+    const matches = searchItems(items, input.value);
+    const shown = matches.slice(0, MAX_RESULTS);
+
+    panel.innerHTML = '';
+
+    if (!matches.length) {
+      const info = document.createElement('div');
+      info.className = 'picker-info';
+      info.textContent = 'Nessun risultato';
+      panel.appendChild(info);
+      panel.classList.add('open');
+      return;
+    }
+
+    for (const item of shown) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'picker-item';
+      button.setAttribute('role', 'option');
+
+      const main = document.createElement('span');
+      main.className = 'picker-main';
+      main.textContent = item.name;
+      button.appendChild(main);
+
+      const alias = shortAlias(item);
+      if (alias) {
+        const sub = document.createElement('span');
+        sub.className = 'picker-sub';
+        sub.textContent = alias;
+        button.appendChild(sub);
+      }
+
+      button.addEventListener('pointerdown', event => {
+        event.preventDefault();
+        onSelect(item);
+        panel.classList.remove('open');
+        input.blur();
+      });
+
+      panel.appendChild(button);
+    }
+
+    const count = document.createElement('div');
+    count.className = 'picker-count';
+    count.textContent = matches.length > shown.length
+      ? `${shown.length} di ${matches.length} risultati · continua a scrivere per filtrare`
+      : `${matches.length} ${matches.length === 1 ? 'risultato' : 'risultati'}`;
+    panel.appendChild(count);
+    panel.classList.add('open');
+  }
+
+  function exactItem(items, value) {
+    const q = norm(value);
+    if (!q) return null;
+    const exact = items.filter(item => namesFor(item).some(name => norm(name) === q));
+    return exact.length === 1 ? exact[0] : null;
+  }
+
+  function currentPlayerPool() {
+    const keepers = $('kind').value === 'saved';
+    return players.filter(player => !keepers || player.role === 'goalkeeper');
+  }
+
+  function wirePicker(input, panel, getItems, setSelected) {
+    input.addEventListener('focus', () => {
+      closePickers(panel);
+      renderPicker(panel, input, getItems(), item => {
+        input.value = item.name;
+        setSelected(item);
+      });
+    });
+
+    input.addEventListener('input', () => {
+      setSelected(null);
+      closePickers(panel);
+      renderPicker(panel, input, getItems(), item => {
+        input.value = item.name;
+        setSelected(item);
+      });
+    });
+
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        panel.classList.remove('open');
+        input.blur();
+      }
+      if (event.key === 'Enter') {
+        const exact = exactItem(getItems(), input.value);
+        if (exact) {
+          event.preventDefault();
+          input.value = exact.name;
+          setSelected(exact);
+          panel.classList.remove('open');
+          input.blur();
+        }
+      }
+    });
   }
 
   async function loadCatalogs() {
@@ -242,11 +417,10 @@
 
       players = (await p.json()).players || [];
       teams = ((await t.json()).teams || [])
-        .filter(x => !norm(x.name).includes('juventus'));
+        .filter(team => !namesFor(team).some(name => norm(name) === 'juventus'));
 
-      $('teams').innerHTML = teams
-        .map(x => `<option value="${esc(x.name)}"></option>`)
-        .join('');
+      players.sort((a,b) => a.name.localeCompare(b.name, 'it', {sensitivity:'base'}));
+      teams.sort((a,b) => a.name.localeCompare(b.name, 'it', {sensitivity:'base'}));
 
       refreshPlayers();
     } catch (_) {
@@ -256,34 +430,34 @@
 
   function refreshPlayers() {
     const keepers = $('kind').value === 'saved';
-    const list = players.filter(x => !keepers || x.role === 'goalkeeper');
-
-    $('players').innerHTML = list
-      .map(x => `<option value="${esc(x.name)}"></option>`)
-      .join('');
-
     $('playerLabel').textContent = keepers ? 'Portiere' : 'Giocatore';
+
+    if (selectedPlayer && keepers && selectedPlayer.role !== 'goalkeeper') {
+      selectedPlayer = null;
+      $('player').value = '';
+    }
+
+    if ($('playerResults').classList.contains('open')) {
+      renderPicker($('playerResults'), $('player'), currentPlayerPool(), item => {
+        $('player').value = item.name;
+        selectedPlayer = item;
+      });
+    }
   }
 
-  function findTeam(value) {
-    const q = norm(value);
-    return teams.find(
-      x => norm(x.name) === q ||
-      (x.aliases || []).some(a => norm(a) === q)
-    );
+  function resolvedTeam() {
+    if (selectedTeam && norm(selectedTeam.name) === norm($('opponent').value)) {
+      return selectedTeam;
+    }
+    return exactItem(teams, $('opponent').value);
   }
 
-  function findPlayer(value) {
-    const q = norm(value);
-    const keepers = $('kind').value === 'saved';
-
-    return players.find(
-      x => (!keepers || x.role === 'goalkeeper') &&
-      (
-        norm(x.name) === q ||
-        (x.aliases || []).some(a => norm(a) === q)
-      )
-    );
+  function resolvedPlayer() {
+    const pool = currentPlayerPool();
+    if (selectedPlayer && norm(selectedPlayer.name) === norm($('player').value)) {
+      return selectedPlayer;
+    }
+    return exactItem(pool, $('player').value);
   }
 
   function score() {
@@ -295,41 +469,28 @@
     }
 
     const out = [Number(h), Number(a)];
-
     if (!out.every(Number.isInteger) || out.some(x => x < 0 || x > 99)) {
       throw new Error('Risultato non valido.');
     }
-
     return out;
   }
 
   function updateVisibility() {
     const kind = $('kind').value;
 
-    $('playerCard').classList.toggle(
-      'hidden',
-      !['goal','saved'].includes(kind)
-    );
-
-    $('scoreCard').classList.toggle(
-      'hidden',
-      !['goal','saved'].includes(kind)
-    );
-
-    $('statsCard').classList.toggle(
-      'hidden',
-      kind !== 'stats'
-    );
+    $('playerCard').classList.toggle('hidden', !['goal','saved'].includes(kind));
+    $('scoreCard').classList.toggle('hidden', !['goal','saved'].includes(kind));
+    $('statsCard').classList.toggle('hidden', kind !== 'stats');
 
     refreshPlayers();
   }
 
   function buildPayload() {
     const kind = $('kind').value;
-    const opponent = findTeam($('opponent').value);
+    const opponent = resolvedTeam();
 
     if (!opponent) {
-      throw new Error('Seleziona un avversario presente nell’elenco.');
+      throw new Error('Seleziona un avversario dall’elenco dei risultati.');
     }
 
     const data = {
@@ -344,13 +505,13 @@
     };
 
     if (['goal','saved'].includes(kind)) {
-      const p = findPlayer($('player').value);
+      const player = resolvedPlayer();
 
-      if (!p) {
+      if (!player) {
         throw new Error(
           kind === 'saved'
-            ? 'Seleziona un portiere valido.'
-            : 'Seleziona un giocatore valido.'
+            ? 'Seleziona un portiere dall’elenco dei risultati.'
+            : 'Seleziona un giocatore dall’elenco dei risultati.'
         );
       }
 
@@ -358,7 +519,7 @@
         throw new Error('Inserisci il minuto.');
       }
 
-      data.player = p.name;
+      data.player = player.name;
       data.minute = $('minute').value.trim();
       data.pose = $('pose').value;
       data.score = score();
@@ -370,29 +531,22 @@
         label,
         home: $(`s${i}h`).value.trim(),
         away: $(`s${i}a`).value.trim()
-      })).filter(x => x.home || x.away);
+      })).filter(row => row.home || row.away);
 
       if (!data.rows.length) {
         throw new Error('Inserisci almeno una statistica.');
       }
 
-      if (data.rows.some(x => !x.home || !x.away)) {
+      if (data.rows.some(row => !row.home || !row.away)) {
         throw new Error('Completa entrambi i valori delle statistiche.');
       }
     }
 
     if (!session) {
-      throw new Error(
-        'Sessione non attiva. Avvia ImageGen e apri il pulsante del bot.'
-      );
+      throw new Error('Sessione non attiva. Avvia ImageGen e apri il pulsante del bot.');
     }
 
-    return {
-      v:1,
-      action:'render',
-      session,
-      data
-    };
+    return {v:1, action:'render', session, data};
   }
 
   $('stats').innerHTML = STATS.map((label,i) => `
@@ -402,6 +556,18 @@
       <input id="s${i}a" inputmode="decimal" placeholder="Trasf.">
     </div>
   `).join('');
+
+  wirePicker($('opponent'), $('teamResults'), () => teams, item => {
+    selectedTeam = item;
+  });
+
+  wirePicker($('player'), $('playerResults'), currentPlayerPool, item => {
+    selectedPlayer = item;
+  });
+
+  document.addEventListener('pointerdown', event => {
+    if (!event.target.closest('.picker')) closePickers();
+  });
 
   $('kind').addEventListener('change', updateVisibility);
 
@@ -424,10 +590,10 @@
       $('generate').textContent = 'INVIO…';
       tg.sendData(raw);
 
-    } catch (e) {
+    } catch (error) {
       $('generate').disabled = false;
       $('generate').textContent = 'GENERA GRAFICA';
-      showError(e.message || 'Dati non validi.');
+      showError(error.message || 'Dati non validi.');
     }
   });
 
