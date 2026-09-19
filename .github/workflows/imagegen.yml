@@ -83,10 +83,10 @@ jobs:
         env:
           MANUAL_GRAPHICS_TELEGRAM_TOKEN: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_TOKEN }}
           MANUAL_GRAPHICS_TELEGRAM_CHAT_ID: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_CHAT_ID }}
-          MANUAL_GRAPHICS_WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/manual_graphics/webapp/
+          MANUAL_GRAPHICS_WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           IMAGEGEN_CANVA_CLIENT_ID: ${{ secrets.IMAGEGEN_CANVA_CLIENT_ID }}
           IMAGEGEN_CANVA_CLIENT_SECRET: ${{ secrets.IMAGEGEN_CANVA_CLIENT_SECRET }}
           IMAGEGEN_CANVA_REFRESH_TOKEN: ${{ secrets.IMAGEGEN_CANVA_REFRESH_TOKEN }}
           IMAGEGEN_GH_PAT: ${{ secrets.IMAGEGEN_GH_PAT }}
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/_graphics_core
-        run: python -u -m manual_graphics.service
+        run: python -u service.py

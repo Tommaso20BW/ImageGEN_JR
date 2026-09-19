@@ -1,5 +1,5 @@
 """Manual workflow to refresh the Canva token and update the GitHub secret."""
-from .canva import CanvaTokenProvider
+from canva import CanvaTokenProvider
 
 
 def main():

@@ -8,16 +8,16 @@ import threading
 import time
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from .canva import CanvaTokenProvider
-from .catalog import Catalog
-from .render import Renderer
-from .telegram import (
+from canva import CanvaTokenProvider
+from catalog import Catalog
+from render import Renderer
+from telegram import (
     DeliveryUncertain,
     Telegram,
     TelegramError,
     authorized,
 )
-from .webapp_payload import parse_webapp_update
+from webapp_payload import parse_webapp_update
 
 
 SESSION_DURATION_SECONDS = 600

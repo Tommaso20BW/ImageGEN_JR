@@ -3,7 +3,7 @@ import json
 import math
 import uuid
 
-from .constants import COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
+from constants import COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
 
 VALID_KINDS = {value for _, value in KINDS}
 VALID_COMPETITIONS = {value for _, value in COMPETITIONS}

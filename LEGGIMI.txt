@@ -1,0 +1,26 @@
+MIGRAZIONE ROOT + FIX HALF/FULL/END OF 90
+
+QUESTO PACCHETTO:
+- sposta tutto in root
+- elimina la dipendenza da manual_graphics/ e manual_graphics/webapp/
+- mantiene il fix per HALF TIME / END OF 90' / FULL TIME
+- aggiorna i workflow per usare index.html in root
+- aggiunge il workflow manuale Refresh Canva Token
+
+FILE ROOT DA TENERE
+index.html
+service.py
+telegram.py
+render.py
+catalog.py
+constants.py
+webapp_payload.py
+canva.py
+refresh_canva_token.py
+requirements.txt
+.github/workflows/imagegen.yml
+.github/workflows/refresh_canva_token.yml
+
+CARTELLE DA TOGLIERE
+manual_graphics
+webapp

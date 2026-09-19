@@ -5,7 +5,7 @@ import tempfile
 
 import requests
 
-from .constants import COMPETITIONS
+from constants import COMPETITIONS
 
 
 def teams(data):

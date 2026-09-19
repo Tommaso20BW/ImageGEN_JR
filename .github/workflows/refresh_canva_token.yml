@@ -37,4 +37,5 @@ jobs:
           IMAGEGEN_CANVA_CLIENT_SECRET: ${{ secrets.IMAGEGEN_CANVA_CLIENT_SECRET }}
           IMAGEGEN_CANVA_REFRESH_TOKEN: ${{ secrets.IMAGEGEN_CANVA_REFRESH_TOKEN }}
           IMAGEGEN_GH_PAT: ${{ secrets.IMAGEGEN_GH_PAT }}
-        run: python -u -m manual_graphics.refresh_canva_token
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python -u refresh_canva_token.py
