@@ -1,5 +1,7 @@
 """Telegram transport for the dedicated manual graphics bot."""
 import json
+from urllib.parse import urlparse
+
 import requests
 
 
@@ -58,7 +60,9 @@ class Telegram:
     def validate_private_chat(self):
         chat = self.call('getChat', {'chat_id': self.chat_id})
         if chat.get('type') != 'private' or str(chat.get('id')) != self.chat_id:
-            raise TelegramError('MANUAL_GRAPHICS_TELEGRAM_CHAT_ID deve essere una chat privata')
+            raise TelegramError(
+                'MANUAL_GRAPHICS_TELEGRAM_CHAT_ID deve essere una chat privata'
+            )
         return int(chat['id'])
 
     def poll(self, offset, timeout=10):
@@ -86,20 +90,37 @@ class Telegram:
             data['reply_markup'] = json.dumps(keyboard)
         return self.call('sendMessage', data)['message_id']
 
-    def webapp_launcher(self, url):
+    def reset_menu_button(self):
+        return self.call(
+            'setChatMenuButton',
+            {
+                'chat_id': self.chat_id,
+                'menu_button': json.dumps({'type': 'default'}),
+            },
+        )
+
+    def webapp_keyboard(self, url):
+        parsed = urlparse(str(url).strip())
+        if parsed.scheme != 'https' or not parsed.netloc:
+            raise TelegramError('URL Mini App non HTTPS')
+
         keyboard = {
             'keyboard': [[{
-                'text': 'Apri ImageGEN',
+                'text': 'ImageGEN',
                 'web_app': {'url': str(url).strip()},
             }]],
             'resize_keyboard': True,
             'is_persistent': True,
-            'input_field_placeholder': 'Apri il generatore',
+            'input_field_placeholder': 'ImageGEN',
         }
-        return self.prompt('🎨 ImageGEN attivo per 30 minuti.', keyboard)
+
+        # Telegram requires a message to attach a ReplyKeyboardMarkup.
+        # The service deletes this message immediately; the keyboard remains
+        # until ReplyKeyboardRemove is sent at cleanup.
+        return self.prompt('\u2063', keyboard)
 
     def remove_keyboard(self):
-        return self.prompt('ImageGEN chiuso.', {'remove_keyboard': True})
+        return self.prompt('\u2063', {'remove_keyboard': True})
 
     def delete(self, message_id):
         return self.call(

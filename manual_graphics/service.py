@@ -1,4 +1,4 @@
-"""Dedicated manually-started 30-minute Telegram Mini App service."""
+"""Dedicated manually-started 10-minute Telegram Mini App service."""
 import copy
 import os
 import queue
@@ -19,6 +19,9 @@ from .telegram import (
 from .webapp_payload import parse_webapp_update
 
 
+SESSION_DURATION_SECONDS = 600
+
+
 class Service:
     def __init__(self, telegram, renderer, catalog, chat_id):
         self.telegram = telegram
@@ -35,7 +38,7 @@ class Service:
         self.stopped = False
         self.generated_message_ids = []
         self.bot_message_ids = []
-        self.launcher_message_id = None
+        self.keyboard_message_id = None
 
     def _remember_bot_message(self, message_id):
         try:
@@ -127,7 +130,7 @@ class Service:
         if error:
             self.state['status'] = 'failed'
             print(f'ERROR IMAGEGEN: {error}', flush=True)
-            self._prompt('Grafica non generata. Riapri la Mini App e riprova.')
+            self._prompt('Grafica non generata. Riapri ImageGEN e riprova.')
             return
 
         self.state['status'] = 'sending'
@@ -142,7 +145,9 @@ class Service:
             self._prompt('Invio incerto: controlla se il PNG è arrivato.')
         except TelegramError:
             self.state['status'] = 'failed'
-            self._prompt('Telegram ha rifiutato il PNG. Riapri la Mini App e riprova.')
+            self._prompt(
+                'Telegram ha rifiutato il PNG. Riapri ImageGEN e riprova.'
+            )
         else:
             self.state.update(
                 status='completed',
@@ -167,12 +172,6 @@ class Service:
             except TelegramError:
                 pass
 
-        if self.launcher_message_id:
-            try:
-                self.telegram.delete(self.launcher_message_id)
-            except TelegramError:
-                pass
-
         cleanup_message_id = None
         try:
             cleanup_message_id = self.telegram.remove_keyboard()
@@ -185,7 +184,12 @@ class Service:
             except TelegramError:
                 pass
 
-    def run(self, duration=1800):
+        try:
+            self.telegram.reset_menu_button()
+        except TelegramError:
+            pass
+
+    def run(self, duration=SESSION_DURATION_SECONDS):
         webapp_url = os.environ.get(
             'MANUAL_GRAPHICS_WEBAPP_URL',
             '',
@@ -208,8 +212,18 @@ class Service:
             )
         )
 
-        self.launcher_message_id = self.telegram.webapp_launcher(launch_url)
-        deadline = time.monotonic() + min(1800, max(1, duration))
+        try:
+            self.telegram.reset_menu_button()
+        except TelegramError:
+            pass
+
+        self.keyboard_message_id = self.telegram.webapp_keyboard(launch_url)
+        try:
+            self.telegram.delete(self.keyboard_message_id)
+        except TelegramError:
+            self._remember_bot_message(self.keyboard_message_id)
+
+        deadline = time.monotonic() + min(SESSION_DURATION_SECONDS, max(1, duration))
 
         try:
             while not self.stopped and time.monotonic() < deadline:
