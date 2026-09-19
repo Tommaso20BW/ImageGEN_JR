@@ -427,6 +427,7 @@
   let selectedTeam = null;
   let playerMatches = [];
   let teamMatches = [];
+  let pendingChoiceAdvance = null;
 
   const $ = id => document.getElementById(id);
 
@@ -600,6 +601,7 @@
   }
 
   function clearTeamSearch() {
+    pendingChoiceAdvance = null;
     $('opponentSearch').value = '';
     selectedTeam = null;
     renderTeamChoice();
@@ -607,6 +609,7 @@
   }
 
   function clearPlayerSearch() {
+    pendingChoiceAdvance = null;
     $('playerSearch').value = '';
     selectedPlayer = null;
     renderPlayerChoice();
@@ -706,6 +709,54 @@
     });
   }
 
+  function openNativeChoice(select, choice, source) {
+    pendingChoiceAdvance = source;
+    clearError();
+
+    const active = document.activeElement;
+    if (active && active.blur) active.blur();
+
+    choice.scrollIntoView({
+      behavior:'smooth',
+      block:'center',
+      inline:'nearest'
+    });
+
+    try {
+      select.focus({preventScroll:true});
+    } catch (_) {
+      select.focus();
+    }
+
+    // Modern Safari/WebViews can expose showPicker(). If unavailable,
+    // fall back to click() while still inside the user's Enter action.
+    try {
+      if (typeof select.showPicker === 'function') {
+        select.showPicker();
+      } else {
+        select.click();
+      }
+    } catch (_) {
+      try { select.click(); } catch (_) {}
+    }
+  }
+
+  function continueAfterChoice(searchField) {
+    pendingChoiceAdvance = null;
+    updateEnterKeyHints();
+
+    const fields = keyboardFields();
+    const index = fields.indexOf(searchField);
+    const next = index >= 0 ? fields[index + 1] : null;
+
+    if (next) {
+      focusKeyboardField(next);
+      return;
+    }
+
+    submitGraphic();
+  }
+
   function resolveSearchBeforeNext(field) {
     if (field === $('opponentSearch')) {
       if (selectedTeam) return true;
@@ -723,11 +774,16 @@
         return true;
       }
 
-      showError(
-        teamMatches.length
-          ? 'Seleziona l’avversario dal menu sotto la ricerca.'
-          : 'Cerca e seleziona un avversario.'
-      );
+      if (teamMatches.length > 1) {
+        openNativeChoice(
+          $('opponentSelect'),
+          $('opponentChoice'),
+          'opponent'
+        );
+        return false;
+      }
+
+      showError('Cerca e seleziona un avversario.');
       return false;
     }
 
@@ -747,11 +803,16 @@
         return true;
       }
 
-      showError(
-        playerMatches.length
-          ? 'Seleziona il giocatore dal menu sotto la ricerca.'
-          : 'Cerca e seleziona un giocatore.'
-      );
+      if (playerMatches.length > 1) {
+        openNativeChoice(
+          $('playerSelect'),
+          $('playerChoice'),
+          'player'
+        );
+        return false;
+      }
+
+      showError('Cerca e seleziona un giocatore.');
       return false;
     }
 
@@ -851,8 +912,16 @@
     </div>
   `).join('');
 
-  $('opponentSearch').addEventListener('input', () => { selectedTeam = null; renderTeamChoice(); });
-  $('playerSearch').addEventListener('input', () => { selectedPlayer = null; renderPlayerChoice(); });
+  $('opponentSearch').addEventListener('input', () => {
+    pendingChoiceAdvance = null;
+    selectedTeam = null;
+    renderTeamChoice();
+  });
+  $('playerSearch').addEventListener('input', () => {
+    pendingChoiceAdvance = null;
+    selectedPlayer = null;
+    renderPlayerChoice();
+  });
   $('opponentClear').addEventListener('click', clearTeamSearch);
   $('playerClear').addEventListener('click', clearPlayerSearch);
 
@@ -861,6 +930,12 @@
     selectedTeam = Number.isInteger(index) && teamMatches[index] ? teamMatches[index] : null;
     renderTeamChoice();
     clearError();
+
+    if (selectedTeam && pendingChoiceAdvance === 'opponent') {
+      $('opponentSearch').value = selectedTeam.name;
+      renderTeamChoice();
+      setTimeout(() => continueAfterChoice($('opponentSearch')), 80);
+    }
   });
 
   $('playerSelect').addEventListener('change', () => {
@@ -868,6 +943,12 @@
     selectedPlayer = Number.isInteger(index) && playerMatches[index] ? playerMatches[index] : null;
     renderPlayerChoice();
     clearError();
+
+    if (selectedPlayer && pendingChoiceAdvance === 'player') {
+      $('playerSearch').value = selectedPlayer.name;
+      renderPlayerChoice();
+      setTimeout(() => continueAfterChoice($('playerSearch')), 80);
+    }
   });
 
   $('kind').addEventListener('change', updateVisibility);
