@@ -148,6 +148,9 @@
       pointer-events:none;opacity:1;transform:translateY(0);visibility:visible;
       transition:opacity .16s ease,transform .22s ease,visibility .16s ease
     }
+    body.keyboard-open{
+      padding-bottom:calc(20px + env(safe-area-inset-bottom))
+    }
     body.keyboard-open .footer{
       opacity:0;transform:translateY(120%);visibility:hidden;pointer-events:none
     }
@@ -235,7 +238,7 @@
             <path d="M16 16L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
           <input id="opponentSearch" autocomplete="off" autocapitalize="words"
-                 spellcheck="false" placeholder="Cerca squadra…">
+                 spellcheck="false" enterkeyhint="next" placeholder="Cerca squadra…">
           <button id="opponentClear" class="smart-clear" type="button" aria-label="Cancella ricerca">×</button>
         </div>
         <div class="smart-divider"></div>
@@ -264,7 +267,7 @@
             <path d="M16 16L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
           <input id="playerSearch" autocomplete="off" autocapitalize="words"
-                 spellcheck="false" placeholder="Cerca giocatore…">
+                 spellcheck="false" enterkeyhint="next" placeholder="Cerca giocatore…">
           <button id="playerClear" class="smart-clear" type="button" aria-label="Cancella ricerca">×</button>
         </div>
         <div class="smart-divider"></div>
@@ -284,7 +287,7 @@
 
     <div>
       <label>Minuto</label>
-      <input id="minute" inputmode="numeric" placeholder="67 o 90+4">
+      <input id="minute" inputmode="numeric" enterkeyhint="next" placeholder="67 o 90+4">
     </div>
 
     <div>
@@ -299,18 +302,18 @@
   <div id="scoreCard" class="card">
     <label>Risultato casa - trasferta</label>
     <div class="score">
-      <input id="homeScore" type="number" min="0" max="99" placeholder="0">
+      <input id="homeScore" type="number" min="0" max="99" enterkeyhint="next" placeholder="0">
       <div class="dash">−</div>
-      <input id="awayScore" type="number" min="0" max="99" placeholder="0">
+      <input id="awayScore" type="number" min="0" max="99" enterkeyhint="send" placeholder="0">
     </div>
   </div>
 
   <div id="shootoutCard" class="card hidden">
     <label>Rigori (opzionale)</label>
     <div class="score">
-      <input id="homePens" type="number" min="0" max="99" placeholder="0">
+      <input id="homePens" type="number" min="0" max="99" enterkeyhint="next" placeholder="0">
       <div class="dash">−</div>
-      <input id="awayPens" type="number" min="0" max="99" placeholder="0">
+      <input id="awayPens" type="number" min="0" max="99" enterkeyhint="send" placeholder="0">
     </div>
     <div class="hint">Compilalo solo se il FULL TIME si chiude ai rigori.</div>
   </div>
@@ -359,18 +362,49 @@
   }
   if (media.addEventListener) media.addEventListener('change', applyTheme);
 
+  let maxViewportHeight = (
+    window.visualViewport ? window.visualViewport.height : window.innerHeight
+  );
+
+  function currentViewportHeight() {
+    return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  }
+
   function updateKeyboardState() {
+    const height = currentViewportHeight();
+    maxViewportHeight = Math.max(maxViewportHeight, height);
+
     const active = document.activeElement;
-    const isKeyboardField = !!(
+    const hasInputFocus = !!(
       active &&
       active.matches &&
       active.matches('input:not([type="hidden"])')
     );
-    document.body.classList.toggle('keyboard-open', isKeyboardField);
+
+    // iOS/Telegram can keep an input focused even after the keyboard closes.
+    // Use the real visual viewport so the footer/body do not remain in a
+    // "keyboard open" layout by mistake.
+    const viewportReduced = (maxViewportHeight - height) > 90;
+    document.body.classList.toggle(
+      'keyboard-open',
+      hasInputFocus && viewportReduced
+    );
   }
 
-  document.addEventListener('focusin', updateKeyboardState);
-  document.addEventListener('focusout', () => setTimeout(updateKeyboardState, 80));
+  document.addEventListener('focusin', () => {
+    setTimeout(updateKeyboardState, 30);
+    setTimeout(updateKeyboardState, 220);
+  });
+  document.addEventListener('focusout', () => {
+    setTimeout(updateKeyboardState, 120);
+    setTimeout(updateKeyboardState, 320);
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateKeyboardState);
+    window.visualViewport.addEventListener('scroll', updateKeyboardState);
+  }
+  window.addEventListener('resize', updateKeyboardState);
 
   const PLAYERS_URL =
     'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/goal_players.json';
@@ -443,7 +477,9 @@
   function showError(message) {
     $('error').textContent = message;
     $('error').style.display = 'block';
-    window.scrollTo({top:0, behavior:'smooth'});
+    if (!document.body.classList.contains('keyboard-open')) {
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
   }
 
   function clearError() {
@@ -642,6 +678,114 @@
     $('statsCard').classList.toggle('hidden', kind !== 'stats');
 
     refreshPlayers();
+    requestAnimationFrame(updateEnterKeyHints);
+  }
+
+  function keyboardFields() {
+    return Array.from(document.querySelectorAll('input:not([type="hidden"])'))
+      .filter(field => {
+        if (field.disabled) return false;
+        const box = field.getBoundingClientRect();
+        const style = window.getComputedStyle(field);
+        return (
+          style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          box.width > 0 &&
+          box.height > 0
+        );
+      });
+  }
+
+  function updateEnterKeyHints() {
+    const fields = keyboardFields();
+    fields.forEach((field, index) => {
+      field.setAttribute(
+        'enterkeyhint',
+        index === fields.length - 1 ? 'send' : 'next'
+      );
+    });
+  }
+
+  function resolveSearchBeforeNext(field) {
+    if (field === $('opponentSearch')) {
+      if (selectedTeam) return true;
+
+      const query = norm(field.value);
+      const exact = teamMatches.find(item =>
+        namesFor(item).some(name => norm(name) === query)
+      );
+
+      if (exact || teamMatches.length === 1) {
+        selectedTeam = exact || teamMatches[0];
+        field.value = selectedTeam.name;
+        renderTeamChoice();
+        clearError();
+        return true;
+      }
+
+      showError(
+        teamMatches.length
+          ? 'Seleziona l’avversario dal menu sotto la ricerca.'
+          : 'Cerca e seleziona un avversario.'
+      );
+      return false;
+    }
+
+    if (field === $('playerSearch')) {
+      if (selectedPlayer) return true;
+
+      const query = norm(field.value);
+      const exact = playerMatches.find(item =>
+        namesFor(item).some(name => norm(name) === query)
+      );
+
+      if (exact || playerMatches.length === 1) {
+        selectedPlayer = exact || playerMatches[0];
+        field.value = selectedPlayer.name;
+        renderPlayerChoice();
+        clearError();
+        return true;
+      }
+
+      showError(
+        playerMatches.length
+          ? 'Seleziona il giocatore dal menu sotto la ricerca.'
+          : 'Cerca e seleziona un giocatore.'
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  function focusKeyboardField(field) {
+    if (!field) return;
+    field.focus({preventScroll:true});
+    setTimeout(() => {
+      field.scrollIntoView({
+        behavior:'smooth',
+        block:'center',
+        inline:'nearest'
+      });
+    }, 80);
+  }
+
+  function handleKeyboardNext(field) {
+    if (!resolveSearchBeforeNext(field)) return;
+
+    updateEnterKeyHints();
+    const fields = keyboardFields();
+    const index = fields.indexOf(field);
+    const next = index >= 0 ? fields[index + 1] : null;
+
+    if (next) {
+      clearError();
+      focusKeyboardField(next);
+      return;
+    }
+
+    field.blur();
+    submitGraphic();
   }
 
   function buildPayload() {
@@ -702,8 +846,8 @@
   $('stats').innerHTML = STATS.map((label, index) => `
     <div class="stat">
       <div class="stat-name">${label}</div>
-      <input id="s${index}h" inputmode="decimal" placeholder="Casa">
-      <input id="s${index}a" inputmode="decimal" placeholder="Trasf.">
+      <input id="s${index}h" inputmode="decimal" enterkeyhint="next" placeholder="Casa">
+      <input id="s${index}a" inputmode="decimal" enterkeyhint="next" placeholder="Trasf.">
     </div>
   `).join('');
 
@@ -728,8 +872,11 @@
 
   $('kind').addEventListener('change', updateVisibility);
 
-  $('generate').addEventListener('click', () => {
+  function submitGraphic() {
     clearError();
+
+    if ($('generate').disabled) return;
+
     if (!tg || typeof tg.sendData !== 'function') {
       showError('Apri la Mini App dal pulsante del bot Telegram.');
       return;
@@ -740,6 +887,7 @@
       if (new TextEncoder().encode(raw).length > 4096) {
         throw new Error('Troppi dati per Telegram.');
       }
+
       $('generate').disabled = true;
       $('generate').textContent = 'INVIO…';
       tg.sendData(raw);
@@ -748,9 +896,29 @@
       $('generate').textContent = 'GENERA GRAFICA';
       showError(error.message || 'Dati non validi.');
     }
+  }
+
+  document.addEventListener('keydown', event => {
+    const field = event.target;
+
+    if (
+      event.key !== 'Enter' ||
+      !field ||
+      !field.matches ||
+      !field.matches('input:not([type="hidden"])')
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    handleKeyboardNext(field);
   });
 
+  $('generate').addEventListener('click', submitGraphic);
+
   updateVisibility();
+  updateEnterKeyHints();
+  updateKeyboardState();
 
   if (!session) {
     $('generate').disabled = true;
