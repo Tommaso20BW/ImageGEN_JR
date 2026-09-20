@@ -94,7 +94,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/_graphics_core
         run: python -u service.py
 
-      - name: Elimina vecchi run ImageGen
+      - name: Elimina vecchi run ImageGen e Pages
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -104,10 +104,28 @@ jobs:
 
           CURRENT_RUN_ID="${{ github.run_id }}"
 
-          gh api --paginate             "repos/${{ github.repository }}/actions/workflows/imagegen.yml/runs?per_page=100"             --jq '.workflow_runs[] | select(.status == "completed") | .id' |
+          echo "Pulisco vecchi run di ImageGen..."
+          gh api --paginate \
+            "repos/${{ github.repository }}/actions/workflows/imagegen.yml/runs?per_page=100" \
+            --jq '.workflow_runs[] | select(.status == "completed") | .id' |
           while read -r RUN_ID; do
             if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "$CURRENT_RUN_ID" ]; then
               echo "Elimino vecchio run ImageGen $RUN_ID"
-              gh api -X DELETE                 "repos/${{ github.repository }}/actions/runs/$RUN_ID"                 || true
+              gh api -X DELETE \
+                "repos/${{ github.repository }}/actions/runs/$RUN_ID" \
+                || true
+            fi
+          done
+
+          echo "Pulisco vecchi run di pages build and deployment..."
+          gh api --paginate \
+            "repos/${{ github.repository }}/actions/runs?per_page=100" \
+            --jq '.workflow_runs[] | select(.name == "pages build and deployment" and .status == "completed") | .id' |
+          while read -r RUN_ID; do
+            if [ -n "$RUN_ID" ]; then
+              echo "Elimino vecchio run Pages $RUN_ID"
+              gh api -X DELETE \
+                "repos/${{ github.repository }}/actions/runs/$RUN_ID" \
+                || true
             fi
           done
