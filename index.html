@@ -765,12 +765,14 @@
 
   const PLAYERS_URLS = [
     'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/goal_players.json',
-    'https://cdn.jsdelivr.net/gh/Tommaso20BW/LiveScore_JR@main/goal_players.json'
+    'https://cdn.jsdelivr.net/gh/Tommaso20BW/LiveScore_JR@main/goal_players.json',
+    'https://api.github.com/repos/Tommaso20BW/LiveScore_JR/contents/goal_players.json?ref=main'
   ];
 
   const TEAMS_URLS = [
     'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/assets/goal_graphics/team_logos/fclogo_cache/manifest.json',
-    'https://cdn.jsdelivr.net/gh/Tommaso20BW/LiveScore_JR@main/assets/goal_graphics/team_logos/fclogo_cache/manifest.json'
+    'https://cdn.jsdelivr.net/gh/Tommaso20BW/LiveScore_JR@main/assets/goal_graphics/team_logos/fclogo_cache/manifest.json',
+    'https://api.github.com/repos/Tommaso20BW/LiveScore_JR/contents/assets/goal_graphics/team_logos/fclogo_cache/manifest.json?ref=main'
   ];
 
   const KINDS = [
@@ -839,6 +841,9 @@
   let teamMatches = [];
   let selectedPlayer = null;
   let selectedTeam = null;
+  let playersLoaded = false;
+  let teamsLoaded = false;
+  let catalogRetryTimer = null;
 
   let flow = [];
   let flowIndex = 0;
@@ -1078,13 +1083,15 @@
 
   function refreshSearchSummaries() {
     const tq = $('opponentSearch').value;
-    teamMatches = searchItems(teams,tq);
+    teamMatches = teamsLoaded ? searchItems(teams,tq) : [];
 
     if (selectedTeam && !teamMatches.some(item => item.name === selectedTeam.name)) {
       if (norm(tq) !== norm(selectedTeam.name)) selectedTeam = null;
     }
 
-    if (norm(tq).length < MIN_SEARCH) {
+    if (!teamsLoaded) {
+      $('opponentSummary').textContent = 'Caricamento squadre…';
+    } else if (norm(tq).length < MIN_SEARCH) {
       $('opponentSummary').textContent = 'Scrivi almeno 2 caratteri.';
     } else if (!teamMatches.length) {
       $('opponentSummary').textContent = 'Nessun risultato.';
@@ -1095,13 +1102,15 @@
     }
 
     const pq = $('playerSearch').value;
-    playerMatches = searchItems(currentPlayerPool(),pq);
+    playerMatches = playersLoaded ? searchItems(currentPlayerPool(),pq) : [];
 
     if (selectedPlayer && !playerMatches.some(item => item.name === selectedPlayer.name)) {
       if (norm(pq) !== norm(selectedPlayer.name)) selectedPlayer = null;
     }
 
-    if (norm(pq).length < MIN_SEARCH) {
+    if (!playersLoaded) {
+      $('playerSummary').textContent = 'Caricamento giocatori…';
+    } else if (norm(pq).length < MIN_SEARCH) {
       $('playerSummary').textContent = 'Scrivi almeno 2 caratteri.';
     } else if (!playerMatches.length) {
       $('playerSummary').textContent = 'Nessun risultato.';
@@ -1113,6 +1122,11 @@
   }
 
   function resolveTeam() {
+    if (!teamsLoaded) {
+      showError('Sto ancora caricando le squadre. Riprova tra un attimo.');
+      loadCatalogs();
+      return false;
+    }
     if (selectedTeam) return true;
     const query = norm($('opponentSearch').value);
     const exact = teamMatches.find(item => namesFor(item).some(name => norm(name) === query));
@@ -1139,6 +1153,11 @@
   }
 
   function resolvePlayer() {
+    if (!playersLoaded) {
+      showError('Sto ancora caricando i giocatori. Riprova tra un attimo.');
+      loadCatalogs();
+      return false;
+    }
     if (selectedPlayer) return true;
     const query = norm($('playerSearch').value);
     const exact = playerMatches.find(item => namesFor(item).some(name => norm(name) === query));
@@ -1389,6 +1408,19 @@
     }
   }
 
+  function decodeGithubContent(payload) {
+    if (!payload || typeof payload !== 'object' || !payload.content) return null;
+
+    try {
+      const clean = String(payload.content).replace(/\s+/g,'');
+      const binary = atob(clean);
+      const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+      return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+    } catch (_) {
+      return null;
+    }
+  }
+
   async function fetchCatalog(urls, label) {
     let lastError = null;
 
@@ -1399,14 +1431,26 @@
 
         const response = await fetch(url,{
           cache:'no-store',
-          headers:{'Accept':'application/json'}
+          headers:{
+            'Accept': baseUrl.includes('api.github.com')
+              ? 'application/vnd.github+json'
+              : 'application/json'
+          }
         });
 
         if (!response.ok) {
           throw new Error(`${label}: HTTP ${response.status}`);
         }
 
-        const data = await response.json();
+        const payload = await response.json();
+
+        // GitHub Contents API restituisce il file in base64.
+        const decoded = baseUrl.includes('api.github.com')
+          ? decodeGithubContent(payload)
+          : payload;
+
+        const data = decoded || payload;
+
         if (!data || typeof data !== 'object') {
           throw new Error(`${label}: JSON non valido`);
         }
@@ -1421,50 +1465,54 @@
   }
 
   async function loadCatalogs() {
-    $('opponentSummary').textContent = 'Caricamento squadre…';
-    $('playerSummary').textContent = 'Caricamento giocatori…';
+    if (!playersLoaded) $('playerSummary').textContent = 'Caricamento giocatori…';
+    if (!teamsLoaded) $('opponentSummary').textContent = 'Caricamento squadre…';
 
     const [playersResult,teamsResult] = await Promise.allSettled([
-      fetchCatalog(PLAYERS_URLS,'Giocatori'),
-      fetchCatalog(TEAMS_URLS,'Squadre')
+      playersLoaded
+        ? Promise.resolve({players})
+        : fetchCatalog(PLAYERS_URLS,'Giocatori'),
+      teamsLoaded
+        ? Promise.resolve({teams})
+        : fetchCatalog(TEAMS_URLS,'Squadre')
     ]);
 
     if (playersResult.status === 'fulfilled') {
-      players = Array.isArray(playersResult.value.players)
+      const rows = Array.isArray(playersResult.value.players)
         ? playersResult.value.players
         : [];
 
-      players.sort((a,b) =>
-        String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
-      );
-    } else {
-      players = [];
+      if (rows.length) {
+        players = rows;
+        players.sort((a,b) =>
+          String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
+        );
+        playersLoaded = true;
+      }
     }
 
     if (teamsResult.status === 'fulfilled') {
-      teams = Array.isArray(teamsResult.value.teams)
+      const rows = Array.isArray(teamsResult.value.teams)
         ? teamsResult.value.teams
         : [];
 
-      teams = teams
-        .filter(team => team && team.name)
-        .filter(team => !namesFor(team).some(name => norm(name) === 'juventus'));
+      if (rows.length) {
+        teams = rows
+          .filter(team => team && team.name)
+          .filter(team => !namesFor(team).some(name => norm(name) === 'juventus'));
 
-      teams.sort((a,b) =>
-        String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
-      );
-    } else {
-      teams = [];
+        teams.sort((a,b) =>
+          String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
+        );
+        teamsLoaded = teams.length > 0;
+      }
     }
 
     refreshSearchSummaries();
 
-    const errors = [];
-    if (!players.length) errors.push('giocatori');
-    if (!teams.length) errors.push('squadre');
-
-    if (errors.length) {
-      showError(`Impossibile caricare il catalogo ${errors.join(' e ')}. Riprova tra qualche secondo.`);
+    if (!playersLoaded || !teamsLoaded) {
+      clearTimeout(catalogRetryTimer);
+      catalogRetryTimer = setTimeout(loadCatalogs, 1800);
     }
   }
 
@@ -1568,7 +1616,7 @@
   window.addEventListener('resize',updateViewport);
 
   document.addEventListener('visibilitychange',() => {
-    if (!document.hidden && (!players.length || !teams.length)) {
+    if (!document.hidden && (!playersLoaded || !teamsLoaded)) {
       loadCatalogs();
     }
   });
