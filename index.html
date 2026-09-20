@@ -69,7 +69,7 @@
       display:grid;
       grid-template-rows:auto minmax(0,1fr);
       padding:
-        calc(12px + env(safe-area-inset-top))
+        calc(62px + env(safe-area-inset-top))
         16px
         0;
       transition:height .14s ease;
@@ -84,16 +84,15 @@
       border-bottom:1px solid var(--line);
     }
 
-    .menu-btn,.top-back{
+    .menu-btn{
       width:40px;height:40px;border:0;border-radius:6px;
       background:transparent;color:var(--text);
       display:grid;place-items:center;padding:0;
     }
-    .menu-btn:active,.top-back:active{background:var(--panel2)}
+    .menu-btn:active{background:var(--panel2)}
     .hamburger{width:19px;display:grid;gap:4px}
     .hamburger span{height:1.5px;background:currentColor;border-radius:2px}
 
-    .top-back:disabled{opacity:.28}
 
     .brand{text-align:center;min-width:0}
     .brand-title{
@@ -126,7 +125,21 @@
         calc(94px + env(safe-area-inset-bottom));
     }
     .screen::-webkit-scrollbar{display:none}
-    .screen.active{display:block}
+    .screen.active{
+      display:block;
+      animation:screenForward .22s cubic-bezier(.22,.72,.25,1) both;
+    }
+    .screen.active.enter-back{
+      animation-name:screenBackward;
+    }
+    @keyframes screenForward{
+      from{opacity:0;transform:translateX(16px)}
+      to{opacity:1;transform:translateX(0)}
+    }
+    @keyframes screenBackward{
+      from{opacity:0;transform:translateX(-16px)}
+      to{opacity:1;transform:translateX(0)}
+    }
 
     .eyebrow{
       color:var(--gold);
@@ -178,7 +191,13 @@
       text-align:left;
       padding:0 16px;
     }
-    .field-button:active{background:var(--panel2)}
+    .field-button{
+      transition:background .14s ease,transform .14s ease;
+    }
+    .field-button:active{
+      background:var(--panel2);
+      transform:scale(.995);
+    }
     .field-label{
       display:block;
       color:var(--muted);
@@ -301,7 +320,10 @@
       font-weight:860;
       box-shadow:none;
     }
-    .next-btn:active{transform:scale(.988)}
+    .next-btn{
+      transition:transform .14s ease,filter .14s ease,opacity .14s ease;
+    }
+    .next-btn:active{transform:scale(.975)}
     .next-btn:disabled{opacity:.45}
 
     .sheet-layer{
@@ -318,7 +340,7 @@
       position:absolute;
       left:50%;
       bottom:calc(var(--keyboard-inset) + 74px + env(safe-area-inset-bottom));
-      transform:translateX(-50%);
+      transform:translate(-50%,18px) scale(.985);
       width:min(728px,calc(100% - 24px));
       max-height:min(62vh,560px);
       display:grid;
@@ -328,7 +350,15 @@
       border-radius:10px;
       box-shadow:0 18px 50px rgba(0,0,0,.22);
       overflow:hidden;
-      transition:bottom .12s ease;
+      opacity:0;
+      transition:
+        bottom .12s ease,
+        transform .22s cubic-bezier(.22,.72,.25,1),
+        opacity .18s ease;
+    }
+    .sheet-layer.open .sheet{
+      transform:translate(-50%,0) scale(1);
+      opacity:1;
     }
     .sheet-head{
       display:grid;
@@ -369,7 +399,13 @@
       font-size:15px;
       font-weight:650;
     }
-    .sheet-option:active{background:var(--panel2)}
+    .sheet-option{
+      transition:background .14s ease,transform .14s ease;
+    }
+    .sheet-option:active{
+      background:var(--panel2);
+      transform:scale(.992);
+    }
     .sheet-option.selected{background:color-mix(in srgb,var(--gold) 10%,var(--panel2))}
     .check{color:var(--gold);font-weight:900}
 
@@ -384,16 +420,22 @@
     .hamburger-panel.open{display:block}
     .drawer{
       position:absolute;
-      top:0;left:0;bottom:0;
+      top:0;right:0;left:auto;bottom:0;
       width:min(84vw,360px);
       padding:
-        calc(18px + env(safe-area-inset-top))
+        calc(72px + env(safe-area-inset-top))
         14px
         calc(18px + env(safe-area-inset-bottom));
       background:var(--sheetbg);
-      border-right:1px solid var(--line);
-      box-shadow:18px 0 60px rgba(0,0,0,.22);
+      border-left:1px solid var(--line);
+      box-shadow:-18px 0 60px rgba(0,0,0,.22);
       overflow-y:auto;
+      transform:translateX(100%);
+      transition:transform .24s cubic-bezier(.22,.72,.25,1);
+      will-change:transform;
+    }
+    .hamburger-panel.open .drawer{
+      transform:translateX(0);
     }
     .drawer-top{
       display:flex;align-items:center;justify-content:space-between;
@@ -424,7 +466,13 @@
       display:flex;align-items:center;justify-content:space-between;gap:10px;
       font-size:15px;font-weight:700;
     }
-    .kind-option:active{background:var(--panel2)}
+    .kind-option{
+      transition:background .14s ease,transform .14s ease;
+    }
+    .kind-option:active{
+      background:var(--panel2);
+      transform:translateX(-2px);
+    }
     .kind-option.selected{
       background:color-mix(in srgb,var(--gold) 11%,var(--panel2));
       color:var(--text);
@@ -443,6 +491,15 @@
       margin-top:8px;color:var(--muted);font-size:11px;line-height:1.4;
     }
 
+    @media (prefers-reduced-motion: reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        animation-iteration-count:1!important;
+        transition-duration:.01ms!important;
+        scroll-behavior:auto!important;
+      }
+    }
+
     @media(max-width:520px){
       .screen{padding-top:24px}
       .stats-pairs{gap:9px}
@@ -454,9 +511,9 @@
 <body>
   <main class="app">
     <header class="topbar">
-      <button id="topBack" class="top-back" type="button" aria-label="Indietro">‹</button>
+      <div aria-hidden="true"></div>
       <div class="brand">
-        <div class="brand-title">IMAGEGEN <span>JR</span></div>
+        <div class="brand-title">ImageGEN <span>JR</span></div>
         <div id="kindSubtitle" class="brand-sub">GOAL</div>
       </div>
       <button id="menuButton" class="menu-btn" type="button" aria-label="Menu">
@@ -636,7 +693,7 @@
   <div id="drawerLayer" class="hamburger-panel" aria-hidden="true">
     <aside class="drawer">
       <div class="drawer-top">
-        <div class="drawer-title">IMAGEGEN <span>JR</span></div>
+        <div class="drawer-title">ImageGEN <span>JR</span></div>
         <button id="drawerClose" class="drawer-close" type="button" aria-label="Chiudi">×</button>
       </div>
       <div class="drawer-label">Tipo grafica</div>
@@ -759,6 +816,7 @@
 
   let flow = [];
   let flowIndex = 0;
+  let navDirection = 'forward';
   let statCursor = 0;
   const statRows = Object.fromEntries(STATS.map(label => [label,{home:'',away:''}]));
 
@@ -825,18 +883,20 @@
   }
 
   function renderFlow() {
-    document.querySelectorAll('[data-screen]').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('[data-screen]').forEach(el => {
+      el.classList.remove('active','enter-back');
+    });
 
     const screenName = flow[flowIndex];
     const screen = document.querySelector(`[data-screen="${screenName}"]`);
     if (screen) {
+      if (navDirection === 'backward') screen.classList.add('enter-back');
       screen.classList.add('active');
       screen.scrollTop = 0;
     }
 
     $('stepCounter').textContent = `${flowIndex + 1} / ${flow.length}`;
     $('backButton').disabled = flowIndex === 0;
-    $('topBack').disabled = flowIndex === 0;
     $('nextButton').textContent = flowIndex === flow.length - 1 ? 'Invia ✓' : 'Avanti ›';
     $('kindSubtitle').textContent = labelOf(KINDS,kind);
 
@@ -975,9 +1035,11 @@
       button.innerHTML = `<span>${label}</span><span class="check">${value === kind ? '✓' : ''}</span>`;
       button.addEventListener('click', () => {
         kind = value;
+        $('kindSubtitle').textContent = labelOf(KINDS,kind);
         selectedPlayer = null;
         $('playerSearch').value = '';
         buildFlow();
+        navDirection = 'forward';
         flowIndex = 0;
         statCursor = 0;
         refreshSearchSummaries();
@@ -1148,6 +1210,7 @@
     if (validate && !validateCurrent()) return;
 
     if (flow[flowIndex] === 'stats' && statCursor < STATS.length - 1) {
+      navDirection = 'forward';
       statCursor += 1;
       renderStatScreen();
       autoFocusCurrent();
@@ -1159,6 +1222,7 @@
       return;
     }
 
+    navDirection = 'forward';
     flowIndex += 1;
     renderFlow();
   }
@@ -1169,6 +1233,7 @@
 
     if (flow[flowIndex] === 'stats' && statCursor > 0) {
       saveCurrentStatDraft();
+      navDirection = 'backward';
       statCursor -= 1;
       renderStatScreen();
       autoFocusCurrent();
@@ -1176,6 +1241,7 @@
     }
 
     if (flowIndex <= 0) return;
+    navDirection = 'backward';
     flowIndex -= 1;
     renderFlow();
   }
@@ -1401,7 +1467,6 @@
 
   $('nextButton').addEventListener('click',() => nextField(true));
   $('backButton').addEventListener('click',previousField);
-  $('topBack').addEventListener('click',previousField);
 
   $('menuButton').addEventListener('click',openDrawer);
   $('drawerClose').addEventListener('click',closeDrawer);
