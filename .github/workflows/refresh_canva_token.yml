@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: imagegen-jr
@@ -39,3 +40,21 @@ jobs:
           IMAGEGEN_GH_PAT: ${{ secrets.IMAGEGEN_GH_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python -u refresh_canva_token.py
+
+      - name: Elimina vecchi run Refresh Canva Token
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CURRENT_RUN_ID="${{ github.run_id }}"
+
+          gh api --paginate             "repos/${{ github.repository }}/actions/workflows/refresh_canva_token.yml/runs?per_page=100"             --jq '.workflow_runs[] | select(.status == "completed") | .id' |
+          while read -r RUN_ID; do
+            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "$CURRENT_RUN_ID" ]; then
+              echo "Elimino vecchio run Refresh Canva Token $RUN_ID"
+              gh api -X DELETE                 "repos/${{ github.repository }}/actions/runs/$RUN_ID"                 || true
+            fi
+          done
