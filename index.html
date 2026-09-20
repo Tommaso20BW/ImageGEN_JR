@@ -236,6 +236,33 @@
       line-height:1.4;
     }
 
+    .minute-field{
+      position:relative;
+    }
+    .minute-field .search-box{
+      padding-right:86px;
+    }
+    .minute-plus{
+      position:absolute;
+      right:10px;
+      top:50%;
+      transform:translateY(-50%);
+      border:0;
+      background:transparent;
+      color:var(--muted);
+      min-height:34px;
+      padding:0 4px;
+      font-size:10px;
+      font-weight:850;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      transition:color .14s ease,transform .14s ease;
+    }
+    .minute-plus:active{
+      color:var(--gold);
+      transform:translateY(-50%) scale(.96);
+    }
+
     .number-row{
       display:grid;
       grid-template-columns:1fr 32px 1fr;
@@ -619,8 +646,9 @@
         <div class="eyebrow">Evento</div>
         <h1>Minuto.</h1>
         <p class="lead">Inserisci il minuto dell’azione.</p>
-        <div class="field-card">
+        <div class="field-card minute-field">
           <input id="minute" class="search-box" inputmode="numeric" enterkeyhint="done" placeholder="67 o 90+4">
+          <button id="minutePlus" class="minute-plus" type="button" aria-label="Aggiungi recupero">+ recupero</button>
         </div>
       </section>
 
@@ -1219,8 +1247,13 @@
     if (step === 'player') return resolvePlayer();
 
     if (step === 'minute') {
-      if (!$('minute').value.trim()) {
+      const minuteValue = $('minute').value.trim();
+      if (!minuteValue) {
         showError('Inserisci il minuto.');
+        return false;
+      }
+      if (!/^\d{1,3}(?:\+\d{1,2})?$/.test(minuteValue)) {
+        showError('Formato minuto non valido. Esempi: 45, 45+2, 90+5.');
         return false;
       }
     }
@@ -1629,6 +1662,20 @@
       await loadCatalogs();
       refreshSearchSummaries();
     }
+  });
+
+  $('minutePlus').addEventListener('click',() => {
+    const input = $('minute');
+    const value = input.value.trim();
+
+    if (value && !value.includes('+')) {
+      input.value = value + '+';
+    }
+
+    input.focus({preventScroll:true});
+    try {
+      input.setSelectionRange(input.value.length,input.value.length);
+    } catch (_) {}
   });
 
   // Il tasto Return della tastiera non naviga: la navigazione resta sempre nei due pulsanti in basso.
