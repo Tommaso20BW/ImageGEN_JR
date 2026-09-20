@@ -81,11 +81,47 @@ jobs:
             playwright install --with-deps chromium
           fi
 
+      - name: Attendi aggiornamento GitHub Pages
+        shell: bash
+        env:
+          WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: |
+          set -euo pipefail
+
+          EXPECTED="$(sha256sum index.html | awk '{print $1}')"
+          ACTUAL=""
+
+          echo "Attendo che GitHub Pages pubblichi l'index.html di questo commit..."
+
+          for ATTEMPT in $(seq 1 36); do
+            URL="${WEBAPP_URL}?v=${GITHUB_SHA}&check=${ATTEMPT}"
+
+            if curl -fsSL \
+              -H 'Cache-Control: no-cache' \
+              -H 'Pragma: no-cache' \
+              "$URL" \
+              -o /tmp/imagegen_pages.html; then
+
+              ACTUAL="$(sha256sum /tmp/imagegen_pages.html | awk '{print $1}')"
+
+              if [ "$ACTUAL" = "$EXPECTED" ]; then
+                echo "GitHub Pages aggiornato correttamente."
+                exit 0
+              fi
+            fi
+
+            echo "Pages ancora vecchio | tentativo ${ATTEMPT}/36"
+            sleep 5
+          done
+
+          echo "ERRORE: GitHub Pages non ha ancora pubblicato l'index.html corrente."
+          exit 1
+
       - name: Avvia generatore Telegram
         env:
           MANUAL_GRAPHICS_TELEGRAM_TOKEN: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_TOKEN }}
           MANUAL_GRAPHICS_TELEGRAM_CHAT_ID: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_CHAT_ID }}
-          MANUAL_GRAPHICS_WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          MANUAL_GRAPHICS_WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/?v=${{ github.sha }}
           IMAGEGEN_CANVA_CLIENT_ID: ${{ secrets.IMAGEGEN_CANVA_CLIENT_ID }}
           IMAGEGEN_CANVA_CLIENT_SECRET: ${{ secrets.IMAGEGEN_CANVA_CLIENT_SECRET }}
           IMAGEGEN_CANVA_REFRESH_TOKEN: ${{ secrets.IMAGEGEN_CANVA_REFRESH_TOKEN }}
