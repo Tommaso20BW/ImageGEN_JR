@@ -1132,8 +1132,7 @@
 
   function resolveTeam() {
     if (!teamsLoaded) {
-      showError('Sto ancora caricando le squadre. Riprova tra un attimo.');
-      loadCatalogs();
+      showError('Impossibile caricare le squadre. Riprova.');
       return false;
     }
     if (selectedTeam) return true;
@@ -1163,8 +1162,7 @@
 
   function resolvePlayer() {
     if (!playersLoaded) {
-      showError('Sto ancora caricando i giocatori. Riprova tra un attimo.');
-      loadCatalogs();
+      showError('Impossibile caricare i giocatori. Riprova.');
       return false;
     }
     if (selectedPlayer) return true;
@@ -1258,10 +1256,24 @@
     return true;
   }
 
-  function nextField(validate=true) {
+  async function nextField(validate=true) {
     clearError();
 
-    if (validate && !validateCurrent()) return;
+    if (validate) {
+      const step = flow[flowIndex];
+
+      if (step === 'opponent' && !teamsLoaded) {
+        await loadCatalogs();
+        refreshSearchSummaries();
+      }
+
+      if (step === 'player' && !playersLoaded) {
+        await loadCatalogs();
+        refreshSearchSummaries();
+      }
+
+      if (!validateCurrent()) return;
+    }
 
     if (flow[flowIndex] === 'stats' && statCursor < STATS.length - 1) {
       navDirection = 'forward';
@@ -1600,14 +1612,24 @@
     })
   );
 
-  $('opponentSearch').addEventListener('input',() => {
+  $('opponentSearch').addEventListener('input',async () => {
     selectedTeam = null;
     refreshSearchSummaries();
+
+    if (!teamsLoaded) {
+      await loadCatalogs();
+      refreshSearchSummaries();
+    }
   });
 
-  $('playerSearch').addEventListener('input',() => {
+  $('playerSearch').addEventListener('input',async () => {
     selectedPlayer = null;
     refreshSearchSummaries();
+
+    if (!playersLoaded) {
+      await loadCatalogs();
+      refreshSearchSummaries();
+    }
   });
 
   // Il tasto Return della tastiera non naviga: la navigazione resta sempre nei due pulsanti in basso.
@@ -1650,6 +1672,10 @@
   restoreCatalogCache();
   refreshSearchSummaries();
 
+  // Parte immediatamente. Se c'è già la cache, la ricerca è disponibile subito;
+  // altrimenti il caricamento continua mentre l'utente compila i primi campi.
+  loadCatalogs();
+
   buildFlow();
   renderKindMenu();
   renderFlow();
@@ -1658,8 +1684,6 @@
   if (!session) {
     showError('Generatore non attivo. Avvia il workflow ImageGen.');
   }
-
-  loadCatalogs();
 })();
 </script>
 </body>
