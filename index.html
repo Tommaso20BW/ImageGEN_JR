@@ -348,25 +348,25 @@
     .sheet{
       position:absolute;
       left:50%;
-      bottom:calc(var(--keyboard-inset) + 74px + env(safe-area-inset-bottom));
-      transform:translate(-50%,18px) scale(.985);
-      width:min(728px,calc(100% - 24px));
-      max-height:min(62vh,560px);
+      top:50%;
+      bottom:auto;
+      transform:translate(-50%,-46%) scale(.985);
+      width:min(520px,calc(100% - 34px));
+      max-height:min(64vh,560px);
       display:grid;
       grid-template-rows:auto minmax(0,1fr);
       background:var(--sheetbg);
       border:1px solid var(--line);
       border-radius:10px;
-      box-shadow:0 18px 50px rgba(0,0,0,.22);
+      box-shadow:0 22px 70px rgba(0,0,0,.24);
       overflow:hidden;
       opacity:0;
       transition:
-        bottom .12s ease,
         transform .22s cubic-bezier(.22,.72,.25,1),
         opacity .18s ease;
     }
     .sheet-layer.open .sheet{
-      transform:translate(-50%,0) scale(1);
+      transform:translate(-50%,-50%) scale(1);
       opacity:1;
     }
     .sheet-head{
@@ -525,7 +525,7 @@
     @media(max-width:520px){
       .screen{padding-top:24px}
       .stats-pairs{gap:9px}
-      .sheet{width:calc(100% - 18px)}
+      .sheet{width:calc(100% - 28px)}
     }
   </style>
 </head>
@@ -843,7 +843,8 @@
   let selectedTeam = null;
   let playersLoaded = false;
   let teamsLoaded = false;
-  let catalogRetryTimer = null;
+  let catalogLoadPromise = null;
+  const CATALOG_CACHE_KEY = 'imagegen-jr-catalog-v1';
 
   let flow = [];
   let flowIndex = 0;
@@ -1003,9 +1004,7 @@
       button.className = 'sheet-option' + (value === selectedValue ? ' selected' : '');
       button.innerHTML = `<span>${label}</span><span class="check">${value === selectedValue ? '✓' : ''}</span>`;
       button.addEventListener('click', () => {
-        onSelect(value,label);
-        closeSheet();
-        setTimeout(() => nextField(false),80);
+        selectAndAdvance(() => onSelect(value,label));
       });
       $('sheetList').appendChild(button);
     });
@@ -1029,9 +1028,7 @@
         selectedName && item.name === selectedName ? '✓' : ''
       }</span>`;
       button.addEventListener('click', () => {
-        onSelect(item);
-        closeSheet();
-        setTimeout(() => nextField(false),80);
+        selectAndAdvance(() => onSelect(item));
       });
       $('sheetList').appendChild(button);
     });
@@ -1043,6 +1040,18 @@
   function closeSheet() {
     $('sheetLayer').classList.remove('open');
     $('sheetLayer').setAttribute('aria-hidden','true');
+  }
+
+  function selectAndAdvance(callback) {
+    callback();
+    closeSheet();
+
+    // Aspetta solo il minimo necessario per far partire l'animazione di chiusura,
+    // poi passa automaticamente al campo successivo.
+    setTimeout(() => {
+      navDirection = 'forward';
+      nextField(false);
+    }, 120);
   }
 
   function openDrawer() {
@@ -1421,99 +1430,118 @@
     }
   }
 
-  async function fetchCatalog(urls, label) {
-    let lastError = null;
-
-    for (const baseUrl of urls) {
-      try {
-        const separator = baseUrl.includes('?') ? '&' : '?';
-        const url = `${baseUrl}${separator}v=${Date.now()}`;
-
-        const response = await fetch(url,{
-          cache:'no-store',
-          headers:{
-            'Accept': baseUrl.includes('api.github.com')
-              ? 'application/vnd.github+json'
-              : 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`${label}: HTTP ${response.status}`);
-        }
-
-        const payload = await response.json();
-
-        // GitHub Contents API restituisce il file in base64.
-        const decoded = baseUrl.includes('api.github.com')
-          ? decodeGithubContent(payload)
-          : payload;
-
-        const data = decoded || payload;
-
-        if (!data || typeof data !== 'object') {
-          throw new Error(`${label}: JSON non valido`);
-        }
-
-        return data;
-      } catch (error) {
-        lastError = error;
-      }
+  function normalizeCatalogs(playerRows, teamRows) {
+    if (Array.isArray(playerRows) && playerRows.length) {
+      players = playerRows;
+      players.sort((a,b) =>
+        String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
+      );
+      playersLoaded = true;
     }
 
-    throw lastError || new Error(`${label}: caricamento fallito`);
+    if (Array.isArray(teamRows) && teamRows.length) {
+      teams = teamRows
+        .filter(team => team && team.name)
+        .filter(team => !namesFor(team).some(name => norm(name) === 'juventus'));
+
+      teams.sort((a,b) =>
+        String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
+      );
+      teamsLoaded = teams.length > 0;
+    }
+  }
+
+  function restoreCatalogCache() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CATALOG_CACHE_KEY) || 'null');
+      if (!cached || typeof cached !== 'object') return;
+      normalizeCatalogs(cached.players,cached.teams);
+    } catch (_) {}
+  }
+
+  function saveCatalogCache() {
+    try {
+      localStorage.setItem(CATALOG_CACHE_KEY,JSON.stringify({
+        savedAt:Date.now(),
+        players,
+        teams
+      }));
+    } catch (_) {}
+  }
+
+  async function fetchOneCatalog(url,label,timeoutMs=2600) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(),timeoutMs);
+
+    try {
+      const response = await fetch(url,{
+        cache:'default',
+        signal:controller.signal,
+        headers:{
+          'Accept': url.includes('api.github.com')
+            ? 'application/vnd.github+json'
+            : 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`${label}: HTTP ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const data = url.includes('api.github.com')
+        ? (decodeGithubContent(payload) || payload)
+        : payload;
+
+      if (!data || typeof data !== 'object') {
+        throw new Error(`${label}: JSON non valido`);
+      }
+
+      return data;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function fetchCatalogFast(urls,label) {
+    return Promise.any(
+      urls.map(url => fetchOneCatalog(url,label))
+    );
   }
 
   async function loadCatalogs() {
-    if (!playersLoaded) $('playerSummary').textContent = 'Caricamento giocatori…';
-    if (!teamsLoaded) $('opponentSummary').textContent = 'Caricamento squadre…';
+    if (catalogLoadPromise) return catalogLoadPromise;
 
-    const [playersResult,teamsResult] = await Promise.allSettled([
-      playersLoaded
-        ? Promise.resolve({players})
-        : fetchCatalog(PLAYERS_URLS,'Giocatori'),
-      teamsLoaded
-        ? Promise.resolve({teams})
-        : fetchCatalog(TEAMS_URLS,'Squadre')
-    ]);
+    catalogLoadPromise = (async () => {
+      if (!playersLoaded) $('playerSummary').textContent = 'Caricamento giocatori…';
+      if (!teamsLoaded) $('opponentSummary').textContent = 'Caricamento squadre…';
 
-    if (playersResult.status === 'fulfilled') {
-      const rows = Array.isArray(playersResult.value.players)
-        ? playersResult.value.players
-        : [];
+      const [playersResult,teamsResult] = await Promise.allSettled([
+        fetchCatalogFast(PLAYERS_URLS,'Giocatori'),
+        fetchCatalogFast(TEAMS_URLS,'Squadre')
+      ]);
 
-      if (rows.length) {
-        players = rows;
-        players.sort((a,b) =>
-          String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
-        );
-        playersLoaded = true;
+      if (playersResult.status === 'fulfilled') {
+        const rows = Array.isArray(playersResult.value.players)
+          ? playersResult.value.players
+          : [];
+        if (rows.length) normalizeCatalogs(rows,null);
       }
-    }
 
-    if (teamsResult.status === 'fulfilled') {
-      const rows = Array.isArray(teamsResult.value.teams)
-        ? teamsResult.value.teams
-        : [];
-
-      if (rows.length) {
-        teams = rows
-          .filter(team => team && team.name)
-          .filter(team => !namesFor(team).some(name => norm(name) === 'juventus'));
-
-        teams.sort((a,b) =>
-          String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
-        );
-        teamsLoaded = teams.length > 0;
+      if (teamsResult.status === 'fulfilled') {
+        const rows = Array.isArray(teamsResult.value.teams)
+          ? teamsResult.value.teams
+          : [];
+        if (rows.length) normalizeCatalogs(null,rows);
       }
-    }
 
-    refreshSearchSummaries();
+      if (playersLoaded || teamsLoaded) saveCatalogCache();
+      refreshSearchSummaries();
+    })().finally(() => {
+      catalogLoadPromise = null;
+    });
 
-    if (!playersLoaded || !teamsLoaded) {
-      clearTimeout(catalogRetryTimer);
-      catalogRetryTimer = setTimeout(loadCatalogs, 1800);
-    }
+    return catalogLoadPromise;
   }
 
   function updateViewport() {
@@ -1616,10 +1644,11 @@
   window.addEventListener('resize',updateViewport);
 
   document.addEventListener('visibilitychange',() => {
-    if (!document.hidden && (!playersLoaded || !teamsLoaded)) {
-      loadCatalogs();
-    }
+    if (!document.hidden && (!playersLoaded || !teamsLoaded)) loadCatalogs();
   });
+
+  restoreCatalogCache();
+  refreshSearchSummaries();
 
   buildFlow();
   renderKindMenu();
