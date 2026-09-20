@@ -763,11 +763,15 @@
     lastTouchEnd = now;
   }, {passive:false});
 
-  const PLAYERS_URL =
-    'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/goal_players.json';
+  const PLAYERS_URLS = [
+    'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/goal_players.json',
+    'https://cdn.jsdelivr.net/gh/Tommaso20BW/LiveScore_JR@main/goal_players.json'
+  ];
 
-  const TEAMS_URL =
-    'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/assets/goal_graphics/team_logos/fclogo_cache/manifest.json';
+  const TEAMS_URLS = [
+    'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/assets/goal_graphics/team_logos/fclogo_cache/manifest.json',
+    'https://cdn.jsdelivr.net/gh/Tommaso20BW/LiveScore_JR@main/assets/goal_graphics/team_logos/fclogo_cache/manifest.json'
+  ];
 
   const KINDS = [
     ['goal','GOAL'],
@@ -1385,26 +1389,82 @@
     }
   }
 
+  async function fetchCatalog(urls, label) {
+    let lastError = null;
+
+    for (const baseUrl of urls) {
+      try {
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        const url = `${baseUrl}${separator}v=${Date.now()}`;
+
+        const response = await fetch(url,{
+          cache:'no-store',
+          headers:{'Accept':'application/json'}
+        });
+
+        if (!response.ok) {
+          throw new Error(`${label}: HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data || typeof data !== 'object') {
+          throw new Error(`${label}: JSON non valido`);
+        }
+
+        return data;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error(`${label}: caricamento fallito`);
+  }
+
   async function loadCatalogs() {
-    try {
-      const [playersResponse,teamsResponse] = await Promise.all([
-        fetch(PLAYERS_URL,{cache:'no-store'}),
-        fetch(TEAMS_URL,{cache:'no-store'})
-      ]);
+    $('opponentSummary').textContent = 'Caricamento squadre…';
+    $('playerSummary').textContent = 'Caricamento giocatori…';
 
-      if (!playersResponse.ok || !teamsResponse.ok) throw new Error();
+    const [playersResult,teamsResult] = await Promise.allSettled([
+      fetchCatalog(PLAYERS_URLS,'Giocatori'),
+      fetchCatalog(TEAMS_URLS,'Squadre')
+    ]);
 
-      players = (await playersResponse.json()).players || [];
-      teams = ((await teamsResponse.json()).teams || [])
+    if (playersResult.status === 'fulfilled') {
+      players = Array.isArray(playersResult.value.players)
+        ? playersResult.value.players
+        : [];
+
+      players.sort((a,b) =>
+        String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
+      );
+    } else {
+      players = [];
+    }
+
+    if (teamsResult.status === 'fulfilled') {
+      teams = Array.isArray(teamsResult.value.teams)
+        ? teamsResult.value.teams
+        : [];
+
+      teams = teams
+        .filter(team => team && team.name)
         .filter(team => !namesFor(team).some(name => norm(name) === 'juventus'));
 
-      players.sort((a,b) => a.name.localeCompare(b.name,'it',{sensitivity:'base'}));
-      teams.sort((a,b) => a.name.localeCompare(b.name,'it',{sensitivity:'base'}));
+      teams.sort((a,b) =>
+        String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
+      );
+    } else {
+      teams = [];
+    }
 
-      refreshSearchSummaries();
+    refreshSearchSummaries();
 
-    } catch (_) {
-      showError('Impossibile caricare giocatori e squadre.');
+    const errors = [];
+    if (!players.length) errors.push('giocatori');
+    if (!teams.length) errors.push('squadre');
+
+    if (errors.length) {
+      showError(`Impossibile caricare il catalogo ${errors.join(' e ')}. Riprova tra qualche secondo.`);
     }
   }
 
@@ -1506,6 +1566,12 @@
     window.visualViewport.addEventListener('scroll',updateViewport);
   }
   window.addEventListener('resize',updateViewport);
+
+  document.addEventListener('visibilitychange',() => {
+    if (!document.hidden && (!players.length || !teams.length)) {
+      loadCatalogs();
+    }
+  });
 
   buildFlow();
   renderKindMenu();
