@@ -900,7 +900,7 @@
     const base = ['competition','side','opponent','kit'];
 
     if (kind === 'goal' || kind === 'saved') {
-      flow = [...base,'player','minute','pose','scoreHome','scoreAway'];
+      flow = [...base,'player','minute','pose'];
     } else if (kind === 'kick') {
       flow = base;
     } else if (kind === 'half' || kind === 'end_of_90') {
@@ -1369,7 +1369,6 @@
       data.player = selectedPlayer.name;
       data.minute = $('minute').value.trim();
       data.pose = pose;
-      data.score = scorePair('homeScore','awayScore',true);
 
     } else if (kind === 'half' || kind === 'full' || kind === 'end_of_90') {
       data.score = scorePair('homeScore','awayScore',true);

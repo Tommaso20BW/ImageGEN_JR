@@ -149,7 +149,6 @@ def parse_webapp_update(state, update, catalog, now, expected_session):
             if pose not in VALID_POSES:
                 raise ValueError('Posa non valida.')
             data['pose'] = pose
-            data['score'] = _score(incoming.get('score'))
 
         elif kind in ('half', 'full', 'end_of_90'):
             data['score'] = _score(incoming.get('score'))

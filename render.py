@@ -154,14 +154,15 @@ class Renderer:
             'kit': data['kit'],
             'competition': data['competition'],
         }
-        score = data.get('score') or (0, 0)
 
         if kind in ('goal', 'saved'):
+            # Il core LiveScore mantiene questi due parametri nella signature
+            # per compatibilità, ma la grafica evento non li usa.
             args = {
                 **common,
                 'minute': data['minute'],
-                'home_goals': score[0],
-                'away_goals': score[1],
+                'home_goals': 0,
+                'away_goals': 0,
                 'pose': data.get('pose', 'arms_crossed'),
             }
             if kind == 'goal':
@@ -176,6 +177,7 @@ class Renderer:
 
         if kind in ('kick', 'half', 'full', 'end_of_90'):
             layers = None
+            score = data.get('score') or (0, 0)
 
             if kind != 'kick':
                 if not self.token_provider:
