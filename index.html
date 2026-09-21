@@ -1701,7 +1701,7 @@
       showError(message);
     } finally {
       $('nextButton').disabled = false;
-      $('nextButton').textContent = finalStepLabel();
+      $('nextButton').textContent = previewMode ? 'Invia foto ✓' : finalStepLabel();
     }
   }
 
