@@ -1146,7 +1146,10 @@
       screen.scrollTop = 0;
     }
 
-    $('stepCounter').textContent = `${previewMode ? flow.length + 1 : flowIndex + 1} / ${flow.length + 1}`;
+    const stepCounter = $('stepCounter');
+    if (stepCounter) {
+      stepCounter.textContent = `${previewMode ? flow.length + 1 : flowIndex + 1} / ${flow.length + 1}`;
+    }
     $('backButton').disabled = !previewMode && flowIndex === 0;
     $('backButton').textContent = previewMode ? '‹ Modifica' : '‹ Indietro';
     $('nextButton').textContent = previewMode ? 'Invia foto ✓' : (flowIndex === flow.length - 1 ? finalStepLabel() : 'Avanti ›');
