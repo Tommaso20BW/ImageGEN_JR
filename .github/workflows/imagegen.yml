@@ -117,7 +117,8 @@ jobs:
           echo "ERRORE: GitHub Pages non ha ancora pubblicato l'index.html corrente."
           exit 1
 
-      - name: Avvia generatore Telegram
+      - name: Avvia endpoint diretto e generatore Telegram
+        shell: bash
         env:
           MANUAL_GRAPHICS_TELEGRAM_TOKEN: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_TOKEN }}
           MANUAL_GRAPHICS_TELEGRAM_CHAT_ID: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_CHAT_ID }}
@@ -128,7 +129,53 @@ jobs:
           IMAGEGEN_GH_PAT: ${{ secrets.IMAGEGEN_GH_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/_graphics_core
-        run: python -u service.py
+        run: |
+          set -euo pipefail
+
+          PORT=8765
+          CLOUDFLARED="${RUNNER_TEMP}/cloudflared"
+          LOG="${RUNNER_TEMP}/cloudflared.log"
+
+          echo "Preparo il collegamento diretto della Mini App..."
+          curl -fsSL \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+            -o "$CLOUDFLARED"
+          chmod +x "$CLOUDFLARED"
+
+          "$CLOUDFLARED" tunnel \
+            --url "http://127.0.0.1:${PORT}" \
+            --no-autoupdate \
+            >"$LOG" 2>&1 &
+          TUNNEL_PID=$!
+
+          cleanup_tunnel() {
+            kill "$TUNNEL_PID" 2>/dev/null || true
+          }
+          trap cleanup_tunnel EXIT
+
+          TUNNEL_URL=""
+          for _ in $(seq 1 50); do
+            TUNNEL_URL="$(grep -Eo 'https://[A-Za-z0-9-]+\.trycloudflare\.com' "$LOG" | head -n 1 || true)"
+            if [ -n "$TUNNEL_URL" ]; then
+              break
+            fi
+            if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
+              break
+            fi
+            sleep 0.4
+          done
+
+          if [ -z "$TUNNEL_URL" ]; then
+            echo "ERRORE: endpoint diretto non avviato."
+            cat "$LOG" || true
+            exit 1
+          fi
+
+          export MANUAL_GRAPHICS_DIRECT_URL="$TUNNEL_URL"
+          export IMAGEGEN_DIRECT_PORT="$PORT"
+
+          echo "Endpoint diretto pronto. LiveScore può restare acceso."
+          python -u service.py
 
       - name: Elimina vecchi run ImageGen e Pages
         if: always()

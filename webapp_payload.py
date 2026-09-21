@@ -1,4 +1,4 @@
-"""Validate Telegram Mini App requests."""
+"""Validate ImageGEN Mini App requests."""
 import json
 import math
 import uuid
@@ -92,89 +92,117 @@ def _rows(value):
     return sorted(rows, key=lambda row: STATS.index(row[0]))
 
 
-def parse_webapp_update(state, update, catalog, now, expected_session):
+def _build_state(envelope, catalog, now, expected_session):
+    if not isinstance(envelope, dict):
+        raise ValueError('Richiesta non valida.')
+
+    raw_size = len(json.dumps(envelope, ensure_ascii=False).encode('utf-8'))
+    if raw_size > 4096:
+        raise ValueError('Dati Mini App troppo lunghi.')
+
+    if str(envelope.get('session') or '') != str(expected_session):
+        raise ValueError('Sessione non valida.')
+
+    if envelope.get('v') != 1 or envelope.get('action') != 'render':
+        raise ValueError('Versione Mini App non supportata.')
+
+    incoming = envelope.get('data')
+    if not isinstance(incoming, dict):
+        raise ValueError('Richiesta non valida.')
+
+    kind = str(incoming.get('kind') or '')
+    competition = str(incoming.get('competition') or '')
+    kit = str(incoming.get('kit') or '')
+    side = str(incoming.get('side') or '')
+
+    if kind not in VALID_KINDS:
+        raise ValueError('Tipo grafica non valido.')
+    if competition not in VALID_COMPETITIONS:
+        raise ValueError('Competizione non valida.')
+    if kit not in VALID_KITS:
+        raise ValueError('Kit non valido.')
+    if side not in VALID_SIDES:
+        raise ValueError('Casa/trasferta non valido.')
+
+    data = {
+        'kind': kind,
+        'competition': competition,
+        'kit': kit,
+        'side': side,
+        'opponent': _canonical_team(catalog, incoming.get('opponent')),
+    }
+
+    if kind in ('goal', 'saved'):
+        data['player'] = _canonical_player(
+            catalog,
+            incoming.get('player'),
+            goalkeeper=(kind == 'saved'),
+        )
+        data['minute'] = parse_minute(str(incoming.get('minute') or ''))
+        pose = str(incoming.get('pose') or '')
+        if pose not in VALID_POSES:
+            raise ValueError('Posa non valida.')
+        data['pose'] = pose
+
+    elif kind in ('half', 'full', 'end_of_90'):
+        data['score'] = _score(incoming.get('score'))
+        if kind == 'full':
+            data['shootout'] = _score(
+                incoming.get('shootout'),
+                optional=True,
+                shootout=True,
+            )
+
+    elif kind == 'stats':
+        moment = str(incoming.get('moment') or '')
+        if moment not in VALID_MOMENTS:
+            raise ValueError('Momento statistiche non valido.')
+        data['moment'] = moment
+        data['rows'] = _rows(incoming.get('rows'))
+        if not data['rows']:
+            raise ValueError('Inserisci almeno una statistica.')
+
+    return {
+        'id': uuid.uuid4().hex[:10],
+        'data': data,
+        'status': 'ready',
+        'updated': now,
+        'source': 'webapp-direct',
+    }
+
+
+def parse_webapp_envelope(state, envelope, catalog, now, expected_session):
     if state.get('status') in BUSY:
         return state, [{
             'text': 'Sto già generando una grafica. Attendi il PNG prima di inviarne un’altra.'
         }]
 
     try:
+        return _build_state(
+            envelope,
+            catalog,
+            now,
+            expected_session,
+        ), []
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        return state, [{'text': f'Mini App: {exc}'}]
+
+
+def parse_webapp_update(state, update, catalog, now, expected_session):
+    """Legacy Telegram web_app_data parser, kept only for compatibility/tests."""
+    try:
         message = update.get('message') or {}
         raw = str((message.get('web_app_data') or {}).get('data') or '')
         if not raw or len(raw.encode('utf-8')) > 4096:
             raise ValueError('Dati Mini App mancanti o troppo lunghi.')
-
         envelope = json.loads(raw)
-
-        if str(envelope.get('session') or '') != str(expected_session):
-            return state, []
-
-        if envelope.get('v') != 1 or envelope.get('action') != 'render':
-            raise ValueError('Versione Mini App non supportata.')
-
-        incoming = envelope.get('data')
-        if not isinstance(incoming, dict):
-            raise ValueError('Richiesta non valida.')
-
-        kind = str(incoming.get('kind') or '')
-        competition = str(incoming.get('competition') or '')
-        kit = str(incoming.get('kit') or '')
-        side = str(incoming.get('side') or '')
-
-        if kind not in VALID_KINDS:
-            raise ValueError('Tipo grafica non valido.')
-        if competition not in VALID_COMPETITIONS:
-            raise ValueError('Competizione non valida.')
-        if kit not in VALID_KITS:
-            raise ValueError('Kit non valido.')
-        if side not in VALID_SIDES:
-            raise ValueError('Casa/trasferta non valido.')
-
-        data = {
-            'kind': kind,
-            'competition': competition,
-            'kit': kit,
-            'side': side,
-            'opponent': _canonical_team(catalog, incoming.get('opponent')),
-        }
-
-        if kind in ('goal', 'saved'):
-            data['player'] = _canonical_player(
-                catalog,
-                incoming.get('player'),
-                goalkeeper=(kind == 'saved'),
-            )
-            data['minute'] = parse_minute(str(incoming.get('minute') or ''))
-            pose = str(incoming.get('pose') or '')
-            if pose not in VALID_POSES:
-                raise ValueError('Posa non valida.')
-            data['pose'] = pose
-
-        elif kind in ('half', 'full', 'end_of_90'):
-            data['score'] = _score(incoming.get('score'))
-            if kind == 'full':
-                data['shootout'] = _score(
-                    incoming.get('shootout'),
-                    optional=True,
-                    shootout=True,
-                )
-
-        elif kind == 'stats':
-            moment = str(incoming.get('moment') or '')
-            if moment not in VALID_MOMENTS:
-                raise ValueError('Momento statistiche non valido.')
-            data['moment'] = moment
-            data['rows'] = _rows(incoming.get('rows'))
-            if not data['rows']:
-                raise ValueError('Inserisci almeno una statistica.')
-
-        return {
-            'id': uuid.uuid4().hex[:10],
-            'data': data,
-            'status': 'ready',
-            'updated': now,
-            'source': 'webapp',
-        }, []
-
     except (ValueError, TypeError, json.JSONDecodeError) as exc:
         return state, [{'text': f'Mini App: {exc}'}]
+
+    return parse_webapp_envelope(
+        state,
+        envelope,
+        catalog,
+        now,
+        expected_session,
+    )

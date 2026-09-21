@@ -853,7 +853,9 @@
   ];
 
   const $ = id => document.getElementById(id);
-  const session = new URLSearchParams(location.search).get('session') || '';
+  const urlParams = new URLSearchParams(location.search);
+  const session = urlParams.get('session') || '';
+  const directEndpoint = urlParams.get('direct') || '';
   const MIN_SEARCH = 2;
 
   let kind = 'goal';
@@ -1435,29 +1437,68 @@
     return {v:1,action:'render',session,data};
   }
 
-  function submitGraphic() {
+  async function submitGraphic() {
     clearError();
 
-    if (!tg || typeof tg.sendData !== 'function') {
-      showError('Apri la Mini App dal pulsante del bot Telegram.');
-      return;
-    }
-
     try {
+      if (!directEndpoint) {
+        throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
+      }
+
       const raw = JSON.stringify(buildPayload());
 
       if (new TextEncoder().encode(raw).length > 4096) {
-        throw new Error('Troppi dati per Telegram.');
+        throw new Error('Troppi dati per ImageGEN.');
       }
 
       $('nextButton').disabled = true;
       $('nextButton').textContent = 'Invio…';
-      tg.sendData(raw);
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(),12000);
+      let response;
+
+      try {
+        response = await fetch(directEndpoint,{
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          credentials:'omit',
+          headers:{
+            'Content-Type':'application/json',
+            'X-ImageGEN-Session':session
+          },
+          body:raw,
+          signal:controller.signal
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+
+      let answer = {};
+      try {
+        answer = await response.json();
+      } catch (_) {}
+
+      if (!response.ok || answer.ok === false) {
+        throw new Error(answer.error || `Invio non riuscito (${response.status}).`);
+      }
+
+      $('nextButton').textContent = 'Inviato ✓';
+
+      setTimeout(() => {
+        try {
+          if (tg && typeof tg.close === 'function') tg.close();
+        } catch (_) {}
+      },220);
 
     } catch (error) {
       $('nextButton').disabled = false;
       $('nextButton').textContent = 'Invia ✓';
-      showError(error.message || 'Dati non validi.');
+      const message = error && error.name === 'AbortError'
+        ? 'ImageGEN non risponde. Riapri la Mini App e riprova.'
+        : (error.message || 'Dati non validi.');
+      showError(message);
     }
   }
 
