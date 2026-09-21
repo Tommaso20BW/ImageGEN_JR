@@ -503,6 +503,135 @@
       color:var(--muted);
       font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
     }
+
+    .preview-layer{
+      position:fixed;
+      inset:0;
+      z-index:900;
+      background:var(--overlay);
+      opacity:0;
+      visibility:hidden;
+      pointer-events:none;
+      transition:opacity .22s ease, visibility 0s linear .28s;
+    }
+    .preview-layer.open{
+      opacity:1;
+      visibility:visible;
+      pointer-events:auto;
+      transition-delay:0s;
+    }
+    .preview-card{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-48%) scale(.985);
+      width:min(780px,calc(100% - 24px));
+      max-height:min(92vh,1000px);
+      background:var(--sheetbg);
+      border:1px solid var(--line);
+      border-radius:12px;
+      overflow:hidden;
+      box-shadow:0 22px 70px rgba(0,0,0,.28);
+      opacity:0;
+      transition:transform .24s cubic-bezier(.22,.72,.25,1), opacity .18s ease;
+      display:grid;
+      grid-template-rows:auto minmax(0,1fr) auto;
+    }
+    .preview-layer.open .preview-card{
+      transform:translate(-50%,-50%) scale(1);
+      opacity:1;
+    }
+    .preview-head{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      align-items:center;
+      gap:12px;
+      padding:14px 16px 12px;
+      border-bottom:1px solid var(--line);
+    }
+    .preview-kicker{
+      color:var(--gold);
+      font-size:10px;
+      font-weight:850;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      margin-bottom:3px;
+    }
+    .preview-title{
+      font-size:18px;
+      font-weight:820;
+      letter-spacing:-.02em;
+    }
+    .preview-close{
+      width:34px;height:34px;border:0;border-radius:6px;
+      background:var(--panel2);color:var(--muted);font-size:22px;line-height:1;
+    }
+    .preview-body{
+      min-height:0;
+      overflow:auto;
+      padding:14px;
+      background:var(--bg2);
+    }
+    .preview-frame{
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+    }
+    .preview-image{
+      display:block;
+      width:min(100%,620px);
+      height:auto;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:var(--panel);
+      box-shadow:0 12px 30px rgba(0,0,0,.16);
+    }
+    .preview-foot{
+      padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+      border-top:1px solid var(--line);
+      background:var(--sheetbg);
+    }
+    .preview-error{
+      display:none;
+      margin-bottom:10px;
+      padding:12px 13px;
+      border-radius:6px;
+      background:var(--danger-bg);
+      color:var(--danger);
+      font-size:12px;
+      font-weight:650;
+      line-height:1.4;
+    }
+    .preview-actions{
+      display:grid;
+      grid-template-columns:1fr auto;
+      align-items:center;
+      gap:12px;
+    }
+    .preview-back{
+      justify-self:start;
+      min-height:42px;
+      padding:0 12px;
+      border:1px solid var(--line);
+      border-radius:6px;
+      background:var(--panel);
+      color:var(--text);
+      font-size:14px;
+      font-weight:700;
+    }
+    .preview-send{
+      min-width:126px;
+      min-height:42px;
+      border:0;
+      border-radius:6px;
+      padding:0 18px;
+      background:linear-gradient(180deg,var(--gold2),var(--gold));
+      color:#171207;
+      font-size:14px;
+      font-weight:860;
+    }
+    .preview-send:disabled,.preview-back:disabled{opacity:.45}
+
     .kind-option{
       width:100%;
       min-height:50px;
@@ -751,6 +880,30 @@
     </aside>
   </div>
 
+  <div id="previewLayer" class="preview-layer" aria-hidden="true">
+    <div class="preview-card" role="dialog" aria-modal="true" aria-label="Anteprima grafica">
+      <div class="preview-head">
+        <div>
+          <div class="preview-kicker">Anteprima</div>
+          <div class="preview-title">Controlla la grafica prima dell’invio.</div>
+        </div>
+        <button id="previewClose" class="preview-close" type="button" aria-label="Chiudi">×</button>
+      </div>
+      <div class="preview-body">
+        <div class="preview-frame">
+          <img id="previewImage" class="preview-image" alt="Anteprima grafica" />
+        </div>
+      </div>
+      <div class="preview-foot">
+        <div id="previewError" class="preview-error"></div>
+        <div class="preview-actions">
+          <button id="previewBack" class="preview-back" type="button">‹ Modifica</button>
+          <button id="previewSend" class="preview-send" type="button">Invia foto ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <script>
 (() => {
   const tg = window.Telegram && window.Telegram.WebApp;
@@ -856,6 +1009,7 @@
   const urlParams = new URLSearchParams(location.search);
   const session = urlParams.get('session') || '';
   const directEndpoint = urlParams.get('direct') || '';
+  const directBase = directEndpoint.replace(/\/submit\/?$/,'');
   const MIN_SEARCH = 2;
 
   let kind = 'goal';
@@ -881,6 +1035,8 @@
   let navDirection = 'forward';
   let statCursor = 0;
   const statRows = Object.fromEntries(STATS.map(label => [label,{home:'',away:''}]));
+  let previewObjectUrl = '';
+  let previewPayloadText = '';
 
   const foldSpecial = value => String(value || '')
     .replace(/ı/g,'i').replace(/ł/g,'l').replace(/đ/g,'d')
@@ -944,6 +1100,34 @@
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
   }
 
+  function finalStepLabel() {
+    return 'Anteprima ›';
+  }
+
+  function setPreviewError(message='') {
+    $('previewError').textContent = message;
+    $('previewError').style.display = message ? 'block' : 'none';
+  }
+
+  function openPreview(url) {
+    if (previewObjectUrl && previewObjectUrl !== url) {
+      try { URL.revokeObjectURL(previewObjectUrl); } catch (_) {}
+    }
+    previewObjectUrl = url;
+    $('previewImage').src = url;
+    setPreviewError('');
+    $('previewSend').disabled = false;
+    $('previewSend').textContent = 'Invia foto ✓';
+    $('previewBack').disabled = false;
+    $('previewLayer').classList.add('open');
+    $('previewLayer').setAttribute('aria-hidden','false');
+  }
+
+  function closePreview() {
+    $('previewLayer').classList.remove('open');
+    $('previewLayer').setAttribute('aria-hidden','true');
+  }
+
   function renderFlow() {
     document.querySelectorAll('[data-screen]').forEach(el => {
       el.classList.remove('active','enter-back');
@@ -959,7 +1143,7 @@
 
     $('stepCounter').textContent = `${flowIndex + 1} / ${flow.length}`;
     $('backButton').disabled = flowIndex === 0;
-    $('nextButton').textContent = flowIndex === flow.length - 1 ? 'Invia ✓' : 'Avanti ›';
+    $('nextButton').textContent = flowIndex === flow.length - 1 ? finalStepLabel() : 'Avanti ›';
     $('kindSubtitle').textContent = labelOf(KINDS,kind);
 
     clearError();
@@ -1104,6 +1288,7 @@
       button.className = 'kind-option' + (value === kind ? ' selected' : '');
       button.innerHTML = `<span>${label}</span><span class="check">${value === kind ? '✓' : ''}</span>`;
       button.addEventListener('click', () => {
+        closePreview();
         kind = value;
         $('kindSubtitle').textContent = labelOf(KINDS,kind);
         selectedPlayer = null;
@@ -1319,7 +1504,7 @@
     }
 
     if (flowIndex >= flow.length - 1) {
-      submitGraphic();
+      previewGraphic();
       return;
     }
 
@@ -1368,7 +1553,7 @@
 
     const isLastStat = statCursor === STATS.length - 1;
     $('nextButton').textContent =
-      isLastStat && flowIndex === flow.length - 1 ? 'Invia ✓' : 'Avanti ›';
+      isLastStat && flowIndex === flow.length - 1 ? finalStepLabel() : 'Avanti ›';
   }
 
   function scorePair(a,b,required=true) {
@@ -1437,11 +1622,11 @@
     return {v:1,action:'render',session,data};
   }
 
-  async function submitGraphic() {
+  async function previewGraphic() {
     clearError();
 
     try {
-      if (!directEndpoint) {
+      if (!directBase) {
         throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
       }
 
@@ -1452,14 +1637,74 @@
       }
 
       $('nextButton').disabled = true;
-      $('nextButton').textContent = 'Invio…';
+      $('nextButton').textContent = 'Anteprima…';
 
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(),12000);
+      const timer = setTimeout(() => controller.abort(), 90000);
       let response;
 
       try {
-        response = await fetch(directEndpoint,{
+        response = await fetch(`${directBase}/preview`, {
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          credentials:'omit',
+          headers:{
+            'Content-Type':'application/json',
+            'X-ImageGEN-Session':session
+          },
+          body:raw,
+          signal:controller.signal
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+
+      if (!response.ok) {
+        let answer = {};
+        try { answer = await response.json(); } catch (_) {}
+        throw new Error(answer.error || `Anteprima non riuscita (${response.status}).`);
+      }
+
+      const blob = await response.blob();
+      if (!blob || !String(blob.type || '').includes('image/png')) {
+        throw new Error('Anteprima non valida.');
+      }
+
+      previewPayloadText = raw;
+      openPreview(URL.createObjectURL(blob));
+
+    } catch (error) {
+      const message = error && error.name === 'AbortError'
+        ? 'Anteprima lenta o non disponibile. Riprova tra qualche secondo.'
+        : (error.message || 'Dati non validi.');
+      showError(message);
+    } finally {
+      $('nextButton').disabled = false;
+      $('nextButton').textContent = finalStepLabel();
+    }
+  }
+
+  async function submitPreviewGraphic() {
+    setPreviewError('');
+
+    try {
+      if (!directBase) {
+        throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
+      }
+
+      const raw = previewPayloadText || JSON.stringify(buildPayload());
+
+      $('previewSend').disabled = true;
+      $('previewBack').disabled = true;
+      $('previewSend').textContent = 'Invio…';
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+      let response;
+
+      try {
+        response = await fetch(`${directBase}/submit`, {
           method:'POST',
           mode:'cors',
           cache:'no-store',
@@ -1476,29 +1721,28 @@
       }
 
       let answer = {};
-      try {
-        answer = await response.json();
-      } catch (_) {}
+      try { answer = await response.json(); } catch (_) {}
 
       if (!response.ok || answer.ok === false) {
         throw new Error(answer.error || `Invio non riuscito (${response.status}).`);
       }
 
-      $('nextButton').textContent = 'Inviato ✓';
+      $('previewSend').textContent = 'Inviato ✓';
 
       setTimeout(() => {
         try {
           if (tg && typeof tg.close === 'function') tg.close();
         } catch (_) {}
-      },220);
+      }, 220);
 
     } catch (error) {
-      $('nextButton').disabled = false;
-      $('nextButton').textContent = 'Invia ✓';
+      $('previewSend').disabled = false;
+      $('previewBack').disabled = false;
+      $('previewSend').textContent = 'Invia foto ✓';
       const message = error && error.name === 'AbortError'
         ? 'ImageGEN non risponde. Riapri la Mini App e riprova.'
-        : (error.message || 'Dati non validi.');
-      showError(message);
+        : (error.message || 'Invio non riuscito.');
+      setPreviewError(message);
     }
   }
 
@@ -1744,6 +1988,13 @@
   $('sheetClose').addEventListener('click',closeSheet);
   $('sheetLayer').addEventListener('click',event => {
     if (event.target === $('sheetLayer')) closeSheet();
+  });
+
+  $('previewBack').addEventListener('click',closePreview);
+  $('previewClose').addEventListener('click',closePreview);
+  $('previewSend').addEventListener('click',submitPreviewGraphic);
+  $('previewLayer').addEventListener('click',event => {
+    if (event.target === $('previewLayer')) closePreview();
   });
 
   if (window.visualViewport) {

@@ -4,9 +4,9 @@ ImageGEN receives Mini App payloads through a temporary HTTPS tunnel instead of
 Telegram getUpdates. This lets it coexist with LiveScore on the same bot token.
 """
 import copy
+import hashlib
 import json
 import os
-import queue
 import secrets
 import signal
 import threading
@@ -18,11 +18,15 @@ from canva import CanvaTokenProvider
 from catalog import Catalog
 from render import Renderer
 from telegram import DeliveryUncertain, Telegram, TelegramError
-from webapp_payload import parse_webapp_envelope
+from webapp_payload import parse_webapp_request
 
 
 SESSION_DURATION_SECONDS = 600
 DIRECT_PORT = 8765
+
+
+class BusyError(RuntimeError):
+    """Raised when ImageGEN is already rendering/sending something."""
 
 
 class _DirectHTTPServer(ThreadingHTTPServer):
@@ -59,19 +63,18 @@ class _DirectHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def do_OPTIONS(self):
-        self.send_response(204)
+    def _png(self, payload):
+        self.send_response(200)
         self._cors()
+        self.send_header('Content-Type', 'image/png')
+        self.send_header('Content-Length', str(len(payload)))
         self.end_headers()
+        self.wfile.write(payload)
 
-    def do_POST(self):
-        if self.path.rstrip('/') != '/submit':
-            self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
-            return
-
+    def _read_envelope(self):
         if self.headers.get('X-ImageGEN-Session', '') != self.service.session:
             self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
-            return
+            return None
 
         try:
             length = int(self.headers.get('Content-Length', '0'))
@@ -80,22 +83,50 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
         if length <= 0 or length > 16384:
             self._json(413, {'ok': False, 'error': 'Richiesta non valida.'})
-            return
+            return None
 
         try:
             raw = self.rfile.read(length)
-            envelope = json.loads(raw.decode('utf-8'))
+            return json.loads(raw.decode('utf-8'))
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
             self._json(400, {'ok': False, 'error': 'JSON non valido.'})
+            return None
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._cors()
+        self.end_headers()
+
+    def do_POST(self):
+        path = self.path.rstrip('/')
+        if path not in ('/preview', '/submit'):
+            self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
-        ok, error = self.service.accept_envelope(envelope)
-        if not ok:
-            status = 409 if error.startswith('Sto già generando') else 400
-            self._json(status, {'ok': False, 'error': error})
+        envelope = self._read_envelope()
+        if envelope is None:
             return
 
-        self._json(202, {'ok': True})
+        try:
+            if path == '/preview':
+                png = self.service.preview(envelope)
+                self._png(png)
+                return
+
+            message_id = self.service.submit(envelope)
+            self._json(200, {'ok': True, 'message_id': message_id})
+
+        except BusyError as exc:
+            self._json(409, {'ok': False, 'error': str(exc)})
+        except ValueError as exc:
+            self._json(400, {'ok': False, 'error': str(exc)})
+        except DeliveryUncertain:
+            self._json(502, {'ok': False, 'error': 'Invio incerto: controlla se la foto è arrivata.'})
+        except TelegramError:
+            self._json(502, {'ok': False, 'error': 'Telegram ha rifiutato la foto. Riapri ImageGEN e riprova.'})
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            print(f'ERROR IMAGEGEN: {type(exc).__name__}: {exc}', flush=True)
+            self._json(500, {'ok': False, 'error': 'Errore interno ImageGEN.'})
 
 
 class Service:
@@ -105,12 +136,7 @@ class Service:
         self.catalog = catalog
         self.chat_id = str(chat_id)
 
-        self.state = {'status': 'idle'}
-        self.state_lock = threading.Lock()
         self.session = secrets.token_urlsafe(18)
-
-        self.worker = None
-        self.results = queue.Queue()
         self.stopped = False
         self.generated_message_ids = []
         self.bot_message_ids = []
@@ -119,6 +145,10 @@ class Service:
         self.http_server = None
         self.http_thread = None
 
+        self.operation_lock = threading.Lock()
+        self.preview_cache_lock = threading.Lock()
+        self.preview_cache = None
+
     def _remember_bot_message(self, message_id):
         try:
             if message_id:
@@ -126,33 +156,107 @@ class Service:
         except (TypeError, ValueError):
             pass
 
-    def _prompt(self, text):
+    def _fingerprint(self, data):
+        raw = json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
+        return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+
+    def _parse_request(self, envelope):
+        return parse_webapp_request(
+            envelope,
+            self.catalog,
+            time.time(),
+            expected_session=self.session,
+        )
+
+    def _render_and_cache(self, request_state, *, force=False):
+        data = copy.deepcopy(request_state['data'])
+        fingerprint = self._fingerprint(data)
+
+        with self.preview_cache_lock:
+            cached = self.preview_cache
+            if (
+                not force
+                and cached
+                and cached.get('fingerprint') == fingerprint
+                and cached.get('png')
+            ):
+                return cached['png'], cached.get('request_id') or request_state['id']
+
+        print(
+            f"INFO IMAGEGEN: render {data['kind']} | id={request_state['id']} | mode=preview",
+            flush=True,
+        )
+        png = self.renderer.render(data)
+
+        with self.preview_cache_lock:
+            self.preview_cache = {
+                'fingerprint': fingerprint,
+                'request_id': request_state['id'],
+                'data': data,
+                'png': png,
+                'updated': time.time(),
+            }
+
+        return png, request_state['id']
+
+    def preview(self, envelope):
+        if not self.operation_lock.acquire(blocking=False):
+            raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
         try:
-            message_id = self.telegram.prompt(text)
-        except TelegramError:
-            return None
+            request_state = self._parse_request(envelope)
+            png, _ = self._render_and_cache(request_state)
+            return png
+        finally:
+            self.operation_lock.release()
 
-        self._remember_bot_message(message_id)
-        return message_id
+    def submit(self, envelope):
+        if not self.operation_lock.acquire(blocking=False):
+            raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
+        try:
+            request_state = self._parse_request(envelope)
+            data = copy.deepcopy(request_state['data'])
+            fingerprint = self._fingerprint(data)
 
-    def accept_envelope(self, envelope):
-        with self.state_lock:
-            new_state, effects = parse_webapp_envelope(
-                self.state,
-                envelope,
-                self.catalog,
-                time.time(),
-                expected_session=self.session,
+            with self.preview_cache_lock:
+                cached = self.preview_cache
+                if (
+                    cached
+                    and cached.get('fingerprint') == fingerprint
+                    and cached.get('png')
+                ):
+                    png = cached['png']
+                else:
+                    png = None
+
+            if png is None:
+                print(
+                    f"INFO IMAGEGEN: render {data['kind']} | id={request_state['id']} | mode=submit",
+                    flush=True,
+                )
+                png = self.renderer.render(data)
+                with self.preview_cache_lock:
+                    self.preview_cache = {
+                        'fingerprint': fingerprint,
+                        'request_id': request_state['id'],
+                        'data': data,
+                        'png': png,
+                        'updated': time.time(),
+                    }
+            else:
+                print(
+                    f"INFO IMAGEGEN: submit cached preview | kind={data['kind']} | id={request_state['id']}",
+                    flush=True,
+                )
+
+            message_id = self.telegram.photo(
+                png,
+                f"{data['kind']}-{request_state['id']}.png",
             )
-
-            if effects:
-                text = str(effects[0].get('text') or 'Richiesta non valida.')
-                if text.startswith('Mini App: '):
-                    text = text[len('Mini App: '):]
-                return False, text
-
-            self.state = new_state
-            return True, ''
+            self.generated_message_ids.append(int(message_id))
+            print(f"INFO IMAGEGEN: foto PNG inviata | id={request_state['id']}", flush=True)
+            return int(message_id)
+        finally:
+            self.operation_lock.release()
 
     def _start_http_server(self):
         try:
@@ -185,81 +289,6 @@ class Service:
                 pass
         self.http_server = None
         self.http_thread = None
-
-    def _start_render(self):
-        with self.state_lock:
-            if self.state.get('status') != 'ready' or self.worker is not None:
-                return
-            data = copy.deepcopy(self.state['data'])
-            request_id = self.state['id']
-            self.state['status'] = 'rendering'
-
-        print(
-            f"INFO IMAGEGEN: render {data['kind']} | id={request_id}",
-            flush=True,
-        )
-
-        def work():
-            try:
-                png = self.renderer.render(data)
-                self.results.put((request_id, png, None))
-            except Exception as exc:
-                self.results.put(
-                    (
-                        request_id,
-                        None,
-                        f'{type(exc).__name__}: {exc}',
-                    )
-                )
-
-        self.worker = threading.Thread(target=work, daemon=True)
-        self.worker.start()
-
-    def rendering(self):
-        if self.worker is None:
-            self._start_render()
-
-        if self.worker is None:
-            return
-
-        try:
-            request_id, png, error = self.results.get_nowait()
-        except queue.Empty:
-            return
-
-        self.worker = None
-
-        with self.state_lock:
-            if self.state.get('id') != request_id:
-                return
-
-            if error:
-                self.state['status'] = 'failed'
-                print(f'ERROR IMAGEGEN: {error}', flush=True)
-                self._prompt('Grafica non generata. Riapri ImageGEN e riprova.')
-                return
-
-            self.state['status'] = 'sending'
-            kind = self.state['data']['kind']
-
-        try:
-            message_id = self.telegram.photo(
-                png,
-                f'{kind}-{request_id}.png',
-            )
-        except DeliveryUncertain:
-            with self.state_lock:
-                self.state['status'] = 'uncertain'
-            self._prompt('Invio incerto: controlla se la foto è arrivata.')
-        except TelegramError:
-            with self.state_lock:
-                self.state['status'] = 'failed'
-            self._prompt('Telegram ha rifiutato la foto. Riapri ImageGEN e riprova.')
-        else:
-            with self.state_lock:
-                self.state.update(status='completed', message_id=message_id)
-            self.generated_message_ids.append(int(message_id))
-            print(f'INFO IMAGEGEN: foto PNG inviata | id={request_id}', flush=True)
 
     def cleanup(self):
         for message_id in reversed(self.generated_message_ids):
@@ -323,15 +352,11 @@ class Service:
             pass
 
         self.launcher_message_id = self.telegram.webapp_launcher(launch_url)
-        deadline = time.monotonic() + min(
-            SESSION_DURATION_SECONDS,
-            max(1, duration),
-        )
+        deadline = time.monotonic() + min(SESSION_DURATION_SECONDS, max(1, duration))
 
         try:
             while not self.stopped and time.monotonic() < deadline:
-                self.rendering()
-                time.sleep(0.08)
+                time.sleep(0.15)
         finally:
             self._stop_http_server()
             self.cleanup()

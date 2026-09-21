@@ -171,6 +171,15 @@ def _build_state(envelope, catalog, now, expected_session):
     }
 
 
+def parse_webapp_request(envelope, catalog, now, expected_session):
+    return _build_state(
+        envelope,
+        catalog,
+        now,
+        expected_session,
+    )
+
+
 def parse_webapp_envelope(state, envelope, catalog, now, expected_session):
     if state.get('status') in BUSY:
         return state, [{
@@ -178,7 +187,7 @@ def parse_webapp_envelope(state, envelope, catalog, now, expected_session):
         }]
 
     try:
-        return _build_state(
+        return parse_webapp_request(
             envelope,
             catalog,
             now,
