@@ -99,7 +99,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.rstrip('/')
-        if path not in ('/preview', '/submit'):
+        if path not in ('/preview', '/submit', '/close'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -108,6 +108,20 @@ class _DirectHandler(BaseHTTPRequestHandler):
             return
 
         try:
+            if path == '/close':
+                if (
+                    envelope.get('action') != 'close'
+                    or str(envelope.get('session', '')) != self.service.session
+                ):
+                    self._json(400, {'ok': False, 'error': 'Richiesta di chiusura non valida.'})
+                    return
+
+                # Conferma prima la richiesta alla Mini App; subito dopo il loop
+                # principale termina e parte lo stesso cleanup usato a scadenza.
+                self._json(200, {'ok': True, 'closed': True})
+                self.service.request_stop()
+                return
+
             if path == '/preview':
                 png = self.service.preview(envelope)
                 self._png(png)
@@ -148,6 +162,12 @@ class Service:
         self.operation_lock = threading.Lock()
         self.preview_cache_lock = threading.Lock()
         self.preview_cache = None
+
+    def request_stop(self):
+        """End the active session immediately and let run() perform normal cleanup."""
+        if not self.stopped:
+            print('INFO IMAGEGEN: chiusura richiesta dalla Mini App', flush=True)
+        self.stopped = True
 
     def _remember_bot_message(self, message_id):
         try:
@@ -380,7 +400,7 @@ def main():
     )
 
     def stop(*_):
-        service.stopped = True
+        service.request_stop()
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
