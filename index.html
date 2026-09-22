@@ -90,6 +90,8 @@
       display:grid;place-items:center;padding:0;
     }
     .menu-btn:active{background:var(--panel2)}
+    .close-btn{font-size:28px;line-height:1;font-weight:400}
+    .close-btn:disabled{opacity:.45}
     .hamburger{width:19px;display:grid;gap:4px}
     .hamburger span{height:1.5px;background:currentColor;border-radius:2px}
 
@@ -705,7 +707,7 @@
 <body>
   <main class="app">
     <header class="topbar">
-      <div aria-hidden="true"></div>
+      <button id="closeWorkflowButton" class="menu-btn close-btn" type="button" aria-label="Chiudi workflow">×</button>
       <div class="brand">
         <div class="brand-title">ImageGEN <span>JR</span></div>
         <div id="kindSubtitle" class="brand-sub">GOAL</div>
@@ -1306,6 +1308,53 @@
   function closeDrawer() {
     $('drawerLayer').classList.remove('open');
     $('drawerLayer').setAttribute('aria-hidden','true');
+  }
+
+  async function closeWorkflow() {
+    closeSheet();
+    closeDrawer();
+    clearError();
+    setPreviewError('');
+
+    const closeBtn = $('closeWorkflowButton');
+    if (closeBtn) closeBtn.disabled = true;
+
+    const payload = JSON.stringify({v:1,action:'close',session});
+
+    if (directBase && session) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 2500);
+      try {
+        await fetch(`${directBase}/close`, {
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          credentials:'omit',
+          keepalive:true,
+          headers:{
+            'Content-Type':'application/json',
+            'X-ImageGEN-Session':session
+          },
+          body:payload,
+          signal:controller.signal
+        });
+      } catch (_) {
+        // La Mini App si chiude comunque; con il backend aggiornato /close
+        // termina immediatamente anche il servizio e il workflow.
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    setTimeout(() => {
+      try {
+        if (tg && typeof tg.close === 'function') {
+          tg.close();
+          return;
+        }
+        window.close();
+      } catch (_) {}
+    }, 120);
   }
 
   function renderKindMenu() {
@@ -2016,6 +2065,7 @@
 
   $('nextButton').addEventListener('click',() => nextField(true));
   $('backButton').addEventListener('click',previousField);
+  $('closeWorkflowButton').addEventListener('click',closeWorkflow);
 
   $('menuButton').addEventListener('click',openDrawer);
   $('drawerClose').addEventListener('click',closeDrawer);
