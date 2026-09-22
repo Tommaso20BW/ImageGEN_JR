@@ -814,29 +814,29 @@
 
       <section id="scoreHomeScreen" class="screen" data-screen="scoreHome">
         <div class="eyebrow">Risultato</div>
-        <h1>Gol casa.</h1>
-        <p class="lead">Inserisci il punteggio della squadra di casa.</p>
+        <h1 id="scoreHomeTitle">Gol casa.</h1>
+        <p id="scoreHomeLead" class="lead">Inserisci il punteggio della squadra di casa.</p>
         <input id="homeScore" class="number-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
       </section>
 
       <section id="scoreAwayScreen" class="screen" data-screen="scoreAway">
         <div class="eyebrow">Risultato</div>
-        <h1>Gol trasferta.</h1>
-        <p class="lead">Inserisci il punteggio della squadra in trasferta.</p>
+        <h1 id="scoreAwayTitle">Gol trasferta.</h1>
+        <p id="scoreAwayLead" class="lead">Inserisci il punteggio della squadra in trasferta.</p>
         <input id="awayScore" class="number-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
       </section>
 
       <section id="pensHomeScreen" class="screen" data-screen="pensHome">
         <div class="eyebrow">Rigori</div>
-        <h1>Rigori casa.</h1>
-        <p class="lead">Facoltativo. Se non ci sono stati rigori, lascia vuoto e vai avanti.</p>
+        <h1 id="pensHomeTitle">Rigori casa.</h1>
+        <p id="pensHomeLead" class="lead">Facoltativo. Se non ci sono stati rigori, lascia vuoto e vai avanti.</p>
         <input id="homePens" class="number-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
       </section>
 
       <section id="pensAwayScreen" class="screen" data-screen="pensAway">
         <div class="eyebrow">Rigori</div>
-        <h1>Rigori trasferta.</h1>
-        <p class="lead">Facoltativo. Completa solo se il FULL TIME si è deciso ai rigori.</p>
+        <h1 id="pensAwayTitle">Rigori trasferta.</h1>
+        <p id="pensAwayLead" class="lead">Facoltativo. Completa solo se il FULL TIME si è deciso ai rigori.</p>
         <input id="awayPens" class="number-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
       </section>
 
@@ -1055,8 +1055,22 @@
     .replace(/[^a-z0-9]+/g,' ')
     .trim();
 
+  const TEAM_NAMES_IT = new Map(Object.entries({
+    'ac milan':'Milan','ac monza':'Monza','acf fiorentina':'Fiorentina','afc bournemouth':'Bournemouth','bayer 04 leverkusen':'Bayer Leverkusen','bologna fc':'Bologna','cagliari calcio':'Cagliari','como 1907':'Como','crystal palace football club':'Crystal Palace','empoli fc':'Empoli','fc inter milan':'Inter','fc salzburg':'Salisburgo','genoa cfc':'Genoa','hellas verona':'Verona','juventus fc':'Juventus','olympique lyonnais':'Lione','parma calcio 1913':'Parma','pisa sc':'Pisa','rc celta de vigo':'Celta Vigo','real sociedad de futbol':'Real Sociedad','ss lazio':'Lazio','sport lisboa e benfica':'Benfica','stade rennais':'Rennes','sunderland afc':'Sunderland','tsg hoffenheim':'Hoffenheim','torino fc':'Torino','us cremonese':'Cremonese','us lecce':'Lecce','us sassuolo calcio':'Sassuolo','udinese calcio':'Udinese','alkmaar zaanstreek':'AZ Alkmaar','ascoli calcio 1898 fc':'Ascoli','associazione sportiva roma':'Roma','atalanta bergamasca calcio':'Atalanta','athletic club omonoia nicosia':'Omonia Nicosia','athletic club sparta praha':'Sparta Praga','benevento calcio':'Benevento','besiktas jimnastik kulubu':'Besiktas','calcio padova':'Padova','carrarese calcio 1908':'Carrarese','celje football club':'Celje','cesena football club':'Cesena','ferencvarosi torna club':'Ferencvaros','football club ararat armenia':'Ararat-Armenia','football club viktoria plzen':'Viktoria Plzen','frosinone calcio':'Frosinone','fussball club sudtirol':'Sudtirol','gnk dinamo zagreb':'Dinamo Zagabria','hapoel beer sheva football club':'Hapoel Beer Sheva','jagiellonia biaystok sportowa spoka akcyjna':'Jagiellonia Bialystok','kolejowy klub sportowy lech poznan sa':'Lech Poznan','lanerossi vicenza':'Vicenza','lillestrm sportsklubb':'Lillestrom','mantova 1911':'Mantova','modena football club':'Modena','nijmegen eendracht combinatie':'NEC Nimega','ofi football club':'OFI Creta','olympiacos football club':'Olympiacos','olympique de marseille':'Marsiglia','palermo football club':'Palermo','profesionalen futbolen klub levski':'Levski Sofia','royal sporting club anderlecht':'Anderlecht','royale union saint gilloise':'Union Saint-Gilloise','societ sportiva calcio napoli':'Napoli','societ sportiva juve stabia':'Juve Stabia','societa sportiva arezzo':'Arezzo','sport clube uniao torreense':'Torreense','sportklub sturm graz':'Sturm Graz','the celtic football club':'Celtic','unione calcio sampdoria':'Sampdoria','unione sportiva avellino 1912':'Avellino','unione sportiva catanzaro 1929':'Catanzaro','venezia football club':'Venezia','virtus entella':'Virtus Entella'
+  }));
+
+  function displayTeamName(name) {
+    const raw = String(name || '').trim();
+    return TEAM_NAMES_IT.get(norm(raw)) || raw;
+  }
+
+  function currentMatchupNames() {
+    const opponent = selectedTeam ? displayTeamName(selectedTeam.name) : 'Avversario';
+    return side === 'home' ? {home:'Juventus',away:opponent} : {home:opponent,away:'Juventus'};
+  }
+
   function namesFor(item) {
-    return [item.name, ...(item.aliases || [])].filter(Boolean);
+    return [item.name, displayTeamName(item.name), ...(item.aliases || [])].filter(Boolean);
   }
 
   function rankItem(item, query) {
@@ -1075,7 +1089,7 @@
       .map(item => ({item,rank:rankItem(item,query)}))
       .filter(row => Number.isFinite(row.rank))
       .sort((a,b) => a.rank - b.rank ||
-        a.item.name.localeCompare(b.item.name,'it',{sensitivity:'base'}))
+        displayTeamName(a.item.name).localeCompare(displayTeamName(b.item.name),'it',{sensitivity:'base'}))
       .map(row => row.item);
   }
 
@@ -1170,8 +1184,18 @@
     $('playerTitle').textContent =
       kind === 'saved' ? 'Scegli il portiere.' : 'Scegli il giocatore.';
 
-    if (selectedTeam) $('opponentSearch').value = selectedTeam.name;
+    if (selectedTeam) $('opponentSearch').value = displayTeamName(selectedTeam.name);
     if (selectedPlayer) $('playerSearch').value = selectedPlayer.name;
+
+    const matchup = currentMatchupNames();
+    $('scoreHomeTitle').textContent = `Gol ${matchup.home}.`;
+    $('scoreHomeLead').textContent = `Inserisci il punteggio di ${matchup.home}.`;
+    $('scoreAwayTitle').textContent = `Gol ${matchup.away}.`;
+    $('scoreAwayLead').textContent = `Inserisci il punteggio di ${matchup.away}.`;
+    $('pensHomeTitle').textContent = `Rigori ${matchup.home}.`;
+    $('pensHomeLead').textContent = `Inserisci i rigori segnati da ${matchup.home}, oppure lascia vuoto se non ci sono stati rigori.`;
+    $('pensAwayTitle').textContent = `Rigori ${matchup.away}.`;
+    $('pensAwayLead').textContent = `Inserisci i rigori segnati da ${matchup.away}, oppure lascia vuoto se non ci sono stati rigori.`;
 
     if (flow[flowIndex] === 'stats') renderStatScreen();
   }
@@ -1248,7 +1272,8 @@
       button.className = 'sheet-option' + (
         selectedName && item.name === selectedName ? ' selected' : ''
       );
-      button.innerHTML = `<span>${item.name}</span><span class="check">${
+      const itemLabel = title === 'Scegli avversario' ? displayTeamName(item.name) : item.name;
+      button.innerHTML = `<span>${itemLabel}</span><span class="check">${
         selectedName && item.name === selectedName ? '✓' : ''
       }</span>`;
       button.addEventListener('click', () => {
@@ -1313,7 +1338,7 @@
     teamMatches = teamsLoaded ? searchItems(teams,tq) : [];
 
     if (selectedTeam && !teamMatches.some(item => item.name === selectedTeam.name)) {
-      if (norm(tq) !== norm(selectedTeam.name)) selectedTeam = null;
+      if (!namesFor(selectedTeam).some(name => norm(tq) === norm(name))) selectedTeam = null;
     }
 
     if (!teamsLoaded) {
@@ -1323,7 +1348,7 @@
     } else if (!teamMatches.length) {
       $('opponentSummary').textContent = 'Nessun risultato.';
     } else if (selectedTeam) {
-      $('opponentSummary').textContent = `Selezionata: ${selectedTeam.name}`;
+      $('opponentSummary').textContent = `Selezionata: ${displayTeamName(selectedTeam.name)}`;
     } else {
       $('opponentSummary').textContent = `${teamMatches.length} risultat${teamMatches.length === 1 ? 'o' : 'i'} · premi Avanti`;
     }
@@ -1359,7 +1384,7 @@
 
     if (exact || teamMatches.length === 1) {
       selectedTeam = exact || teamMatches[0];
-      $('opponentSearch').value = selectedTeam.name;
+      $('opponentSearch').value = displayTeamName(selectedTeam.name);
       refreshSearchSummaries();
       return true;
     }
@@ -1368,7 +1393,7 @@
       document.activeElement?.blur();
       openSearchSheet('Scegli avversario',teamMatches,selectedTeam?.name,item => {
         selectedTeam = item;
-        $('opponentSearch').value = item.name;
+        $('opponentSearch').value = displayTeamName(item.name);
         refreshSearchSummaries();
       });
       return false;
@@ -1787,7 +1812,7 @@
         .filter(team => !namesFor(team).some(name => norm(name) === 'juventus'));
 
       teams.sort((a,b) =>
-        String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
+        displayTeamName(a.name).localeCompare(displayTeamName(b.name),'it',{sensitivity:'base'})
       );
       teamsLoaded = teams.length > 0;
     }
