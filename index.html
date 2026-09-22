@@ -1269,13 +1269,6 @@
   function selectAndAdvance(callback) {
     callback();
     closeSheet();
-
-    // Aspetta solo il minimo necessario per far partire l'animazione di chiusura,
-    // poi passa automaticamente al campo successivo.
-    setTimeout(() => {
-      navDirection = 'forward';
-      nextField(false);
-    }, 120);
   }
 
   function openDrawer() {
