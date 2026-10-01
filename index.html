@@ -1888,10 +1888,11 @@
   async function fetchOneCatalog(url,label,timeoutMs=2600) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(),timeoutMs);
+    const freshUrl = `${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`;
 
     try {
-      const response = await fetch(url,{
-        cache:'no-cache',
+      const response = await fetch(freshUrl,{
+        cache:'no-store',
         signal:controller.signal,
         headers:{
           'Accept': url.includes('api.github.com')
