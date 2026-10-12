@@ -27,7 +27,6 @@ jobs:
           repository: Tommaso20BW/LiveScore_JR
           path: _graphics_core
           sparse-checkout: |
-            assets/goal_graphics
             goal_graphics.py
             goal_players.json
             portrait_graphics.py
