@@ -3,912 +3,569 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#090b0f">
+  <meta name="theme-color" content="#0a0c10">
   <title>ImageGEN JR</title>
   <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   <style>
     :root{
-      --bg:#f4f4f2;
-      --bg2:#f4f4f2;
-      --panel:#ffffff;
-      --panel2:#eeeeec;
-      --text:#111318;
-      --muted:#747b84;
-      --line:#d8dadd;
-      --line2:#c9cdd2;
-      --gold:#b98d2f;
-      --gold2:#d9b251;
-      --danger:#b42336;
-      --danger-bg:#f7e9ec;
-      --shadow:none;
-      --navbg:#f4f4f2;
-      --sheetbg:#ffffff;
-      --overlay:rgba(18,20,24,.24);
-      --keyboard-inset:0px;
+      --bg:#f5f4f0;
+      --surface:#ffffff;
+      --surface2:#efede8;
+      --text:#14161a;
+      --muted:#79767a;
+      --line:#e0ddd6;
+      --accent:#b8892a;
+      --accent2:#d4a843;
+      --accent-ink:#1a1405;
+      --accent-soft:rgba(184,137,42,.12);
+      --danger:#b3263a;
+      --danger-soft:rgba(179,38,58,.1);
+      --ok:#2f8f5b;
+      --radius:16px;
       --app-h:100dvh;
+      --top-pad:0px;
     }
-
     html[data-theme="dark"]{
-      --bg:#0b0e12;
-      --bg2:#0b0e12;
-      --panel:#101419;
-      --panel2:#171c22;
-      --text:#f5f6f8;
-      --muted:#8b929d;
-      --line:#303741;
-      --line2:#414954;
-      --gold:#d8b457;
-      --gold2:#efc964;
+      --bg:#0a0c10;
+      --surface:#12161c;
+      --surface2:#1a1f27;
+      --text:#f3f4f6;
+      --muted:#8a919c;
+      --line:#232a33;
+      --accent:#d9b45a;
+      --accent2:#ecc96f;
+      --accent-ink:#1a1405;
+      --accent-soft:rgba(217,180,90,.13);
       --danger:#ff9aa6;
-      --danger-bg:#241519;
-      --shadow:none;
-      --navbg:#0b0e12;
-      --sheetbg:#11151a;
-      --overlay:rgba(0,0,0,.52);
+      --danger-soft:rgba(255,154,166,.1);
+      --ok:#6fd49a;
     }
 
     *{box-sizing:border-box}
-    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text)}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text)}
     html{-webkit-text-size-adjust:100%;touch-action:manipulation}
     body{
-      overflow:hidden;
-      overscroll-behavior:none;
-      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",sans-serif;
+      overflow:hidden;overscroll-behavior:none;
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Inter,sans-serif;
+    }
+    button,input{font:inherit;color:inherit}
+    button{-webkit-tap-highlight-color:transparent;cursor:pointer}
+    input{-webkit-appearance:none;appearance:none}
+    .hidden{display:none!important}
+    :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+    /* ---------- Shell ---------- */
+    .shell{
+      height:var(--app-h);
+      width:100%;
+      max-width:1120px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns:minmax(0,1fr);
+      transition:height .12s ease;
+    }
+    html.tg-mobile{--top-pad:calc(54px + env(safe-area-inset-top))}
+
+    /* ---------- Sidebar (desktop) ---------- */
+    .side{display:none}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{
+      width:34px;height:34px;border-radius:10px;
+      background:linear-gradient(145deg,var(--accent2),var(--accent));
+      color:var(--accent-ink);display:grid;place-items:center;
+      font-weight:900;font-size:13px;letter-spacing:-.02em;
+    }
+    .brand-name{font-size:17px;font-weight:850;letter-spacing:-.03em}
+    .brand-name span{color:var(--accent)}
+    .label{
+      font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+      margin:0 0 10px;
+    }
+
+    .kind-list{display:grid;gap:4px}
+    .kind-item{
+      border:0;background:transparent;text-align:left;
+      min-height:40px;padding:0 12px;border-radius:10px;
+      font-size:14px;font-weight:650;color:var(--muted);
+      display:flex;align-items:center;gap:10px;
+      transition:background .12s,color .12s;
+    }
+    .kind-item:hover{background:var(--surface2);color:var(--text)}
+    .kind-item.selected{background:var(--accent-soft);color:var(--text)}
+    .kind-item .dot{width:6px;height:6px;border-radius:50%;background:var(--line);flex:none}
+    .kind-item.selected .dot{background:var(--accent)}
+
+    .steps{display:grid;gap:0;margin:0;padding:0;list-style:none}
+    .step-item{
+      display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;
+      border:0;background:transparent;text-align:left;width:100%;
+      padding:7px 4px;border-radius:8px;
+    }
+    .step-item .mark{
+      width:20px;height:20px;border-radius:50%;
+      border:1.5px solid var(--line);display:grid;place-items:center;
+      font-size:10px;font-weight:900;color:transparent;margin-top:1px;
+    }
+    .step-item.done .mark{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+    .step-item.current .mark{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+    .step-name{font-size:13px;font-weight:700;color:var(--muted);line-height:1.2}
+    .step-val{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:14px}
+    .step-item.current .step-name,.step-item.done .step-name{color:var(--text)}
+    .step-item.done:hover{background:var(--surface2)}
+    .step-item:disabled{cursor:default}
+
+    /* ---------- Main ---------- */
+    .main{
+      min-height:0;
+      display:grid;
+      grid-template-rows:auto auto auto minmax(0,1fr) auto;
+      padding-top:var(--top-pad);
       background:var(--bg);
     }
 
-    button,input{font:inherit}
-    button{-webkit-tap-highlight-color:transparent}
-    input{-webkit-appearance:none}
-    .hidden{display:none!important}
-
-    .app{
-      width:min(760px,100%);
-      height:var(--app-h);
-      margin:0 auto;
-      display:grid;
-      grid-template-rows:auto minmax(0,1fr);
-      padding:
-        calc(62px + env(safe-area-inset-top))
-        16px
-        0;
-      transition:height .14s ease;
+    .top{
+      display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;
+      padding:8px 12px 4px;
     }
-
-    .topbar{
-      position:relative;
-      min-height:54px;
-      display:grid;
-      grid-template-columns:44px minmax(0,1fr) 44px;
-      align-items:center;
-      border-bottom:1px solid var(--line);
+    .icon-btn{
+      width:40px;height:40px;border:0;border-radius:12px;background:transparent;
+      display:grid;place-items:center;font-size:26px;line-height:1;color:var(--text);
     }
-
-    .menu-btn{
-      width:40px;height:40px;border:0;border-radius:6px;
-      background:transparent;color:var(--text);
-      display:grid;place-items:center;padding:0;
+    .icon-btn:hover{background:var(--surface2)}
+    .icon-btn:disabled{opacity:.4}
+    .top-title{text-align:center;min-width:0}
+    .top-title .brand-name{font-size:16px}
+    .top-title small{
+      display:block;margin-top:3px;color:var(--muted);
+      font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
     }
-    .menu-btn:active{background:var(--panel2)}
-    .close-btn{font-size:28px;line-height:1;font-weight:400}
-    .close-btn:disabled{opacity:.45}
-    .hamburger{width:19px;display:grid;gap:4px}
-    .hamburger span{height:1.5px;background:currentColor;border-radius:2px}
+    .top-right{width:40px}
 
-
-    .brand{text-align:center;min-width:0}
-    .brand-title{
-      font-size:20px;font-weight:900;letter-spacing:-.04em;line-height:1;
+    .kind-chips{
+      display:flex;gap:8px;overflow-x:auto;padding:8px 16px 4px;
+      scrollbar-width:none;-webkit-overflow-scrolling:touch;
     }
-    .brand-title span{color:var(--gold)}
-    .brand-sub{
-      margin-top:4px;
-      color:var(--muted);
-      font-size:9px;
-      font-weight:760;
-      letter-spacing:.15em;
-      text-transform:uppercase;
+    .kind-chips::-webkit-scrollbar{display:none}
+    .chip{
+      flex:none;border:1px solid var(--line);background:var(--surface);
+      height:34px;padding:0 14px;border-radius:999px;
+      font-size:12.5px;font-weight:750;color:var(--muted);white-space:nowrap;
+    }
+    .chip.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+    .progress{
+      margin:10px 16px 0;height:4px;border-radius:4px;background:var(--surface2);overflow:hidden;
+    }
+    .progress i{
+      display:block;height:100%;width:0;border-radius:4px;
+      background:linear-gradient(90deg,var(--accent),var(--accent2));
+      transition:width .3s cubic-bezier(.22,.72,.25,1);
     }
 
-    .step-counter{display:none}
+    .stage{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+    .content{
+      width:100%;max-width:600px;margin:0 auto;
+      padding:26px 16px 28px;
+    }
 
-    .stage{position:relative;min-height:0;overflow:hidden}
-
-    .screen{
-      position:absolute;inset:0;
-      display:none;
-      overflow-y:auto;
-      overscroll-behavior:contain;
-      -webkit-overflow-scrolling:touch;
-      scrollbar-width:none;
-      padding:
-        24px
-        0
-        calc(94px + env(safe-area-inset-bottom));
-    }
-    .screen::-webkit-scrollbar{display:none}
-    .screen.active{
-      display:block;
-      animation:screenForward .22s cubic-bezier(.22,.72,.25,1) both;
-    }
-    .screen.active.enter-back{
-      animation-name:screenBackward;
-    }
-    @keyframes screenForward{
-      from{opacity:0;transform:translateX(16px)}
-      to{opacity:1;transform:translateX(0)}
-    }
-    @keyframes screenBackward{
-      from{opacity:0;transform:translateX(-16px)}
-      to{opacity:1;transform:translateX(0)}
-    }
+    .screen{display:none}
+    .screen.active{display:block;animation:inFwd .22s cubic-bezier(.22,.72,.25,1) both}
+    .screen.active.back{animation-name:inBack}
+    @keyframes inFwd{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+    @keyframes inBack{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
 
     .eyebrow{
-      color:var(--gold);
-      font-size:10px;
-      font-weight:850;
-      letter-spacing:.17em;
-      text-transform:uppercase;
-      margin-bottom:9px;
+      color:var(--accent);font-size:11px;font-weight:850;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;
     }
-    h1{
-      margin:0;
-      font-size:24px;
-      line-height:1.12;
-      letter-spacing:-.025em;
-      font-weight:820;
-    }
-    .lead{
-      margin:7px 0 22px;
-      color:var(--muted);
-      font-size:12.5px;
-      line-height:1.45;
-      max-width:560px;
-    }
-
-    .field-card{
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:8px;
-      box-shadow:none;
-      overflow:hidden;
-    }
-
-    .field-button,
-    .search-box,
-    .number-input{
-      width:100%;
-      min-height:54px;
-      border:0;
-      background:transparent;
-      color:var(--text);
-      outline:none;
-    }
-
-    .field-button{
-      display:grid;
-      grid-template-columns:minmax(0,1fr) auto;
-      align-items:center;
-      gap:12px;
-      text-align:left;
-      padding:0 16px;
-    }
-    .field-button{
-      transition:background .14s ease,transform .14s ease;
-    }
-    .field-button:active{
-      background:var(--panel2);
-      transform:scale(.995);
-    }
-    .field-label{
-      display:block;
-      color:var(--muted);
-      font-size:10px;
-      font-weight:800;
-      letter-spacing:.09em;
-      text-transform:uppercase;
-      margin-bottom:4px;
-    }
-    .field-value{
-      display:block;
-      color:var(--text);
-      font-size:16px;
-      font-weight:680;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .chev{color:var(--muted);font-size:20px}
-
-    .search-box{
-      padding:0 16px;
-      font-size:17px;
-      font-weight:620;
-      border-radius:8px;
-    }
-    .search-box::placeholder{color:color-mix(in srgb,var(--muted) 72%,transparent)}
-    .search-box:focus{
-      box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 74%,transparent);
-    }
-
-    .search-summary{
-      margin-top:10px;
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.4;
-    }
-
-    .minute-field{
-      position:relative;
-    }
-    .minute-field .search-box{
-      padding-right:86px;
-    }
-    .minute-plus{
-      position:absolute;
-      right:10px;
-      top:50%;
-      transform:translateY(-50%);
-      border:0;
-      background:transparent;
-      color:var(--muted);
-      min-height:34px;
-      padding:0 4px;
-      font-size:10px;
-      font-weight:850;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      transition:color .14s ease,transform .14s ease;
-    }
-    .minute-plus:active{
-      color:var(--gold);
-      transform:translateY(-50%) scale(.96);
-    }
-
-    .number-row{
-      display:grid;
-      grid-template-columns:1fr 32px 1fr;
-      align-items:center;
-      gap:8px;
-    }
-    .number-input{
-      min-height:66px;
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:8px;
-      text-align:center;
-      font-size:31px;
-      font-weight:820;
-      box-shadow:none;
-      padding:0 10px;
-    }
-    .number-input:focus{
-      border-color:color-mix(in srgb,var(--gold) 74%,transparent);
-      box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 11%,transparent);
-    }
-    .dash{text-align:center;color:var(--muted);font-size:22px}
+    h1{margin:0;font-size:28px;line-height:1.1;letter-spacing:-.03em;font-weight:850}
+    .lead{margin:8px 0 22px;color:var(--muted);font-size:14px;line-height:1.5}
 
     .error{
-      display:none;
-      margin:0 0 18px;
-      padding:12px 13px;
-      border-radius:6px;
-      background:var(--danger-bg);
-      color:var(--danger);
-      font-size:12px;
-      font-weight:650;
-      line-height:1.4;
+      display:none;margin:0 0 18px;padding:12px 14px;border-radius:12px;
+      background:var(--danger-soft);color:var(--danger);
+      font-size:13px;font-weight:650;line-height:1.4;
     }
 
-    .nav{
-      position:fixed;
-      z-index:700;
-      left:50%;
-      bottom:var(--keyboard-inset);
-      transform:translateX(-50%);
-      width:min(760px,100%);
-      padding:
-        10px 16px
-        calc(10px + env(safe-area-inset-bottom));
-      background:var(--navbg);
-      border-top:1px solid var(--line);
-      transition:bottom .12s ease;
-      pointer-events:none;
+    /* Options */
+    .opts{display:grid;gap:10px}
+    .opt{
+      width:100%;min-height:60px;padding:0 16px;
+      display:flex;align-items:center;gap:14px;text-align:left;
+      background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
+      font-size:16px;font-weight:700;
+      transition:border-color .14s,background .14s,transform .12s;
     }
-    .nav-inner{
-      min-height:58px;
-      display:grid;
-      grid-template-columns:1fr auto;
-      align-items:center;
-      gap:12px;
-      pointer-events:auto;
+    .opt:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+    .opt:active{transform:scale(.99)}
+    .opt .radio{
+      width:22px;height:22px;border-radius:50%;flex:none;
+      border:2px solid var(--line);position:relative;
+      transition:border-color .14s;
     }
-    .back-btn{
-      justify-self:start;
-      min-height:42px;
-      padding:0 8px;
-      border:0;
-      background:transparent;
-      color:var(--text);
-      border-radius:6px;
-      font-size:14px;
-      font-weight:650;
+    .opt.selected{border-color:var(--accent);background:var(--accent-soft)}
+    .opt.selected .radio{border-color:var(--accent)}
+    .opt.selected .radio::after{
+      content:"";position:absolute;inset:3px;border-radius:50%;background:var(--accent);
     }
-    .back-btn:disabled{opacity:.28}
-    .back-btn:not(:disabled):active{background:color-mix(in srgb,var(--text) 6%,transparent)}
-
-    .next-btn{
-      min-width:108px;
-      min-height:42px;
-      border:0;
-      border-radius:6px;
-      padding:0 18px;
-      background:linear-gradient(180deg,var(--gold2),var(--gold));
-      color:#171207;
-      font-size:14px;
-      font-weight:860;
-      box-shadow:none;
-    }
-    .next-btn{
-      transition:transform .14s ease,filter .14s ease,opacity .14s ease;
-    }
-    .next-btn:active{transform:scale(.975)}
-    .next-btn:disabled{opacity:.45}
-
-    .sheet-layer{
-      position:fixed;
-      inset:0;
-      z-index:600;
-      background:var(--overlay);
-      opacity:0;
-      visibility:hidden;
-      pointer-events:none;
-      transition:
-        opacity .20s ease,
-        visibility 0s linear .26s;
-    }
-    .sheet-layer.open{
-      opacity:1;
-      visibility:visible;
-      pointer-events:auto;
-      transition-delay:0s;
+    @media(min-width:700px){
+      .opts.grid{grid-template-columns:1fr 1fr}
     }
 
-    .sheet{
-      position:absolute;
-      left:50%;
-      top:50%;
-      bottom:auto;
-      transform:translate(-50%,-46%) scale(.985);
-      width:min(520px,calc(100% - 34px));
-      max-height:min(64vh,560px);
-      display:grid;
-      grid-template-rows:auto minmax(0,1fr);
-      background:var(--sheetbg);
-      border:1px solid var(--line);
-      border-radius:10px;
-      box-shadow:0 22px 70px rgba(0,0,0,.24);
-      overflow:hidden;
-      opacity:0;
-      transition:
-        transform .22s cubic-bezier(.22,.72,.25,1),
-        opacity .18s ease;
+    /* Search */
+    .search{
+      display:flex;align-items:center;gap:10px;
+      background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
+      padding:0 16px;min-height:58px;
+      transition:border-color .14s,box-shadow .14s;
     }
-    .sheet-layer.open .sheet{
-      transform:translate(-50%,-50%) scale(1);
-      opacity:1;
+    .search:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+    .search svg{flex:none;color:var(--muted)}
+    .search input{
+      flex:1;min-width:0;border:0;background:transparent;outline:none;
+      font-size:17px;font-weight:650;min-height:54px;
     }
-    .sheet-head{
-      display:grid;
-      grid-template-columns:1fr auto;
-      align-items:center;
-      gap:10px;
-      padding:14px 15px 11px;
-      border-bottom:1px solid var(--line);
+    .search input::placeholder{color:var(--muted);font-weight:500}
+    .hint{margin:10px 2px 0;color:var(--muted);font-size:12.5px;min-height:18px}
+    .results{display:grid;gap:6px;margin-top:12px}
+    .result{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      min-height:52px;padding:0 16px;border-radius:12px;
+      background:var(--surface);border:1.5px solid transparent;
+      font-size:15.5px;font-weight:650;text-align:left;width:100%;
     }
-    .sheet-title{
-      font-size:15px;
-      font-weight:800;
-      letter-spacing:-.01em;
-    }
-    .sheet-close{
-      width:32px;height:32px;border:0;border-radius:6px;
-      background:var(--panel2);color:var(--muted);
-      font-size:21px;line-height:1;
-    }
-    .sheet-list{
-      overflow-y:auto;
-      -webkit-overflow-scrolling:touch;
-      padding:7px;
-    }
-    .sheet-option{
-      width:100%;
-      min-height:50px;
-      border:0;
-      border-radius:6px;
-      background:transparent;
-      color:var(--text);
-      text-align:left;
-      padding:0 12px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      font-size:15px;
-      font-weight:650;
-    }
-    .sheet-option{
-      transition:background .14s ease,transform .14s ease;
-    }
-    .sheet-option:active{
-      background:var(--panel2);
-      transform:scale(.992);
-    }
-    .sheet-option.selected{background:color-mix(in srgb,var(--gold) 10%,var(--panel2))}
-    .check{color:var(--gold);font-weight:900}
+    .result:hover{border-color:var(--line)}
+    .result.selected{border-color:var(--accent);background:var(--accent-soft)}
+    .result .tick{color:var(--accent);font-weight:900}
 
-    .hamburger-panel{
-      position:fixed;
-      inset:0;
-      z-index:800;
-      background:var(--overlay);
-      opacity:0;
-      visibility:hidden;
-      pointer-events:none;
-      transition:
-        opacity .24s ease,
-        visibility 0s linear .32s;
+    /* Minute */
+    .inline-field{position:relative}
+    .field-input{
+      width:100%;min-height:62px;padding:0 110px 0 18px;
+      background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
+      font-size:26px;font-weight:800;outline:none;letter-spacing:-.01em;
     }
-    .hamburger-panel.open{
-      opacity:1;
-      visibility:visible;
-      pointer-events:auto;
-      transition-delay:0s;
+    .field-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+    .field-input::placeholder{color:var(--muted);font-weight:500}
+    .pill-btn{
+      position:absolute;right:10px;top:50%;transform:translateY(-50%);
+      height:38px;padding:0 14px;border:0;border-radius:10px;
+      background:var(--surface2);color:var(--text);font-size:12px;font-weight:800;
     }
-    .drawer{
-      position:absolute;
-      top:0;right:0;left:auto;bottom:0;
-      width:min(84vw,360px);
-      padding:
-        calc(72px + env(safe-area-inset-top))
-        14px
-        calc(18px + env(safe-area-inset-bottom));
-      background:var(--sheetbg);
-      border-left:1px solid var(--line);
-      box-shadow:-18px 0 60px rgba(0,0,0,.22);
-      overflow-y:auto;
-      transform:translate3d(104%,0,0);
-      opacity:.96;
-      transition:
-        transform .32s cubic-bezier(.22,.78,.24,1),
-        opacity .22s ease;
-      will-change:transform,opacity;
+    .pill-btn:active{background:var(--accent-soft)}
+    .quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .quick button{
+      height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);
+      background:var(--surface);color:var(--muted);font-size:13px;font-weight:700;
     }
-    .hamburger-panel.open .drawer{
-      transform:translate3d(0,0,0);
-      opacity:1;
-    }
-    .drawer-top{
-      display:flex;align-items:center;justify-content:space-between;
-      gap:12px;padding:0 2px 18px;
-    }
-    .drawer-title{
-      font-size:20px;font-weight:900;letter-spacing:-.035em;
-    }
-    .drawer-title span{color:var(--gold)}
-    .drawer-close{
-      width:34px;height:34px;border:0;border-radius:6px;
-      background:var(--panel2);color:var(--muted);font-size:22px;
-    }
-    .drawer-label{
-      margin:8px 4px 8px;
-      color:var(--muted);
-      font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
-    }
+    .quick button:hover{color:var(--text);border-color:var(--accent)}
 
-    .preview-screen-wrap{
-      display:grid;
-      gap:14px;
-      align-items:start;
+    /* Number pairs */
+    .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .num-card{
+      background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
+      padding:14px 12px 12px;display:grid;gap:10px;justify-items:center;
+      transition:border-color .14s,box-shadow .14s;
     }
-    .preview-screen-frame{
-      display:flex;
-      justify-content:center;
-      padding:6px 0 4px;
+    .num-card:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+    .num-name{
+      font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+      max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
-    .preview-screen-note{
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.5;
+    .num-row{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;width:100%;gap:4px}
+    .step-btn{
+      width:40px;height:40px;border-radius:12px;border:0;background:var(--surface2);
+      font-size:22px;font-weight:600;line-height:1;display:grid;place-items:center;
     }
+    .step-btn:active{background:var(--accent-soft)}
+    .num-input{
+      width:100%;min-width:0;border:0;background:transparent;outline:none;text-align:center;
+      font-size:44px;font-weight:850;letter-spacing:-.03em;padding:0;min-height:56px;
+      -moz-appearance:textfield;
+    }
+    .num-input::-webkit-outer-spin-button,.num-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+    .num-input::placeholder{color:var(--line)}
+    .num-input.text{font-size:30px}
+    .vs{display:none}
 
-    .preview-layer{
-      position:fixed;
-      inset:0;
-      z-index:900;
-      background:var(--overlay);
-      opacity:0;
-      visibility:hidden;
-      pointer-events:none;
-      transition:opacity .22s ease, visibility 0s linear .28s;
+    .chips-stats{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+    .chips-stats button{
+      height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);
+      background:transparent;color:var(--muted);font-size:11px;font-weight:750;
     }
-    .preview-layer.open{
-      opacity:1;
-      visibility:visible;
-      pointer-events:auto;
-      transition-delay:0s;
-    }
-    .preview-card{
-      position:absolute;
-      left:50%;
-      top:50%;
-      transform:translate(-50%,-48%) scale(.985);
-      width:min(780px,calc(100% - 24px));
-      max-height:min(92vh,1000px);
-      background:var(--sheetbg);
-      border:1px solid var(--line);
-      border-radius:12px;
-      overflow:hidden;
-      box-shadow:0 22px 70px rgba(0,0,0,.28);
-      opacity:0;
-      transition:transform .24s cubic-bezier(.22,.72,.25,1), opacity .18s ease;
-      display:grid;
-      grid-template-rows:auto minmax(0,1fr) auto;
-    }
-    .preview-layer.open .preview-card{
-      transform:translate(-50%,-50%) scale(1);
-      opacity:1;
-    }
-    .preview-head{
-      display:grid;
-      grid-template-columns:minmax(0,1fr) auto;
-      align-items:center;
-      gap:12px;
-      padding:14px 16px 12px;
-      border-bottom:1px solid var(--line);
-    }
-    .preview-kicker{
-      color:var(--gold);
-      font-size:10px;
-      font-weight:850;
-      letter-spacing:.12em;
-      text-transform:uppercase;
-      margin-bottom:3px;
-    }
-    .preview-title{
-      font-size:18px;
-      font-weight:820;
-      letter-spacing:-.02em;
-    }
-    .preview-close{
-      width:34px;height:34px;border:0;border-radius:6px;
-      background:var(--panel2);color:var(--muted);font-size:22px;line-height:1;
-    }
-    .preview-body{
-      min-height:0;
-      overflow:auto;
-      padding:14px;
-      background:var(--bg2);
-    }
-    .preview-frame{
-      display:flex;
-      justify-content:center;
-      align-items:flex-start;
-    }
+    .chips-stats button.filled{color:var(--text);border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+    .chips-stats button.current{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+    .tiny{margin-top:14px;color:var(--muted);font-size:12px}
+
+    /* Preview */
+    .preview-wrap{display:grid;gap:14px;justify-items:center}
     .preview-image{
-      display:block;
-      width:min(100%,620px);
-      height:auto;
-      border-radius:10px;
-      border:1px solid var(--line);
-      background:var(--panel);
-      box-shadow:0 12px 30px rgba(0,0,0,.16);
+      display:block;width:100%;max-width:540px;height:auto;border-radius:14px;
+      border:1px solid var(--line);background:var(--surface);
+      box-shadow:0 18px 50px rgba(0,0,0,.25);
     }
-    .preview-foot{
-      padding:12px 14px calc(12px + env(safe-area-inset-bottom));
-      border-top:1px solid var(--line);
-      background:var(--sheetbg);
-    }
-    .preview-error{
-      display:none;
-      margin-bottom:10px;
-      padding:12px 13px;
-      border-radius:6px;
-      background:var(--danger-bg);
-      color:var(--danger);
-      font-size:12px;
-      font-weight:650;
-      line-height:1.4;
-    }
-    .preview-actions{
-      display:grid;
-      grid-template-columns:1fr auto;
-      align-items:center;
-      gap:12px;
-    }
-    .preview-back{
-      justify-self:start;
-      min-height:42px;
-      padding:0 12px;
-      border:1px solid var(--line);
-      border-radius:6px;
-      background:var(--panel);
-      color:var(--text);
-      font-size:14px;
-      font-weight:700;
-    }
-    .preview-send{
-      min-width:126px;
-      min-height:42px;
-      border:0;
-      border-radius:6px;
-      padding:0 18px;
-      background:linear-gradient(180deg,var(--gold2),var(--gold));
-      color:#171207;
-      font-size:14px;
-      font-weight:860;
-    }
-    .preview-send:disabled,.preview-back:disabled{opacity:.45}
+    .note{color:var(--muted);font-size:12.5px;text-align:center}
 
-    .kind-option{
-      width:100%;
-      min-height:50px;
-      border:0;
-      border-radius:6px;
-      background:transparent;
-      color:var(--text);
-      text-align:left;
-      padding:0 12px;
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-      font-size:15px;font-weight:700;
+    /* Bottom bar */
+    .bar{
+      border-top:1px solid var(--line);background:var(--bg);
+      padding:12px 16px calc(12px + env(safe-area-inset-bottom));
     }
-    .kind-option{
-      transition:background .14s ease,transform .14s ease;
+    .bar-inner{
+      width:100%;max-width:600px;margin:0 auto;
+      display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;
     }
-    .kind-option:active{
-      background:var(--panel2);
-      transform:translateX(-2px);
+    .btn{
+      min-height:50px;border-radius:14px;font-size:15px;font-weight:800;border:0;padding:0 20px;
+      transition:transform .12s,opacity .12s,filter .12s;
     }
-    .kind-option.selected{
-      background:color-mix(in srgb,var(--gold) 11%,var(--panel2));
-      color:var(--text);
+    .btn:active{transform:scale(.98)}
+    .btn:disabled{opacity:.4;cursor:default}
+    .btn.ghost{background:var(--surface2);color:var(--text)}
+    .btn.primary{
+      background:linear-gradient(180deg,var(--accent2),var(--accent));color:var(--accent-ink);
     }
+    .btn.primary:hover:not(:disabled){filter:brightness(1.05)}
 
-    .stats-pairs{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
-    }
-    .stats-pairs .number-input{
-      min-height:64px;
-      font-size:22px;
-    }
-    .tiny{
-      margin-top:8px;color:var(--muted);font-size:11px;line-height:1.4;
-    }
-
-    @media (prefers-reduced-motion: reduce){
-      *,*::before,*::after{
-        animation-duration:.01ms!important;
-        animation-iteration-count:1!important;
-        transition-duration:.01ms!important;
-        scroll-behavior:auto!important;
+    /* ---------- Desktop ---------- */
+    @media(min-width:900px){
+      html{--top-pad:0px}
+      .shell{grid-template-columns:300px minmax(0,1fr)}
+      .side{
+        display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:26px;
+        padding:28px 22px 22px;border-right:1px solid var(--line);
+        background:var(--surface);overflow-y:auto;
       }
+      .top{padding:20px 28px 0;grid-template-columns:44px minmax(0,1fr) 44px}
+      .top-title .brand-name{display:none}
+      .top-title{text-align:left}
+      .top-title small{
+        font-size:12px;margin:0;color:var(--text);letter-spacing:.14em;
+      }
+      .kind-chips{display:none}
+      .progress{margin:16px 28px 0}
+      .content{padding:44px 28px 40px}
+      h1{font-size:34px}
+      .lead{font-size:15px}
+      .bar{padding:16px 28px}
+      .bar-inner{max-width:600px}
+      .btn.primary{min-width:180px}
+      .bar-inner{grid-template-columns:auto 1fr}
+      #nextButton{justify-self:end}
+      .num-input{font-size:52px}
+    }
+    @media(min-width:1180px){
+      .shell{grid-template-columns:320px minmax(0,1fr)}
     }
 
-    @media(max-width:520px){
-      .screen{padding-top:24px}
-      .stats-pairs{gap:9px}
-      .sheet{width:calc(100% - 28px)}
+    @media(max-width:380px){
+      h1{font-size:25px}
+      .num-input{font-size:38px}
+    }
+    @media (prefers-reduced-motion: reduce){
+      *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
     }
   </style>
 </head>
 
 <body>
-  <main class="app">
-    <header class="topbar">
-      <button id="closeWorkflowButton" class="menu-btn close-btn" type="button" aria-label="Chiudi workflow">×</button>
+  <div class="shell">
+
+    <!-- Sidebar desktop -->
+    <aside class="side">
       <div class="brand">
-        <div class="brand-title">ImageGEN <span>JR</span></div>
-        <div id="kindSubtitle" class="brand-sub">GOAL</div>
+        <div class="logo">JR</div>
+        <div class="brand-name">ImageGEN <span>JR</span></div>
       </div>
-      <button id="menuButton" class="menu-btn" type="button" aria-label="Menu">
-        <span class="hamburger" aria-hidden="true"><span></span><span></span><span></span></span>
-      </button>
-    </header>
-
-    <div class="stage">
-      <section id="competitionScreen" class="screen active" data-screen="competition">
-        <div class="eyebrow">Partita</div>
-        <h1>Competizione.</h1>
-        <p class="lead">Scegli la competizione della partita.</p>
-        <div id="error" class="error"></div>
-
-        <div class="field-card">
-          <button id="competitionButton" class="field-button" type="button">
-            <span>
-              <span class="field-label">Competizione</span>
-              <span id="competitionValue" class="field-value">Serie A</span>
-            </span>
-            <span class="chev">›</span>
-          </button>
-        </div>
-      </section>
-
-      <section id="sideScreen" class="screen" data-screen="side">
-        <div class="eyebrow">Partita</div>
-        <h1>Casa o trasferta?</h1>
-        <p class="lead">Dove gioca la Juventus?</p>
-        <div class="field-card">
-          <button id="sideButton" class="field-button" type="button">
-            <span>
-              <span class="field-label">Juventus</span>
-              <span id="sideValue" class="field-value">In casa</span>
-            </span>
-            <span class="chev">›</span>
-          </button>
-        </div>
-      </section>
-
-      <section id="opponentScreen" class="screen" data-screen="opponent">
-        <div class="eyebrow">Partita</div>
-        <h1>Avversario.</h1>
-        <p class="lead">Cerca la squadra e selezionala.</p>
-
-        <div class="field-card">
-          <input id="opponentSearch" class="search-box" autocomplete="off" autocapitalize="words"
-                 spellcheck="false" enterkeyhint="done" placeholder="Cerca squadra…">
-        </div>
-        <div id="opponentSummary" class="search-summary">Scrivi almeno 2 caratteri.</div>
-      </section>
-
-      <section id="kitScreen" class="screen" data-screen="kit">
-        <div class="eyebrow">Aspetto</div>
-        <h1>Quale maglia?</h1>
-        <p class="lead">Scegli il kit Juventus da usare nella grafica.</p>
-        <div class="field-card">
-          <button id="kitButton" class="field-button" type="button">
-            <span>
-              <span class="field-label">Kit Juventus</span>
-              <span id="kitValue" class="field-value">Home</span>
-            </span>
-            <span class="chev">›</span>
-          </button>
-        </div>
-      </section>
-
-      <section id="playerScreen" class="screen" data-screen="player">
-        <div class="eyebrow">Giocatore</div>
-        <h1 id="playerTitle">Scegli il giocatore.</h1>
-        <p class="lead">Cerca il nome e selezionalo.</p>
-
-        <div class="field-card">
-          <input id="playerSearch" class="search-box" autocomplete="off" autocapitalize="words"
-                 spellcheck="false" enterkeyhint="done" placeholder="Cerca giocatore…">
-        </div>
-        <div id="playerSummary" class="search-summary">Scrivi almeno 2 caratteri.</div>
-      </section>
-
-      <section id="minuteScreen" class="screen" data-screen="minute">
-        <div class="eyebrow">Evento</div>
-        <h1>Minuto.</h1>
-        <p class="lead">Inserisci il minuto dell’azione.</p>
-        <div class="field-card minute-field">
-          <input id="minute" class="search-box" inputmode="numeric" enterkeyhint="done" placeholder="67 o 90+4">
-          <button id="minutePlus" class="minute-plus" type="button" aria-label="Aggiungi recupero">+ recupero</button>
-        </div>
-      </section>
-
-      <section id="poseScreen" class="screen" data-screen="pose">
-        <div class="eyebrow">Aspetto</div>
-        <h1>Posa.</h1>
-        <p class="lead">Scegli la posa del giocatore.</p>
-        <div class="field-card">
-          <button id="poseButton" class="field-button" type="button">
-            <span>
-              <span class="field-label">Posa</span>
-              <span id="poseValue" class="field-value">Braccia incrociate</span>
-            </span>
-            <span class="chev">›</span>
-          </button>
-        </div>
-      </section>
-
-      <section id="scoreHomeScreen" class="screen" data-screen="scoreHome">
-        <div class="eyebrow">Risultato</div>
-        <h1 id="scoreHomeTitle">Gol casa.</h1>
-        <p id="scoreHomeLead" class="lead">Inserisci il punteggio della squadra di casa.</p>
-        <input id="homeScore" class="number-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
-      </section>
-
-      <section id="scoreAwayScreen" class="screen" data-screen="scoreAway">
-        <div class="eyebrow">Risultato</div>
-        <h1 id="scoreAwayTitle">Gol trasferta.</h1>
-        <p id="scoreAwayLead" class="lead">Inserisci il punteggio della squadra in trasferta.</p>
-        <input id="awayScore" class="number-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
-      </section>
-
-      <section id="pensHomeScreen" class="screen" data-screen="pensHome">
-        <div class="eyebrow">Rigori</div>
-        <h1 id="pensHomeTitle">Rigori casa.</h1>
-        <p id="pensHomeLead" class="lead">Facoltativo. Se non ci sono stati rigori, lascia vuoto e vai avanti.</p>
-        <input id="homePens" class="number-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
-      </section>
-
-      <section id="pensAwayScreen" class="screen" data-screen="pensAway">
-        <div class="eyebrow">Rigori</div>
-        <h1 id="pensAwayTitle">Rigori trasferta.</h1>
-        <p id="pensAwayLead" class="lead">Facoltativo. Completa solo se il FULL TIME si è deciso ai rigori.</p>
-        <input id="awayPens" class="number-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
-      </section>
-
-      <section id="momentScreen" class="screen" data-screen="moment">
-        <div class="eyebrow">Statistiche</div>
-        <h1>Momento.</h1>
-        <p class="lead">A quale fase della partita appartengono le statistiche?</p>
-        <div class="field-card">
-          <button id="momentButton" class="field-button" type="button">
-            <span>
-              <span class="field-label">Momento</span>
-              <span id="momentValue" class="field-value">HALF TIME</span>
-            </span>
-            <span class="chev">›</span>
-          </button>
-        </div>
-      </section>
-
-      <section id="statsScreen" class="screen" data-screen="stats">
-        <div class="eyebrow">Statistiche</div>
-        <h1 id="statTitle">Possesso.</h1>
-        <p id="statLead" class="lead">Inserisci i due valori. Puoi lasciare entrambi vuoti per saltare questa voce.</p>
-        <div class="stats-pairs">
-          <input id="statHome" class="number-input" inputmode="decimal" enterkeyhint="done" placeholder="Casa">
-          <input id="statAway" class="number-input" inputmode="decimal" enterkeyhint="done" placeholder="Trasf.">
-        </div>
-        <div id="statIndex" class="tiny"></div>
-      </section>
-
-      <section id="previewScreen" class="screen" data-screen="preview">
-        <div class="eyebrow">Anteprima</div>
-        <h1>Controlla la grafica.</h1>
-        <p class="lead">Se è tutto ok, premi “Invia foto”. Altrimenti torna indietro e modifica i dati.</p>
-        <div id="previewError" class="error"></div>
-        <div class="preview-screen-wrap">
-          <div class="preview-screen-frame">
-            <img id="previewImage" class="preview-image" alt="Anteprima grafica" />
-          </div>
-          <div class="preview-screen-note">Questa è l’anteprima reale della grafica che verrà inviata su Telegram.</div>
-        </div>
-      </section>
-    </div>
-  </main>
-
-  <nav class="nav" aria-label="Navigazione">
-    <div class="nav-inner">
-      <button id="backButton" class="back-btn" type="button">‹ Indietro</button>
-      <button id="nextButton" class="next-btn" type="button">Avanti ›</button>
-    </div>
-  </nav>
-
-  <div id="sheetLayer" class="sheet-layer" aria-hidden="true">
-    <div class="sheet" role="dialog" aria-modal="true">
-      <div class="sheet-head">
-        <div id="sheetTitle" class="sheet-title">Scegli</div>
-        <button id="sheetClose" class="sheet-close" type="button" aria-label="Chiudi">×</button>
+      <div>
+        <div class="label">Tipo grafica</div>
+        <div id="kindListSide" class="kind-list"></div>
       </div>
-      <div id="sheetList" class="sheet-list"></div>
-    </div>
-  </div>
-
-  <div id="drawerLayer" class="hamburger-panel" aria-hidden="true">
-    <aside class="drawer">
-      <div class="drawer-top">
-        <div class="drawer-title">ImageGEN <span>JR</span></div>
-        <button id="drawerClose" class="drawer-close" type="button" aria-label="Chiudi">×</button>
+      <div>
+        <div class="label">Percorso</div>
+        <ul id="stepList" class="steps"></ul>
       </div>
-      <div class="drawer-label">Tipo grafica</div>
-      <div id="kindList"></div>
     </aside>
+
+    <!-- Main -->
+    <section class="main">
+      <header class="top">
+        <button id="closeWorkflowButton" class="icon-btn" type="button" aria-label="Chiudi workflow">×</button>
+        <div class="top-title">
+          <div class="brand-name">ImageGEN <span>JR</span></div>
+          <small id="kindSubtitle">GOAL</small>
+        </div>
+        <div class="top-right"></div>
+      </header>
+
+      <div id="kindListMobile" class="kind-chips" role="tablist" aria-label="Tipo grafica"></div>
+
+      <div class="progress"><i id="progressBar"></i></div>
+
+      <div class="stage" id="stage">
+        <div class="content">
+          <div id="error" class="error"></div>
+
+          <section class="screen active" data-screen="competition">
+            <div class="eyebrow">Partita</div>
+            <h1>Competizione</h1>
+            <p class="lead">Scegli la competizione della partita.</p>
+            <div id="competitionOpts" class="opts grid" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="side">
+            <div class="eyebrow">Partita</div>
+            <h1>Casa o trasferta?</h1>
+            <p class="lead">Dove gioca la Juventus?</p>
+            <div id="sideOpts" class="opts" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="opponent">
+            <div class="eyebrow">Partita</div>
+            <h1>Avversario</h1>
+            <p class="lead">Cerca la squadra e selezionala dalla lista.</p>
+            <label class="search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="opponentSearch" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Cerca squadra…">
+            </label>
+            <div id="opponentSummary" class="hint">Scrivi almeno 2 caratteri.</div>
+            <div id="opponentList" class="results"></div>
+          </section>
+
+          <section class="screen" data-screen="kit">
+            <div class="eyebrow">Aspetto</div>
+            <h1>Quale maglia?</h1>
+            <p class="lead">Scegli il kit Juventus da usare nella grafica.</p>
+            <div id="kitOpts" class="opts" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="player">
+            <div class="eyebrow">Giocatore</div>
+            <h1 id="playerTitle">Scegli il giocatore</h1>
+            <p class="lead">Cerca il nome e selezionalo dalla lista.</p>
+            <label class="search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="playerSearch" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Cerca giocatore…">
+            </label>
+            <div id="playerSummary" class="hint">Scrivi almeno 2 caratteri.</div>
+            <div id="playerList" class="results"></div>
+          </section>
+
+          <section class="screen" data-screen="minute">
+            <div class="eyebrow">Evento</div>
+            <h1>Minuto</h1>
+            <p class="lead">Inserisci il minuto dell’azione.</p>
+            <div class="inline-field">
+              <input id="minute" class="field-input" inputmode="numeric" enterkeyhint="done" placeholder="67 o 90+4" autocomplete="off">
+              <button id="minutePlus" class="pill-btn" type="button">+ recupero</button>
+            </div>
+            <div class="quick" id="minuteQuick">
+              <button type="button" data-v="45+">45+</button>
+              <button type="button" data-v="90+">90+</button>
+              <button type="button" data-v="105+">105+</button>
+              <button type="button" data-v="120+">120+</button>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="pose">
+            <div class="eyebrow">Aspetto</div>
+            <h1>Posa</h1>
+            <p class="lead">Scegli la posa del giocatore.</p>
+            <div id="poseOpts" class="opts" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="score">
+            <div class="eyebrow">Risultato</div>
+            <h1>Punteggio</h1>
+            <p class="lead">Inserisci i gol di entrambe le squadre.</p>
+            <div class="pair">
+              <div class="num-card">
+                <div id="scoreHomeName" class="num-name">Casa</div>
+                <div class="num-row">
+                  <button class="step-btn" type="button" data-target="homeScore" data-delta="-1" aria-label="Meno">−</button>
+                  <input id="homeScore" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
+                  <button class="step-btn" type="button" data-target="homeScore" data-delta="1" aria-label="Più">+</button>
+                </div>
+              </div>
+              <div class="num-card">
+                <div id="scoreAwayName" class="num-name">Trasferta</div>
+                <div class="num-row">
+                  <button class="step-btn" type="button" data-target="awayScore" data-delta="-1" aria-label="Meno">−</button>
+                  <input id="awayScore" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
+                  <button class="step-btn" type="button" data-target="awayScore" data-delta="1" aria-label="Più">+</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="pens">
+            <div class="eyebrow">Rigori</div>
+            <h1>Lotteria dei rigori</h1>
+            <p class="lead">Facoltativo. Compila solo se il FULL TIME si è deciso ai rigori, altrimenti vai avanti.</p>
+            <div class="pair">
+              <div class="num-card">
+                <div id="pensHomeName" class="num-name">Casa</div>
+                <div class="num-row">
+                  <button class="step-btn" type="button" data-target="homePens" data-delta="-1" aria-label="Meno">−</button>
+                  <input id="homePens" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="–">
+                  <button class="step-btn" type="button" data-target="homePens" data-delta="1" aria-label="Più">+</button>
+                </div>
+              </div>
+              <div class="num-card">
+                <div id="pensAwayName" class="num-name">Trasferta</div>
+                <div class="num-row">
+                  <button class="step-btn" type="button" data-target="awayPens" data-delta="-1" aria-label="Meno">−</button>
+                  <input id="awayPens" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="–">
+                  <button class="step-btn" type="button" data-target="awayPens" data-delta="1" aria-label="Più">+</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="moment">
+            <div class="eyebrow">Statistiche</div>
+            <h1>Momento</h1>
+            <p class="lead">A quale fase della partita appartengono le statistiche?</p>
+            <div id="momentOpts" class="opts" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="stats">
+            <div class="eyebrow">Statistiche</div>
+            <h1 id="statTitle">Possesso</h1>
+            <p class="lead">Inserisci i due valori. Puoi lasciare entrambi vuoti per saltare questa voce.</p>
+            <div class="pair">
+              <div class="num-card">
+                <div id="statHomeName" class="num-name">Casa</div>
+                <input id="statHome" class="num-input text" inputmode="decimal" enterkeyhint="done" placeholder="–" autocomplete="off">
+              </div>
+              <div class="num-card">
+                <div id="statAwayName" class="num-name">Trasferta</div>
+                <input id="statAway" class="num-input text" inputmode="decimal" enterkeyhint="done" placeholder="–" autocomplete="off">
+              </div>
+            </div>
+            <div id="statChips" class="chips-stats"></div>
+            <div id="statIndex" class="tiny"></div>
+          </section>
+
+          <section class="screen" data-screen="preview">
+            <div class="eyebrow">Anteprima</div>
+            <h1>Controlla la grafica</h1>
+            <p class="lead">Se è tutto ok, premi “Invia foto”. Altrimenti torna indietro e modifica i dati.</p>
+            <div id="previewError" class="error"></div>
+            <div class="preview-wrap">
+              <img id="previewImage" class="preview-image" alt="Anteprima grafica">
+              <div class="note">Questa è l’anteprima reale della grafica che verrà inviata su Telegram.</div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <footer class="bar">
+        <div class="bar-inner">
+          <button id="backButton" class="btn ghost" type="button">‹ Indietro</button>
+          <button id="nextButton" class="btn primary" type="button">Avanti ›</button>
+        </div>
+      </footer>
+    </section>
   </div>
 
 <script>
@@ -921,12 +578,10 @@
     const theme = tg && ['dark','light'].includes(tg.colorScheme)
       ? tg.colorScheme
       : (media.matches ? 'dark' : 'light');
-
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
-    metaTheme.setAttribute('content', theme === 'dark' ? '#090b0f' : '#f4f5f7');
+    metaTheme.setAttribute('content', theme === 'dark' ? '#0a0c10' : '#f5f4f0');
   }
-
   applyTheme();
   if (media.addEventListener) media.addEventListener('change', applyTheme);
 
@@ -934,16 +589,15 @@
     tg.ready();
     tg.expand();
     if (tg.onEvent) tg.onEvent('themeChanged', applyTheme);
-    try {
-      if (typeof tg.requestFullscreen === 'function') tg.requestFullscreen();
-    } catch (_) {}
+    if (['ios','android'].includes(tg.platform)) {
+      document.documentElement.classList.add('tg-mobile');
+      try { if (typeof tg.requestFullscreen === 'function') tg.requestFullscreen(); } catch (_) {}
+    }
   }
 
-  // Blocca pinch/double-tap zoom dove WebView/Safari lo consentono.
   document.addEventListener('gesturestart', e => e.preventDefault(), {passive:false});
   document.addEventListener('gesturechange', e => e.preventDefault(), {passive:false});
   document.addEventListener('gestureend', e => e.preventDefault(), {passive:false});
-
   let lastTouchEnd = 0;
   document.addEventListener('touchend', event => {
     const now = Date.now();
@@ -956,7 +610,6 @@
     'https://cdn.jsdelivr.net/gh/Tommaso20BW/LiveScore_JR@main/goal_players.json',
     'https://api.github.com/repos/Tommaso20BW/LiveScore_JR/contents/goal_players.json?ref=main'
   ];
-
   const TEAMS_URLS = [
     'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/data/fclogo_manifest.json',
     'https://cdn.jsdelivr.net/gh/Tommaso20BW/LiveScore_JR@main/data/fclogo_manifest.json',
@@ -964,53 +617,29 @@
   ];
 
   const KINDS = [
-    ['goal','GOAL'],
-    ['saved','SAVED'],
-    ['kick','KICK OFF'],
-    ['half','HALF TIME'],
-    ['end_of_90',"END OF 90'"],
-    ['full','FULL TIME'],
-    ['stats','STATS']
+    ['goal','GOAL'],['saved','SAVED'],['kick','KICK OFF'],['half','HALF TIME'],
+    ['end_of_90',"END OF 90'"],['full','FULL TIME'],['stats','STATS']
   ];
-
   const COMPETITIONS = [
-    ['ita.1','Serie A'],
-    ['ita.coppa_italia','Coppa Italia'],
-    ['ita.super_cup','Supercoppa Italiana'],
-    ['uefa.champions','Champions League'],
-    ['uefa.europa','Europa League'],
-    ['uefa.europa.conf','Conference League'],
-    ['uefa.super_cup','Supercoppa UEFA'],
+    ['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana'],
+    ['uefa.champions','Champions League'],['uefa.europa','Europa League'],
+    ['uefa.europa.conf','Conference League'],['uefa.super_cup','Supercoppa UEFA'],
     ['fifa.cwc','Mondiale per Club']
   ];
-
-  const SIDES = [
-    ['home','In casa'],
-    ['away','In trasferta']
-  ];
-
-  const KITS = [
-    ['home','Home'],
-    ['away','Away'],
-    ['third','Third']
-  ];
-
-  const POSES = [
-    ['arms_crossed','Braccia incrociate'],
-    ['pointing','Indica']
-  ];
-
-  const MOMENTS = [
-    ['HT','HALF TIME'],
-    ['2H_END',"END OF 90'"],
-    ['FT','FULL TIME']
-  ];
-
+  const SIDES = [['home','In casa'],['away','In trasferta']];
+  const KITS = [['home','Home'],['away','Away'],['third','Third']];
+  const POSES = [['arms_crossed','Braccia incrociate'],['pointing','Indica']];
+  const MOMENTS = [['HT','HALF TIME'],['2H_END',"END OF 90'"],['FT','FULL TIME']];
   const STATS = [
     'POSSESSO','xG','TIRI','TIRI IN PORTA','CORNER','FALLI',
-    'FUORIGIOCO','AMMONITI','ESPULSI','PARATE',
-    'PRECISIONE PASSAGGI','PASSAGGI'
+    'FUORIGIOCO','AMMONITI','ESPULSI','PARATE','PRECISIONE PASSAGGI','PASSAGGI'
   ];
+
+  const STEP_NAMES = {
+    competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
+    player:'Giocatore', minute:'Minuto', pose:'Posa', score:'Risultato',
+    pens:'Rigori', moment:'Momento', stats:'Statistiche'
+  };
 
   const $ = id => document.getElementById(id);
   const urlParams = new URLSearchParams(location.search);
@@ -1018,6 +647,8 @@
   const directEndpoint = urlParams.get('direct') || '';
   const directBase = directEndpoint.replace(/\/submit\/?$/,'');
   const MIN_SEARCH = 2;
+  const MAX_RESULTS = 60;
+  const finePointer = window.matchMedia('(pointer:fine)').matches;
 
   let kind = 'goal';
   let competition = 'ita.1';
@@ -1104,27 +735,94 @@
     return players.filter(player => !keepers || player.role === 'goalkeeper');
   }
 
+  /* ---------- Flow ---------- */
   function buildFlow() {
     const base = ['competition','side','opponent','kit'];
-
-    if (kind === 'goal' || kind === 'saved') {
-      flow = [...base,'player','minute','pose'];
-    } else if (kind === 'kick') {
-      flow = base;
-    } else if (kind === 'half' || kind === 'end_of_90') {
-      flow = [...base,'scoreHome','scoreAway'];
-    } else if (kind === 'full') {
-      flow = [...base,'scoreHome','scoreAway','pensHome','pensAway'];
-    } else if (kind === 'stats') {
-      flow = [...base,'moment','stats'];
-    }
-
+    if (kind === 'goal' || kind === 'saved') flow = [...base,'player','minute','pose'];
+    else if (kind === 'kick') flow = base;
+    else if (kind === 'half' || kind === 'end_of_90') flow = [...base,'score'];
+    else if (kind === 'full') flow = [...base,'score','pens'];
+    else if (kind === 'stats') flow = [...base,'moment','stats'];
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
   }
 
-  function finalStepLabel() {
-    return 'Anteprima ›';
+  function stepTitle(step) {
+    if (step === 'player') return kind === 'saved' ? 'Portiere' : 'Giocatore';
+    return STEP_NAMES[step] || step;
   }
+
+  function stepValue(step) {
+    switch (step) {
+      case 'competition': return labelOf(COMPETITIONS,competition);
+      case 'side': return labelOf(SIDES,side);
+      case 'opponent': return selectedTeam ? displayTeamName(selectedTeam.name) : '';
+      case 'kit': return labelOf(KITS,kit);
+      case 'player': return selectedPlayer ? selectedPlayer.name : '';
+      case 'minute': return $('minute').value.trim() ? `${$('minute').value.trim()}'` : '';
+      case 'pose': return labelOf(POSES,pose);
+      case 'score': {
+        const h = $('homeScore').value.trim(), a = $('awayScore').value.trim();
+        return h !== '' && a !== '' ? `${h} – ${a}` : '';
+      }
+      case 'pens': {
+        const h = $('homePens').value.trim(), a = $('awayPens').value.trim();
+        return h !== '' && a !== '' ? `${h} – ${a}` : '';
+      }
+      case 'moment': return labelOf(MOMENTS,moment);
+      case 'stats': {
+        const n = STATS.filter(l => statRows[l].home || statRows[l].away).length;
+        return n ? `${n} / ${STATS.length} voci` : '';
+      }
+    }
+    return '';
+  }
+
+  function renderSteps() {
+    const list = $('stepList');
+    list.innerHTML = '';
+    flow.forEach((step,i) => {
+      const done = previewMode || i < flowIndex;
+      const current = !previewMode && i === flowIndex;
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'step-item' + (done ? ' done' : '') + (current ? ' current' : '');
+      b.disabled = !done;
+      b.innerHTML = '<span class="mark">✓</span><span><div class="step-name"></div><div class="step-val"></div></span>';
+      b.querySelector('.step-name').textContent = stepTitle(step);
+      b.querySelector('.step-val').textContent = (done || current) ? stepValue(step) : '';
+      b.addEventListener('click',() => {
+        saveCurrentStatDraft();
+        previewMode = false;
+        navDirection = i < flowIndex ? 'backward' : 'forward';
+        flowIndex = i;
+        renderFlow();
+      });
+      li.appendChild(b);
+      list.appendChild(li);
+    });
+    const last = document.createElement('li');
+    const lb = document.createElement('button');
+    lb.type = 'button';
+    lb.disabled = true;
+    lb.className = 'step-item' + (previewMode ? ' current' : '');
+    lb.innerHTML = '<span class="mark">✓</span><span><div class="step-name">Anteprima</div><div class="step-val"></div></span>';
+    last.appendChild(lb);
+    list.appendChild(last);
+  }
+
+  function renderProgress() {
+    let p;
+    if (previewMode) p = 1;
+    else {
+      p = flowIndex;
+      if (flow[flowIndex] === 'stats') p += statCursor / STATS.length;
+      p = p / (flow.length);
+    }
+    $('progressBar').style.width = `${Math.max(4,Math.round(p * 100))}%`;
+  }
+
+  function finalStepLabel() { return 'Anteprima ›'; }
 
   function setPreviewError(message='') {
     $('previewError').textContent = message;
@@ -1139,183 +837,116 @@
     $('previewImage').src = url;
     setPreviewError('');
     previewMode = true;
+    navDirection = 'forward';
     renderFlow();
   }
 
   function closePreview() {
     previewMode = false;
     setPreviewError('');
+    navDirection = 'backward';
     renderFlow();
   }
 
   function renderFlow() {
-
-    document.querySelectorAll('[data-screen]').forEach(el => {
-      el.classList.remove('active','enter-back');
-    });
+    document.querySelectorAll('[data-screen]').forEach(el => el.classList.remove('active','back'));
 
     const screenName = previewMode ? 'preview' : flow[flowIndex];
     const screen = document.querySelector(`[data-screen="${screenName}"]`);
     if (screen) {
-      if (navDirection === 'backward') screen.classList.add('enter-back');
+      if (navDirection === 'backward') screen.classList.add('back');
       screen.classList.add('active');
-      screen.scrollTop = 0;
     }
+    $('stage').scrollTop = 0;
 
-    const stepCounter = $('stepCounter');
-    if (stepCounter) {
-      stepCounter.textContent = `${previewMode ? flow.length + 1 : flowIndex + 1} / ${flow.length + 1}`;
-    }
-    $('backButton').disabled = !previewMode && flowIndex === 0;
+    $('backButton').disabled = !previewMode && flowIndex === 0 && !(flow[flowIndex] === 'stats' && statCursor > 0);
     $('backButton').textContent = previewMode ? '‹ Modifica' : '‹ Indietro';
-    $('nextButton').textContent = previewMode ? 'Invia foto ✓' : (flowIndex === flow.length - 1 ? finalStepLabel() : 'Avanti ›');
+    $('nextButton').textContent = previewMode ? 'Invia foto ✓' : (isLastStep() ? finalStepLabel() : 'Avanti ›');
     $('kindSubtitle').textContent = previewMode ? 'ANTEPRIMA' : labelOf(KINDS,kind);
 
     clearError();
     updateScreenValues();
+    renderSteps();
+    renderProgress();
     autoFocusCurrent();
   }
 
-  function updateScreenValues() {
-    $('competitionValue').textContent = labelOf(COMPETITIONS,competition);
-    $('sideValue').textContent = labelOf(SIDES,side);
-    $('kitValue').textContent = labelOf(KITS,kit);
-    $('poseValue').textContent = labelOf(POSES,pose);
-    $('momentValue').textContent = labelOf(MOMENTS,moment);
+  function isLastStep() {
+    if (flowIndex !== flow.length - 1) return false;
+    if (flow[flowIndex] === 'stats') return statCursor === STATS.length - 1;
+    return true;
+  }
 
-    $('playerTitle').textContent =
-      kind === 'saved' ? 'Scegli il portiere.' : 'Scegli il giocatore.';
+  /* ---------- Option groups ---------- */
+  function renderOptions(id, options, value, onSelect) {
+    const box = $(id);
+    box.innerHTML = '';
+    options.forEach(([v,label]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'opt' + (v === value ? ' selected' : '');
+      b.setAttribute('role','radio');
+      b.setAttribute('aria-checked', v === value ? 'true' : 'false');
+      b.innerHTML = '<span class="radio"></span><span class="opt-label"></span>';
+      b.querySelector('.opt-label').textContent = label;
+      b.addEventListener('click',() => {
+        onSelect(v);
+        renderOptions(id,options,v,onSelect);
+        renderSteps();
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function updateScreenValues() {
+    renderOptions('competitionOpts',COMPETITIONS,competition,v => competition = v);
+    renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
+    renderOptions('kitOpts',KITS,kit,v => kit = v);
+    renderOptions('poseOpts',POSES,pose,v => pose = v);
+    renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
+
+    $('playerTitle').textContent = kind === 'saved' ? 'Scegli il portiere' : 'Scegli il giocatore';
+    $('playerSearch').placeholder = kind === 'saved' ? 'Cerca portiere…' : 'Cerca giocatore…';
 
     if (selectedTeam) $('opponentSearch').value = displayTeamName(selectedTeam.name);
     if (selectedPlayer) $('playerSearch').value = selectedPlayer.name;
 
-    const matchup = currentMatchupNames();
-    $('scoreHomeTitle').textContent = `Gol ${matchup.home}.`;
-    $('scoreHomeLead').textContent = `Inserisci il punteggio di ${matchup.home}.`;
-    $('scoreAwayTitle').textContent = `Gol ${matchup.away}.`;
-    $('scoreAwayLead').textContent = `Inserisci il punteggio di ${matchup.away}.`;
-    $('pensHomeTitle').textContent = `Rigori ${matchup.home}.`;
-    $('pensHomeLead').textContent = `Inserisci i rigori segnati da ${matchup.home}, oppure lascia vuoto se non ci sono stati rigori.`;
-    $('pensAwayTitle').textContent = `Rigori ${matchup.away}.`;
-    $('pensAwayLead').textContent = `Inserisci i rigori segnati da ${matchup.away}, oppure lascia vuoto se non ci sono stati rigori.`;
+    const m = currentMatchupNames();
+    $('scoreHomeName').textContent = m.home;
+    $('scoreAwayName').textContent = m.away;
+    $('pensHomeName').textContent = m.home;
+    $('pensAwayName').textContent = m.away;
+    $('statHomeName').textContent = m.home;
+    $('statAwayName').textContent = m.away;
 
-    if (flow[flowIndex] === 'stats') renderStatScreen();
+    if (flow[flowIndex] === 'stats') renderStatScreen(false);
   }
 
   function autoFocusCurrent() {
     if (previewMode) return;
-    const name = flow[flowIndex];
     const inputMap = {
-      opponent:'opponentSearch',
-      player:'playerSearch',
-      minute:'minute',
-      scoreHome:'homeScore',
-      scoreAway:'awayScore',
-      pensHome:'homePens',
-      pensAway:'awayPens',
-      stats:'statHome'
+      opponent:'opponentSearch', player:'playerSearch', minute:'minute',
+      score:'homeScore', stats:'statHome'
     };
-
-    const id = inputMap[name];
+    const id = inputMap[flow[flowIndex]];
     if (!id) return;
-
     setTimeout(() => {
       const el = $(id);
       if (!el) return;
       try { el.focus({preventScroll:true}); } catch (_) { el.focus(); }
-    }, 120);
+    }, 140);
   }
 
   function showError(message) {
-    const active = document.querySelector('.screen.active');
-    if (!active) return;
-
-    if ($('error').parentElement !== active) {
-      const lead = active.querySelector('.lead');
-      if (lead) lead.insertAdjacentElement('afterend',$('error'));
-    }
-
     $('error').textContent = message;
     $('error').style.display = 'block';
+    $('stage').scrollTop = 0;
   }
-
-  function clearError() {
-    $('error').style.display = 'none';
-  }
-
-  function openSheet(title, options, selectedValue, onSelect) {
-    closeDrawer();
-    $('sheetTitle').textContent = title;
-    $('sheetList').innerHTML = '';
-
-    options.forEach(([value,label]) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'sheet-option' + (value === selectedValue ? ' selected' : '');
-      button.innerHTML = `<span>${label}</span><span class="check">${value === selectedValue ? '✓' : ''}</span>`;
-      button.addEventListener('click', () => {
-        selectAndAdvance(() => onSelect(value,label));
-      });
-      $('sheetList').appendChild(button);
-    });
-
-    $('sheetLayer').classList.add('open');
-    $('sheetLayer').setAttribute('aria-hidden','false');
-  }
-
-  function openSearchSheet(title, matches, selectedName, onSelect) {
-    closeDrawer();
-    $('sheetTitle').textContent = title;
-    $('sheetList').innerHTML = '';
-
-    matches.forEach(item => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'sheet-option' + (
-        selectedName && item.name === selectedName ? ' selected' : ''
-      );
-      const itemLabel = title === 'Scegli avversario' ? displayTeamName(item.name) : item.name;
-      button.innerHTML = `<span>${itemLabel}</span><span class="check">${
-        selectedName && item.name === selectedName ? '✓' : ''
-      }</span>`;
-      button.addEventListener('click', () => {
-        selectAndAdvance(() => onSelect(item));
-      });
-      $('sheetList').appendChild(button);
-    });
-
-    $('sheetLayer').classList.add('open');
-    $('sheetLayer').setAttribute('aria-hidden','false');
-  }
-
-  function closeSheet() {
-    $('sheetLayer').classList.remove('open');
-    $('sheetLayer').setAttribute('aria-hidden','true');
-  }
-
-  function selectAndAdvance(callback) {
-    callback();
-    closeSheet();
-  }
-
-  function openDrawer() {
-    closeSheet();
-    renderKindMenu();
-    $('drawerLayer').classList.add('open');
-    $('drawerLayer').setAttribute('aria-hidden','false');
-  }
-
-  function closeDrawer() {
-    $('drawerLayer').classList.remove('open');
-    $('drawerLayer').setAttribute('aria-hidden','true');
-  }
+  function clearError() { $('error').style.display = 'none'; }
 
   async function closeWorkflow() {
-    closeSheet();
-    closeDrawer();
     clearError();
     setPreviewError('');
-
     const closeBtn = $('closeWorkflowButton');
     if (closeBtn) closeBtn.disabled = true;
 
@@ -1326,59 +957,74 @@
       const timer = setTimeout(() => controller.abort(), 2500);
       try {
         await fetch(`${directBase}/close`, {
-          method:'POST',
-          mode:'cors',
-          cache:'no-store',
-          credentials:'omit',
-          keepalive:true,
-          headers:{
-            'Content-Type':'application/json',
-            'X-ImageGEN-Session':session
-          },
-          body:payload,
-          signal:controller.signal
+          method:'POST', mode:'cors', cache:'no-store', credentials:'omit', keepalive:true,
+          headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+          body:payload, signal:controller.signal
         });
       } catch (_) {
-        // La Mini App si chiude comunque; con il backend aggiornato /close
-        // termina immediatamente anche il servizio e il workflow.
-      } finally {
-        clearTimeout(timer);
-      }
+      } finally { clearTimeout(timer); }
     }
 
     setTimeout(() => {
       try {
-        if (tg && typeof tg.close === 'function') {
-          tg.close();
-          return;
-        }
+        if (tg && typeof tg.close === 'function') { tg.close(); return; }
         window.close();
       } catch (_) {}
+      if (closeBtn) closeBtn.disabled = false;
     }, 120);
   }
 
+  /* ---------- Kind menu ---------- */
   function renderKindMenu() {
-    $('kindList').innerHTML = '';
-    KINDS.forEach(([value,label]) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'kind-option' + (value === kind ? ' selected' : '');
-      button.innerHTML = `<span>${label}</span><span class="check">${value === kind ? '✓' : ''}</span>`;
-      button.addEventListener('click', () => {
-        closePreview();
-        kind = value;
-        $('kindSubtitle').textContent = labelOf(KINDS,kind);
-        selectedPlayer = null;
-        $('playerSearch').value = '';
-        buildFlow();
-        navDirection = 'forward';
-        flowIndex = 0;
-        statCursor = 0;
-        refreshSearchSummaries();
-        closeDrawer();
-        renderFlow();
+    ['kindListSide','kindListMobile'].forEach(id => {
+      const box = $(id);
+      const mobile = id === 'kindListMobile';
+      box.innerHTML = '';
+      KINDS.forEach(([value,label]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = (mobile ? 'chip' : 'kind-item') + (value === kind ? ' selected' : '');
+        if (mobile) b.textContent = label;
+        else b.innerHTML = '<span class="dot"></span><span></span>', b.lastChild.textContent = label;
+        b.addEventListener('click',() => changeKind(value));
+        box.appendChild(b);
       });
-      $('kindList').appendChild(button);
+    });
+    const sel = $('kindListMobile').querySelector('.selected');
+    if (sel && sel.scrollIntoView) {
+      try { sel.scrollIntoView({inline:'center',block:'nearest'}); } catch (_) {}
+    }
+  }
+
+  function changeKind(value) {
+    if (value === kind && !previewMode) return;
+    previewMode = false;
+    kind = value;
+    selectedPlayer = null;
+    $('playerSearch').value = '';
+    buildFlow();
+    navDirection = 'forward';
+    flowIndex = 0;
+    statCursor = 0;
+    refreshSearchSummaries();
+    renderKindMenu();
+    renderFlow();
+  }
+
+  /* ---------- Search ---------- */
+  function renderResults(listId, matches, selectedName, labelFn, onPick) {
+    const box = $(listId);
+    box.innerHTML = '';
+    matches.slice(0,MAX_RESULTS).forEach(item => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      const isSel = selectedName && item.name === selectedName;
+      b.className = 'result' + (isSel ? ' selected' : '');
+      b.innerHTML = '<span></span><span class="tick"></span>';
+      b.firstChild.textContent = labelFn(item);
+      b.lastChild.textContent = isSel ? '✓' : '';
+      b.addEventListener('click',() => onPick(item));
+      box.appendChild(b);
     });
   }
 
@@ -1390,17 +1036,21 @@
       if (!namesFor(selectedTeam).some(name => norm(tq) === norm(name))) selectedTeam = null;
     }
 
-    if (!teamsLoaded) {
-      $('opponentSummary').textContent = 'Caricamento squadre…';
-    } else if (norm(tq).length < MIN_SEARCH) {
-      $('opponentSummary').textContent = 'Scrivi almeno 2 caratteri.';
-    } else if (!teamMatches.length) {
-      $('opponentSummary').textContent = 'Nessun risultato.';
-    } else if (selectedTeam) {
-      $('opponentSummary').textContent = `Selezionata: ${displayTeamName(selectedTeam.name)}`;
-    } else {
-      $('opponentSummary').textContent = `${teamMatches.length} risultat${teamMatches.length === 1 ? 'o' : 'i'} · premi Avanti`;
-    }
+    if (!teamsLoaded) $('opponentSummary').textContent = 'Caricamento squadre…';
+    else if (norm(tq).length < MIN_SEARCH) $('opponentSummary').textContent = 'Scrivi almeno 2 caratteri.';
+    else if (!teamMatches.length) $('opponentSummary').textContent = 'Nessun risultato.';
+    else if (selectedTeam) $('opponentSummary').textContent = `Selezionata: ${displayTeamName(selectedTeam.name)}`;
+    else $('opponentSummary').textContent = `${teamMatches.length} risultat${teamMatches.length === 1 ? 'o' : 'i'}`;
+
+    renderResults('opponentList',teamMatches,selectedTeam && selectedTeam.name,
+      item => displayTeamName(item.name),
+      item => {
+        selectedTeam = item;
+        $('opponentSearch').value = displayTeamName(item.name);
+        refreshSearchSummaries();
+        renderSteps();
+        document.activeElement && document.activeElement.blur && document.activeElement.blur();
+      });
 
     const pq = $('playerSearch').value;
     playerMatches = playersLoaded ? searchItems(currentPlayerPool(),pq) : [];
@@ -1409,93 +1059,59 @@
       if (norm(pq) !== norm(selectedPlayer.name)) selectedPlayer = null;
     }
 
-    if (!playersLoaded) {
-      $('playerSummary').textContent = 'Caricamento giocatori…';
-    } else if (norm(pq).length < MIN_SEARCH) {
-      $('playerSummary').textContent = 'Scrivi almeno 2 caratteri.';
-    } else if (!playerMatches.length) {
-      $('playerSummary').textContent = 'Nessun risultato.';
-    } else if (selectedPlayer) {
-      $('playerSummary').textContent = `Selezionato: ${selectedPlayer.name}`;
-    } else {
-      $('playerSummary').textContent = `${playerMatches.length} risultat${playerMatches.length === 1 ? 'o' : 'i'} · premi Avanti`;
-    }
+    if (!playersLoaded) $('playerSummary').textContent = 'Caricamento giocatori…';
+    else if (norm(pq).length < MIN_SEARCH) $('playerSummary').textContent = 'Scrivi almeno 2 caratteri.';
+    else if (!playerMatches.length) $('playerSummary').textContent = 'Nessun risultato.';
+    else if (selectedPlayer) $('playerSummary').textContent = `Selezionato: ${selectedPlayer.name}`;
+    else $('playerSummary').textContent = `${playerMatches.length} risultat${playerMatches.length === 1 ? 'o' : 'i'}`;
+
+    renderResults('playerList',playerMatches,selectedPlayer && selectedPlayer.name,
+      item => item.name,
+      item => {
+        selectedPlayer = item;
+        $('playerSearch').value = item.name;
+        refreshSearchSummaries();
+        renderSteps();
+        document.activeElement && document.activeElement.blur && document.activeElement.blur();
+      });
   }
 
   function resolveTeam() {
-    if (!teamsLoaded) {
-      showError('Impossibile caricare le squadre. Riprova.');
-      return false;
-    }
+    if (!teamsLoaded) { showError('Impossibile caricare le squadre. Riprova.'); return false; }
     if (selectedTeam) return true;
     const query = norm($('opponentSearch').value);
     const exact = teamMatches.find(item => namesFor(item).some(name => norm(name) === query));
-
     if (exact || teamMatches.length === 1) {
       selectedTeam = exact || teamMatches[0];
       $('opponentSearch').value = displayTeamName(selectedTeam.name);
       refreshSearchSummaries();
       return true;
     }
-
-    if (teamMatches.length > 1) {
-      document.activeElement?.blur();
-      openSearchSheet('Scegli avversario',teamMatches,selectedTeam?.name,item => {
-        selectedTeam = item;
-        $('opponentSearch').value = displayTeamName(item.name);
-        refreshSearchSummaries();
-      });
-      return false;
-    }
-
-    showError('Cerca e seleziona un avversario.');
+    showError(teamMatches.length > 1 ? 'Seleziona una squadra dalla lista.' : 'Cerca e seleziona un avversario.');
     return false;
   }
 
   function resolvePlayer() {
-    if (!playersLoaded) {
-      showError('Impossibile caricare i giocatori. Riprova.');
-      return false;
-    }
+    if (!playersLoaded) { showError('Impossibile caricare i giocatori. Riprova.'); return false; }
     if (selectedPlayer) return true;
     const query = norm($('playerSearch').value);
     const exact = playerMatches.find(item => namesFor(item).some(name => norm(name) === query));
-
     if (exact || playerMatches.length === 1) {
       selectedPlayer = exact || playerMatches[0];
       $('playerSearch').value = selectedPlayer.name;
       refreshSearchSummaries();
       return true;
     }
-
-    if (playerMatches.length > 1) {
-      document.activeElement?.blur();
-      openSearchSheet(
-        kind === 'saved' ? 'Scegli portiere' : 'Scegli giocatore',
-        playerMatches,
-        selectedPlayer?.name,
-        item => {
-          selectedPlayer = item;
-          $('playerSearch').value = item.name;
-          refreshSearchSummaries();
-        }
-      );
-      return false;
-    }
-
-    showError(kind === 'saved'
-      ? 'Cerca e seleziona un portiere.'
-      : 'Cerca e seleziona un giocatore.');
+    if (playerMatches.length > 1) showError(kind === 'saved' ? 'Seleziona un portiere dalla lista.' : 'Seleziona un giocatore dalla lista.');
+    else showError(kind === 'saved' ? 'Cerca e seleziona un portiere.' : 'Cerca e seleziona un giocatore.');
     return false;
   }
 
+  /* ---------- Validation ---------- */
   function validateScoreValue(id, optional=false) {
     const raw = $(id).value.trim();
     if (raw === '' && optional) return true;
-    if (raw === '') {
-      showError('Inserisci un valore.');
-      return false;
-    }
+    if (raw === '') { showError('Inserisci un valore.'); return false; }
     const value = Number(raw);
     if (!Number.isInteger(value) || value < 0 || value > 99) {
       showError('Inserisci un numero valido da 0 a 99.');
@@ -1511,84 +1127,68 @@
     if (step === 'player') return resolvePlayer();
 
     if (step === 'minute') {
-      const minuteValue = $('minute').value.trim();
-      if (!minuteValue) {
-        showError('Inserisci il minuto.');
-        return false;
-      }
-      if (!/^\d{1,3}(?:\+\d{1,2})?$/.test(minuteValue)) {
+      const v = $('minute').value.trim();
+      if (!v) { showError('Inserisci il minuto.'); return false; }
+      if (!/^\d{1,3}(?:\+\d{1,2})?$/.test(v)) {
         showError('Formato minuto non valido. Esempi: 45, 45+2, 90+5.');
         return false;
       }
     }
 
-    if (step === 'scoreHome') return validateScoreValue('homeScore');
-    if (step === 'scoreAway') return validateScoreValue('awayScore');
-    if (step === 'pensHome') return validateScoreValue('homePens',true);
-    if (step === 'pensAway') {
-      const homeBlank = $('homePens').value.trim() === '';
-      const awayBlank = $('awayPens').value.trim() === '';
-      if (homeBlank && awayBlank) return true;
-      if (homeBlank !== awayBlank) {
+    if (step === 'score') {
+      return validateScoreValue('homeScore') && validateScoreValue('awayScore');
+    }
+
+    if (step === 'pens') {
+      const hb = $('homePens').value.trim() === '';
+      const ab = $('awayPens').value.trim() === '';
+      if (hb && ab) return true;
+      if (hb !== ab) {
         showError('Inserisci entrambi i valori dei rigori oppure lasciali entrambi vuoti.');
         return false;
       }
-      return validateScoreValue('awayPens',true);
+      return validateScoreValue('homePens',true) && validateScoreValue('awayPens',true);
     }
 
     if (step === 'stats') {
       const label = STATS[statCursor];
       const home = $('statHome').value.trim();
       const away = $('statAway').value.trim();
-
-      if (!home && !away) return true;
+      if (!home && !away) { statRows[label] = {home:'',away:''}; return true; }
       if (!home || !away) {
         showError('Inserisci entrambi i valori oppure lasciali entrambi vuoti.');
         return false;
       }
-
       statRows[label] = {home,away};
     }
-
     return true;
   }
 
   async function nextField(validate=true) {
     clearError();
 
-    if (previewMode) {
-      submitPreviewGraphic();
-      return;
-    }
+    if (previewMode) { submitPreviewGraphic(); return; }
 
     if (validate) {
       const step = flow[flowIndex];
-
-      if (step === 'opponent' && !teamsLoaded) {
+      if ((step === 'opponent' && !teamsLoaded) || (step === 'player' && !playersLoaded)) {
         await loadCatalogs();
         refreshSearchSummaries();
       }
-
-      if (step === 'player' && !playersLoaded) {
-        await loadCatalogs();
-        refreshSearchSummaries();
-      }
-
       if (!validateCurrent()) return;
     }
 
     if (flow[flowIndex] === 'stats' && statCursor < STATS.length - 1) {
       navDirection = 'forward';
       statCursor += 1;
-      renderStatScreen();
+      renderStatScreen(true);
+      renderProgress();
+      renderSteps();
       autoFocusCurrent();
       return;
     }
 
-    if (flowIndex >= flow.length - 1) {
-      previewGraphic();
-      return;
-    }
+    if (flowIndex >= flow.length - 1) { previewGraphic(); return; }
 
     navDirection = 'forward';
     flowIndex += 1;
@@ -1596,19 +1196,16 @@
   }
 
   function previousField() {
-    closeSheet();
     clearError();
 
-    if (previewMode) {
-      closePreview();
-      return;
-    }
+    if (previewMode) { closePreview(); return; }
 
     if (flow[flowIndex] === 'stats' && statCursor > 0) {
       saveCurrentStatDraft();
       navDirection = 'backward';
       statCursor -= 1;
-      renderStatScreen();
+      renderStatScreen(true);
+      renderProgress();
       autoFocusCurrent();
       return;
     }
@@ -1619,37 +1216,56 @@
     renderFlow();
   }
 
+  /* ---------- Stats ---------- */
   function saveCurrentStatDraft() {
     if (flow[flowIndex] !== 'stats') return;
-    const label = STATS[statCursor];
-    statRows[label] = {
+    statRows[STATS[statCursor]] = {
       home:$('statHome').value.trim(),
       away:$('statAway').value.trim()
     };
   }
 
-  function renderStatScreen() {
-    const label = STATS[statCursor];
-    const row = statRows[label] || {home:'',away:''};
-    $('statTitle').textContent =
-      label === 'xG' ? 'xG.' :
-      label.charAt(0) + label.slice(1).toLowerCase() + '.';
-    $('statIndex').textContent = `${statCursor + 1} / ${STATS.length}`;
-    $('statHome').value = row.home;
-    $('statAway').value = row.away;
-
-    const isLastStat = statCursor === STATS.length - 1;
-    $('nextButton').textContent =
-      isLastStat && flowIndex === flow.length - 1 ? finalStepLabel() : 'Avanti ›';
+  function renderStatChips() {
+    const box = $('statChips');
+    box.innerHTML = '';
+    STATS.forEach((label,i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      const filled = statRows[label].home || statRows[label].away;
+      b.className = (filled ? 'filled ' : '') + (i === statCursor ? 'current' : '');
+      b.textContent = label;
+      b.addEventListener('click',() => {
+        saveCurrentStatDraft();
+        navDirection = i < statCursor ? 'backward' : 'forward';
+        statCursor = i;
+        renderStatScreen(true);
+        renderProgress();
+        autoFocusCurrent();
+      });
+      box.appendChild(b);
+    });
   }
 
+  function renderStatScreen(reload) {
+    const label = STATS[statCursor];
+    const row = statRows[label] || {home:'',away:''};
+    $('statTitle').textContent = label === 'xG' ? 'xG' : label.charAt(0) + label.slice(1).toLowerCase();
+    $('statIndex').textContent = `Voce ${statCursor + 1} di ${STATS.length}`;
+    if (reload) {
+      $('statHome').value = row.home;
+      $('statAway').value = row.away;
+    }
+    renderStatChips();
+    $('nextButton').textContent = isLastStep() ? finalStepLabel() : 'Avanti ›';
+    $('backButton').disabled = flowIndex === 0 && statCursor === 0;
+  }
+
+  /* ---------- Payload / network ---------- */
   function scorePair(a,b,required=true) {
     const av = $(a).value.trim();
     const bv = $(b).value.trim();
-
     if (!av && !bv && !required) return null;
     if (!av || !bv) throw new Error('Inserisci entrambi i valori del risultato.');
-
     const pair = [Number(av),Number(bv)];
     if (!pair.every(Number.isInteger) || pair.some(v => v < 0 || v > 99)) {
       throw new Error('Risultato non valido.');
@@ -1661,14 +1277,8 @@
     if (!selectedTeam) throw new Error('Avversario mancante.');
 
     const data = {
-      kind,
-      competition,
-      kit,
-      side,
-      opponent:{
-        name:selectedTeam.name,
-        id:String(selectedTeam.espn_id || '')
-      }
+      kind, competition, kit, side,
+      opponent:{ name:selectedTeam.name, id:String(selectedTeam.espn_id || '') }
     };
 
     if (kind === 'goal' || kind === 'saved') {
@@ -1676,15 +1286,12 @@
       data.player = selectedPlayer.name;
       data.minute = $('minute').value.trim();
       data.pose = pose;
-
     } else if (kind === 'half' || kind === 'full' || kind === 'end_of_90') {
       data.score = scorePair('homeScore','awayScore',true);
-
       if (kind === 'full') {
         const pens = scorePair('homePens','awayPens',false);
         if (pens) data.shootout = pens;
       }
-
     } else if (kind === 'stats') {
       saveCurrentStatDraft();
       data.moment = moment;
@@ -1695,33 +1302,23 @@
           away:String(statRows[label]?.away || '').trim()
         }))
         .filter(row => row.home || row.away);
-
       if (!data.rows.length) throw new Error('Inserisci almeno una statistica.');
       if (data.rows.some(row => !row.home || !row.away)) {
         throw new Error('Completa entrambi i valori delle statistiche.');
       }
     }
 
-    if (!session) {
-      throw new Error('Sessione non attiva. Avvia ImageGen e apri il pulsante del bot.');
-    }
-
+    if (!session) throw new Error('Sessione non attiva. Avvia ImageGen e apri il pulsante del bot.');
     return {v:1,action:'render',session,data};
   }
 
   async function previewGraphic() {
     clearError();
-
     try {
-      if (!directBase) {
-        throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
-      }
+      if (!directBase) throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
 
       const raw = JSON.stringify(buildPayload());
-
-      if (new TextEncoder().encode(raw).length > 4096) {
-        throw new Error('Troppi dati per ImageGEN.');
-      }
+      if (new TextEncoder().encode(raw).length > 4096) throw new Error('Troppi dati per ImageGEN.');
 
       $('nextButton').disabled = true;
       $('nextButton').textContent = 'Anteprima…';
@@ -1729,23 +1326,13 @@
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 90000);
       let response;
-
       try {
         response = await fetch(`${directBase}/preview`, {
-          method:'POST',
-          mode:'cors',
-          cache:'no-store',
-          credentials:'omit',
-          headers:{
-            'Content-Type':'application/json',
-            'X-ImageGEN-Session':session
-          },
-          body:raw,
-          signal:controller.signal
+          method:'POST', mode:'cors', cache:'no-store', credentials:'omit',
+          headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+          body:raw, signal:controller.signal
         });
-      } finally {
-        clearTimeout(timer);
-      }
+      } finally { clearTimeout(timer); }
 
       if (!response.ok) {
         let answer = {};
@@ -1754,13 +1341,10 @@
       }
 
       const blob = await response.blob();
-      if (!blob || !String(blob.type || '').includes('image/png')) {
-        throw new Error('Anteprima non valida.');
-      }
+      if (!blob || !String(blob.type || '').includes('image/png')) throw new Error('Anteprima non valida.');
 
       previewPayloadText = raw;
       openPreview(URL.createObjectURL(blob));
-
     } catch (error) {
       const message = error && error.name === 'AbortError'
         ? 'Anteprima lenta o non disponibile. Riprova tra qualche secondo.'
@@ -1768,17 +1352,14 @@
       showError(message);
     } finally {
       $('nextButton').disabled = false;
-      $('nextButton').textContent = previewMode ? 'Invia foto ✓' : finalStepLabel();
+      $('nextButton').textContent = previewMode ? 'Invia foto ✓' : (isLastStep() ? finalStepLabel() : 'Avanti ›');
     }
   }
 
   async function submitPreviewGraphic() {
     setPreviewError('');
-
     try {
-      if (!directBase) {
-        throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
-      }
+      if (!directBase) throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
 
       const raw = previewPayloadText || JSON.stringify(buildPayload());
 
@@ -1789,39 +1370,24 @@
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 30000);
       let response;
-
       try {
         response = await fetch(`${directBase}/submit`, {
-          method:'POST',
-          mode:'cors',
-          cache:'no-store',
-          credentials:'omit',
-          headers:{
-            'Content-Type':'application/json',
-            'X-ImageGEN-Session':session
-          },
-          body:raw,
-          signal:controller.signal
+          method:'POST', mode:'cors', cache:'no-store', credentials:'omit',
+          headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+          body:raw, signal:controller.signal
         });
-      } finally {
-        clearTimeout(timer);
-      }
+      } finally { clearTimeout(timer); }
 
       let answer = {};
       try { answer = await response.json(); } catch (_) {}
-
       if (!response.ok || answer.ok === false) {
         throw new Error(answer.error || `Invio non riuscito (${response.status}).`);
       }
 
       $('nextButton').textContent = 'Inviato ✓';
-
       setTimeout(() => {
-        try {
-          if (tg && typeof tg.close === 'function') tg.close();
-        } catch (_) {}
+        try { if (tg && typeof tg.close === 'function') tg.close(); } catch (_) {}
       }, 220);
-
     } catch (error) {
       $('nextButton').disabled = false;
       $('backButton').disabled = false;
@@ -1833,36 +1399,29 @@
     }
   }
 
+  /* ---------- Catalogs ---------- */
   function decodeGithubContent(payload) {
     if (!payload || typeof payload !== 'object' || !payload.content) return null;
-
     try {
       const clean = String(payload.content).replace(/\s+/g,'');
       const binary = atob(clean);
       const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
       return JSON.parse(new TextDecoder('utf-8').decode(bytes));
-    } catch (_) {
-      return null;
-    }
+    } catch (_) { return null; }
   }
 
   function normalizeCatalogs(playerRows, teamRows) {
     if (Array.isArray(playerRows) && playerRows.length) {
       players = playerRows;
-      players.sort((a,b) =>
-        String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'})
-      );
+      players.sort((a,b) => String(a.name || '').localeCompare(String(b.name || ''),'it',{sensitivity:'base'}));
       playersLoaded = true;
     }
-
     if (Array.isArray(teamRows) && teamRows.length) {
       teams = teamRows
         .filter(team => team && team.name)
         .filter(team => !namesFor(team).some(name => norm(name) === 'juventus'));
-
       teams.sort((a,b) =>
-        displayTeamName(a.name).localeCompare(displayTeamName(b.name),'it',{sensitivity:'base'})
-      );
+        displayTeamName(a.name).localeCompare(displayTeamName(b.name),'it',{sensitivity:'base'}));
       teamsLoaded = teams.length > 0;
     }
   }
@@ -1877,11 +1436,7 @@
 
   function saveCatalogCache() {
     try {
-      localStorage.setItem(CATALOG_CACHE_KEY,JSON.stringify({
-        savedAt:Date.now(),
-        players,
-        teams
-      }));
+      localStorage.setItem(CATALOG_CACHE_KEY,JSON.stringify({savedAt:Date.now(),players,teams}));
     } catch (_) {}
   }
 
@@ -1889,46 +1444,25 @@
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(),timeoutMs);
     const freshUrl = `${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`;
-
     try {
       const response = await fetch(freshUrl,{
-        cache:'no-store',
-        signal:controller.signal,
-        headers:{
-          'Accept': url.includes('api.github.com')
-            ? 'application/vnd.github+json'
-            : 'application/json'
-        }
+        cache:'no-store', signal:controller.signal,
+        headers:{'Accept': url.includes('api.github.com') ? 'application/vnd.github+json' : 'application/json'}
       });
-
-      if (!response.ok) {
-        throw new Error(`${label}: HTTP ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`${label}: HTTP ${response.status}`);
       const payload = await response.json();
-      const data = url.includes('api.github.com')
-        ? (decodeGithubContent(payload) || payload)
-        : payload;
-
-      if (!data || typeof data !== 'object') {
-        throw new Error(`${label}: JSON non valido`);
-      }
-
+      const data = url.includes('api.github.com') ? (decodeGithubContent(payload) || payload) : payload;
+      if (!data || typeof data !== 'object') throw new Error(`${label}: JSON non valido`);
       return data;
-    } finally {
-      clearTimeout(timer);
-    }
+    } finally { clearTimeout(timer); }
   }
 
-  async function fetchCatalogFast(urls,label) {
-    return Promise.any(
-      urls.map(url => fetchOneCatalog(url,label))
-    );
+  function fetchCatalogFast(urls,label) {
+    return Promise.any(urls.map(url => fetchOneCatalog(url,label)));
   }
 
   async function loadCatalogs() {
     if (catalogLoadPromise) return catalogLoadPromise;
-
     catalogLoadPromise = (async () => {
       if (!playersLoaded) $('playerSummary').textContent = 'Caricamento giocatori…';
       if (!teamsLoaded) $('opponentSummary').textContent = 'Caricamento squadre…';
@@ -1939,145 +1473,90 @@
       ]);
 
       if (playersResult.status === 'fulfilled') {
-        const rows = Array.isArray(playersResult.value.players)
-          ? playersResult.value.players
-          : [];
+        const rows = Array.isArray(playersResult.value.players) ? playersResult.value.players : [];
         if (rows.length) normalizeCatalogs(rows,null);
       }
-
       if (teamsResult.status === 'fulfilled') {
-        const rows = Array.isArray(teamsResult.value.teams)
-          ? teamsResult.value.teams
-          : [];
+        const rows = Array.isArray(teamsResult.value.teams) ? teamsResult.value.teams : [];
         if (rows.length) normalizeCatalogs(null,rows);
       }
 
       if (playersLoaded || teamsLoaded) saveCatalogCache();
       refreshSearchSummaries();
-    })().finally(() => {
-      catalogLoadPromise = null;
-    });
-
+    })().finally(() => { catalogLoadPromise = null; });
     return catalogLoadPromise;
   }
 
+  /* ---------- Viewport ---------- */
   function updateViewport() {
     const vv = window.visualViewport;
-    if (!vv) {
-      document.documentElement.style.setProperty('--keyboard-inset','0px');
-      document.documentElement.style.setProperty('--app-h',`${window.innerHeight}px`);
-      return;
-    }
-
-    const keyboardInset = Math.max(
-      0,
-      Math.round(window.innerHeight - vv.height - vv.offsetTop)
-    );
-
-    document.documentElement.style.setProperty('--keyboard-inset',`${keyboardInset}px`);
-    document.documentElement.style.setProperty(
-      '--app-h',
-      `${Math.round(vv.height + vv.offsetTop)}px`
-    );
+    const h = vv ? Math.round(vv.height + vv.offsetTop) : window.innerHeight;
+    document.documentElement.style.setProperty('--app-h',`${h}px`);
   }
 
-  // Custom picker buttons
-  $('competitionButton').addEventListener('click',() =>
-    openSheet('Competizione',COMPETITIONS,competition,value => {
-      competition = value;
-      updateScreenValues();
-    })
-  );
-
-  $('sideButton').addEventListener('click',() =>
-    openSheet('Juventus',SIDES,side,value => {
-      side = value;
-      updateScreenValues();
-    })
-  );
-
-  $('kitButton').addEventListener('click',() =>
-    openSheet('Kit Juventus',KITS,kit,value => {
-      kit = value;
-      updateScreenValues();
-    })
-  );
-
-  $('poseButton').addEventListener('click',() =>
-    openSheet('Posa',POSES,pose,value => {
-      pose = value;
-      updateScreenValues();
-    })
-  );
-
-  $('momentButton').addEventListener('click',() =>
-    openSheet('Momento',MOMENTS,moment,value => {
-      moment = value;
-      updateScreenValues();
-    })
-  );
-
+  /* ---------- Events ---------- */
   $('opponentSearch').addEventListener('input',async () => {
     selectedTeam = null;
     refreshSearchSummaries();
-
-    if (!teamsLoaded) {
-      await loadCatalogs();
-      refreshSearchSummaries();
-    }
+    renderSteps();
+    if (!teamsLoaded) { await loadCatalogs(); refreshSearchSummaries(); }
   });
 
   $('playerSearch').addEventListener('input',async () => {
     selectedPlayer = null;
     refreshSearchSummaries();
-
-    if (!playersLoaded) {
-      await loadCatalogs();
-      refreshSearchSummaries();
-    }
+    renderSteps();
+    if (!playersLoaded) { await loadCatalogs(); refreshSearchSummaries(); }
   });
+
+  $('minute').addEventListener('input',renderSteps);
+  ['homeScore','awayScore','homePens','awayPens'].forEach(id => $(id).addEventListener('input',renderSteps));
+  $('statHome').addEventListener('input',() => { saveCurrentStatDraft(); renderStatChips(); });
+  $('statAway').addEventListener('input',() => { saveCurrentStatDraft(); renderStatChips(); });
 
   $('minutePlus').addEventListener('click',() => {
     const input = $('minute');
     const value = input.value.trim();
-
-    if (value && !value.includes('+')) {
-      input.value = value + '+';
-    }
-
+    if (value && !value.includes('+')) input.value = value + '+';
     input.focus({preventScroll:true});
-    try {
-      input.setSelectionRange(input.value.length,input.value.length);
-    } catch (_) {}
+    try { input.setSelectionRange(input.value.length,input.value.length); } catch (_) {}
+    renderSteps();
   });
 
-  // Il tasto Return della tastiera non naviga: la navigazione resta sempre nei due pulsanti in basso.
+  $('minuteQuick').addEventListener('click',event => {
+    const b = event.target.closest('button[data-v]');
+    if (!b) return;
+    const input = $('minute');
+    input.value = b.dataset.v;
+    input.focus({preventScroll:true});
+    try { input.setSelectionRange(input.value.length,input.value.length); } catch (_) {}
+    renderSteps();
+  });
+
+  document.querySelectorAll('.step-btn').forEach(btn => {
+    btn.addEventListener('click',() => {
+      const input = $(btn.dataset.target);
+      const delta = Number(btn.dataset.delta);
+      const raw = input.value.trim();
+      if (raw === '' && delta < 0) return;
+      const next = Math.max(0,Math.min(99,(parseInt(raw || '0',10) || 0) + delta));
+      input.value = String(next);
+      renderSteps();
+    });
+  });
+
+  // Invio: su desktop avanza, su mobile chiude solo la tastiera.
   document.addEventListener('keydown',event => {
-    if (
-      event.key === 'Enter' &&
-      event.target &&
-      event.target.matches &&
-      event.target.matches('input')
-    ) {
+    if (event.key === 'Enter' && event.target && event.target.matches && event.target.matches('input')) {
       event.preventDefault();
-      event.target.blur();
+      if (finePointer) nextField(true);
+      else event.target.blur();
     }
   });
 
   $('nextButton').addEventListener('click',() => nextField(true));
   $('backButton').addEventListener('click',previousField);
   $('closeWorkflowButton').addEventListener('click',closeWorkflow);
-
-  $('menuButton').addEventListener('click',openDrawer);
-  $('drawerClose').addEventListener('click',closeDrawer);
-  $('drawerLayer').addEventListener('click',event => {
-    if (event.target === $('drawerLayer')) closeDrawer();
-  });
-
-  $('sheetClose').addEventListener('click',closeSheet);
-  $('sheetLayer').addEventListener('click',event => {
-    if (event.target === $('sheetLayer')) closeSheet();
-  });
 
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize',updateViewport);
@@ -2091,9 +1570,6 @@
 
   restoreCatalogCache();
   refreshSearchSummaries();
-
-  // Parte immediatamente. Se c'è già la cache, la ricerca è disponibile subito;
-  // altrimenti il caricamento continua mentre l'utente compila i primi campi.
   loadCatalogs();
 
   buildFlow();
@@ -2101,9 +1577,7 @@
   renderFlow();
   updateViewport();
 
-  if (!session) {
-    showError('Generatore non attivo. Avvia il workflow ImageGen.');
-  }
+  if (!session) showError('Generatore non attivo. Avvia il workflow ImageGen.');
 })();
 </script>
 </body>
