@@ -1,7 +1,7 @@
 """Read the production player/team catalogs from the graphics core."""
 import json
 from pathlib import Path
-import goal_graphics as g
+from livescore.graphics import goal as g
 
 
 class Catalog:
