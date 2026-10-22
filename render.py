@@ -39,7 +39,7 @@ def _team_display_names(core_dir_text):
       FC Inter Milan -> Inter  (via manifest alias "Internazionale")
     """
     core_dir = Path(core_dir_text)
-    teams_path = core_dir / 'teams.json'
+    teams_path = core_dir / 'data' / 'teams.json'
     manifest_path = (
         core_dir
         / 'assets'
@@ -100,7 +100,7 @@ def _team_display_names(core_dir_text):
 
 def translated_team_name(name, portrait_module):
     try:
-        core_dir = Path(portrait_module.__file__).resolve().parent
+        core_dir = Path(portrait_module.__file__).resolve().parents[2]
         return _team_display_names(str(core_dir)).get(
             _name_key(name),
             str(name),
@@ -144,9 +144,9 @@ class Renderer:
         self.design_id = design_id
 
     def render(self, data):
-        import goal_graphics as g
-        import portrait_graphics as p
-        from canva_page_one import export_page_one
+        from livescore.canva.page_one import export_page_one
+        from livescore.graphics import goal as g
+        from livescore.graphics import portrait as p
 
         kind = data['kind']
         common = {
@@ -222,7 +222,7 @@ class Renderer:
             )
 
         if kind == 'stats':
-            import stats_graphics as stats
+            from livescore.graphics import stats
 
             html = stats.build_html(
                 **common,
