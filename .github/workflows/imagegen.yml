@@ -27,15 +27,8 @@ jobs:
           repository: Tommaso20BW/LiveScore_JR
           path: _graphics_core
           sparse-checkout: |
-            goal_graphics.py
-            goal_players.json
-            portrait_graphics.py
-            stats_graphics.py
-            stats.html
-            team_matching.py
-            teams.json
-            live_logging.py
-            canva_page_one.py
+            /livescore/
+            /data/
           sparse-checkout-cone-mode: false
 
       - name: Checkout asset privati (foto, font, loghi)
@@ -76,14 +69,14 @@ jobs:
           import sys
 
           chrome = sys.argv[1]
-          path = Path("_graphics_core/stats_graphics.py")
+          path = Path("_graphics_core/livescore/graphics/stats.py")
           text = path.read_text(encoding="utf-8")
 
           old = "browser = playwright.chromium.launch()"
           new = f"browser = playwright.chromium.launch(executable_path={chrome!r})"
 
           if old not in text:
-              raise SystemExit("Riga Playwright non trovata in stats_graphics.py")
+              raise SystemExit("Riga Playwright non trovata in livescore/graphics/stats.py")
 
           path.write_text(text.replace(old, new, 1), encoding="utf-8")
           print(f"STATS userà Chrome di sistema: {chrome}")
