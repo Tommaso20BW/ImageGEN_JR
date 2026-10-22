@@ -588,6 +588,8 @@
   if (tg) {
     tg.ready();
     tg.expand();
+    // Conferma anche quando si chiude con la X nativa di Telegram.
+    try { if (typeof tg.enableClosingConfirmation === 'function') tg.enableClosingConfirmation(); } catch (_) {}
     if (tg.onEvent) tg.onEvent('themeChanged', applyTheme);
     if (['ios','android'].includes(tg.platform)) {
       document.documentElement.classList.add('tg-mobile');
@@ -944,6 +946,18 @@
   }
   function clearError() { $('error').style.display = 'none'; }
 
+  const CLOSE_MESSAGE = 'Vuoi chiudere il bot? Il lavoro in corso andrà perso.';
+
+  function askCloseWorkflow() {
+    if (tg && typeof tg.showConfirm === 'function') {
+      try {
+        tg.showConfirm(CLOSE_MESSAGE, ok => { if (ok) closeWorkflow(); });
+        return;
+      } catch (_) {}
+    }
+    if (window.confirm(CLOSE_MESSAGE)) closeWorkflow();
+  }
+
   async function closeWorkflow() {
     clearError();
     setPreviewError('');
@@ -967,6 +981,7 @@
 
     setTimeout(() => {
       try {
+        try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}
         if (tg && typeof tg.close === 'function') { tg.close(); return; }
         window.close();
       } catch (_) {}
@@ -1386,6 +1401,7 @@
 
       $('nextButton').textContent = 'Inviato ✓';
       setTimeout(() => {
+        try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}
         try { if (tg && typeof tg.close === 'function') tg.close(); } catch (_) {}
       }, 220);
     } catch (error) {
@@ -1556,7 +1572,7 @@
 
   $('nextButton').addEventListener('click',() => nextField(true));
   $('backButton').addEventListener('click',previousField);
-  $('closeWorkflowButton').addEventListener('click',closeWorkflow);
+  $('closeWorkflowButton').addEventListener('click',askCloseWorkflow);
 
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize',updateViewport);
