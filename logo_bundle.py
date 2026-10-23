@@ -73,6 +73,19 @@ def _prepare(assets, team):
     return row
 
 
+def _players():
+    """Rosa dal motore grafico, nello stesso formato letto dalla Mini App."""
+    rows = []
+    for player in g.load_players():
+        rows.append({
+            'name': player.name,
+            'aliases': list(getattr(player, 'aliases', None) or []),
+            'role': getattr(player, 'role', None),
+        })
+    rows.sort(key=lambda row: row['name'].casefold())
+    return rows
+
+
 def build_team_bundle(assets=g.DEFAULT_ASSET_DIR):
     assets = Path(assets)
     manifest = json.loads(_find_manifest().read_text(encoding='utf-8'))
@@ -81,4 +94,12 @@ def build_team_bundle(assets=g.DEFAULT_ASSET_DIR):
         rows = list(pool.map(lambda team: _prepare(assets, team), teams))
     ready = sum(1 for row in rows if row.get('logo'))
     print(f'INFO IMAGEGEN: loghi incorporati {ready}/{len(rows)}', flush=True)
-    return json.dumps({**manifest, 'teams': rows}, ensure_ascii=False).encode('utf-8')
+    try:
+        players = _players()
+    except Exception as exc:  # la Mini App ripiega sul download da GitHub
+        print(f'WARN IMAGEGEN: calciatori non preparati: {exc}', flush=True)
+        players = []
+    print(f'INFO IMAGEGEN: calciatori nel pacchetto {len(players)}', flush=True)
+    return json.dumps(
+        {**manifest, 'teams': rows, 'players': players}, ensure_ascii=False
+    ).encode('utf-8')

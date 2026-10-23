@@ -2015,13 +2015,18 @@
       if (!playersLoaded) $('playerSummary').textContent = 'Caricamento giocatori…';
       if (!teamsLoaded) $('opponentSummary').textContent = 'Caricamento squadre…';
 
-      // Squadre + loghi arrivano già pronti dal workflow; GitHub resta solo come riserva.
-      const teamsFromWorkflow = () => (directBase && session)
-        ? fetchOneCatalog(`${directBase}/catalog?session=${encodeURIComponent(session)}`,'Squadre workflow',10000)
+      // Squadre, loghi e calciatori arrivano già pronti dal workflow; GitHub resta solo come riserva.
+      const bundle = (directBase && session)
+        ? fetchOneCatalog(`${directBase}/catalog?session=${encodeURIComponent(session)}`,'Catalogo workflow',10000)
         : Promise.reject(new Error('Workflow non collegato'));
+      bundle.catch(() => null);
+      const fromBundle = key => bundle.then(data => {
+        if (!Array.isArray(data[key]) || !data[key].length) throw new Error(`${key} mancanti`);
+        return data;
+      });
       const [playersResult,teamsResult] = await Promise.allSettled([
-        fetchCatalogFast(PLAYERS_URLS,'Giocatori'),
-        teamsFromWorkflow().catch(() => fetchCatalogFast(TEAMS_URLS,'Squadre'))
+        fromBundle('players').catch(() => fetchCatalogFast(PLAYERS_URLS,'Giocatori')),
+        fromBundle('teams').catch(() => fetchCatalogFast(TEAMS_URLS,'Squadre'))
       ]);
 
       if (playersResult.status === 'fulfilled') {
