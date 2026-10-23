@@ -330,9 +330,6 @@
       transition:opacity .3s ease,transform .45s var(--spring);
     }
     html[data-theme="dark"] .logo img{filter:brightness(0) invert(1)}
-    /* Le poche squadre senza versione mono: scala di grigi, per non perdere i dettagli interni. */
-    .logo.color img{filter:grayscale(1) contrast(1.15)}
-    html[data-theme="dark"] .logo.color img{filter:grayscale(1) brightness(1.4)}
     .logo img.ok{opacity:1;transform:none}
     .logo.fallback{width:28px;height:28px;border-radius:50%;background:var(--surface2)}
     /* Nel campo di ricerca il logo della squadra scelta prende il posto della lente. */
@@ -621,7 +618,7 @@
           <section class="screen" data-screen="opponent">
             <div class="eyebrow">Partita</div>
             <h1>Avversario</h1>
-            <p class="lead">Cerca la squadra e selezionala dalla lista.</p>
+            <p class="lead">Scegli la squadra dalla lista o cercala per nome.</p>
             <label class="search" id="opponentField">
               <span class="search-ico">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -871,7 +868,7 @@
   const directEndpoint = urlParams.get('direct') || '';
   const directBase = directEndpoint.replace(/\/submit\/?$/,'');
   const MIN_SEARCH = 2;
-  const MAX_RESULTS = 60;
+  const MAX_RESULTS = 150;
   const finePointer = window.matchMedia('(pointer:fine)').matches;
 
   let kind = 'goal';
@@ -1232,6 +1229,7 @@
       competition = v;
       if (!v.startsWith('ita.') && kind !== 'goal' && kind !== 'saved') kit = 'home';
       buildFlow();
+      refreshSearchSummaries();
     });
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
     renderOptions('kitOpts',KITS,kit,v => kit = v);
@@ -1278,6 +1276,8 @@
     };
     const id = inputMap[flow[flowIndex]];
     if (!id) return;
+    // Con la lista squadre già visibile, su telefono la tastiera la coprirebbe.
+    if (id === 'opponentSearch' && !finePointer) return;
     setTimeout(() => {
       const el = $(id);
       if (!el) return;
@@ -1471,7 +1471,6 @@
     box.innerHTML = '';
     box.classList.remove('fallback');
     if (!team) return;
-    box.classList.toggle('color',team.variant === 'color');
     const urls = teamLogoUrls(team);
     const initial = () => {
       box.innerHTML = '';
@@ -1534,16 +1533,64 @@
     });
   }
 
+  /* ---------- Squadre per competizione ---------- */
+  // Pack FCLogo da cui pescare le avversarie (suffisso dello slug, es. "2026-27-serie-a").
+  const COMPETITION_PACKS = {
+    'ita.1':['serie-a'],
+    'ita.super_cup':['serie-a'],
+    'ita.coppa_italia':['serie-a','serie-b'],
+    'uefa.champions':['uefa-champions-league'],
+    'uefa.europa':['uefa-europa-league'],
+    'uefa.europa.conf':['uefa-conference-league']
+  };
+
+  function competitionPacks() {
+    // Fuori dalle STATS "Italia" vale per campionato, coppa e supercoppa insieme.
+    if (competition === 'ita.1' && kind !== 'stats') return ['serie-a','serie-b'];
+    return COMPETITION_PACKS[competition] || [];
+  }
+
+  // Se il catalogo non ha ancora il pack della competizione, mostra tutte le squadre.
+  let teamPoolFallback = false;
+  function currentTeamPool() {
+    const packs = competitionPacks();
+    const pool = teams.filter(team =>
+      (team.packs || []).some(slug => packs.some(suffix => String(slug).endsWith(`-${suffix}`))));
+    teamPoolFallback = !pool.length;
+    return teamPoolFallback ? teams : pool;
+  }
+
+  // Lista completa subito; la ricerca filtra da 1 carattere.
+  function searchTeams(pool, rawQuery) {
+    if (!norm(rawQuery)) return pool;
+    return pool
+      .map(item => ({item,rank:rankItem(item,norm(rawQuery))}))
+      .filter(row => Number.isFinite(row.rank))
+      .sort((a,b) => a.rank - b.rank ||
+        displayTeamName(a.item.name).localeCompare(displayTeamName(b.item.name),'it',{sensitivity:'base'}))
+      .map(row => row.item);
+  }
+
   function refreshSearchSummaries() {
     const tq = $('opponentSearch').value;
-    teamMatches = teamsLoaded ? searchItems(teams,tq) : [];
+    const pool = teamsLoaded ? currentTeamPool() : [];
+    teamMatches = searchTeams(pool,tq);
 
+    // Squadra scelta per un'altra competizione: si riparte da zero.
+    if (selectedTeam && !pool.some(item => item.name === selectedTeam.name)) {
+      selectedTeam = null;
+      $('opponentSearch').value = '';
+      teamMatches = pool;
+    }
     if (selectedTeam && !teamMatches.some(item => item.name === selectedTeam.name)) {
       if (!namesFor(selectedTeam).some(name => norm(tq) === norm(name))) selectedTeam = null;
     }
 
+    const compLabel = labelOf(competitionOptions(),competition);
     if (!teamsLoaded) $('opponentSummary').textContent = 'Caricamento squadre…';
-    else if (norm(tq).length < MIN_SEARCH) $('opponentSummary').textContent = 'Scrivi almeno 2 caratteri.';
+    else if (!norm($('opponentSearch').value)) $('opponentSummary').textContent = teamPoolFallback
+      ? `${pool.length} squadre (catalogo ${compLabel} non ancora disponibile)`
+      : `${pool.length} squadre · ${compLabel}`;
     else if (!teamMatches.length) $('opponentSummary').textContent = 'Nessun risultato.';
     else if (selectedTeam) $('opponentSummary').textContent = `Selezionata: ${displayTeamName(selectedTeam.name)}`;
     else $('opponentSummary').textContent = `${teamMatches.length} risultat${teamMatches.length === 1 ? 'o' : 'i'}`;
