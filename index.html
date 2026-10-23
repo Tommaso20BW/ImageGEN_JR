@@ -259,7 +259,7 @@
     }
 
     /* Options */
-    .opts{display:grid;gap:10px}
+    .opts{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
     .opt{
       width:100%;min-height:60px;padding:0 16px;
       display:flex;align-items:center;gap:14px;text-align:left;
@@ -306,10 +306,10 @@
     }
     .search input::placeholder{color:var(--muted);font-weight:500}
     .hint{margin:10px 2px 0;color:var(--muted);font-size:12.5px;min-height:18px}
-    .results{display:grid;gap:6px;margin-top:12px}
+    .results{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;margin-top:12px}
     .result{
       display:flex;align-items:center;justify-content:space-between;gap:12px;
-      min-height:52px;padding:0 16px;border-radius:12px;
+      min-height:52px;min-width:0;padding:0 16px;border-radius:12px;
       background:var(--surface);border:1.5px solid transparent;
       font-size:15.5px;font-weight:650;text-align:left;width:100%;box-shadow:var(--shadow-soft);
       transition:transform .45s var(--spring),border-color .24s ease,background-color .24s ease,box-shadow .28s var(--ease-out);
@@ -318,7 +318,8 @@
     .result:active{transform:scale(.98);transition-duration:.12s,.24s,.24s,.28s}
     .result.selected{border-color:var(--accent);background:var(--accent-soft)}
     /* Loghi squadre mono: nero su tema chiaro, bianco su tema scuro. */
-    .res-main{display:flex;align-items:center;gap:12px;min-width:0}
+    .res-main{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto}
+    .result .tick{flex:none}
     .res-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .logo{
       flex:none;width:28px;height:28px;display:grid;place-items:center;
@@ -808,6 +809,12 @@
     'https://api.github.com/repos/Tommaso20BW/LiveScore_JR/contents/data/fclogo_manifest.json?ref=main'
   ];
 
+  const TEAM_NAMES_URLS = [
+    'https://raw.githubusercontent.com/Tommaso20BW/LiveScore_JR/main/data/teams.json',
+    'https://cdn.jsdelivr.net/gh/Tommaso20BW/LiveScore_JR@main/data/teams.json',
+    'https://api.github.com/repos/Tommaso20BW/LiveScore_JR/contents/data/teams.json?ref=main'
+  ];
+
   const KINDS = [
     ['goal','GOAL'],['saved','SAVED'],['match','EVENT'],['stats','STATS']
   ];
@@ -815,11 +822,8 @@
     ['uefa.champions','Champions League'],['uefa.europa','Europa League'],
     ['uefa.europa.conf','Conference League']
   ];
-  // Le singole competizioni italiane servono solo alle STATS; per le altre grafiche basta "Italia".
   function competitionOptions() {
-    const italy = kind === 'stats'
-      ? [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana']]
-      : [['ita.1','Italia']];
+    const italy = [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana']];
     return [...italy, ...COMPETITIONS_UEFA];
   }
   const PHASES = [['kick','KICK OFF'],['half','HALF TIME'],['end_of_90',"END OF 90'"],['full','FULL TIME']];
@@ -919,13 +923,71 @@
     .replace(/[^a-z0-9]+/g,' ')
     .trim();
 
-  const TEAM_NAMES_IT = new Map(Object.entries({
-    'ac milan':'Milan','ac monza':'Monza','acf fiorentina':'Fiorentina','afc bournemouth':'Bournemouth','bayer 04 leverkusen':'Bayer Leverkusen','bologna fc':'Bologna','cagliari calcio':'Cagliari','como 1907':'Como','crystal palace football club':'Crystal Palace','empoli fc':'Empoli','fc inter milan':'Inter','fc salzburg':'Salisburgo','genoa cfc':'Genoa','hellas verona':'Verona','juventus fc':'Juventus','olympique lyonnais':'Lione','parma calcio 1913':'Parma','pisa sc':'Pisa','rc celta de vigo':'Celta Vigo','real sociedad de futbol':'Real Sociedad','ss lazio':'Lazio','sport lisboa e benfica':'Benfica','stade rennais':'Rennes','sunderland afc':'Sunderland','tsg hoffenheim':'Hoffenheim','torino fc':'Torino','us cremonese':'Cremonese','us lecce':'Lecce','us sassuolo calcio':'Sassuolo','udinese calcio':'Udinese','alkmaar zaanstreek':'AZ Alkmaar','ascoli calcio 1898 fc':'Ascoli','associazione sportiva roma':'Roma','atalanta bergamasca calcio':'Atalanta','athletic club omonoia nicosia':'Omonia Nicosia','athletic club sparta praha':'Sparta Praga','benevento calcio':'Benevento','besiktas jimnastik kulubu':'Besiktas','calcio padova':'Padova','carrarese calcio 1908':'Carrarese','celje football club':'Celje','cesena football club':'Cesena','ferencvarosi torna club':'Ferencvaros','football club ararat armenia':'Ararat-Armenia','football club viktoria plzen':'Viktoria Plzen','frosinone calcio':'Frosinone','fussball club sudtirol':'Sudtirol','gnk dinamo zagreb':'Dinamo Zagabria','hapoel beer sheva football club':'Hapoel Beer Sheva','jagiellonia biaystok sportowa spoka akcyjna':'Jagiellonia Bialystok','kolejowy klub sportowy lech poznan sa':'Lech Poznan','lanerossi vicenza':'Vicenza','lillestrm sportsklubb':'Lillestrom','mantova 1911':'Mantova','modena football club':'Modena','nijmegen eendracht combinatie':'NEC Nimega','ofi football club':'OFI Creta','olympiacos football club':'Olympiacos','olympique de marseille':'Marsiglia','palermo football club':'Palermo','profesionalen futbolen klub levski':'Levski Sofia','royal sporting club anderlecht':'Anderlecht','royale union saint gilloise':'Union Saint-Gilloise','societ sportiva calcio napoli':'Napoli','societ sportiva juve stabia':'Juve Stabia','societa sportiva arezzo':'Arezzo','sport clube uniao torreense':'Torreense','sportklub sturm graz':'Sturm Graz','the celtic football club':'Celtic','unione calcio sampdoria':'Sampdoria','unione sportiva avellino 1912':'Avellino','unione sportiva catanzaro 1929':'Catanzaro','venezia football club':'Venezia','virtus entella':'Virtus Entella'
-  }));
+  /* Nomi italiani: la fonte è data/teams.json di LiveScore (la stessa dell'immagine).
+     Il confronto ignora maiuscole, accenti, trattini e parole generiche (FC, Football Club…);
+     Le squadre non presenti in teams.json mostrano il nome del catalogo, senza modifiche. */
+  const NAME_NOISE = new Set(['fc','cf','afc','sc','ac','as','us','ss','cd','fk','sk','bk','if','losc',
+    'football','club','futbol','calcio','spor','kulubu','kulub','de','of','the','1907','1909','1913','1898','1911']);
+  const stripNoise = key => key.split(' ').filter(word => word && !NAME_NOISE.has(word)).join(' ');
+  let teamNamesExact = new Map();
+  let teamNamesLoose = new Map();
+  let teamNamesRaw = null;
+  let teamNamesByAlias = new Map();
+
+  function setTeamNames(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+    const exact = new Map();
+    const loose = new Map();
+    const ambiguous = new Set();
+    Object.entries(obj).forEach(([source,value]) => {
+      const display = String(Array.isArray(value) ? value[0] : value || '').trim();
+      const key = norm(source);
+      if (!display || !key) return;
+      exact.set(key,display);
+      const short = stripNoise(key);
+      if (!short) return;
+      if (loose.has(short) && loose.get(short) !== display) ambiguous.add(short);
+      else loose.set(short,display);
+    });
+    ambiguous.forEach(key => loose.delete(key));
+    if (!exact.size) return false;
+    teamNamesExact = exact;
+    teamNamesLoose = loose;
+    teamNamesRaw = obj;
+    resolveTeamAliases();
+    return true;
+  }
+
+  const lookupTeamName = name => {
+    const key = norm(name);
+    return teamNamesExact.get(key) || teamNamesLoose.get(stripNoise(key)) || '';
+  };
+
+  // Se il nome del catalogo non è in teams.json ma lo è un suo alias (es. "Sporting CP"),
+  // si usa la traduzione dell'alias; poi si riordina l'elenco per nome mostrato.
+  function resolveTeamAliases() {
+    const byAlias = new Map();
+    teams.forEach(team => {
+      if (lookupTeamName(team.name)) return;
+      for (const alias of (team.aliases || [])) {
+        const hit = lookupTeamName(alias);
+        if (hit) { byAlias.set(norm(team.name),hit); break; }
+      }
+    });
+    teamNamesByAlias = byAlias;
+    if (teams.length) {
+      teams.sort((a,b) =>
+        displayTeamName(a.name).localeCompare(displayTeamName(b.name),'it',{sensitivity:'base'}));
+    }
+  }
 
   function displayTeamName(name) {
     const raw = String(name || '').trim();
-    return TEAM_NAMES_IT.get(norm(raw)) || raw;
+    const key = norm(raw);
+    return teamNamesExact.get(key)
+      || teamNamesLoose.get(stripNoise(key))
+      || teamNamesByAlias.get(key)
+      || raw;
   }
 
   function currentMatchupNames() {
@@ -1551,8 +1613,6 @@
   };
 
   function competitionPacks() {
-    // Fuori dalle STATS "Italia" vale per campionato, coppa e supercoppa insieme.
-    if (competition === 'ita.1' && kind !== 'stats') return ['serie-a','serie-b'];
     return COMPETITION_PACKS[competition] || [];
   }
 
@@ -1962,8 +2022,7 @@
       teams = teamRows
         .filter(team => team && team.name)
         .filter(team => !namesFor(team).some(name => norm(name) === 'juventus'));
-      teams.sort((a,b) =>
-        displayTeamName(a.name).localeCompare(displayTeamName(b.name),'it',{sensitivity:'base'}));
+      resolveTeamAliases();
       teamsLoaded = teams.length > 0;
     }
   }
@@ -1972,13 +2031,14 @@
     try {
       const cached = JSON.parse(localStorage.getItem(CATALOG_CACHE_KEY) || 'null');
       if (!cached || typeof cached !== 'object') return;
+      setTeamNames(cached.teamNames);
       normalizeCatalogs(cached.players,cached.teams);
     } catch (_) {}
   }
 
   function saveCatalogCache() {
     try {
-      localStorage.setItem(CATALOG_CACHE_KEY,JSON.stringify({savedAt:Date.now(),players,teams}));
+      localStorage.setItem(CATALOG_CACHE_KEY,JSON.stringify({savedAt:Date.now(),players,teams,teamNames:teamNamesRaw}));
     } catch (_) {}
   }
 
@@ -2018,10 +2078,20 @@
         if (!Array.isArray(data[key]) || !data[key].length) throw new Error(`${key} mancanti`);
         return data;
       });
-      const [playersResult,teamsResult] = await Promise.allSettled([
+      const [playersResult,teamsResult,namesResult] = await Promise.allSettled([
         fromBundle('players').catch(() => fetchCatalogFast(PLAYERS_URLS,'Giocatori')),
-        fromBundle('teams').catch(() => fetchCatalogFast(TEAMS_URLS,'Squadre'))
+        fromBundle('teams').catch(() => fetchCatalogFast(TEAMS_URLS,'Squadre')),
+        bundle.then(data => {
+          if (!data.team_names || !Object.keys(data.team_names).length) throw new Error('nomi mancanti');
+          return data;
+        }).catch(() => fetchCatalogFast(TEAM_NAMES_URLS,'Nomi squadre'))
       ]);
+
+      // I nomi italiani vanno applicati prima delle squadre, che si ordinano per nome mostrato.
+      if (namesResult.status === 'fulfilled') {
+        const value = namesResult.value;
+        setTeamNames(value && value.team_names ? value.team_names : value);
+      }
 
       if (playersResult.status === 'fulfilled') {
         const rows = Array.isArray(playersResult.value.players) ? playersResult.value.players : [];
