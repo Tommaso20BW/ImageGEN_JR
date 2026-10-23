@@ -890,7 +890,21 @@
   let playersLoaded = false;
   let teamsLoaded = false;
   let catalogLoadPromise = null;
-  const CATALOG_CACHE_KEY = 'imagegen-jr-catalog-v1';
+  const CATALOG_CACHE_KEY = 'imagegen-jr-catalog-v2';
+  const SESSION_KEY = 'imagegen-jr-session';
+  // Ogni nuovo workflow ha una sessione diversa: butta via tutto ciò che il browser ricorda.
+  (function resetCacheOnNewSession() {
+    try {
+      if (localStorage.getItem(SESSION_KEY) === session && session) return;
+      localStorage.removeItem('imagegen-jr-catalog-v1');
+      localStorage.removeItem(CATALOG_CACHE_KEY);
+      if (session) localStorage.setItem(SESSION_KEY,session);
+      else localStorage.removeItem(SESSION_KEY);
+    } catch (_) {}
+    try {
+      if (window.caches && caches.keys) caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    } catch (_) {}
+  })();
 
   let flow = [];
   let flowIndex = 0;
@@ -1460,7 +1474,7 @@
   function teamLogoUrls(team) {
     if (!team) return [];
     const preview = team.preview_url ? String(team.preview_url).replace(/([?&])w=\d+/,'$1w=96') : '';
-    return [team.source_url,preview].filter(Boolean);
+    return [team.logo,team.source_url,preview].filter(Boolean);
   }
 
   // Riempie un contenitore .logo: prova le URL in ordine, se falliscono tutte mostra l'iniziale.
@@ -1481,7 +1495,7 @@
     const img = new Image();
     img.alt = '';
     img.decoding = 'async';
-    img.loading = 'lazy';
+    img.loading = 'eager';
     img.referrerPolicy = 'no-referrer';
     let i = 0;
     img.onload = () => img.classList.add('ok');
@@ -2001,9 +2015,13 @@
       if (!playersLoaded) $('playerSummary').textContent = 'Caricamento giocatori…';
       if (!teamsLoaded) $('opponentSummary').textContent = 'Caricamento squadre…';
 
+      // Squadre + loghi arrivano già pronti dal workflow; GitHub resta solo come riserva.
+      const teamsFromWorkflow = () => (directBase && session)
+        ? fetchOneCatalog(`${directBase}/catalog?session=${encodeURIComponent(session)}`,'Squadre workflow',10000)
+        : Promise.reject(new Error('Workflow non collegato'));
       const [playersResult,teamsResult] = await Promise.allSettled([
         fetchCatalogFast(PLAYERS_URLS,'Giocatori'),
-        fetchCatalogFast(TEAMS_URLS,'Squadre')
+        teamsFromWorkflow().catch(() => fetchCatalogFast(TEAMS_URLS,'Squadre'))
       ]);
 
       if (playersResult.status === 'fulfilled') {

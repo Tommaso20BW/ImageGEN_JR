@@ -16,6 +16,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from canva import CanvaTokenProvider
 from catalog import Catalog
+from logo_bundle import build_team_bundle
 from render import Renderer
 from telegram import DeliveryUncertain, Telegram, TelegramError
 from webapp_payload import parse_webapp_request
@@ -46,7 +47,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
     def _cors(self):
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header(
             'Access-Control-Allow-Headers',
             'Content-Type, X-ImageGEN-Session',
@@ -91,6 +92,26 @@ class _DirectHandler(BaseHTTPRequestHandler):
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
             self._json(400, {'ok': False, 'error': 'JSON non valido.'})
             return None
+
+    def do_GET(self):
+        parts = urlsplit(self.path)
+        if parts.path.rstrip('/') != '/catalog':
+            self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
+            return
+        token = dict(parse_qsl(parts.query)).get('session', '')
+        if token != self.service.session:
+            self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+            return
+        body = self.service.catalog_bundle
+        if not body:
+            self._json(503, {'ok': False, 'error': 'Catalogo non pronto.'})
+            return
+        self.send_response(200)
+        self._cors()
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -155,6 +176,7 @@ class Service:
         self.generated_message_ids = []
         self.bot_message_ids = []
         self.launcher_message_id = None
+        self.catalog_bundle = None
 
         self.http_server = None
         self.http_thread = None
@@ -354,6 +376,12 @@ class Service:
             raise RuntimeError('MANUAL_GRAPHICS_WEBAPP_URL mancante')
         if not direct_url.startswith('https://'):
             raise RuntimeError('MANUAL_GRAPHICS_DIRECT_URL mancante o non HTTPS')
+
+        # Catalogo fresco + loghi incorporati, pronto prima che la Mini App si apra.
+        try:
+            self.catalog_bundle = build_team_bundle()
+        except Exception as exc:
+            print(f'WARN IMAGEGEN: pacchetto loghi non disponibile: {type(exc).__name__}: {exc}', flush=True)
 
         self._start_http_server()
 
