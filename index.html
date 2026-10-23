@@ -197,6 +197,9 @@
     }
     .opt:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
     .opt:active{transform:scale(.99)}
+    .opt:disabled{opacity:.45;cursor:default;transform:none}
+    .opt:disabled:hover{border-color:var(--line)}
+    .opt .soon{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em}
     .opt .radio{
       width:22px;height:22px;border-radius:50%;flex:none;
       border:2px solid var(--line);position:relative;
@@ -287,14 +290,32 @@
     .num-input.text{font-size:30px}
     .vs{display:none}
 
-    .chips-stats{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
-    .chips-stats button{
-      height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);
-      background:transparent;color:var(--muted);font-size:11px;font-weight:750;
+    /* Stats: tutte le voci in una sola schermata */
+    .stat-head,.stat-row{display:grid;grid-template-columns:80px minmax(0,1fr) 80px;gap:8px;align-items:center}
+    .stat-head{position:sticky;top:-26px;z-index:2;background:var(--bg);padding:10px 8px 8px}
+    .stat-head span{
+      font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text);
+      text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
-    .chips-stats button.filled{color:var(--text);border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
-    .chips-stats button.current{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-    .tiny{margin-top:14px;color:var(--muted);font-size:12px}
+    .stat-head span.mid{color:var(--muted)}
+    .stat-rows{display:grid;gap:6px}
+    .stat-row{
+      background:var(--surface);border:1.5px solid var(--line);border-radius:999px;
+      padding:5px 6px;transition:border-color .14s;
+    }
+    .stat-row.filled{border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+    .stat-row.bad{border-color:var(--danger)}
+    .stat-row label{font-size:12.5px;font-weight:750;line-height:1.15;text-align:center;color:var(--muted)}
+    .stat-row.filled label{color:var(--text)}
+    .stat-row input{
+      width:100%;min-width:0;height:42px;border:0;border-radius:999px;background:var(--surface2);
+      text-align:center;font-size:20px;font-weight:800;outline:none;
+    }
+    .stat-row input:focus{box-shadow:0 0 0 2px var(--accent)}
+    .stat-row input::placeholder{color:var(--text);opacity:.22;font-weight:700}
+    .stat-row input:focus::placeholder{opacity:.12}
+    .stat-tools{display:flex;justify-content:space-between;align-items:center;margin-top:14px;color:var(--muted);font-size:12.5px}
+    .link-btn{border:0;background:transparent;color:var(--muted);font-size:12.5px;font-weight:700;text-decoration:underline;padding:6px 0}
 
     /* Preview */
     .preview-wrap{display:grid;gap:14px;justify-items:center}
@@ -530,20 +551,16 @@
 
           <section class="screen" data-screen="stats">
             <div class="eyebrow">Statistiche</div>
-            <h1 id="statTitle">Possesso</h1>
-            <p class="lead">Inserisci i due valori. Puoi lasciare entrambi vuoti per saltare questa voce.</p>
-            <div class="pair">
-              <div class="num-card">
-                <div id="statHomeName" class="num-name">Casa</div>
-                <input id="statHome" class="num-input text" inputmode="decimal" enterkeyhint="done" placeholder="–" autocomplete="off">
-              </div>
-              <div class="num-card">
-                <div id="statAwayName" class="num-name">Trasferta</div>
-                <input id="statAway" class="num-input text" inputmode="decimal" enterkeyhint="done" placeholder="–" autocomplete="off">
-              </div>
+            <h1>Statistiche</h1>
+            <p class="lead">Compila le voci che vuoi mostrare. Per ogni riga inserisci entrambi i valori oppure lasciala vuota.</p>
+            <div class="stat-head">
+              <span id="statHomeName">Casa</span><span class="mid">Voce</span><span id="statAwayName">Trasferta</span>
             </div>
-            <div id="statChips" class="chips-stats"></div>
-            <div id="statIndex" class="tiny"></div>
+            <div id="statRows" class="stat-rows"></div>
+            <div class="stat-tools">
+              <span id="statCount">0 / 12 voci</span>
+              <button id="statClear" class="link-btn" type="button">Svuota tutto</button>
+            </div>
           </section>
 
           <section class="screen" data-screen="preview">
@@ -622,12 +639,17 @@
     ['goal','GOAL'],['saved','SAVED'],['kick','KICK OFF'],['half','HALF TIME'],
     ['end_of_90',"END OF 90'"],['full','FULL TIME'],['stats','STATS']
   ];
-  const COMPETITIONS = [
-    ['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana'],
+  const COMPETITIONS_UEFA = [
     ['uefa.champions','Champions League'],['uefa.europa','Europa League'],
-    ['uefa.europa.conf','Conference League'],['uefa.super_cup','Supercoppa UEFA'],
-    ['fifa.cwc','Mondiale per Club']
+    ['uefa.europa.conf','Conference League']
   ];
+  // Le singole competizioni italiane servono solo alle STATS; per le altre grafiche basta "Italia".
+  function competitionOptions() {
+    const italy = kind === 'stats'
+      ? [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana']]
+      : [['ita.1','Italia']];
+    return [...italy, ...COMPETITIONS_UEFA];
+  }
   const SIDES = [['home','In casa'],['away','In trasferta']];
   const KITS = [['home','Home'],['away','Away'],['third','Third']];
   const POSES = [['arms_crossed','Braccia incrociate'],['pointing','Indica']];
@@ -636,6 +658,9 @@
     'POSSESSO','xG','TIRI','TIRI IN PORTA','CORNER','FALLI',
     'FUORIGIOCO','AMMONITI','ESPULSI','PARATE','PRECISIONE PASSAGGI','PASSAGGI'
   ];
+  // Tipo di dato di ogni voce -> placeholder semi-trasparenti [casa, trasferta]
+  const STAT_PLACEHOLDERS = {pct:['58%','42%'], dec:['1.42','0.87'], int:['7','4']};
+  const STAT_TYPES = {'POSSESSO':'pct','PRECISIONE PASSAGGI':'pct','xG':'dec'};
 
   const STEP_NAMES = {
     competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
@@ -673,7 +698,6 @@
   let flow = [];
   let flowIndex = 0;
   let navDirection = 'forward';
-  let statCursor = 0;
   const statRows = Object.fromEntries(STATS.map(label => [label,{home:'',away:''}]));
   let previewObjectUrl = '';
   let previewPayloadText = '';
@@ -739,12 +763,16 @@
 
   /* ---------- Flow ---------- */
   function buildFlow() {
-    const base = ['competition','side','opponent','kit'];
-    if (kind === 'goal' || kind === 'saved') flow = [...base,'player','minute','pose'];
+    const base = ['competition','side','opponent'];
+    // Goal/saved: maglia sempre. Half/end/full: solo con "Italia" (serve per lo sfondo);
+    // le UEFA hanno lo sfondo della competizione. Stats: come half/end/full. Kick off: mai.
+    const italy = competition.startsWith('ita.');
+    const withKit = [...base,'kit'];
+    if (kind === 'goal' || kind === 'saved') flow = [...withKit,'player','minute','pose'];
     else if (kind === 'kick') flow = base;
-    else if (kind === 'half' || kind === 'end_of_90') flow = [...base,'score'];
-    else if (kind === 'full') flow = [...base,'score','pens'];
-    else if (kind === 'stats') flow = [...base,'moment','stats'];
+    else if (kind === 'half' || kind === 'end_of_90') flow = [...(italy ? withKit : base),'score'];
+    else if (kind === 'full') flow = [...(italy ? withKit : base),'score','pens'];
+    else if (kind === 'stats') flow = [...(italy ? withKit : base),'moment','stats'];
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
   }
 
@@ -755,7 +783,7 @@
 
   function stepValue(step) {
     switch (step) {
-      case 'competition': return labelOf(COMPETITIONS,competition);
+      case 'competition': return labelOf(competitionOptions(),competition);
       case 'side': return labelOf(SIDES,side);
       case 'opponent': return selectedTeam ? displayTeamName(selectedTeam.name) : '';
       case 'kit': return labelOf(KITS,kit);
@@ -817,9 +845,7 @@
     let p;
     if (previewMode) p = 1;
     else {
-      p = flowIndex;
-      if (flow[flowIndex] === 'stats') p += statCursor / STATS.length;
-      p = p / (flow.length);
+      p = flowIndex / flow.length;
     }
     $('progressBar').style.width = `${Math.max(4,Math.round(p * 100))}%`;
   }
@@ -861,7 +887,7 @@
     }
     $('stage').scrollTop = 0;
 
-    $('backButton').disabled = !previewMode && flowIndex === 0 && !(flow[flowIndex] === 'stats' && statCursor > 0);
+    $('backButton').disabled = !previewMode && flowIndex === 0;
     $('backButton').textContent = previewMode ? '‹ Modifica' : '‹ Indietro';
     $('nextButton').textContent = previewMode ? 'Invia foto ✓' : (isLastStep() ? finalStepLabel() : 'Avanti ›');
     $('kindSubtitle').textContent = previewMode ? 'ANTEPRIMA' : labelOf(KINDS,kind);
@@ -874,23 +900,27 @@
   }
 
   function isLastStep() {
-    if (flowIndex !== flow.length - 1) return false;
-    if (flow[flowIndex] === 'stats') return statCursor === STATS.length - 1;
-    return true;
+    return flowIndex === flow.length - 1;
   }
 
   /* ---------- Option groups ---------- */
   function renderOptions(id, options, value, onSelect) {
     const box = $(id);
     box.innerHTML = '';
-    options.forEach(([v,label]) => {
+    options.forEach(([v,label,disabled]) => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'opt' + (v === value ? ' selected' : '');
+      b.className = 'opt' + (v === value && !disabled ? ' selected' : '');
       b.setAttribute('role','radio');
-      b.setAttribute('aria-checked', v === value ? 'true' : 'false');
+      b.setAttribute('aria-checked', v === value && !disabled ? 'true' : 'false');
       b.innerHTML = '<span class="radio"></span><span class="opt-label"></span>';
       b.querySelector('.opt-label').textContent = label;
+      if (disabled) {
+        b.disabled = true;
+        b.innerHTML += '<span class="soon">non disponibile</span>';
+        box.appendChild(b);
+        return;
+      }
       b.addEventListener('click',() => {
         onSelect(v);
         renderOptions(id,options,v,onSelect);
@@ -901,7 +931,11 @@
   }
 
   function updateScreenValues() {
-    renderOptions('competitionOpts',COMPETITIONS,competition,v => competition = v);
+    renderOptions('competitionOpts',competitionOptions(),competition,v => {
+      competition = v;
+      if (!v.startsWith('ita.') && kind !== 'goal' && kind !== 'saved') kit = 'home';
+      buildFlow();
+    });
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
     renderOptions('kitOpts',KITS,kit,v => kit = v);
     renderOptions('poseOpts',POSES,pose,v => pose = v);
@@ -920,15 +954,13 @@
     $('pensAwayName').textContent = m.away;
     $('statHomeName').textContent = m.home;
     $('statAwayName').textContent = m.away;
-
-    if (flow[flowIndex] === 'stats') renderStatScreen(false);
   }
 
   function autoFocusCurrent() {
     if (previewMode) return;
     const inputMap = {
       opponent:'opponentSearch', player:'playerSearch', minute:'minute',
-      score:'homeScore', stats:'statHome'
+      score:'homeScore'
     };
     const id = inputMap[flow[flowIndex]];
     if (!id) return;
@@ -1011,16 +1043,35 @@
     }
   }
 
+  // Cambiando tipo di grafica si riparte da zero: nessun dato resta salvato.
+  function resetAllData() {
+    competition = 'ita.1';
+    side = 'home';
+    kit = 'home';
+    pose = 'arms_crossed';
+    moment = 'HT';
+    selectedTeam = null;
+    selectedPlayer = null;
+    ['opponentSearch','playerSearch','minute','homeScore','awayScore',
+     'homePens','awayPens'].forEach(id => { $(id).value = ''; });
+    clearStats();
+    previewPayloadText = '';
+    if (previewObjectUrl) {
+      try { URL.revokeObjectURL(previewObjectUrl); } catch (_) {}
+      previewObjectUrl = '';
+    }
+    $('previewImage').removeAttribute('src');
+    setPreviewError('');
+  }
+
   function changeKind(value) {
     if (value === kind && !previewMode) return;
     previewMode = false;
     kind = value;
-    selectedPlayer = null;
-    $('playerSearch').value = '';
+    resetAllData();
     buildFlow();
     navDirection = 'forward';
     flowIndex = 0;
-    statCursor = 0;
     refreshSearchSummaries();
     renderKindMenu();
     renderFlow();
@@ -1166,15 +1217,20 @@
     }
 
     if (step === 'stats') {
-      const label = STATS[statCursor];
-      const home = $('statHome').value.trim();
-      const away = $('statAway').value.trim();
-      if (!home && !away) { statRows[label] = {home:'',away:''}; return true; }
-      if (!home || !away) {
-        showError('Inserisci entrambi i valori oppure lasciali entrambi vuoti.');
+      collectStats();
+      let bad = null, any = false;
+      statRowEls().forEach((r,i) => {
+        const {home,away} = statRows[STATS[i]];
+        r.classList.remove('bad');
+        if (home || away) any = true;
+        if (!home !== !away) { r.classList.add('bad'); bad = bad || r; }
+      });
+      if (bad) {
+        showError('Inserisci entrambi i valori oppure lascia la riga vuota.');
+        bad.scrollIntoView({block:'center',behavior:'smooth'});
         return false;
       }
-      statRows[label] = {home,away};
+      if (!any) { showError('Inserisci almeno una statistica.'); return false; }
     }
     return true;
   }
@@ -1193,16 +1249,6 @@
       if (!validateCurrent()) return;
     }
 
-    if (flow[flowIndex] === 'stats' && statCursor < STATS.length - 1) {
-      navDirection = 'forward';
-      statCursor += 1;
-      renderStatScreen(true);
-      renderProgress();
-      renderSteps();
-      autoFocusCurrent();
-      return;
-    }
-
     if (flowIndex >= flow.length - 1) { previewGraphic(); return; }
 
     navDirection = 'forward';
@@ -1215,16 +1261,6 @@
 
     if (previewMode) { closePreview(); return; }
 
-    if (flow[flowIndex] === 'stats' && statCursor > 0) {
-      saveCurrentStatDraft();
-      navDirection = 'backward';
-      statCursor -= 1;
-      renderStatScreen(true);
-      renderProgress();
-      autoFocusCurrent();
-      return;
-    }
-
     if (flowIndex <= 0) return;
     navDirection = 'backward';
     flowIndex -= 1;
@@ -1232,47 +1268,52 @@
   }
 
   /* ---------- Stats ---------- */
-  function saveCurrentStatDraft() {
-    if (flow[flowIndex] !== 'stats') return;
-    statRows[STATS[statCursor]] = {
-      home:$('statHome').value.trim(),
-      away:$('statAway').value.trim()
-    };
-  }
+  function statRowEls() { return [...$('statRows').querySelectorAll('.stat-row')]; }
 
-  function renderStatChips() {
-    const box = $('statChips');
+  function buildStatRows() {
+    const box = $('statRows');
     box.innerHTML = '';
-    STATS.forEach((label,i) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      const filled = statRows[label].home || statRows[label].away;
-      b.className = (filled ? 'filled ' : '') + (i === statCursor ? 'current' : '');
-      b.textContent = label;
-      b.addEventListener('click',() => {
-        saveCurrentStatDraft();
-        navDirection = i < statCursor ? 'backward' : 'forward';
-        statCursor = i;
-        renderStatScreen(true);
-        renderProgress();
-        autoFocusCurrent();
-      });
-      box.appendChild(b);
+    STATS.forEach(label => {
+      const [ph,pa] = STAT_PLACEHOLDERS[STAT_TYPES[label] || 'int'];
+      const name = label === 'xG' ? 'xG' : label.charAt(0) + label.slice(1).toLowerCase();
+      const row = document.createElement('div');
+      row.className = 'stat-row';
+      row.innerHTML = '<input inputmode="decimal" enterkeyhint="next" autocomplete="off"><label></label><input inputmode="decimal" enterkeyhint="next" autocomplete="off">';
+      const [h,l,a] = row.children;
+      h.placeholder = ph;
+      a.placeholder = pa;
+      l.textContent = name;
+      h.setAttribute('aria-label',`${name} casa`);
+      a.setAttribute('aria-label',`${name} trasferta`);
+      box.appendChild(row);
     });
   }
 
-  function renderStatScreen(reload) {
-    const label = STATS[statCursor];
-    const row = statRows[label] || {home:'',away:''};
-    $('statTitle').textContent = label === 'xG' ? 'xG' : label.charAt(0) + label.slice(1).toLowerCase();
-    $('statIndex').textContent = `Voce ${statCursor + 1} di ${STATS.length}`;
-    if (reload) {
-      $('statHome').value = row.home;
-      $('statAway').value = row.away;
-    }
-    renderStatChips();
-    $('nextButton').textContent = isLastStep() ? finalStepLabel() : 'Avanti ›';
-    $('backButton').disabled = flowIndex === 0 && statCursor === 0;
+  function collectStats() {
+    let n = 0;
+    statRowEls().forEach((r,i) => {
+      const [h,a] = r.querySelectorAll('input');
+      const home = h.value.trim(), away = a.value.trim();
+      statRows[STATS[i]] = {home,away};
+      const filled = !!(home || away);
+      r.classList.toggle('filled',filled);
+      if (filled) n++;
+      if (home && away) r.classList.remove('bad');
+    });
+    $('statCount').textContent = `${n} / ${STATS.length} voci`;
+    return n;
+  }
+
+  function saveCurrentStatDraft() {
+    if (flow[flowIndex] === 'stats') collectStats();
+  }
+
+  function clearStats() {
+    statRowEls().forEach(r => {
+      r.querySelectorAll('input').forEach(i => { i.value = ''; });
+      r.classList.remove('bad');
+    });
+    collectStats();
   }
 
   /* ---------- Payload / network ---------- */
@@ -1308,7 +1349,7 @@
         if (pens) data.shootout = pens;
       }
     } else if (kind === 'stats') {
-      saveCurrentStatDraft();
+      collectStats();
       data.moment = moment;
       data.rows = STATS
         .map(label => ({
@@ -1527,8 +1568,8 @@
 
   $('minute').addEventListener('input',renderSteps);
   ['homeScore','awayScore','homePens','awayPens'].forEach(id => $(id).addEventListener('input',renderSteps));
-  $('statHome').addEventListener('input',() => { saveCurrentStatDraft(); renderStatChips(); });
-  $('statAway').addEventListener('input',() => { saveCurrentStatDraft(); renderStatChips(); });
+  $('statRows').addEventListener('input',() => { collectStats(); renderSteps(); });
+  $('statClear').addEventListener('click',() => { clearStats(); clearError(); renderSteps(); });
 
   $('minutePlus').addEventListener('click',() => {
     const input = $('minute');
@@ -1565,6 +1606,12 @@
   document.addEventListener('keydown',event => {
     if (event.key === 'Enter' && event.target && event.target.matches && event.target.matches('input')) {
       event.preventDefault();
+      if (event.target.closest('.stat-row')) {
+        const all = [...$('statRows').querySelectorAll('input')];
+        const next = all[all.indexOf(event.target) + 1];
+        if (next) next.focus(); else event.target.blur();
+        return;
+      }
       if (finePointer) nextField(true);
       else event.target.blur();
     }
@@ -1588,6 +1635,7 @@
   refreshSearchSummaries();
   loadCatalogs();
 
+  buildStatRows();
   buildFlow();
   renderKindMenu();
   renderFlow();
