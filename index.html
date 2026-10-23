@@ -350,22 +350,15 @@
     /* Minute */
     .inline-field{position:relative}
     .field-input{
-      width:100%;min-height:62px;padding:0 110px 0 18px;
+      width:100%;min-height:62px;padding:0 18px;
       background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
       font-size:26px;font-weight:800;outline:none;letter-spacing:-.01em;box-shadow:var(--shadow-soft);
       transition:border-color .24s ease,box-shadow .28s var(--ease-out),background-color .24s ease;
     }
     .field-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft),var(--shadow-soft)}
     .field-input::placeholder{color:var(--muted);font-weight:500}
-    .pill-btn{
-      position:absolute;right:10px;top:50%;transform:translateY(-50%);
-      height:38px;padding:0 14px;border:0;border-radius:10px;
-      background:var(--surface2);color:var(--text);font-size:12px;font-weight:800;
-      transition:background-color .18s ease,transform .45s var(--spring);
-    }
-    @media(hover:hover){.pill-btn:hover{background:var(--accent-soft)}}
-    .pill-btn:active{transform:translateY(-50%) scale(.93);transition-duration:.18s,.1s}
-    .quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .quick{display:flex;gap:8px;margin-top:12px}
+    .quick button{flex:1 1 0;min-width:0}
     .quick button{
       height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);
       background:var(--surface);color:var(--muted);font-size:13px;font-weight:700;
@@ -655,7 +648,6 @@
             <p class="lead">Inserisci il minuto dell’azione.</p>
             <div class="inline-field">
               <input id="minute" class="field-input" inputmode="numeric" enterkeyhint="done" placeholder="67 o 90+4" autocomplete="off">
-              <button id="minutePlus" class="pill-btn" type="button">+ recupero</button>
             </div>
             <div class="quick" id="minuteQuick">
               <button type="button" data-v="45+">45+</button>
@@ -2083,15 +2075,6 @@
   ['homeScore','awayScore','homePens','awayPens'].forEach(id => $(id).addEventListener('input',renderSteps));
   $('statRows').addEventListener('input',() => { collectStats(); renderSteps(); });
   $('statClear').addEventListener('click',() => { clearStats(); clearError(); renderSteps(); });
-
-  $('minutePlus').addEventListener('click',() => {
-    const input = $('minute');
-    const value = input.value.trim();
-    if (value && !value.includes('+')) input.value = value + '+';
-    input.focus({preventScroll:true});
-    try { input.setSelectionRange(input.value.length,input.value.length); } catch (_) {}
-    renderSteps();
-  });
 
   $('minuteQuick').addEventListener('click',event => {
     const b = event.target.closest('button[data-v]');
