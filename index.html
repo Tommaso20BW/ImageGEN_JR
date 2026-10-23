@@ -317,6 +317,30 @@
     @media(hover:hover){.result:hover{border-color:var(--line);box-shadow:var(--shadow-hover)}}
     .result:active{transform:scale(.98);transition-duration:.12s,.24s,.24s,.28s}
     .result.selected{border-color:var(--accent);background:var(--accent-soft)}
+    /* Loghi squadre mono: nero su tema chiaro, bianco su tema scuro. */
+    .res-main{display:flex;align-items:center;gap:12px;min-width:0}
+    .res-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .logo{
+      flex:none;width:28px;height:28px;display:grid;place-items:center;
+      font-size:13px;font-weight:850;color:var(--muted);
+    }
+    .logo img{
+      width:28px;height:28px;object-fit:contain;opacity:0;transform:scale(.8);
+      filter:brightness(0);
+      transition:opacity .3s ease,transform .45s var(--spring);
+    }
+    html[data-theme="dark"] .logo img{filter:brightness(0) invert(1)}
+    /* Le poche squadre senza versione mono: scala di grigi, per non perdere i dettagli interni. */
+    .logo.color img{filter:grayscale(1) contrast(1.15)}
+    html[data-theme="dark"] .logo.color img{filter:grayscale(1) brightness(1.4)}
+    .logo img.ok{opacity:1;transform:none}
+    .logo.fallback{width:28px;height:28px;border-radius:50%;background:var(--surface2)}
+    /* Nel campo di ricerca il logo della squadra scelta prende il posto della lente. */
+    .search-ico{position:relative;flex:none;width:32px;height:32px;display:grid;place-items:center;margin-left:-6px}
+    .search-ico>svg,.search-ico>.logo{grid-area:1/1;transition:opacity .25s ease,transform .45s var(--spring)}
+    .search-ico>.logo{opacity:0;transform:scale(.6) rotate(-12deg)}
+    .search.has-logo .search-ico>.logo{opacity:1;transform:none}
+    .search.has-logo .search-ico>svg{opacity:0;transform:scale(.6)}
     .result .tick{
       color:var(--accent);font-weight:900;opacity:0;transform:scale(.3) rotate(-20deg);
       transition:opacity .15s ease,transform .2s var(--ease-exit);
@@ -598,8 +622,11 @@
             <div class="eyebrow">Partita</div>
             <h1>Avversario</h1>
             <p class="lead">Cerca la squadra e selezionala dalla lista.</p>
-            <label class="search">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <label class="search" id="opponentField">
+              <span class="search-ico">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <span id="opponentLogo" class="logo" aria-hidden="true"></span>
+              </span>
               <input id="opponentSearch" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Cerca squadra…">
             </label>
             <div id="opponentSummary" class="hint">Scrivi almeno 2 caratteri.</div>
@@ -908,9 +935,14 @@
   }
 
   function rankItem(item, query) {
-    const names = namesFor(item).map(norm).filter(Boolean);
-    if (names.some(v => v === query)) return 0;
-    if (names.some(v => v.startsWith(query))) return 1;
+    // Se la squadra ha un nome italiano (es. "FC Inter Milan" → "Inter"), il nome
+    // originale conta solo se la ricerca ne copre l'inizio: altrimenti "milan" troverebbe anche l'Inter.
+    const raw = norm(item.name);
+    const translated = norm(displayTeamName(item.name)) !== raw;
+    const all = namesFor(item).map(norm).filter(Boolean);
+    const names = translated ? all.filter(v => v !== raw) : all;
+    if (all.some(v => v === query)) return 0;
+    if (all.some(v => v.startsWith(query))) return 1;
     if (names.some(v => v.split(' ').some(word => word.startsWith(query)))) return 2;
     if (names.some(v => v.includes(query))) return 3;
     return Infinity;
@@ -1422,7 +1454,49 @@
   /* ---------- Search ---------- */
   // Lista con chiave: se i risultati non cambiano si aggiorna solo la selezione;
   // se cambiano, entrano con una breve cascata solo le righe che prima non c'erano.
-  function renderResults(listId, matches, selectedName, labelFn, onPick) {
+  /* ---------- Loghi squadre ---------- */
+  // source_url è il PNG ufficiale (mono: nero su trasparente); il CSS lo rende nero o bianco
+  // in base al tema. preview_url (a colori, dal CDN) resta solo come riserva.
+  function teamLogoUrls(team) {
+    if (!team) return [];
+    const preview = team.preview_url ? String(team.preview_url).replace(/([?&])w=\d+/,'$1w=96') : '';
+    return [team.source_url,preview].filter(Boolean);
+  }
+
+  // Riempie un contenitore .logo: prova le URL in ordine, se falliscono tutte mostra l'iniziale.
+  function fillLogo(box, team) {
+    const key = team ? team.name : '';
+    if (box.dataset.team === key) return;
+    box.dataset.team = key;
+    box.innerHTML = '';
+    box.classList.remove('fallback');
+    if (!team) return;
+    box.classList.toggle('color',team.variant === 'color');
+    const urls = teamLogoUrls(team);
+    const initial = () => {
+      box.innerHTML = '';
+      box.classList.add('fallback');
+      box.textContent = displayTeamName(team.name).charAt(0).toUpperCase();
+    };
+    if (!urls.length) { initial(); return; }
+    const img = new Image();
+    img.alt = '';
+    img.decoding = 'async';
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    let i = 0;
+    img.onload = () => img.classList.add('ok');
+    img.onerror = () => { i += 1; if (i < urls.length) img.src = urls[i]; else initial(); };
+    img.src = urls[0];
+    box.appendChild(img);
+  }
+
+  function updateOpponentLogo() {
+    fillLogo($('opponentLogo'),selectedTeam);
+    $('opponentField').classList.toggle('has-logo',Boolean(selectedTeam));
+  }
+
+  function renderResults(listId, matches, selectedName, labelFn, onPick, logoFn) {
     const box = $(listId);
     box._onPick = onPick;
     const items = matches.slice(0,MAX_RESULTS);
@@ -1438,8 +1512,15 @@
         b.type = 'button';
         b.className = 'result';
         b.dataset.name = item.name;
-        b.innerHTML = '<span></span><span class="tick" aria-hidden="true">✓</span>';
-        b.firstChild.textContent = labelFn(item);
+        b.innerHTML = '<span class="res-main"><span class="res-name"></span></span><span class="tick" aria-hidden="true">✓</span>';
+        b.querySelector('.res-name').textContent = labelFn(item);
+        if (logoFn) {
+          const logo = document.createElement('span');
+          logo.className = 'logo';
+          logo.setAttribute('aria-hidden','true');
+          fillLogo(logo,logoFn(item));
+          b.firstChild.prepend(logo);
+        }
         if (animateRows && !before.has(item.name)) {
           b.classList.add('enter');
           b.style.animationDelay = `${Math.min(n++,8) * 24}ms`;
@@ -1475,7 +1556,9 @@
         refreshSearchSummaries();
         renderSteps();
         document.activeElement && document.activeElement.blur && document.activeElement.blur();
-      });
+      },
+      item => item);
+    updateOpponentLogo();
 
     const pq = $('playerSearch').value;
     playerMatches = playersLoaded ? searchItems(currentPlayerPool(),pq) : [];
