@@ -40,14 +40,10 @@ def _team_display_names(core_dir_text):
     """
     core_dir = Path(core_dir_text)
     teams_path = core_dir / 'data' / 'teams.json'
-    manifest_path = (
-        core_dir
-        / 'assets'
-        / 'goal_graphics'
-        / 'team_logos'
-        / 'fclogo_cache'
-        / 'manifest.json'
-    )
+    logos_dir = core_dir / 'assets' / 'goal_graphics' / 'team_logos'
+    manifest_path = logos_dir / 'manifest.json'
+    if not manifest_path.is_file():
+        manifest_path = logos_dir / 'fclogo_cache' / 'manifest.json'
 
     translated = {}
 

@@ -9,7 +9,11 @@ class Catalog:
         self.assets = Path(assets)
 
     def teams(self, query):
-        path = self.assets / 'team_logos/fclogo_cache/manifest.json'
+        # Il bot LiveScore tiene il manifest in team_logos/ (loghi divisi per
+        # competizione); la vecchia team_logos/fclogo_cache/ resta come riserva.
+        path = self.assets / 'team_logos/manifest.json'
+        if not path.is_file():
+            path = self.assets / 'team_logos/fclogo_cache/manifest.json'
         rows = json.loads(path.read_text(encoding='utf-8')).get('teams', [])
         q = g.normalize_name(query)
         matches, exact = [], []
