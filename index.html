@@ -142,15 +142,21 @@
     .top-right{width:40px}
 
     .kind-chips{
-      display:flex;gap:6px;padding:8px 16px 4px;
+      display:flex;gap:6px;padding:8px 16px 4px;position:relative;
     }
+    .chip-ind{
+      position:absolute;top:8px;left:0;height:34px;width:0;border-radius:999px;
+      background:var(--accent);pointer-events:none;
+    }
+    .chip-ind.anim{transition:transform .3s cubic-bezier(.22,.72,.25,1),width .3s cubic-bezier(.22,.72,.25,1)}
     .chip{
       flex:1 1 0;min-width:0;border:1px solid var(--line);background:var(--surface);
       height:34px;padding:0 4px;border-radius:999px;
       font-size:clamp(10.5px,3.3vw,12.5px);font-weight:750;color:var(--muted);
       white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis;
+      position:relative;z-index:1;
     }
-    .chip.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+    .chip.selected{background:transparent;border-color:transparent;color:var(--accent-ink)}
 
     .progress{
       margin:10px 16px 0;height:4px;border-radius:4px;background:var(--surface2);overflow:hidden;
@@ -263,6 +269,28 @@
 
     /* Number pairs */
     [hidden]{display:none !important}
+    /* Apertura morbida di un blocco (rigori) */
+    .reveal{
+      display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;
+      transition:grid-template-rows .3s cubic-bezier(.22,.72,.25,1),opacity .2s,visibility 0s .3s;
+    }
+    .reveal.open{
+      grid-template-rows:1fr;opacity:1;visibility:visible;
+      transition:grid-template-rows .3s cubic-bezier(.22,.72,.25,1),opacity .25s .05s,visibility 0s;
+    }
+    .reveal-in{overflow:hidden;min-height:0;margin:0 -4px;padding:0 4px 4px}
+    /* Interruttore */
+    .opt .sw{
+      margin-left:auto;flex:none;width:46px;height:28px;border-radius:999px;
+      background:var(--surface2);border:1.5px solid var(--line);position:relative;
+      transition:background .2s,border-color .2s;
+    }
+    .opt .sw::after{
+      content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;
+      background:var(--muted);transition:transform .22s cubic-bezier(.22,.72,.25,1),background .2s;
+    }
+    .opt.selected .sw{background:var(--accent);border-color:var(--accent)}
+    .opt.selected .sw::after{transform:translateX(18px);background:var(--accent-ink)}
     .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .num-card{
       background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
@@ -524,12 +552,12 @@
               </div>
             </div>
 
-            <div id="pensToggleWrap" style="margin-top:18px" hidden>
+            <div id="pensToggleWrap" class="reveal"><div class="reveal-in" style="padding-top:18px">
               <button id="pensToggle" class="opt" type="button" role="checkbox" aria-checked="false">
-                <span class="radio"></span><span class="opt-label">Rigori</span>
+                <span class="opt-label">Rigori</span><span class="sw" aria-hidden="true"></span>
               </button>
-            </div>
-            <div id="pensWrap" style="margin-top:14px" hidden>
+            </div></div>
+            <div id="pensWrap" class="reveal"><div class="reveal-in" style="padding-top:14px">
               <div class="pair">
               <div class="num-card">
                 <div id="pensHomeName" class="num-name">Casa</div>
@@ -548,7 +576,7 @@
                 </div>
               </div>
             </div>
-            </div>
+            </div></div>
           </section>
 
 
@@ -885,6 +913,7 @@
     $('previewImage').src = url;
     setPreviewError('');
     previewMode = true;
+    haptic('success');
     navDirection = 'forward';
     renderFlow();
   }
@@ -942,6 +971,7 @@
         return;
       }
       b.addEventListener('click',() => {
+        haptic('select');
         onSelect(v);
         renderOptions(id,options,v,onSelect);
         renderSteps();
@@ -986,8 +1016,8 @@
   function updatePhaseUI() {
     const t = PHASE_TEXT[phase];
     if (t) { $('scoreTitle').textContent = t.title; $('scoreLead').textContent = t.lead; }
-    $('pensToggleWrap').hidden = phase !== 'full';
-    $('pensWrap').hidden = !(phase === 'full' && pensOn);
+    $('pensToggleWrap').classList.toggle('open',phase === 'full');
+    $('pensWrap').classList.toggle('open',phase === 'full' && pensOn);
     const b = $('pensToggle');
     b.classList.toggle('selected',pensOn);
     b.setAttribute('aria-checked',pensOn ? 'true' : 'false');
@@ -1009,7 +1039,19 @@
     }, 140);
   }
 
+  function haptic(type='select') {
+    const h = tg && tg.HapticFeedback;
+    if (!h) return;
+    try {
+      if (type === 'select') h.selectionChanged();
+      else if (type === 'error') h.notificationOccurred('error');
+      else if (type === 'success') h.notificationOccurred('success');
+      else h.impactOccurred('light');
+    } catch (_) {}
+  }
+
   function showError(message) {
+    haptic('error');
     $('error').textContent = message;
     $('error').style.display = 'block';
     $('stage').scrollTop = 0;
@@ -1064,7 +1106,8 @@
     ['kindListSide','kindListMobile'].forEach(id => {
       const box = $(id);
       const mobile = id === 'kindListMobile';
-      box.innerHTML = '';
+      if (mobile) box.querySelectorAll('.chip').forEach(n => n.remove());
+      else box.innerHTML = '';
       KINDS.forEach(([value,label]) => {
         const b = document.createElement('button');
         b.type = 'button';
@@ -1075,11 +1118,28 @@
         box.appendChild(b);
       });
     });
-    const sel = $('kindListMobile').querySelector('.selected');
-    if (sel && sel.scrollIntoView) {
-      try { sel.scrollIntoView({inline:'center',block:'nearest'}); } catch (_) {}
+    placeChipIndicator();
+  }
+
+  // La pillola dell'accento scivola sul tab selezionato invece di saltare.
+  function placeChipIndicator() {
+    const box = $('kindListMobile');
+    let ind = box.querySelector('.chip-ind');
+    if (!ind) {
+      ind = document.createElement('span');
+      ind.className = 'chip-ind';
+      box.prepend(ind);
+    }
+    const sel = box.querySelector('.chip.selected');
+    if (!sel || !sel.offsetWidth) return;
+    ind.style.width = sel.offsetWidth + 'px';
+    ind.style.transform = `translateX(${sel.offsetLeft}px)`;
+    if (!ind.classList.contains('anim')) {
+      requestAnimationFrame(() => requestAnimationFrame(() => ind.classList.add('anim')));
     }
   }
+  window.addEventListener('resize',placeChipIndicator);
+  if (window.ResizeObserver) new ResizeObserver(placeChipIndicator).observe($('kindListMobile'));
 
   // Cambiando tipo di grafica si riparte da zero: nessun dato resta salvato.
   function resetAllData() {
@@ -1106,6 +1166,7 @@
 
   function changeKind(value) {
     if (value === kind && !previewMode) return;
+    haptic('select');
     previewMode = false;
     kind = value;
     resetAllData();
@@ -1129,7 +1190,7 @@
       b.innerHTML = '<span></span><span class="tick"></span>';
       b.firstChild.textContent = labelFn(item);
       b.lastChild.textContent = isSel ? '✓' : '';
-      b.addEventListener('click',() => onPick(item));
+      b.addEventListener('click',() => { haptic('select'); onPick(item); });
       box.appendChild(b);
     });
   }
@@ -1598,6 +1659,7 @@
   });
 
   $('pensToggle').addEventListener('click',() => {
+    haptic('select');
     pensOn = !pensOn;
     if (!pensOn) { $('homePens').value = ''; $('awayPens').value = ''; }
     updatePhaseUI();
@@ -1634,6 +1696,7 @@
       const delta = Number(btn.dataset.delta);
       const raw = input.value.trim();
       if (raw === '' && delta < 0) return;
+      haptic('light');
       const next = Math.max(0,Math.min(99,(parseInt(raw || '0',10) || 0) + delta));
       input.value = String(next);
       renderSteps();
@@ -1655,8 +1718,8 @@
     }
   });
 
-  $('nextButton').addEventListener('click',() => nextField(true));
-  $('backButton').addEventListener('click',previousField);
+  $('nextButton').addEventListener('click',() => { haptic('light'); nextField(true); });
+  $('backButton').addEventListener('click',() => { haptic('light'); previousField(); });
   $('closeWorkflowButton').addEventListener('click',askCloseWorkflow);
 
   if (window.visualViewport) {
