@@ -142,14 +142,13 @@
     .top-right{width:40px}
 
     .kind-chips{
-      display:flex;gap:8px;overflow-x:auto;padding:8px 16px 4px;
-      scrollbar-width:none;-webkit-overflow-scrolling:touch;
+      display:flex;gap:6px;padding:8px 16px 4px;
     }
-    .kind-chips::-webkit-scrollbar{display:none}
     .chip{
-      flex:none;border:1px solid var(--line);background:var(--surface);
-      height:34px;padding:0 14px;border-radius:999px;
-      font-size:12.5px;font-weight:750;color:var(--muted);white-space:nowrap;
+      flex:1 1 0;min-width:0;border:1px solid var(--line);background:var(--surface);
+      height:34px;padding:0 4px;border-radius:999px;
+      font-size:clamp(10.5px,3.3vw,12.5px);font-weight:750;color:var(--muted);
+      white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis;
     }
     .chip.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 
@@ -263,6 +262,7 @@
     .quick button:hover{color:var(--text);border-color:var(--accent)}
 
     /* Number pairs */
+    [hidden]{display:none !important}
     .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .num-card{
       background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
@@ -433,6 +433,13 @@
             <div id="competitionOpts" class="opts grid" role="radiogroup"></div>
           </section>
 
+          <section class="screen" data-screen="phase">
+            <div class="eyebrow">Evento</div>
+            <h1>Quale evento?</h1>
+            <p class="lead">Scegli il momento della partita: le pagine successive si adattano.</p>
+            <div id="phaseOpts" class="opts" role="radiogroup"></div>
+          </section>
+
           <section class="screen" data-screen="side">
             <div class="eyebrow">Partita</div>
             <h1>Casa o trasferta?</h1>
@@ -496,8 +503,8 @@
 
           <section class="screen" data-screen="score">
             <div class="eyebrow">Risultato</div>
-            <h1>Punteggio</h1>
-            <p class="lead">Inserisci i gol di entrambe le squadre.</p>
+            <h1 id="scoreTitle">Punteggio</h1>
+            <p class="lead" id="scoreLead">Inserisci i gol di entrambe le squadre.</p>
             <div class="pair">
               <div class="num-card">
                 <div id="scoreHomeName" class="num-name">Casa</div>
@@ -516,13 +523,14 @@
                 </div>
               </div>
             </div>
-          </section>
 
-          <section class="screen" data-screen="pens">
-            <div class="eyebrow">Rigori</div>
-            <h1>Lotteria dei rigori</h1>
-            <p class="lead">Facoltativo. Compila solo se il FULL TIME si è deciso ai rigori, altrimenti vai avanti.</p>
-            <div class="pair">
+            <div id="pensToggleWrap" style="margin-top:18px" hidden>
+              <button id="pensToggle" class="opt" type="button" role="checkbox" aria-checked="false">
+                <span class="radio"></span><span class="opt-label">Rigori</span>
+              </button>
+            </div>
+            <div id="pensWrap" style="margin-top:14px" hidden>
+              <div class="pair">
               <div class="num-card">
                 <div id="pensHomeName" class="num-name">Casa</div>
                 <div class="num-row">
@@ -540,7 +548,9 @@
                 </div>
               </div>
             </div>
+            </div>
           </section>
+
 
           <section class="screen" data-screen="moment">
             <div class="eyebrow">Statistiche</div>
@@ -636,8 +646,7 @@
   ];
 
   const KINDS = [
-    ['goal','GOAL'],['saved','SAVED'],['kick','KICK OFF'],['half','HALF TIME'],
-    ['end_of_90',"END OF 90'"],['full','FULL TIME'],['stats','STATS']
+    ['goal','GOAL'],['saved','SAVED'],['match','EVENT'],['stats','STATS']
   ];
   const COMPETITIONS_UEFA = [
     ['uefa.champions','Champions League'],['uefa.europa','Europa League'],
@@ -650,6 +659,12 @@
       : [['ita.1','Italia']];
     return [...italy, ...COMPETITIONS_UEFA];
   }
+  const PHASES = [['kick','KICK OFF'],['half','HALF TIME'],['end_of_90',"END OF 90'"],['full','FULL TIME']];
+  const PHASE_TEXT = {
+    half:{title:'Risultato all’intervallo',lead:'Inserisci i gol di entrambe le squadre a fine primo tempo.'},
+    end_of_90:{title:'Risultato dopo i 90’',lead:'Inserisci i gol di entrambe le squadre al 90’.'},
+    full:{title:'Risultato finale',lead:'Inserisci i gol di entrambe le squadre. Se è finita ai rigori, spunta “Rigori”.'}
+  };
   const SIDES = [['home','In casa'],['away','In trasferta']];
   const KITS = [['home','Home'],['away','Away'],['third','Third']];
   const POSES = [['arms_crossed','Braccia incrociate'],['pointing','Indica']];
@@ -665,7 +680,7 @@
   const STEP_NAMES = {
     competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
     player:'Giocatore', minute:'Minuto', pose:'Posa', score:'Risultato',
-    pens:'Rigori', moment:'Momento', stats:'Statistiche'
+    phase:'Fase', moment:'Momento', stats:'Statistiche'
   };
 
   const $ = id => document.getElementById(id);
@@ -678,6 +693,9 @@
   const finePointer = window.matchMedia('(pointer:fine)').matches;
 
   let kind = 'goal';
+  let phase = 'half';
+  let pensOn = false;
+  const realKind = () => kind === 'match' ? phase : kind;
   let competition = 'ita.1';
   let side = 'home';
   let kit = 'home';
@@ -770,8 +788,8 @@
     const withKit = [...base,'kit'];
     if (kind === 'goal' || kind === 'saved') flow = [...withKit,'player','minute','pose'];
     else if (kind === 'kick') flow = base;
-    else if (kind === 'half' || kind === 'end_of_90') flow = [...(italy ? withKit : base),'score'];
-    else if (kind === 'full') flow = [...(italy ? withKit : base),'score','pens'];
+    else if (kind === 'match' && phase === 'kick') flow = ['phase',...base];
+    else if (kind === 'match') flow = ['phase',...(italy ? withKit : base),'score'];
     else if (kind === 'stats') flow = [...(italy ? withKit : base),'moment','stats'];
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
   }
@@ -792,12 +810,14 @@
       case 'pose': return labelOf(POSES,pose);
       case 'score': {
         const h = $('homeScore').value.trim(), a = $('awayScore').value.trim();
-        return h !== '' && a !== '' ? `${h} – ${a}` : '';
+        let out = h !== '' && a !== '' ? `${h} – ${a}` : '';
+        if (out && phase === 'full' && pensOn) {
+          const ph = $('homePens').value.trim(), pa = $('awayPens').value.trim();
+          if (ph !== '' && pa !== '') out += ` (rig. ${ph} – ${pa})`;
+        }
+        return out;
       }
-      case 'pens': {
-        const h = $('homePens').value.trim(), a = $('awayPens').value.trim();
-        return h !== '' && a !== '' ? `${h} – ${a}` : '';
-      }
+      case 'phase': return labelOf(PHASES,phase);
       case 'moment': return labelOf(MOMENTS,moment);
       case 'stats': {
         const n = STATS.filter(l => statRows[l].home || statRows[l].away).length;
@@ -890,7 +910,7 @@
     $('backButton').disabled = !previewMode && flowIndex === 0;
     $('backButton').textContent = previewMode ? '‹ Modifica' : '‹ Indietro';
     $('nextButton').textContent = previewMode ? 'Invia foto ✓' : (isLastStep() ? finalStepLabel() : 'Avanti ›');
-    $('kindSubtitle').textContent = previewMode ? 'ANTEPRIMA' : labelOf(KINDS,kind);
+    $('kindSubtitle').textContent = previewMode ? 'ANTEPRIMA' : (kind === 'match' ? labelOf(PHASES,phase) : labelOf(KINDS,kind));
 
     clearError();
     updateScreenValues();
@@ -940,6 +960,13 @@
     renderOptions('kitOpts',KITS,kit,v => kit = v);
     renderOptions('poseOpts',POSES,pose,v => pose = v);
     renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
+    renderOptions('phaseOpts',PHASES,phase,v => {
+      phase = v;
+      if (phase !== 'full') { pensOn = false; $('homePens').value = ''; $('awayPens').value = ''; }
+      buildFlow();
+      updatePhaseUI();
+    });
+    updatePhaseUI();
 
     $('playerTitle').textContent = kind === 'saved' ? 'Scegli il portiere' : 'Scegli il giocatore';
     $('playerSearch').placeholder = kind === 'saved' ? 'Cerca portiere…' : 'Cerca giocatore…';
@@ -954,6 +981,17 @@
     $('pensAwayName').textContent = m.away;
     $('statHomeName').textContent = m.home;
     $('statAwayName').textContent = m.away;
+  }
+
+  function updatePhaseUI() {
+    const t = PHASE_TEXT[phase];
+    if (t) { $('scoreTitle').textContent = t.title; $('scoreLead').textContent = t.lead; }
+    $('pensToggleWrap').hidden = phase !== 'full';
+    $('pensWrap').hidden = !(phase === 'full' && pensOn);
+    const b = $('pensToggle');
+    b.classList.toggle('selected',pensOn);
+    b.setAttribute('aria-checked',pensOn ? 'true' : 'false');
+    $('kindSubtitle').textContent = previewMode ? 'ANTEPRIMA' : (kind === 'match' ? labelOf(PHASES,phase) : labelOf(KINDS,kind));
   }
 
   function autoFocusCurrent() {
@@ -1050,6 +1088,8 @@
     kit = 'home';
     pose = 'arms_crossed';
     moment = 'HT';
+    phase = 'half';
+    pensOn = false;
     selectedTeam = null;
     selectedPlayer = null;
     ['opponentSearch','playerSearch','minute','homeScore','awayScore',
@@ -1202,18 +1242,10 @@
     }
 
     if (step === 'score') {
-      return validateScoreValue('homeScore') && validateScoreValue('awayScore');
-    }
-
-    if (step === 'pens') {
-      const hb = $('homePens').value.trim() === '';
-      const ab = $('awayPens').value.trim() === '';
-      if (hb && ab) return true;
-      if (hb !== ab) {
-        showError('Inserisci entrambi i valori dei rigori oppure lasciali entrambi vuoti.');
-        return false;
+      if (!(validateScoreValue('homeScore') && validateScoreValue('awayScore'))) return false;
+      if (phase === 'full' && pensOn) {
+        return validateScoreValue('homePens') && validateScoreValue('awayPens');
       }
-      return validateScoreValue('homePens',true) && validateScoreValue('awayPens',true);
     }
 
     if (step === 'stats') {
@@ -1333,7 +1365,7 @@
     if (!selectedTeam) throw new Error('Avversario mancante.');
 
     const data = {
-      kind, competition, kit, side,
+      kind: realKind(), competition, kit, side,
       opponent:{ name:selectedTeam.name, id:String(selectedTeam.espn_id || '') }
     };
 
@@ -1342,11 +1374,10 @@
       data.player = selectedPlayer.name;
       data.minute = $('minute').value.trim();
       data.pose = pose;
-    } else if (kind === 'half' || kind === 'full' || kind === 'end_of_90') {
+    } else if (kind === 'match' && phase !== 'kick') {
       data.score = scorePair('homeScore','awayScore',true);
-      if (kind === 'full') {
-        const pens = scorePair('homePens','awayPens',false);
-        if (pens) data.shootout = pens;
+      if (phase === 'full' && pensOn) {
+        data.shootout = scorePair('homePens','awayPens',true);
       }
     } else if (kind === 'stats') {
       collectStats();
@@ -1566,6 +1597,13 @@
     if (!playersLoaded) { await loadCatalogs(); refreshSearchSummaries(); }
   });
 
+  $('pensToggle').addEventListener('click',() => {
+    pensOn = !pensOn;
+    if (!pensOn) { $('homePens').value = ''; $('awayPens').value = ''; }
+    updatePhaseUI();
+    renderSteps();
+    if (pensOn) setTimeout(() => { try { $('homePens').focus({preventScroll:true}); } catch (_) {} },60);
+  });
   $('minute').addEventListener('input',renderSteps);
   ['homeScore','awayScore','homePens','awayPens'].forEach(id => $(id).addEventListener('input',renderSteps));
   $('statRows').addEventListener('input',() => { collectStats(); renderSteps(); });
