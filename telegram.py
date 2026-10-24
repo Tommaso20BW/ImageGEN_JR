@@ -137,7 +137,7 @@ class Telegram:
         }
 
         return self.prompt(
-            "🎨 IMAGEGEN · JR\n\n⏱️ Sessione attiva per 10 minuti.",
+            "🎨 ImageGEN · JR\n\n⏱️ Sessione attiva per 10 minuti.",
             keyboard,
         )
 
