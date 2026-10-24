@@ -212,15 +212,16 @@
     .busy.open{opacity:1;visibility:visible;transition:opacity .18s ease,visibility 0s}
     .stage{grid-row:-3/-2;grid-column:1}
     .busy-box{display:grid;justify-items:center;gap:12px;text-align:center;max-width:320px}
-    .busy-ring{
-      width:44px;height:44px;border-radius:50%;
-      border:3.5px solid var(--surface2);border-top-color:var(--accent);
-      animation:spin .8s linear infinite;
+    .busy-ring{position:relative;width:96px;height:96px}
+    .busy-ring svg{display:block;width:96px;height:96px;transform:rotate(-90deg)}
+    .busy-track{fill:none;stroke:var(--surface2);stroke-width:7}
+    .busy-arc{fill:none;stroke:var(--accent);stroke-width:7;stroke-linecap:round}
+    .busy-pct{
+      position:absolute;inset:0;display:grid;place-items:center;
+      font-size:22px;font-weight:850;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
     }
-    @keyframes spin{to{transform:rotate(360deg)}}
     .busy-title{font-size:18px;font-weight:800;letter-spacing:-.01em;margin-top:6px}
     .busy-sub{font-size:13.5px;line-height:1.45;color:var(--muted);min-height:40px}
-    .busy-time{font-size:12.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
     html.is-busy .kind-chips,html.is-busy .side,html.is-busy .bar{pointer-events:none}
     html.is-busy .kind-chips,html.is-busy .kind-list,html.is-busy .steps{opacity:.55;transition:opacity .18s ease}
 
@@ -784,10 +785,15 @@
 
       <div id="busy" class="busy" aria-hidden="true">
         <div class="busy-box" role="status" aria-live="polite">
-          <div class="busy-ring" aria-hidden="true"></div>
+          <div class="busy-ring" role="progressbar" aria-label="Avanzamento" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="busyRing">
+            <svg viewBox="0 0 96 96" aria-hidden="true">
+              <circle class="busy-track" cx="48" cy="48" r="42"/>
+              <circle id="busyArc" class="busy-arc" cx="48" cy="48" r="42" stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+            </svg>
+            <div id="busyPct" class="busy-pct">0%</div>
+          </div>
           <div id="busyTitle" class="busy-title">Genero l’anteprima…</div>
           <div id="busySub" class="busy-sub"></div>
-          <div id="busyTime" class="busy-time">0 s</div>
         </div>
       </div>
 
@@ -1495,37 +1501,157 @@
   }
 
   /* ---------- Caricamento ---------- */
+  // Grafiche Canva: avanzamento reale letto da GET /progress (passi di render.py).
+  // Altre grafiche: avanzamento stimato sulla durata delle generazioni precedenti, minimo 3 s.
+  const CANVA_KINDS = new Set(['half','end_of_90','full']);
+  const STAGE_RANGE = {idle:[0,4], render:[2,10], canva_token:[10,25], canva_export:[25,75], compose:[75,96]};
+  const STAGE_SUB = {
+    canva_token:'Mi collego a Canva…',
+    canva_export:'Scarico lo sfondo da Canva…',
+    compose:'Compongo la grafica…'
+  };
   const BUSY_SUB = {
     goal:'Compongo la grafica con foto e posa del giocatore.',
     saved:'Compongo la grafica con foto e posa del portiere.',
     kick:'Preparo la grafica del calcio d’inizio.',
-    half:'Scarico lo sfondo da Canva: può richiedere qualche secondo in più.',
-    end_of_90:'Scarico lo sfondo da Canva: può richiedere qualche secondo in più.',
-    full:'Scarico lo sfondo da Canva: può richiedere qualche secondo in più.',
+    half:'Avvio la generazione…',
+    end_of_90:'Avvio la generazione…',
+    full:'Avvio la generazione…',
     stats:'Preparo la tabella delle statistiche.'
   };
+  const DEFAULT_MS = {goal:4000, saved:4000, kick:4000, stats:7000, half:12000, end_of_90:12000, full:12000, submit:2500};
+  const MIN_FAST_MS = 3000;
+  const DURATIONS_KEY = 'imagegen-jr-durations';
   const SLOW_SUB = 'Ci sta mettendo più del solito: attendi ancora qualche secondo.';
-  let busyHandle = null;
+  const RING_C = 2 * Math.PI * 42;
+  let busy = null;
 
-  function showBusy(title, sub) {
-    const started = Date.now();
+  function expectedMs(kind) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DURATIONS_KEY) || '{}');
+      const v = Number(saved[kind]);
+      if (v > 300 && v < 120000) return v;
+    } catch (_) {}
+    return DEFAULT_MS[kind] || 5000;
+  }
+
+  function rememberMs(kind, ms) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DURATIONS_KEY) || '{}');
+      const prev = Number(saved[kind]);
+      saved[kind] = Math.round(prev > 0 ? prev * .6 + ms * .4 : ms);
+      localStorage.setItem(DURATIONS_KEY,JSON.stringify(saved));
+    } catch (_) {}
+  }
+
+  function drawRing(pct) {
+    const v = Math.max(0,Math.min(100,pct));
+    $('busyArc').setAttribute('stroke-dashoffset',String(RING_C * (1 - v / 100)));
+    const n = Math.round(v);
+    $('busyPct').textContent = `${n}%`;
+    if (n % 10 === 0) $('busyRing').setAttribute('aria-valuenow',String(n));
+  }
+
+  function busyTarget(now) {
+    const t = now - busy.started;
+    if (busy.real) {
+      const [lo,hi] = STAGE_RANGE[busy.stage] || STAGE_RANGE.render;
+      const st = now - busy.stageAt;
+      return lo + (hi - lo) * .85 * (1 - Math.exp(-st / 2500));
+    }
+    return 95 * (1 - Math.exp(-2.6 * t / busy.expected));
+  }
+
+  function busyTick() {
+    if (!busy || busy.finishing) return;
+    const now = performance.now();
+    const target = busyTarget(now);
+    if (target > busy.shown) busy.shown += (target - busy.shown) * .18;
+    drawRing(busy.shown);
+    if (!busy.slow && now - busy.started > 25000 && !(busy.real && STAGE_SUB[busy.stage])) {
+      busy.slow = true;
+      $('busySub').textContent = SLOW_SUB;
+    }
+    busy.raf = requestAnimationFrame(busyTick);
+  }
+
+  function setBusyStage(stage) {
+    if (!busy || !busy.real || stage === busy.stage) return;
+    if (stage === 'idle' && busy.stage !== 'idle') return; // fine render: arriva la risposta
+    busy.stage = stage;
+    busy.stageAt = performance.now();
+    if (STAGE_SUB[stage]) $('busySub').textContent = STAGE_SUB[stage];
+  }
+
+  function pollProgress() {
+    if (!busy || !busy.real || !directBase || !session) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(),1500);
+    fetch(`${directBase}/progress?session=${encodeURIComponent(session)}&_=${Date.now()}`,{
+      cache:'no-store', credentials:'omit', signal:controller.signal
+    })
+      .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then(data => { if (busy) { busy.pollFails = 0; setBusyStage(String(data.stage || 'idle')); } })
+      .catch(() => {
+        // Backend senza /progress (o tunnel lento): si passa alla stima.
+        if (busy && ++busy.pollFails >= 2) {
+          busy.real = false;
+          clearInterval(busy.poll);
+        }
+      })
+      .finally(() => clearTimeout(timer));
+  }
+
+  function showBusy(title, sub, kind) {
+    hideBusy();
+    const real = CANVA_KINDS.has(kind) && Boolean(directBase);
+    busy = {
+      kind, real, started:performance.now(), stageAt:performance.now(), stage:'idle',
+      expected:expectedMs(kind), shown:0, slow:false, pollFails:0, raf:0, poll:0, finishing:false
+    };
     $('busyTitle').textContent = title;
     $('busySub').textContent = sub;
-    $('busyTime').textContent = '0 s';
-    clearInterval(busyHandle);
-    busyHandle = setInterval(() => {
-      const secs = Math.floor((Date.now() - started) / 1000);
-      $('busyTime').textContent = `${secs} s`;
-      if (secs === 25 && sub) $('busySub').textContent = SLOW_SUB;
-    },1000);
+    drawRing(0);
     $('busy').classList.add('open');
     $('busy').setAttribute('aria-hidden','false');
     document.documentElement.classList.add('is-busy');
+    busy.raf = requestAnimationFrame(busyTick);
+    if (real) busy.poll = setInterval(pollProgress,600);
+  }
+
+  // Porta il cerchio al 100% (rispettando il minimo di 3 s per le grafiche veloci), poi risolve.
+  function finishBusy() {
+    if (!busy) return Promise.resolve();
+    const b = busy;
+    const now = performance.now();
+    const elapsed = now - b.started;
+    if (!b.real || b.stage === 'idle') rememberMs(b.kind,elapsed);
+    b.finishing = true;
+    cancelAnimationFrame(b.raf);
+    clearInterval(b.poll);
+    const fast = b.kind !== 'submit' && !CANVA_KINDS.has(b.kind);
+    const duration = Math.max(350,fast ? MIN_FAST_MS - elapsed : 0);
+    const from = b.shown;
+    const t0 = now;
+    return new Promise(resolve => {
+      const step = () => {
+        if (busy !== b) { resolve(); return; }
+        const k = Math.min(1,(performance.now() - t0) / duration);
+        const eased = 1 - Math.pow(1 - k,3);
+        drawRing(from + (100 - from) * eased);
+        if (k < 1) requestAnimationFrame(step);
+        else setTimeout(resolve,160);
+      };
+      requestAnimationFrame(step);
+    });
   }
 
   function hideBusy() {
-    clearInterval(busyHandle);
-    busyHandle = null;
+    if (busy) {
+      cancelAnimationFrame(busy.raf);
+      clearInterval(busy.poll);
+      busy = null;
+    }
     $('busy').classList.remove('open');
     $('busy').setAttribute('aria-hidden','true');
     document.documentElement.classList.remove('is-busy');
@@ -2029,7 +2155,7 @@
       $('nextButton').disabled = true;
       $('backButton').disabled = true;
       $('nextButton').textContent = 'Anteprima…';
-      showBusy('Genero l’anteprima…',BUSY_SUB[realKind()] || '');
+      showBusy('Genero l’anteprima…',BUSY_SUB[realKind()] || '',realKind());
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 90000);
@@ -2051,6 +2177,7 @@
       const blob = await response.blob();
       if (!blob || !String(blob.type || '').includes('image/png')) throw new Error('Anteprima non valida.');
 
+      await finishBusy();
       previewPayloadText = raw;
       openPreview(URL.createObjectURL(blob));
     } catch (error) {
@@ -2078,7 +2205,7 @@
       $('nextButton').disabled = true;
       $('backButton').disabled = true;
       $('nextButton').textContent = 'Invio…';
-      showBusy('Invio su Telegram…','La foto arriva nella chat del bot.');
+      showBusy('Invio su Telegram…','La foto arriva nella chat del bot.','submit');
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 30000);
@@ -2097,14 +2224,15 @@
         throw new Error(answer.error || `Invio non riuscito (${response.status}).`);
       }
 
+      await finishBusy();
       $('nextButton').textContent = 'Inviato ✓';
       $('busyTitle').textContent = 'Inviata ✓';
       $('busySub').textContent = 'Trovi la foto nella chat del bot.';
-      clearInterval(busyHandle);
+      haptic('success');
       setTimeout(() => {
         try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}
         try { if (tg && typeof tg.close === 'function') tg.close(); } catch (_) {}
-      }, 220);
+      }, 700);
     } catch (error) {
       hideBusy();
       $('nextButton').disabled = sessionExpired();
