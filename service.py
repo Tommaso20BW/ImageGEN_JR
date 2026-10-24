@@ -95,6 +95,13 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parts = urlsplit(self.path)
+        if parts.path.rstrip('/') == '/progress':
+            token = dict(parse_qsl(parts.query)).get('session', '')
+            if token != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            self._json(200, {'ok': True, 'stage': self.service.progress_stage})
+            return
         if parts.path.rstrip('/') != '/catalog':
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
@@ -184,6 +191,11 @@ class Service:
         self.operation_lock = threading.Lock()
         self.preview_cache_lock = threading.Lock()
         self.preview_cache = None
+        # Passo reale del render in corso, letto dalla Mini App tramite GET /progress.
+        self.progress_stage = 'idle'
+
+    def _set_stage(self, stage):
+        self.progress_stage = str(stage)
 
     def request_stop(self):
         """End the active session immediately and let run() perform normal cleanup."""
@@ -228,7 +240,8 @@ class Service:
             f"INFO IMAGEGEN: render {data['kind']} | id={request_state['id']} | mode=preview",
             flush=True,
         )
-        png = self.renderer.render(data)
+        self._set_stage('render')
+        png = self.renderer.render(data, progress=self._set_stage)
 
         with self.preview_cache_lock:
             self.preview_cache = {
@@ -249,6 +262,7 @@ class Service:
             png, _ = self._render_and_cache(request_state)
             return png
         finally:
+            self._set_stage('idle')
             self.operation_lock.release()
 
     def submit(self, envelope):
