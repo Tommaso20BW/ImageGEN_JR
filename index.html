@@ -707,7 +707,7 @@
                 <div id="scoreHomeName" class="num-name">Casa</div>
                 <div class="num-row">
                   <button class="step-btn" type="button" data-target="homeScore" data-delta="-1" aria-label="Meno">−</button>
-                  <input id="homeScore" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
+                  <input id="homeScore" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0" value="0">
                   <button class="step-btn" type="button" data-target="homeScore" data-delta="1" aria-label="Più">+</button>
                 </div>
               </div>
@@ -715,7 +715,7 @@
                 <div id="scoreAwayName" class="num-name">Trasferta</div>
                 <div class="num-row">
                   <button class="step-btn" type="button" data-target="awayScore" data-delta="-1" aria-label="Meno">−</button>
-                  <input id="awayScore" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0">
+                  <input id="awayScore" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0" value="0">
                   <button class="step-btn" type="button" data-target="awayScore" data-delta="1" aria-label="Più">+</button>
                 </div>
               </div>
@@ -1432,7 +1432,7 @@
   }
   function clearError() { $('error').style.display = 'none'; }
 
-  const CLOSE_MESSAGE = 'Vuoi chiudere il bot? Il lavoro in corso andrà perso.';
+  const CLOSE_MESSAGE = 'Vuoi chiudere ImageGEN? Il lavoro in corso andrà perso e le foto inviate verranno cancellate dalla chat.';
 
   function askCloseWorkflow() {
     if (tg && typeof tg.showConfirm === 'function') {
@@ -1724,8 +1724,10 @@
     pensOn = false;
     selectedTeam = null;
     selectedPlayer = null;
-    ['opponentSearch','playerSearch','minute','homeScore','awayScore',
-     'homePens','awayPens'].forEach(id => { $(id).value = ''; });
+    ['opponentSearch','playerSearch','minute','homePens','awayPens'].forEach(id => { $(id).value = ''; });
+    // Il risultato parte da 0–0: se non lo tocchi resta così.
+    $('homeScore').value = '0';
+    $('awayScore').value = '0';
     clearStats();
     previewPayloadText = '';
     if (previewObjectUrl) {
@@ -1990,6 +1992,8 @@
     }
 
     if (step === 'score') {
+      // Campo svuotato a mano = 0, come il valore di partenza.
+      ['homeScore','awayScore'].forEach(id => { if (!$(id).value.trim()) $(id).value = '0'; });
       if (!(validateScoreValue('homeScore') && validateScoreValue('awayScore'))) return false;
       if (phase === 'full' && pensOn) {
         return validateScoreValue('homePens') && validateScoreValue('awayPens');

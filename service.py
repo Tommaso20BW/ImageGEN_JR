@@ -346,24 +346,58 @@ class Service:
         self.http_server = None
         self.http_thread = None
 
+    def _delete_messages(self, message_ids):
+        """Delete messages in bulk; on failure retry one by one."""
+        ids = []
+        for message_id in message_ids:
+            try:
+                value = int(message_id)
+            except (TypeError, ValueError):
+                continue
+            if value and value not in ids:
+                ids.append(value)
+        if not ids:
+            return
+
+        try:
+            self.telegram.delete_many(ids)
+            print(f'INFO IMAGEGEN: messaggi cancellati | n={len(ids)}', flush=True)
+            return
+        except TelegramError:
+            pass
+
+        failed = 0
+        for message_id in ids:
+            for attempt in range(3):
+                try:
+                    self.telegram.delete(message_id)
+                    break
+                except TelegramError:
+                    if attempt < 2:
+                        time.sleep(1.5)
+            else:
+                failed += 1
+        print(
+            f'INFO IMAGEGEN: messaggi cancellati | n={len(ids) - failed} | falliti={failed}',
+            flush=True,
+        )
+
     def cleanup(self):
-        for message_id in reversed(self.generated_message_ids):
-            try:
-                self.telegram.delete(message_id)
-            except TelegramError:
-                pass
+        # Se un render/invio è ancora in corso, lo si lascia finire: così anche
+        # la foto appena inviata finisce nell'elenco e viene cancellata.
+        locked = self.operation_lock.acquire(timeout=75)
+        try:
+            self._cleanup_messages()
+        finally:
+            if locked:
+                self.operation_lock.release()
 
-        for message_id in reversed(self.bot_message_ids):
-            try:
-                self.telegram.delete(message_id)
-            except TelegramError:
-                pass
-
-        if self.launcher_message_id:
-            try:
-                self.telegram.delete(self.launcher_message_id)
-            except TelegramError:
-                pass
+    def _cleanup_messages(self):
+        self._delete_messages([
+            *reversed(self.generated_message_ids),
+            *reversed(self.bot_message_ids),
+            self.launcher_message_id,
+        ])
 
         cleanup_message_id = None
         try:

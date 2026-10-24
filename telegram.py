@@ -153,6 +153,19 @@ class Telegram:
             },
         )
 
+    def delete_many(self, message_ids):
+        """Delete up to 100 messages per call (deleteMessages skips missing ones)."""
+        ids = [int(value) for value in message_ids]
+        for start in range(0, len(ids), 100):
+            self.call(
+                'deleteMessages',
+                {
+                    'chat_id': self.chat_id,
+                    'message_ids': json.dumps(ids[start:start + 100]),
+                },
+            )
+        return True
+
     def photo(self, png, filename='grafica.png'):
         """Invia il PNG come foto Telegram, come il Live Score originale."""
         if not png.startswith(b'\x89PNG\r\n\x1a\n'):
