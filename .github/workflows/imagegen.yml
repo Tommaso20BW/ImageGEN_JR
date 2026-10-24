@@ -180,7 +180,20 @@ jobs:
           export IMAGEGEN_DIRECT_PORT="$PORT"
 
           echo "Endpoint diretto pronto. LiveScore può restare acceso."
-          python -u service.py
+
+          # Se il run viene annullato, lo stop arriva sempre a Python, che
+          # chiude la sessione e cancella i messaggi prima di uscire.
+          python -u service.py &
+          SERVICE_PID=$!
+          trap 'kill -TERM "$SERVICE_PID" 2>/dev/null || true' INT TERM
+          set +e
+          wait "$SERVICE_PID"
+          STATUS=$?
+          while kill -0 "$SERVICE_PID" 2>/dev/null; do
+            wait "$SERVICE_PID"
+            STATUS=$?
+          done
+          exit "$STATUS"
 
       - name: Elimina vecchi run ImageGen e Pages
         if: always()
