@@ -389,6 +389,9 @@ class Service:
         query = dict(parse_qsl(parts.query, keep_blank_values=True))
         query['session'] = self.session
         query['direct'] = direct_url.rstrip('/') + '/submit'
+        # Scadenza in ms epoch, per il timer della Mini App (stessa durata del loop qui sotto).
+        session_seconds = min(SESSION_DURATION_SECONDS, max(1, duration))
+        query['expires'] = str(int((time.time() + session_seconds) * 1000))
 
         launch_url = urlunsplit(
             (parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment)
@@ -400,7 +403,7 @@ class Service:
             pass
 
         self.launcher_message_id = self.telegram.webapp_launcher(launch_url)
-        deadline = time.monotonic() + min(SESSION_DURATION_SECONDS, max(1, duration))
+        deadline = time.monotonic() + session_seconds
 
         try:
             while not self.stopped and time.monotonic() < deadline:
