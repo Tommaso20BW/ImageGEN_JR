@@ -139,10 +139,18 @@ class Renderer:
         self.token_provider = token_provider
         self.design_id = design_id
 
-    def render(self, data):
+    def render(self, data, progress=None):
+        """Render a graphic. `progress(stage)` is called at the real steps of Canva graphics."""
         from livescore.canva.page_one import export_page_one
         from livescore.graphics import goal as g
         from livescore.graphics import portrait as p
+
+        def note(stage):
+            if progress:
+                try:
+                    progress(stage)
+                except Exception:
+                    pass
 
         kind = data['kind']
         common = {
@@ -181,12 +189,17 @@ class Renderer:
 
                 with tempfile.TemporaryDirectory(prefix='jr_manual_') as cache:
                     with requests.Session() as session:
+                        note('canva_token')
+                        token = self.token_provider()
+                        note('canva_export')
                         layers = export_page_one(
                             session,
-                            self.token_provider(),
+                            token,
                             self.design_id,
                             Path(cache),
                         )
+
+                    note('compose')
 
                     phase_args = {
                         **common,
