@@ -428,9 +428,9 @@
     .opt.selected .sw::after{transform:translateX(20px);background:var(--accent-ink)}
     .opt.selected:active .sw::after{transform:translateX(17px)}
     /* The toggle row should never acquire the glowing selection ring. */
-    #pensToggle.selected{box-shadow:var(--shadow-soft);border-color:var(--line);background:var(--surface)}
-    #pensToggle.selected .opt-label{color:var(--text)}
-    #pensToggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+    #pensToggle.selected,#etToggle.selected{box-shadow:var(--shadow-soft);border-color:var(--line);background:var(--surface)}
+    #pensToggle.selected .opt-label,#etToggle.selected .opt-label{color:var(--text)}
+    #pensToggle:focus-visible,#etToggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     /* Schermata Risultato: selettore un po' piu' in alto (i testi restano dove sono). */
     #scoreLead{margin-bottom:10px}
@@ -870,7 +870,10 @@
   let lastTouchEnd = 0;
   document.addEventListener('touchend', event => {
     const now = Date.now();
-    if (now - lastTouchEnd <= 280) event.preventDefault();
+    // Blocca solo il doppio tocco-zoom fuori dai pulsanti: due tocchi rapidi su
+    // pulsanti diversi (es. Supplementari poi Rigori) devono funzionare entrambi.
+    const onButton = event.target && event.target.closest && event.target.closest('button');
+    if (!onButton && now - lastTouchEnd <= 280) event.preventDefault();
     lastTouchEnd = now;
   }, {passive:false});
 
@@ -1434,9 +1437,9 @@
 
   function autoFocusCurrent() {
     if (previewMode) return;
+    // Risultato: i campi sono solo pulsanti (+/-), il focus su telefono ruberebbe il tocco successivo.
     const inputMap = {
-      opponent:'opponentSearch', player:'playerSearch', minute:'minute',
-      score:'homeScore'
+      opponent:'opponentSearch', player:'playerSearch', minute:'minute'
     };
     const id = inputMap[flow[flowIndex]];
     if (!id) return;
@@ -2462,7 +2465,6 @@
     if (!pensOn) { $('homePens').value = ''; $('awayPens').value = ''; }
     updatePhaseUI();
     renderSteps();
-    if (pensOn) setTimeout(() => { try { $('homePens').focus({preventScroll:true}); } catch (_) {} },60);
   });
   $('minute').addEventListener('input',renderSteps);
   ['homeScore','awayScore','homePens','awayPens','evHomeScore','evAwayScore'].forEach(id => $(id).addEventListener('input',renderSteps));
