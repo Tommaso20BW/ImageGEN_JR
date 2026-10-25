@@ -109,12 +109,15 @@ class Telegram:
             default=0,
         )
 
-    def prompt(self, text, keyboard=None, entities=None):
+    def prompt(self, text, keyboard=None, entities=None, silent=False):
         data = {
             'chat_id': self.chat_id,
             'text': text,
             'disable_web_page_preview': 'true',
         }
+
+        if silent:
+            data['disable_notification'] = 'true'
 
         if entities:
             data['entities'] = json.dumps(entities)
@@ -152,7 +155,8 @@ class Telegram:
         return self.prompt(SESSION_TEXT, keyboard, SESSION_ENTITIES)
 
     def remove_keyboard(self):
-        return self.prompt('\u2063', {'remove_keyboard': True})
+        # Messaggio invisibile (poi cancellato) che toglie il pulsante: senza notifica.
+        return self.prompt('\u2063', {'remove_keyboard': True}, silent=True)
 
     def delete(self, message_id):
         return self.call(
