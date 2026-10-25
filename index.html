@@ -947,15 +947,17 @@
   const finePointer = window.matchMedia('(pointer:fine)').matches;
 
   let kind = 'goal';
-  let phase = 'half';
+  // Nessuna opzione preselezionata: ogni scelta la fa l'utente.
+  let phase = '';
   let pensOn = false;
   let etOn = false;
   const realKind = () => kind === 'match' ? phase : kind;
-  let competition = 'ita.1';
-  let side = 'home';
-  let kit = 'home';
-  let pose = 'arms_crossed';
-  let moment = 'HT';
+  let competition = '';
+  let side = '';
+  let kit = '';
+  let kitAuto = false;   // kit messo in automatico (competizione UEFA, passo nascosto)
+  let pose = '';
+  let moment = '';
 
   let players = [];
   let teams = [];
@@ -1380,12 +1382,14 @@
   function updateScreenValues() {
     renderOptions('competitionOpts',competitionOptions(),competition,v => {
       competition = v;
-      if (!v.startsWith('ita.') && kind !== 'goal' && kind !== 'saved') kit = 'home';
+      // UEFA (fuori da goal/saved): la maglia non si chiede, sfondo della competizione.
+      if (!v.startsWith('ita.') && kind !== 'goal' && kind !== 'saved') { kit = 'home'; kitAuto = true; }
+      else if (kitAuto) { kit = ''; kitAuto = false; }
       buildFlow();
       refreshSearchSummaries();
     });
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
-    renderOptions('kitOpts',KITS,kit,v => kit = v);
+    renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; });
     renderOptions('poseOpts',POSES,pose,v => pose = v);
     renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
     renderOptions('phaseOpts',PHASES,phase,v => {
@@ -1755,12 +1759,13 @@
 
   // Cambiando tipo di grafica si riparte da zero: nessun dato resta salvato.
   function resetAllData() {
-    competition = 'ita.1';
-    side = 'home';
-    kit = 'home';
-    pose = 'arms_crossed';
-    moment = 'HT';
-    phase = 'half';
+    competition = '';
+    side = '';
+    kit = '';
+    kitAuto = false;
+    pose = '';
+    moment = '';
+    phase = '';
     pensOn = false;
     etOn = false;
     selectedTeam = null;
@@ -2031,6 +2036,9 @@
   function validateCurrent() {
     const step = flow[flowIndex];
 
+    const choice = {competition, side, kit, pose, phase, moment};
+    if (step in choice && !choice[step]) { showError('Seleziona un’opzione per continuare.'); return false; }
+
     if (step === 'opponent') return resolveTeam();
     if (step === 'player') return resolvePlayer();
 
@@ -2168,7 +2176,8 @@
     if (!selectedTeam) throw new Error('Avversario mancante.');
 
     const data = {
-      kind: realKind(), competition, kit, side,
+      // KICK OFF non chiede la maglia: in quel caso vale home (non viene mostrata).
+      kind: realKind(), competition, kit: kit || 'home', side,
       opponent:{ name:selectedTeam.name, id:String(selectedTeam.espn_id || '') }
     };
 
