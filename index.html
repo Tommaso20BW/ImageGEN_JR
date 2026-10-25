@@ -2456,12 +2456,15 @@
   $('etToggle').addEventListener('click',() => {
     haptic('select');
     etOn = !etOn;
+    // Supplementari e Rigori si escludono: attivarne uno spegne l'altro.
+    if (etOn) { pensOn = false; $('homePens').value = ''; $('awayPens').value = ''; }
     updatePhaseUI();
     renderSteps();
   });
   $('pensToggle').addEventListener('click',() => {
     haptic('select');
     pensOn = !pensOn;
+    if (pensOn) etOn = false;
     if (!pensOn) { $('homePens').value = ''; $('awayPens').value = ''; }
     updatePhaseUI();
     renderSteps();
