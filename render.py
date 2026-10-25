@@ -160,13 +160,13 @@ class Renderer:
         }
 
         if kind in ('goal', 'saved'):
-            # Il core LiveScore mantiene questi due parametri nella signature
-            # per compatibilità, ma la grafica evento non li usa.
+            # Risultato accanto al minuto (assente nei payload vecchi: la card lo omette).
+            score = data.get('score') or (None, None)
             args = {
                 **common,
                 'minute': data['minute'],
-                'home_goals': 0,
-                'away_goals': 0,
+                'home_goals': score[0],
+                'away_goals': score[1],
                 'pose': data.get('pose', 'arms_crossed'),
             }
             if kind == 'goal':

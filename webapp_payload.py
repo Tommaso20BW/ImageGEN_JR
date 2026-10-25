@@ -139,6 +139,8 @@ def _build_state(envelope, catalog, now, expected_session):
             goalkeeper=(kind == 'saved'),
         )
         data['minute'] = parse_minute(str(incoming.get('minute') or ''))
+        # Score shown next to the minute on the card; older clients may not send it.
+        data['score'] = _score(incoming.get('score'), optional=True)
         pose = str(incoming.get('pose') or '')
         if pose not in VALID_POSES:
             raise ValueError('Posa non valida.')
