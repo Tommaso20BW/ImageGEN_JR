@@ -460,6 +460,8 @@
     }
     .num-input::-webkit-outer-spin-button,.num-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
     .num-input::placeholder{color:var(--line)}
+    /* Scores change only with the − / + buttons: no keyboard. */
+    .num-input[readonly]{pointer-events:none;caret-color:transparent;user-select:none;-webkit-user-select:none}
     .num-input.text{font-size:30px}
     .vs{display:none}
 
@@ -688,7 +690,7 @@
                 <div id="evHomeName" class="num-name">Casa</div>
                 <div class="num-row">
                   <button class="step-btn" type="button" data-target="evHomeScore" data-delta="-1" aria-label="Meno">−</button>
-                  <input id="evHomeScore" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="next" placeholder="0" value="0">
+                  <input id="evHomeScore" class="num-input" type="number" readonly tabindex="-1" min="0" max="99" inputmode="numeric" enterkeyhint="next" placeholder="0" value="0">
                   <button class="step-btn" type="button" data-target="evHomeScore" data-delta="1" aria-label="Più">+</button>
                 </div>
               </div>
@@ -696,7 +698,7 @@
                 <div id="evAwayName" class="num-name">Trasferta</div>
                 <div class="num-row">
                   <button class="step-btn" type="button" data-target="evAwayScore" data-delta="-1" aria-label="Meno">−</button>
-                  <input id="evAwayScore" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="next" placeholder="0" value="0">
+                  <input id="evAwayScore" class="num-input" type="number" readonly tabindex="-1" min="0" max="99" inputmode="numeric" enterkeyhint="next" placeholder="0" value="0">
                   <button class="step-btn" type="button" data-target="evAwayScore" data-delta="1" aria-label="Più">+</button>
                 </div>
               </div>
@@ -729,7 +731,7 @@
                 <div id="scoreHomeName" class="num-name">Casa</div>
                 <div class="num-row">
                   <button class="step-btn" type="button" data-target="homeScore" data-delta="-1" aria-label="Meno">−</button>
-                  <input id="homeScore" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0" value="0">
+                  <input id="homeScore" class="num-input" type="number" readonly tabindex="-1" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0" value="0">
                   <button class="step-btn" type="button" data-target="homeScore" data-delta="1" aria-label="Più">+</button>
                 </div>
               </div>
@@ -737,7 +739,7 @@
                 <div id="scoreAwayName" class="num-name">Trasferta</div>
                 <div class="num-row">
                   <button class="step-btn" type="button" data-target="awayScore" data-delta="-1" aria-label="Meno">−</button>
-                  <input id="awayScore" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0" value="0">
+                  <input id="awayScore" class="num-input" type="number" readonly tabindex="-1" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="0" value="0">
                   <button class="step-btn" type="button" data-target="awayScore" data-delta="1" aria-label="Più">+</button>
                 </div>
               </div>
@@ -754,7 +756,7 @@
                 <div id="pensHomeName" class="num-name">Casa</div>
                 <div class="num-row">
                   <button class="step-btn" type="button" data-target="homePens" data-delta="-1" aria-label="Meno">−</button>
-                  <input id="homePens" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="–">
+                  <input id="homePens" class="num-input" type="number" readonly tabindex="-1" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="–">
                   <button class="step-btn" type="button" data-target="homePens" data-delta="1" aria-label="Più">+</button>
                 </div>
               </div>
@@ -762,7 +764,7 @@
                 <div id="pensAwayName" class="num-name">Trasferta</div>
                 <div class="num-row">
                   <button class="step-btn" type="button" data-target="awayPens" data-delta="-1" aria-label="Meno">−</button>
-                  <input id="awayPens" class="num-input" type="number" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="–">
+                  <input id="awayPens" class="num-input" type="number" readonly tabindex="-1" min="0" max="99" inputmode="numeric" enterkeyhint="done" placeholder="–">
                   <button class="step-btn" type="button" data-target="awayPens" data-delta="1" aria-label="Più">+</button>
                 </div>
               </div>
@@ -1903,10 +1905,19 @@
   function refreshSearchSummaries() {
     const tq = $('opponentSearch').value;
     const pool = teamsLoaded ? currentTeamPool() : [];
-    teamMatches = searchTeams(pool,tq);
+    // Lista: solo la competizione. Ricerca scritta: tutte le squadre, prima quelle della competizione.
+    if (norm(tq)) {
+      const inPool = new Set(pool.map(item => item.name));
+      teamMatches = searchTeams(teamsLoaded ? teams : [],tq)
+        .map((item,i) => ({item,i,own:inPool.has(item.name) ? 0 : 1}))
+        .sort((a,b) => a.own - b.own || a.i - b.i)
+        .map(row => row.item);
+    } else {
+      teamMatches = pool;
+    }
 
-    // Squadra scelta per un'altra competizione: si riparte da zero.
-    if (selectedTeam && !pool.some(item => item.name === selectedTeam.name)) {
+    // Squadra non più nel catalogo: si riparte da zero.
+    if (selectedTeam && teamsLoaded && !teams.some(item => item.name === selectedTeam.name)) {
       selectedTeam = null;
       $('opponentSearch').value = '';
       teamMatches = pool;
