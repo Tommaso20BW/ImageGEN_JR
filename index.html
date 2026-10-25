@@ -746,6 +746,9 @@
             </div>
 
             <div id="pensToggleWrap" class="reveal"><div class="reveal-in" style="padding-top:18px">
+              <button id="etToggle" class="opt" type="button" role="checkbox" aria-checked="false" style="margin-bottom:10px">
+                <span class="opt-label">Supplementari</span><span class="sw" aria-hidden="true"></span>
+              </button>
               <button id="pensToggle" class="opt" type="button" role="checkbox" aria-checked="false">
                 <span class="opt-label">Rigori</span><span class="sw" aria-hidden="true"></span>
               </button>
@@ -897,11 +900,12 @@
     const italy = [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana']];
     return [...italy, ...COMPETITIONS_UEFA];
   }
-  const PHASES = [['kick','KICK OFF'],['half','HALF TIME'],['end_of_90',"END OF 90'"],['full','FULL TIME']];
+  const PHASES = [['kick','KICK OFF'],['second','2ND HALF'],['half','HALF TIME'],['end_of_90',"END OF 90'"],['full','FULL TIME']];
   const PHASE_TEXT = {
+    second:{title:'Risultato all’intervallo',lead:'Inserisci i gol di entrambe le squadre a fine primo tempo.'},
     half:{title:'Risultato all’intervallo',lead:'Inserisci i gol di entrambe le squadre a fine primo tempo.'},
     end_of_90:{title:'Risultato dopo i 90’',lead:'Inserisci i gol di entrambe le squadre al 90’.'},
-    full:{title:'Risultato finale',lead:'Inserisci i gol di entrambe le squadre. Se è finita ai rigori, spunta “Rigori”.'}
+    full:{title:'Risultato finale',lead:'Inserisci i gol di entrambe le squadre. Spunta “Supplementari” se si sono giocati, “Rigori” se è finita ai rigori.'}
   };
   const SIDES = [['home','In casa'],['away','In trasferta']];
   const KITS = [['home','Home'],['away','Away'],['third','Third']];
@@ -945,6 +949,7 @@
   let kind = 'goal';
   let phase = 'half';
   let pensOn = false;
+  let etOn = false;
   const realKind = () => kind === 'match' ? phase : kind;
   let competition = 'ita.1';
   let side = 'home';
@@ -1144,6 +1149,7 @@
       case 'score': {
         const h = $('homeScore').value.trim(), a = $('awayScore').value.trim();
         let out = h !== '' && a !== '' ? `${h} – ${a}` : '';
+        if (out && phase === 'full' && etOn) out += ' (suppl.)';
         if (out && phase === 'full' && pensOn) {
           const ph = $('homePens').value.trim(), pa = $('awayPens').value.trim();
           if (ph !== '' && pa !== '') out += ` (rig. ${ph} – ${pa})`;
@@ -1384,7 +1390,7 @@
     renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
     renderOptions('phaseOpts',PHASES,phase,v => {
       phase = v;
-      if (phase !== 'full') { pensOn = false; $('homePens').value = ''; $('awayPens').value = ''; }
+      if (phase !== 'full') { pensOn = false; etOn = false; $('homePens').value = ''; $('awayPens').value = ''; }
       buildFlow();
       updatePhaseUI();
     });
@@ -1415,6 +1421,9 @@
     const b = $('pensToggle');
     b.classList.toggle('selected',pensOn);
     b.setAttribute('aria-checked',pensOn ? 'true' : 'false');
+    const e = $('etToggle');
+    e.classList.toggle('selected',etOn);
+    e.setAttribute('aria-checked',etOn ? 'true' : 'false');
   }
 
   function autoFocusCurrent() {
@@ -1544,12 +1553,13 @@
     goal:'Compongo la grafica con foto e posa del giocatore.',
     saved:'Compongo la grafica con foto e posa del portiere.',
     kick:'Preparo la grafica del calcio d’inizio.',
+    second:'Preparo la grafica dell’inizio del secondo tempo.',
     half:'Avvio la generazione…',
     end_of_90:'Avvio la generazione…',
     full:'Avvio la generazione…',
     stats:'Preparo la tabella delle statistiche.'
   };
-  const DEFAULT_MS = {goal:4000, saved:4000, kick:4000, stats:7000, half:12000, end_of_90:12000, full:12000, submit:2500};
+  const DEFAULT_MS = {goal:4000, saved:4000, kick:4000, second:4000, stats:7000, half:12000, end_of_90:12000, full:12000, submit:2500};
   const MIN_FAST_MS = 3000;
   const DURATIONS_KEY = 'imagegen-jr-durations';
   const SLOW_SUB = 'Ci sta mettendo più del solito: attendi ancora qualche secondo.';
@@ -1752,6 +1762,7 @@
     moment = 'HT';
     phase = 'half';
     pensOn = false;
+    etOn = false;
     selectedTeam = null;
     selectedPlayer = null;
     ['opponentSearch','playerSearch','minute','homePens','awayPens'].forEach(id => { $(id).value = ''; });
@@ -2169,6 +2180,7 @@
       data.pose = pose;
     } else if (kind === 'match' && phase !== 'kick') {
       data.score = scorePair('homeScore','awayScore',true);
+      if (phase === 'full' && etOn) data.extra_time = true;
       if (phase === 'full' && pensOn) {
         data.shootout = scorePair('homePens','awayPens',true);
       }
@@ -2427,6 +2439,12 @@
     if (!playersLoaded) { await loadCatalogs(); refreshSearchSummaries(); }
   });
 
+  $('etToggle').addEventListener('click',() => {
+    haptic('select');
+    etOn = !etOn;
+    updatePhaseUI();
+    renderSteps();
+  });
   $('pensToggle').addEventListener('click',() => {
     haptic('select');
     pensOn = !pensOn;

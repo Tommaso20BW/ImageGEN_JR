@@ -6,6 +6,7 @@ KINDS = [
     ('GOAL', 'goal'),
     ('SAVED', 'saved'),
     ('KICK OFF', 'kick'),
+    ('2ND HALF', 'second'),
     ('HALF TIME', 'half'),
     ("END OF 90'", 'end_of_90'),
     ('FULL TIME', 'full'),

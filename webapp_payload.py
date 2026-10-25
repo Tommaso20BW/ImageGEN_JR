@@ -146,9 +146,11 @@ def _build_state(envelope, catalog, now, expected_session):
             raise ValueError('Posa non valida.')
         data['pose'] = pose
 
-    elif kind in ('half', 'full', 'end_of_90'):
+    elif kind in ('second', 'half', 'full', 'end_of_90'):
         data['score'] = _score(incoming.get('score'))
         if kind == 'full':
+            # Spunta "Supplementari": solo dicitura sotto il risultato.
+            data['extra_time'] = incoming.get('extra_time') is True
             data['shootout'] = _score(
                 incoming.get('shootout'),
                 optional=True,

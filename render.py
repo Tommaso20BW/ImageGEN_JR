@@ -179,11 +179,11 @@ class Renderer:
                 goalkeeper_name=data['player'],
             ).png
 
-        if kind in ('kick', 'half', 'full', 'end_of_90'):
+        if kind in ('kick', 'second', 'half', 'full', 'end_of_90'):
             layers = None
             score = data.get('score') or (0, 0)
 
-            if kind != 'kick':
+            if kind not in ('kick', 'second'):
                 if not self.token_provider:
                     raise ValueError('Canva non configurato per questa grafica.')
 
@@ -207,6 +207,7 @@ class Renderer:
                         'home_goals': score[0],
                         'away_goals': score[1],
                         'layers': layers,
+                        'extra_time': kind == 'full' and bool(data.get('extra_time')),
                     }
 
                     if kind == 'full' and data.get('shootout'):
@@ -221,11 +222,12 @@ class Renderer:
                         shootout=None,
                     )
 
+            # KICK OFF e 2ND HALF: senza Canva (2ND HALF mostra il risultato).
             return p.phase(
                 **common,
-                kind='kick',
-                home_goals=0,
-                away_goals=0,
+                kind=kind,
+                home_goals=score[0] if kind == 'second' else 0,
+                away_goals=score[1] if kind == 'second' else 0,
                 shootout=None,
                 layers=None,
             )
