@@ -432,6 +432,8 @@
     #pensToggle.selected .opt-label{color:var(--text)}
     #pensToggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .field-label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 2px 8px}
+    .field-label.gap{margin-top:26px}
     .num-card{
       background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
       padding:14px 12px 12px;display:grid;gap:10px;justify-items:center;box-shadow:var(--shadow-soft);
@@ -680,6 +682,7 @@
             <div class="eyebrow">Evento</div>
             <h1>Risultato e minuto</h1>
             <p class="lead">Il risultato dopo l’azione, poi il minuto.</p>
+            <div class="field-label">Risultato</div>
             <div class="pair">
               <div class="num-card">
                 <div id="evHomeName" class="num-name">Casa</div>
@@ -698,6 +701,7 @@
                 </div>
               </div>
             </div>
+            <div class="field-label gap">Minuto</div>
             <div class="inline-field">
               <input id="minute" class="field-input" inputmode="numeric" enterkeyhint="done" placeholder="67 o 90+4" autocomplete="off">
             </div>
