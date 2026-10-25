@@ -5,6 +5,16 @@ from urllib.parse import urlparse
 import requests
 
 
+# Session message: bold title + italic line, both with custom emoji (offsets in UTF-16 units).
+SESSION_TEXT = "🎨 ImageGEN · JR\n\n⏳ Sessione attiva per 10min."
+SESSION_ENTITIES = [
+    {'type': 'bold', 'offset': 0, 'length': 16},
+    {'type': 'custom_emoji', 'offset': 0, 'length': 2, 'custom_emoji_id': '5431456208487716895'},
+    {'type': 'custom_emoji', 'offset': 18, 'length': 1, 'custom_emoji_id': '5451732530048802485'},
+    {'type': 'italic', 'offset': 20, 'length': 26},
+]
+
+
 class TelegramError(RuntimeError):
     pass
 
@@ -99,12 +109,15 @@ class Telegram:
             default=0,
         )
 
-    def prompt(self, text, keyboard=None):
+    def prompt(self, text, keyboard=None, entities=None):
         data = {
             'chat_id': self.chat_id,
             'text': text,
             'disable_web_page_preview': 'true',
         }
+
+        if entities:
+            data['entities'] = json.dumps(entities)
 
         if keyboard:
             data['reply_markup'] = json.dumps(keyboard)
@@ -136,10 +149,7 @@ class Telegram:
             'input_field_placeholder': 'ImageGEN',
         }
 
-        return self.prompt(
-            "🎨 ImageGEN · JR\n\n⏱️ Sessione attiva per 10 minuti.",
-            keyboard,
-        )
+        return self.prompt(SESSION_TEXT, keyboard, SESSION_ENTITIES)
 
     def remove_keyboard(self):
         return self.prompt('\u2063', {'remove_keyboard': True})
