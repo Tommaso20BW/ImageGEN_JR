@@ -101,6 +101,20 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parts = urlsplit(self.path)
+        if parts.path.rstrip('/') == '/fixtures':
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            self._json(200, {'ok': True, 'matches': self.service.fixtures(query.get('from', ''), query.get('to', ''))})
+            return
+        if parts.path.rstrip('/') == '/fixture':
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            self._json(200, {'ok': True, 'fixture': self.service.fixture(query.get('opponent', ''), query.get('side', ''))})
+            return
         if parts.path.rstrip('/') == '/overlay':
             query = dict(parse_qsl(parts.query))
             if query.get('session', '') != self.service.session:
@@ -351,6 +365,37 @@ class Service:
                 logo_bundle.SHIRT_NUMBERS.update(updates)
         except Exception as exc:
             print(f'WARN IMAGEGEN: numeri di maglia non salvati: {type(exc).__name__}: {exc}', flush=True)
+
+    def fixtures(self, start, end):
+        """Partite Juventus fra due date (AAAA-MM-GG, ora italiana), dal calendario ESPN."""
+        try:
+            from datetime import datetime, timedelta
+            from zoneinfo import ZoneInfo
+
+            import fixtures
+            from graphics.common import _logo_rows, asset_dir
+            rome = ZoneInfo('Europe/Rome')
+            begin = datetime.fromisoformat(start).replace(tzinfo=rome) if start else None
+            stop = datetime.fromisoformat(end).replace(tzinfo=rome) + timedelta(days=1) if end else None
+            return fixtures.matches(_logo_rows(str(asset_dir())), begin, stop)
+        except Exception as exc:
+            print(f'WARN IMAGEGEN: calendario ESPN non disponibile: {type(exc).__name__}: {exc}', flush=True)
+            return []
+
+    def fixture(self, opponent, side):
+        """Stadio, data e ora della partita contro l'avversario (calendario ESPN)."""
+        try:
+            import fixtures
+            from graphics.common import _logo_rows, asset_dir, normalize
+            names = [opponent]
+            for row in _logo_rows(str(asset_dir())):
+                if normalize(row.get('name')) == normalize(opponent):
+                    names += list(row.get('aliases') or [])
+            home = {'home': True, 'away': False}.get(side)
+            return fixtures.find(names, home=home)
+        except Exception as exc:
+            print(f'WARN IMAGEGEN: partita non trovata su ESPN: {type(exc).__name__}: {exc}', flush=True)
+            return None
 
     def preview_jpeg(self, png):
         """Anteprima per il telefono: JPEG ~10 volte più leggero del PNG."""

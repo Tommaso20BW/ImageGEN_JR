@@ -841,6 +841,14 @@
             <div id="lineupSummary" class="hint">0 / 11 giocatori</div>
           </section>
 
+          <section class="screen" data-screen="mdpick">
+            <div class="eyebrow">Matchday</div>
+            <h1>Scegli la partita</h1>
+            <p class="lead">Dal calendario della Juventus: competizione, avversario, stadio, data e ora si compilano da soli.</p>
+            <div id="mdPickOpts" class="opts" role="radiogroup"></div>
+            <div id="mdPickHint" class="hint"></div>
+          </section>
+
           <section class="screen" data-screen="match">
             <div class="eyebrow">Matchday</div>
             <h1>Partita</h1>
@@ -1075,7 +1083,7 @@
   const STEP_NAMES = {
     competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
     player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
-    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite'
+    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite'
   };
 
   const $ = id => document.getElementById(id);
@@ -1113,6 +1121,8 @@
   let jrColor = '';      // FOTO + JR: colore del logo
   let pxiModule = '';    // PROBABILE XI: modulo
   let calMonth = 0;      // CALENDARIO: mese (1-12)
+  let mdPick = '';       // MATCHDAY: id partita ESPN scelta, 'manual' o ''
+  let fixtureList = [];
   let calRows = [];
   let pxiPicks = Array(11).fill('');
   let pose = '';
@@ -1289,7 +1299,10 @@
     else if (kind === 'stats') flow = [...(italy ? withKit : base),'moment','stats'];
     else if (kind === 'squad') flow = [...base,'squad'];
     else if (kind === 'xi') flow = [...withKit,'lineup','photo'];
-    else if (kind === 'md') flow = [...withKit,'match','photo'];
+    // Matchday: prima si sceglie la partita dal calendario (compila tutto),
+    // oppure "Altra partita" per inserirla a mano.
+    else if (kind === 'md') flow = mdPick && mdPick !== 'manual' ? ['mdpick','kit','match','photo']
+      : ['mdpick',...withKit,'match','photo'];
     else if (kind === 'jr') flow = ['jrcolor','photo'];
     else if (kind === 'cal') flow = ['calmonth','calrows'];
     else if (kind === 'pxi') flow = [...withKit,'module','xi11'];
@@ -1335,6 +1348,7 @@
       case 'jrcolor': return labelOf(JR_COLORS,jrColor);
       case 'module': return pxiModule;
       case 'subkind': return labelOf(TAB_KINDS[tab] || [],kind);
+      case 'mdpick': { const m = fixtureList.find(f => f.id === mdPick); return mdPick === 'manual' ? 'A mano' : (m ? fixtureLabel(m, true) : ''); }
       case 'calmonth': return calMonth ? `${CAL_MONTHS[calMonth - 1]} ${$('calYear').value}` : '';
       case 'calrows': { const n = calRows.length; return n ? `${n} partit${n === 1 ? 'a' : 'e'}` : ''; }
       case 'xi11': { const n = pxiPicks.filter(Boolean).length; return n ? `${n} / 11` : ''; }
@@ -1498,6 +1512,8 @@
     if (screen) screen.classList.add('active');
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Foto + JR'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
     if (screenName === 'lineup') renderXiRows();
+    if (screenName === 'mdpick') loadMdFixtures();
+    if (screenName === 'calrows') fillCalendarFromFixtures();
     if (screenName === 'calrows') { if (!calRows.length) calRows.push({day:'', team:'', side:'home'}); renderCalRows(); }
     if (screenName === 'xi11' && $('pxiSlots').dataset.module !== pxiModule + players.length) {
       $('pxiSlots').dataset.module = pxiModule + players.length;
@@ -1596,7 +1612,7 @@
       flowIndex = 0;
       setTimeout(() => nextField(),120);
     });
-    renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { calMonth = Number(v); });
+    renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); });
     renderOptions('poseOpts',POSES,pose,v => pose = v);
     renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
     renderOptions('phaseOpts',PHASES,phase,v => {
@@ -1987,6 +2003,7 @@
     pxiModule = '';
     pxiPicks = Array(11).fill('');
     calMonth = 0;
+    mdPick = '';
     calRows = [];
     pose = '';
     moment = '';
@@ -2274,7 +2291,7 @@
   function validateCurrent() {
     const step = flow[flowIndex];
 
-    const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, subkind:kind};
+    const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, subkind:kind, mdpick:mdPick};
     if (step in choice && !choice[step]) { showError('Seleziona un’opzione per continuare.'); return false; }
 
     if (step === 'opponent') return resolveTeam();
@@ -2308,6 +2325,8 @@
       if (bad) { showError(`Manca il numero di maglia di ${bad.name}.`); return false; }
       rememberShirts();
     }
+
+    if (step === 'mdpick' && !mdPick) { showError('Scegli una partita o “Altra partita”.'); return false; }
 
     if (step === 'match') {
       if (!$('matchStadium').value.trim()) { showError('Scrivi lo stadio.'); return false; }
@@ -2429,6 +2448,79 @@
     });
     $('statCount').textContent = `${n} / ${STATS.length} voci`;
     return n;
+  }
+
+  /* ---------- Calendario Juventus (ESPN, tramite il workflow) ---------- */
+  const COMP_SHORT = {'ita.1':'Serie A','ita.coppa_italia':'Coppa Italia','ita.super_cup':'Supercoppa',
+    'uefa.champions':'Champions','uefa.europa':'Europa League','uefa.europa.conf':'Conference'};
+  const MONTHS_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  const isoDay = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
+
+  async function fetchFixtures(from, to) {
+    if (!directBase || !session) return [];
+    const url = `${directBase}/fixtures?session=${encodeURIComponent(session)}&from=${from}&to=${to}`;
+    const response = await netFetch(url, {method:'GET'}, 30000);
+    const body = await response.json().catch(() => ({}));
+    return response.ok && body.ok ? (body.matches || []) : [];
+  }
+
+  function fixtureLabel(m, short=false) {
+    const [y,mo,d] = m.date.split('-').map(Number);
+    const who = displayTeamName(m.opponent || m.opponent_espn);
+    const where = m.side === 'home' ? 'in casa' : 'in trasferta';
+    return short ? `${d} ${MONTHS_SHORT[mo - 1]} · ${who}`
+      : `${d} ${MONTHS_SHORT[mo - 1]} · ${m.time} · ${who} (${where}) · ${COMP_SHORT[m.competition] || m.competition}`;
+  }
+
+  async function loadMdFixtures() {
+    const hint = $('mdPickHint');
+    if (!fixtureList.length) {
+      hint.textContent = 'Carico le partite…';
+      const today = new Date();
+      const to = new Date(today.getTime() + 60 * 86400000);
+      try { fixtureList = (await fetchFixtures(isoDay(today), isoDay(to))).filter(m => COMP_SHORT[m.competition]); }
+      catch (_) { fixtureList = []; }
+    }
+    hint.textContent = fixtureList.length ? '' : 'Calendario non disponibile: usa “Altra partita”.';
+    const options = fixtureList.slice(0,10).map(m => [m.id, fixtureLabel(m), !m.opponent]);
+    options.push(['manual','Altra partita (inserisci a mano)']);
+    renderOptions('mdPickOpts', options, mdPick, pickMdFixture);
+  }
+
+  // Un tocco: competizione, campo, avversario, stadio, data e ora.
+  function pickMdFixture(id) {
+    mdPick = id;
+    const m = fixtureList.find(f => f.id === id);
+    if (m) {
+      competition = m.competition;
+      side = m.side;
+      selectedTeam = teams.find(t => t.name === m.opponent) || null;
+      $('opponentSearch').value = selectedTeam ? displayTeamName(selectedTeam.name) : '';
+      $('matchStadium').value = m.stadium;
+      $('matchTime').value = m.time;
+      $('matchDate').value = m.date;
+    }
+    buildFlow();
+    renderSteps();
+    setTimeout(() => nextField(), 120);
+  }
+
+  // Calendario: scelto il mese, le partite si compilano da sole (modificabili).
+  async function fillCalendarFromFixtures() {
+    if (calRows.some(r => r.day || r.team)) return;
+    const year = Number($('calYear').value), month = calMonth;
+    const last = new Date(year, month, 0).getDate();
+    const pad = n => String(n).padStart(2,'0');
+    $('calSummary').textContent = 'Carico le partite del mese…';
+    let found = [];
+    try { found = await fetchFixtures(`${year}-${pad(month)}-01`, `${year}-${pad(month)}-${pad(last)}`); } catch (_) {}
+    if (calRows.some(r => r.day || r.team)) return;           // nel frattempo modificato a mano
+    if (found.length) {
+      calRows = found.slice(0, CAL_MAX).map(m => ({day:String(Number(m.date.slice(8))), team:m.opponent || '', side:m.side}));
+    }
+    renderCalRows();
+    renderSteps();
+    if (!found.length) $('calSummary').textContent = `${calRows.length} / ${CAL_MAX} partite · nessuna trovata nel calendario`;
   }
 
   /* ---------- Calendario: righe partita ---------- */
