@@ -1,11 +1,12 @@
 """Adapters to the production graphics core."""
 from functools import lru_cache
+import io
 import json
 from pathlib import Path
 import shutil
 import tempfile
+import threading
 
-import requests
 
 from constants import COMPETITIONS
 
@@ -135,11 +136,33 @@ def _phase_with_translated_shootout(p, *, shootout=None, **kwargs):
 
 
 class Renderer:
-    def __init__(self, token_provider=None, design_id='DAHI3ytu6yQ'):
-        self.token_provider = token_provider
-        self.design_id = design_id
+    def __init__(self):
         # Foto caricate dalla Mini App (id -> byte), riempito da service.Service.
         self.photos = {}
+        # Persone scontornate (id foto -> PNG), riusate da anteprima e invio.
+        self.cutouts = {}
+        self.cutout_lock = threading.Lock()
+
+    def cutout(self, photo_id):
+        """Persona scontornata da una foto caricata (PNG, calcolata una volta sola)."""
+        from livescore.graphics import phase_layers
+
+        with self.cutout_lock:
+            if photo_id not in self.cutouts:
+                raw = self.photos.get(photo_id)
+                if not raw:
+                    raise ValueError('Foto non trovata: ricaricala nella Mini App.')
+                image = phase_layers.open_photo(raw)
+                if phase_layers.has_transparency(image):
+                    # PNG già scontornato caricato come persona: resta com'è.
+                    self.cutouts[photo_id] = raw
+                else:
+                    out = io.BytesIO()
+                    phase_layers.cutout(image).save(out, 'PNG')
+                    self.cutouts[photo_id] = out.getvalue()
+                while len(self.cutouts) > 6:
+                    self.cutouts.pop(next(iter(self.cutouts)))
+            return self.cutouts[photo_id]
 
     def _photo(self, data):
         photo = self.photos.get(data.get('photo_id'))
@@ -149,8 +172,7 @@ class Renderer:
 
     def render(self, data, progress=None, ghost=False):
         """ghost=True (grafiche con foto): versione leggera senza foto per l'editor."""
-        """Render a graphic. `progress(stage)` is called at the real steps of Canva graphics."""
-        from livescore.canva.page_one import export_page_one
+        """Render a graphic. `progress(stage)` is called at the real steps of HALF/END/FULL TIME."""
         from livescore.graphics import goal as g
         from livescore.graphics import portrait as p
 
@@ -199,50 +221,42 @@ class Renderer:
                 goalkeeper_name=data['player'],
             ).png
 
-        if kind in ('kick', 'second', 'half', 'full', 'end_of_90'):
-            layers = None
+        if kind in ('half', 'full', 'end_of_90'):
+            # Sfondo e persona dalle foto caricate nella Mini App (prima: pagina 1 Canva).
+            from livescore.graphics import phase_layers
+
             score = data.get('score') or (0, 0)
+            phase_args = {
+                **common,
+                'kind': kind,
+                'home_goals': score[0],
+                'away_goals': score[1],
+                'extra_time': kind == 'full' and bool(data.get('extra_time')),
+            }
+            shootout = data.get('shootout') if kind == 'full' else None
 
-            if kind not in ('kick', 'second'):
-                if not self.token_provider:
-                    raise ValueError('Canva non configurato per questa grafica.')
+            def draw(layers):
+                return _phase_with_translated_shootout(p, shootout=shootout, layers=layers, **phase_args)
 
-                with tempfile.TemporaryDirectory(prefix='jr_manual_') as cache:
-                    with requests.Session() as session:
-                        note('canva_token')
-                        token = self.token_provider()
-                        note('canva_export')
-                        layers = export_page_one(
-                            session,
-                            token,
-                            self.design_id,
-                            Path(cache),
-                        )
+            if ghost:
+                return phase_layers.ghost(draw)
 
-                    note('compose')
+            note('cutout')
+            person = self.cutout(data.get('person_id') or data['photo_id'])
+            note('compose')
+            with tempfile.TemporaryDirectory(prefix='jr_manual_') as cache:
+                layers = phase_layers.build_layers(
+                    Path(cache),
+                    background=self._photo(data),
+                    person=person,
+                    background_frame=data['frame'],
+                    person_frame=data.get('person_frame'),
+                )
+                return draw(layers)
 
-                    phase_args = {
-                        **common,
-                        'kind': kind,
-                        'home_goals': score[0],
-                        'away_goals': score[1],
-                        'layers': layers,
-                        'extra_time': kind == 'full' and bool(data.get('extra_time')),
-                    }
-
-                    if kind == 'full' and data.get('shootout'):
-                        return _phase_with_translated_shootout(
-                            p,
-                            shootout=data.get('shootout'),
-                            **phase_args,
-                        )
-
-                    return p.phase(
-                        **phase_args,
-                        shootout=None,
-                    )
-
-            # KICK OFF e 2ND HALF: senza Canva (2ND HALF mostra il risultato).
+        if kind in ('kick', 'second'):
+            score = data.get('score') or (0, 0)
+            # KICK OFF e 2ND HALF: senza foto (2ND HALF mostra il risultato).
             return p.phase(
                 **common,
                 kind=kind,

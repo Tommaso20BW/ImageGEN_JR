@@ -409,7 +409,7 @@
     .field-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft),var(--shadow-soft)}
     .field-input::placeholder{color:var(--muted);font-weight:500}
     textarea.field-input{min-height:300px;padding:14px 18px;font-size:16px;font-weight:600;line-height:1.45;resize:vertical;font-family:inherit;color:inherit}
-    /* Editor foto: stessa proporzione della grafica (3:4) con sopra il livello Canva */
+    /* Editor foto: stessa proporzione della grafica (3:4) con sopra il livello della grafica */
     /* Altezza massima: riquadro + strumenti sempre visibili sopra la barra in basso */
     .photo-frame{position:relative;width:100%;max-width:min(380px,calc((100dvh - 420px) * .75));min-width:220px;aspect-ratio:3/4;margin:0 auto;overflow:hidden;
       border-radius:var(--radius);background:var(--surface2);border:1.5px solid var(--line);touch-action:none;cursor:grab;user-select:none}
@@ -466,6 +466,18 @@
     .photo-frame .overlay.ghost{opacity:.72}
     .photo-frame .empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-weight:700;text-align:center;padding:20px}
     .photo-tools{display:flex;gap:10px;align-items:center;max-width:380px;margin:12px auto 0}
+    /* HALF/END/FULL TIME: la foto sta solo nel riquadro interno della grafica (76 px di
+       cornice su 1086x1448); dentro, la pagina dei livelli 1086x1448 ridotta a 972x1296. */
+    .pp-window{position:absolute;left:6.998%;top:5.249%;width:86.004%;height:89.503%;overflow:hidden}
+    .pp-page{position:absolute;left:-2.034%;top:0;width:104.069%;height:100%}
+    .pp-tools{display:flex;flex-direction:column;align-items:center;gap:4px;margin:10px auto 0}
+    .pp-tools .module-chips{margin-top:0;justify-content:center}
+    .pp-links{display:flex;gap:18px;justify-content:center}
+    /* Modalita' live (dal LiveScore): solo foto della fase e conferma */
+    /* Restano al loro posto (righe e colonne della griglia invariate), solo invisibili */
+    body.live #closeWorkflowButton{visibility:hidden}
+    body.live #kindListMobile{visibility:hidden;height:0;min-height:0;padding:0;margin:0;overflow:hidden}
+    body.live #kindListSide{display:none}
     .quick{display:flex;gap:8px;margin-top:12px}
     .quick button{flex:1 1 0;min-width:0}
     .quick button{
@@ -960,6 +972,32 @@
             <div id="photoSummary" class="hint" style="text-align:center"></div>
           </section>
 
+          <section class="screen" data-screen="phasephoto">
+            <div id="ppEyebrow" class="eyebrow">Half Time</div>
+            <div class="photo-head">
+              <h1>Foto</h1>
+              <button id="ppPick" class="btn ghost" type="button">Scegli foto</button>
+            </div>
+            <p class="lead">Trascina per spostare, due dita per lo zoom.</p>
+            <div id="ppFrame" class="photo-frame">
+              <div class="pp-window"><div class="pp-page">
+                <img id="ppBg" alt="" hidden>
+                <img id="ppPerson" alt="" hidden>
+              </div></div>
+              <img id="ppOverlay" class="overlay ghost" alt="" hidden>
+              <div id="ppEmpty" class="empty" aria-label="Nessuna foto"></div>
+            </div>
+            <div id="ppTools" class="pp-tools" hidden>
+              <div id="ppModeOpts" class="module-chips" role="radiogroup"></div>
+              <div class="pp-links">
+                <button id="ppBgButton" class="link-btn" type="button">Cambia sfondo</button>
+                <button id="ppPersonButton" class="link-btn" type="button">Cambia persona</button>
+              </div>
+            </div>
+            <input id="ppFile" type="file" accept="image/*" hidden>
+            <div id="ppSummary" class="hint" style="text-align:center"></div>
+          </section>
+
           <section class="screen" data-screen="squad">
             <div class="eyebrow">Squad List</div>
             <h1>Convocati</h1>
@@ -1096,6 +1134,8 @@
     const italy = [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana']];
     return [...italy, ...COMPETITIONS_UEFA];
   }
+  // Fasi con foto caricata (sfondo + persona), prima prese dalla pagina 1 Canva.
+  const PHOTO_PHASES = new Set(['half','end_of_90','full']);
   const PHASES = [['kick','KICK OFF'],['half','HALF TIME'],['second','2ND HALF'],['end_of_90',"END OF 90'"],['full','FULL TIME']];
   const PHASE_TEXT = {
     second:{title:'Risultato all’intervallo',lead:'Inserisci i gol di entrambe le squadre a fine primo tempo.'},
@@ -1123,7 +1163,7 @@
   const STEP_NAMES = {
     competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
     player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
-    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite'
+    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto'
   };
 
   const $ = id => document.getElementById(id);
@@ -1139,6 +1179,12 @@
   const session = urlParams.get('session') || '';
   const directEndpoint = urlParams.get('direct') || '';
   const directBase = directEndpoint.replace(/\/submit\/?$/,'');
+  // Live: aperta dal pulsante del LiveScore. Solo la foto di una fase, poi "Conferma".
+  const LIVE = urlParams.get('mode') === 'live';
+  const LIVE_SLOT = urlParams.get('slot') || 'half';
+  const LIVE_PHASE = urlParams.get('phase') || 'half';
+  const SEND_LABEL = LIVE ? 'Conferma foto ✓' : 'Invia foto ✓';
+  let liveTitle = '';
   // Scadenza reale della sessione (ms epoch), passata da service.py. Senza, il timer resta nascosto.
   const sessionExpiresAt = Number(urlParams.get('expires')) || 0;
   const sessionExpired = () => Boolean(sessionExpiresAt) && Date.now() >= sessionExpiresAt;
@@ -1329,6 +1375,7 @@
   /* ---------- Flow ---------- */
   function buildFlow() {
     flow = [];
+    if (LIVE) { flow = ['phasephoto']; flowIndex = 0; return; }
     const base = ['competition','side','opponent'];
     // Goal/saved: maglia sempre. Half/end/full: solo con "Italia" (serve per lo sfondo);
     // le UEFA hanno lo sfondo della competizione. Stats: come half/end/full. Kick off: mai.
@@ -1344,7 +1391,7 @@
     if (kind === 'goal' || kind === 'saved') flow = pick([...withKit,'player','minute','pose']);
     else if (kind === 'kick') flow = pick(base);
     else if (kind === 'match' && phase === 'kick') flow = ['phase',...pick(base)];
-    else if (kind === 'match') flow = ['phase',...pick([...(italy ? withKit : base),'score'])];
+    else if (kind === 'match') flow = ['phase',...pick([...(italy ? withKit : base),'score']),...(PHOTO_PHASES.has(phase) ? ['phasephoto'] : [])];
     else if (kind === 'stats') flow = pick([...(italy ? withKit : base),'moment','stats']);
     else if (PREMATCH.includes(kind)) {
       const rest = {squad:['squad'], xi:['kit','lineup','photo'], md:['kit','match','photo'], pxi:['kit','xi11']}[kind];
@@ -1391,6 +1438,7 @@
         return n ? `${n} / 11` : '';
       }
       case 'photo': return photoState.id ? 'Caricata' : '';
+      case 'phasephoto': return ppState.bg ? 'Caricata' : '';
       case 'jrcolor': return labelOf(JR_COLORS,jrColor);
       case 'module': return pxiModule;
       case 'subkind': return labelOf(TAB_KINDS[tab] || [],kind);
@@ -1556,11 +1604,13 @@
       if (el !== screen) el.classList.remove('active');
     });
     if (screen) screen.classList.add('active');
-    $('stage').classList.toggle('photo-mode', screenName === 'photo');
-    if (screenName === 'photo') $('stage').scrollTop = 0;
+    const editing = screenName === 'photo' || screenName === 'phasephoto';
+    $('stage').classList.toggle('photo-mode', editing);
+    if (editing) $('stage').scrollTop = 0;
     try {
-      if (tg && tg.disableVerticalSwipes) screenName === 'photo' ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
+      if (tg && tg.disableVerticalSwipes) editing ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
     } catch (_) {}
+    if (screenName === 'phasephoto') { $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); renderPpMode(); loadPpGhost(); requestAnimationFrame(layoutPhase); }
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Foto + JR'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
     if (screenName === 'lineup') readXiText();
     if (screenName === 'mdpick') {
@@ -1585,7 +1635,7 @@
     $('backButton').textContent = '‹ Indietro';
     // Calendario compilato da solo: "Modifica" in alto apre l'elenco partite.
     $('previewEdit').hidden = !(previewMode && kind === 'cal');
-    $('nextButton').textContent = previewMode ? 'Invia foto ✓' : (isLastStep() ? finalStepLabel() : 'Avanti ›');
+    $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? finalStepLabel() : 'Avanti ›');
 
     clearError();
     updateScreenValues();
@@ -1826,13 +1876,11 @@
   }
 
   /* ---------- Caricamento ---------- */
-  // Grafiche Canva: avanzamento reale letto da GET /progress (passi di render.py).
+  // HALF/END/FULL TIME: avanzamento reale letto da GET /progress (passi di render.py).
   // Altre grafiche: avanzamento stimato sulla durata delle generazioni precedenti, minimo 3 s.
-  const CANVA_KINDS = new Set(['half','end_of_90','full']);
-  const STAGE_RANGE = {idle:[0,4], render:[2,10], canva_token:[10,25], canva_export:[25,75], compose:[75,96]};
+  const STAGE_RANGE = {idle:[0,4], render:[2,10], cutout:[10,60], compose:[60,96]};
   const STAGE_SUB = {
-    canva_token:'Mi collego a Canva…',
-    canva_export:'Scarico lo sfondo da Canva…',
+    cutout:'Scontorno la persona…',
     compose:'Compongo la grafica…'
   };
   const BUSY_SUB = {
@@ -1845,7 +1893,7 @@
     full:'Avvio la generazione…',
     stats:'Preparo la tabella delle statistiche.'
   };
-  const DEFAULT_MS = {goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, pxi:9000, cal:5000, half:12000, end_of_90:12000, full:12000, submit:2500};
+  const DEFAULT_MS = {goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, pxi:9000, cal:5000, half:6000, end_of_90:6000, full:6000, submit:2500};
   const MIN_FAST_MS = 3000;
   const DURATIONS_KEY = 'imagegen-jr-durations';
   const SLOW_SUB = 'Ci sta mettendo più del solito: attendi ancora qualche secondo.';
@@ -1930,7 +1978,7 @@
 
   function showBusy(title, sub, kind) {
     hideBusy();
-    const real = CANVA_KINDS.has(kind) && Boolean(directBase);
+    const real = PHOTO_PHASES.has(kind) && Boolean(directBase);
     busy = {
       kind, real, started:performance.now(), stageAt:performance.now(), stage:'idle',
       expected:expectedMs(kind), shown:0, slow:false, pollFails:0, raf:0, poll:0, finishing:false
@@ -1955,7 +2003,7 @@
     b.finishing = true;
     cancelAnimationFrame(b.raf);
     clearInterval(b.poll);
-    const fast = b.kind !== 'submit' && !CANVA_KINDS.has(b.kind);
+    const fast = b.kind !== 'submit' && !PHOTO_PHASES.has(b.kind);
     const duration = Math.max(350,fast ? MIN_FAST_MS - elapsed : 0);
     const from = b.shown;
     const t0 = now;
@@ -2078,6 +2126,7 @@
     updateSquadSummary();
     updateLineupSummary();
     clearPhoto();
+    clearPhase();
     $('calYear').value = String(new Date().getFullYear());
     $('matchTime').value = '20:45';
     $('matchDate').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,10);
@@ -2398,6 +2447,11 @@
     if (step === 'photo') {
       if (photoState.uploading) { showError('Attendi il caricamento della foto.'); return false; }
       if (!photoState.id) { showError('Scegli una foto.'); return false; }
+    }
+
+    if (step === 'phasephoto') {
+      if (ppState.uploading) { showError('Attendi il caricamento della foto.'); return false; }
+      if (!ppState.bg) { showError('Scegli una foto.'); return false; }
     }
 
     if (step === 'calmonth') {
@@ -2949,7 +3003,7 @@
 
   // Riduce la foto a max 2560 px (lato lungo) in JPEG: qualità piena per la grafica,
   // invio veloce dal telefono.
-  async function preparePhoto(file) {
+  async function preparePhoto(file, keepAlpha=false) {
     let source;
     try { source = await createImageBitmap(file,{imageOrientation:'from-image'}); }
     catch (_) {
@@ -2962,10 +3016,17 @@
     const scale = Math.min(1, 2048 / Math.max(sw,sh));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(sw * scale); canvas.height = Math.round(sh * scale);
-    canvas.getContext('2d').drawImage(source,0,0,canvas.width,canvas.height);
-    const blob = await new Promise(resolve => canvas.toBlob(resolve,'image/jpeg',0.88));
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(source,0,0,canvas.width,canvas.height);
+    // Persona già scontornata (PNG trasparente): resta PNG, la trasparenza non si perde.
+    let type = 'image/jpeg';
+    if (keepAlpha) {
+      const px = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      for (let i = 3; i < px.length; i += 4) if (px[i] < 250) { type = 'image/png'; break; }
+    }
+    const blob = await new Promise(resolve => canvas.toBlob(resolve,type,0.88));
     if (!blob) throw new Error('Foto non leggibile.');
-    return {blob, w:canvas.width, h:canvas.height};
+    return {blob, w:canvas.width, h:canvas.height, type};
   }
 
   async function uploadPhoto(file) {
@@ -3050,6 +3111,256 @@
     frame.addEventListener('touchmove',e => e.preventDefault(),{passive:false});
   }
 
+
+  /* ---------- HALF / END OF 90' / FULL TIME: sfondo + persona ---------- */
+  // Stessa pagina dei livelli del bot (1086x1448) e stessi calcoli di
+  // livescore/graphics/phase_layers.py (box): l'anteprima coincide con la grafica.
+  // persona.follow = scontornata dallo sfondo e ferma su di esso (combacia esattamente).
+  const PP_W = 1086, PP_H = 1448;
+  const ppState = {bg:null, person:null, mode:'both', uploading:false, ghostKey:'', pick:'photo'};
+  const PP_MODES = [['both','Insieme'],['bg','Sfondo'],['person','Persona']];
+
+  function ppRevoke(url) { if (url) { try { URL.revokeObjectURL(url); } catch (_) {} } }
+
+  function clearPhase() {
+    if (ppState.bg) ppRevoke(ppState.bg.url);
+    if (ppState.person) ppRevoke(ppState.person.url);
+    Object.assign(ppState,{bg:null, person:null, mode:'both', uploading:false});
+    ['ppBg','ppPerson'].forEach(id => { $(id).hidden = true; $(id).removeAttribute('src'); });
+    $('ppEmpty').hidden = false;
+    $('ppTools').hidden = true;
+    $('ppSummary').textContent = '';
+  }
+
+  function ppBox(o, f, cover) {
+    const fit = Math.max(PP_W / o.w, PP_H / o.h);
+    const zoom = Math.min(6, Math.max(cover ? 1 : .2, f.zoom));
+    const w = o.w * fit * zoom, h = o.h * fit * zoom;
+    let left = (PP_W - w) / 2 + f.x * PP_W, top = (PP_H - h) / 2 + f.y * PP_H;
+    if (cover) {
+      left = Math.min(0, Math.max(PP_W - w, left));
+      top = Math.min(0, Math.max(PP_H - h, top));
+    }
+    return {left, top, w, h, zoom};
+  }
+
+  // Riporta x/y/zoom nei limiti (come fa il server), così trascinare oltre il bordo non accumula.
+  function ppNormalize(o, cover) {
+    const b = ppBox(o, o, cover);
+    o.zoom = b.zoom;
+    o.x = (b.left - (PP_W - b.w) / 2) / PP_W;
+    o.y = (b.top - (PP_H - b.h) / 2) / PP_H;
+    return b;
+  }
+
+  function ppPlace(img, b) {
+    img.style.left = `${b.left / PP_W * 100}%`; img.style.top = `${b.top / PP_H * 100}%`;
+    img.style.width = `${b.w / PP_W * 100}%`; img.style.height = `${b.h / PP_H * 100}%`;
+  }
+
+  function layoutPhase() {
+    const frame = $('ppFrame'), stage = $('stage');
+    if (frame.offsetParent) {
+      const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 74;
+      const width = Math.max(200, Math.min(frame.parentElement.clientWidth, free * 0.75));
+      frame.style.maxWidth = 'none';
+      frame.style.width = `${Math.floor(width)}px`;
+    }
+    const {bg, person} = ppState;
+    if (!bg) return;
+    ppPlace($('ppBg'), ppNormalize(bg, true));
+    if (person && person.w) ppPlace($('ppPerson'), person.follow ? ppBox(person, bg, true) : ppNormalize(person, false));
+  }
+
+  // La persona smette di seguire lo sfondo: parte dalla stessa identica posizione.
+  function ppDetach() {
+    const {bg, person} = ppState;
+    if (person && person.follow) Object.assign(person,{x:bg.x, y:bg.y, zoom:bg.zoom, follow:false});
+  }
+
+  function ppTargets() {
+    const {bg, person, mode} = ppState;
+    if (!bg) return [];
+    if (mode === 'both') return person && !person.follow ? [bg, person] : [bg];
+    ppDetach();
+    return mode === 'bg' ? [bg] : (person ? [person] : []);
+  }
+
+  function renderPpMode() {
+    renderOptions('ppModeOpts',PP_MODES,ppState.mode,v => { ppState.mode = v; });
+  }
+
+  function phasePhotoData(ghost) {
+    const {bg, person} = ppState;
+    if (!bg) {
+      if (!ghost) throw new Error('Scegli una foto.');
+      return {photo_id:'0'.repeat(16), frame:{x:0, y:0, zoom:1}};
+    }
+    const out = {photo_id:bg.id, frame:{x:bg.x, y:bg.y, zoom:bg.zoom}};
+    if (person && person.id !== bg.id) out.person_id = person.id;
+    if (person && !person.follow) out.person_frame = {x:person.x, y:person.y, zoom:person.zoom};
+    return out;
+  }
+
+  // Placeholder: la grafica senza foto (cornice, scritta, risultato, stemmi), semitrasparente.
+  async function loadPpGhost() {
+    if (!directBase || !session) return;
+    let payload;
+    try { payload = buildPayload(true); } catch (_) { return; }
+    const {photo_id, frame, person_id, person_frame, ...rest} = payload.data;
+    const key = JSON.stringify(rest);
+    if (key === ppState.ghostKey) return;
+    ppState.ghostKey = key;
+    try {
+      const response = await netFetch(`${directBase}/ghost`,{
+        method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body:JSON.stringify(payload)
+      }, 60000);
+      if (!response.ok) throw new Error(String(response.status));
+      const url = URL.createObjectURL(await response.blob());
+      if (ppState.ghostKey !== key) { ppRevoke(url); return; }
+      ppRevoke($('ppOverlay').dataset.url);
+      $('ppOverlay').dataset.url = url;
+      $('ppOverlay').src = url;
+      $('ppOverlay').hidden = false;
+    } catch (_) {
+      if (ppState.ghostKey === key) ppState.ghostKey = '';
+    }
+  }
+
+  async function ppSend(blob, type) {
+    const response = await netFetch(`${directBase}/upload`,{
+      method:'POST', headers:{'Content-Type':type, 'X-ImageGEN-Session':session}, body:blob
+    }, 60000);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.ok) throw new Error(body.error || 'Caricamento non riuscito.');
+    return body.photo_id;
+  }
+
+  // Persona scontornata dal servizio (o il PNG trasparente caricato, così com'è).
+  async function ppLoadCutout(person) {
+    $('ppSummary').textContent = 'Scontorno la persona…';
+    try {
+      const response = await netFetch(`${directBase}/cutout?session=${encodeURIComponent(session)}&id=${person.id}`,{}, 90000);
+      if (!response.ok) throw new Error('Scontorno non riuscito.');
+      const url = URL.createObjectURL(await response.blob());
+      if (ppState.person !== person) { ppRevoke(url); return; }
+      ppRevoke(person.url);
+      person.url = url;
+      $('ppPerson').src = url;
+      $('ppPerson').hidden = false;
+      layoutPhase();
+    } catch (err) {
+      if (ppState.person === person) showError(err && err.message ? err.message : 'Scontorno non riuscito.');
+    } finally {
+      if (ppState.person === person) $('ppSummary').textContent = '';
+    }
+  }
+
+  // pick: 'photo' = foto nuova (sfondo + persona scontornata da lei),
+  // 'bg' = cambia solo lo sfondo, 'person' = cambia solo la persona.
+  async function uploadPhasePhoto(file, pick) {
+    if (!file) return;
+    clearError();
+    if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+    ppState.uploading = true;
+    $('ppSummary').textContent = 'Caricamento foto…';
+    try {
+      const {blob, w, h, type} = await preparePhoto(file, pick === 'person');
+      const id = await ppSend(blob, type);
+      const item = {id, w, h, url:URL.createObjectURL(blob), x:0, y:0, zoom:1};
+      if (pick === 'person') {
+        if (ppState.person) ppRevoke(ppState.person.url);
+        ppState.person = {...item, url:'', follow:false};
+        ppRevoke(item.url);
+        ppState.mode = 'person';
+        $('ppPerson').hidden = true;
+        ppLoadCutout(ppState.person);
+      } else if (pick === 'bg' && ppState.bg) {
+        // La persona resta quella di prima, ferma dov'era: cambia solo lo stadio dietro.
+        ppDetach();
+        ppRevoke(ppState.bg.url);
+        ppState.bg = item;
+        ppState.mode = 'bg';
+      } else {
+        if (ppState.bg) ppRevoke(ppState.bg.url);
+        if (ppState.person) ppRevoke(ppState.person.url);
+        ppState.bg = item;
+        ppState.person = {id, w, h, url:'', x:0, y:0, zoom:1, follow:true};
+        ppState.mode = 'both';
+        $('ppPerson').hidden = true;
+        ppLoadCutout(ppState.person);
+      }
+      $('ppBg').src = ppState.bg.url;
+      $('ppBg').hidden = false;
+      $('ppEmpty').hidden = true;
+      $('ppTools').hidden = false;
+      if ($('ppSummary').textContent === 'Caricamento foto…') $('ppSummary').textContent = '';
+      renderPpMode();
+      layoutPhase();
+      haptic('success');
+    } catch (err) {
+      $('ppSummary').textContent = '';
+      showError(err && err.message ? err.message : 'Caricamento non riuscito.');
+    } finally {
+      ppState.uploading = false;
+      renderSteps();
+    }
+  }
+
+  function initPhaseEditor() {
+    const frame = $('ppFrame');
+    const pointers = new Map();
+    let last = null;
+    const snapshot = () => {
+      const pts = [...pointers.values()];
+      if (pts.length === 1) return {x:pts[0].x, y:pts[0].y, d:0};
+      const [a,b] = pts;
+      return {x:(a.x + b.x) / 2, y:(a.y + b.y) / 2, d:Math.hypot(a.x - b.x, a.y - b.y)};
+    };
+    const pick = which => { ppState.pick = which; $('ppFile').click(); };
+    frame.addEventListener('pointerdown',e => {
+      if (!ppState.bg) { pick('photo'); return; }
+      frame.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId,{x:e.clientX, y:e.clientY});
+      last = snapshot();
+      frame.classList.add('dragging');
+    });
+    frame.addEventListener('pointermove',e => {
+      if (!pointers.has(e.pointerId) || !last) return;
+      pointers.set(e.pointerId,{x:e.clientX, y:e.clientY});
+      const now = snapshot();
+      // La pagina dei livelli è larga 972/1086 del riquadro (e alta 1296/1448).
+      const pw = frame.clientWidth * 972 / PP_W, ph = frame.clientHeight * 1296 / PP_H;
+      const zoom = now.d && last.d ? now.d / last.d : 1;
+      ppTargets().forEach(o => {
+        o.x += (now.x - last.x) / pw;
+        o.y += (now.y - last.y) / ph;
+        o.zoom *= zoom;
+      });
+      last = now;
+      layoutPhase();
+    });
+    const end = e => {
+      pointers.delete(e.pointerId);
+      last = pointers.size ? snapshot() : null;
+      if (!pointers.size) frame.classList.remove('dragging');
+    };
+    frame.addEventListener('pointerup',end);
+    frame.addEventListener('pointercancel',end);
+    frame.addEventListener('wheel',e => {
+      if (!ppState.bg) return;
+      e.preventDefault();
+      ppTargets().forEach(o => { o.zoom *= Math.exp(-e.deltaY * 0.0015); });
+      layoutPhase();
+    },{passive:false});
+    $('ppPick').addEventListener('click',() => pick('photo'));
+    $('ppBgButton').addEventListener('click',() => pick('bg'));
+    $('ppPersonButton').addEventListener('click',() => pick('person'));
+    $('ppFile').addEventListener('change',e => { uploadPhasePhoto(e.target.files && e.target.files[0], ppState.pick); e.target.value = ''; });
+    window.addEventListener('resize',layoutPhase);
+    frame.addEventListener('touchmove',e => e.preventDefault(),{passive:false});
+  }
+
   // Stessa pulizia di ImageGEN: via numeri e simboli, righe vuote e doppioni.
   function squadNames() {
     const seen = new Set();
@@ -3090,6 +3401,10 @@
 
   // ghost=true: anteprima nell'editor, valida anche senza foto (id segnaposto).
   function buildPayload(ghost=false) {
+    if (LIVE) {
+      if (!session) throw new Error('Sessione non attiva: riapri il pulsante del bot.');
+      return {v:1, action:'render', session, data:{slot:LIVE_SLOT, kind:LIVE_PHASE, ...phasePhotoData(ghost)}};
+    }
     const photoId = photoState.id || (ghost ? '0'.repeat(16) : '');
     if (kind === 'cal') {
       return {v:1, action:'render', session, data:{
@@ -3124,6 +3439,7 @@
       if (phase === 'full' && pensOn) {
         data.shootout = scorePair('homePens','awayPens',true);
       }
+      if (PHOTO_PHASES.has(phase)) Object.assign(data, phasePhotoData(ghost));
     } else if (kind === 'xi') {
       if (!photoId) throw new Error('Scegli una foto.');
       data.lineup = lineupRows().map(p => ({number:p.number, name:p.name}));
@@ -3218,7 +3534,7 @@
       hideBusy();
       $('nextButton').disabled = sessionExpired();
       $('backButton').disabled = !previewMode && flowIndex === 0;
-      $('nextButton').textContent = previewMode ? 'Invia foto ✓' : (isLastStep() ? finalStepLabel() : 'Avanti ›');
+      $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? finalStepLabel() : 'Avanti ›');
     }
   }
 
@@ -3232,7 +3548,8 @@
       $('nextButton').disabled = true;
       $('backButton').disabled = true;
       $('nextButton').textContent = 'Invio…';
-      showBusy('Invio su Telegram…','La foto arriva nella chat del bot.','submit');
+      if (LIVE) showBusy('Confermo la foto…','Il bot la userà per la grafica.','submit');
+      else showBusy('Invio su Telegram…','La foto arriva nella chat del bot.','submit');
 
       const response = await netFetch(`${directBase}/submit`, {
         method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body:raw
@@ -3245,9 +3562,9 @@
       }
 
       await finishBusy();
-      $('nextButton').textContent = 'Inviato ✓';
-      $('busyTitle').textContent = 'Inviata ✓';
-      $('busySub').textContent = 'Trovi la foto nella chat del bot.';
+      $('nextButton').textContent = LIVE ? 'Confermata ✓' : 'Inviato ✓';
+      $('busyTitle').textContent = LIVE ? 'Confermata ✓' : 'Inviata ✓';
+      $('busySub').textContent = LIVE ? 'Puoi cambiarla dal pulsante del bot fino al fischio.' : 'Trovi la foto nella chat del bot.';
       haptic('success');
       setTimeout(() => {
         try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}
@@ -3257,13 +3574,39 @@
       hideBusy();
       $('nextButton').disabled = sessionExpired();
       $('backButton').disabled = false;
-      $('nextButton').textContent = 'Invia foto ✓';
+      $('nextButton').textContent = SEND_LABEL;
       const message = sessionExpired()
         ? EXPIRED_MESSAGE
         : (error && error.name === 'AbortError'
           ? 'ImageGEN non risponde. Riapri la Mini App e riprova.'
           : (error.message || 'Invio non riuscito.'));
       setPreviewError(message);
+    }
+  }
+
+
+  /* ---------- Live: stato dal LiveScore ---------- */
+  // Titolo e risultato dal bot; se avevi gia' confermato una foto, l'editor riparte da li'.
+  async function loadLiveState() {
+    try {
+      const response = await netFetch(`${directBase}/phase?session=${encodeURIComponent(session)}&slot=${encodeURIComponent(LIVE_SLOT)}`,{}, 30000);
+      const body = await response.json();
+      if (!response.ok || !body.ok) throw new Error(body.error || 'Sessione non valida.');
+      liveTitle = body.score ? `${body.title} · ${body.score}` : body.title;
+      $('ppEyebrow').textContent = liveTitle;
+      const state = body.state;
+      if (state && state.bg && !ppState.bg) {
+        const q = `session=${encodeURIComponent(session)}`;
+        ppState.bg = {...state.bg, url:`${directBase}/photo?${q}&id=${state.bg.id}`};
+        ppState.person = {...state.person, url:`${directBase}/cutout?${q}&id=${state.person.id}`};
+        ppState.mode = 'both';
+        $('ppBg').src = ppState.bg.url; $('ppBg').hidden = false;
+        $('ppPerson').src = ppState.person.url; $('ppPerson').hidden = false;
+        $('ppEmpty').hidden = true; $('ppTools').hidden = false;
+        renderPpMode(); layoutPhase(); renderSteps();
+      }
+    } catch (err) {
+      showError(err && err.message ? err.message : 'LiveScore non raggiungibile.');
     }
   }
 
@@ -3423,6 +3766,7 @@
   $('statClear').addEventListener('click',() => { clearStats(); clearError(); renderSteps(); });
   $('squadText').addEventListener('input',() => { updateSquadSummary(); clearError(); renderSteps(); });
   initPhotoEditor();
+  initPhaseEditor();
   $('previewEdit').addEventListener('click',() => { flowIndex = Math.max(0, flow.indexOf('calrows')); closePreview(); });
   $('calAdd').addEventListener('click',() => { if (calRows.length < CAL_MAX) { calRows.push({day:'', team:'', side:'home'}); renderCalRows(); renderSteps(); } });
 
@@ -3482,12 +3826,23 @@
   window.addEventListener('resize',updateViewport);
 
   document.addEventListener('visibilitychange',() => {
-    if (!document.hidden && (!playersLoaded || !teamsLoaded)) loadCatalogs();
+    if (!LIVE && !document.hidden && (!playersLoaded || !teamsLoaded)) loadCatalogs();
   });
 
-  restoreCatalogCache();
-  refreshSearchSummaries();
-  loadCatalogs();
+  if (LIVE) {
+    // Dati della partita dal LiveScore: niente cataloghi, niente menu.
+    document.body.classList.add('live');
+    kind = 'match'; phase = LIVE_PHASE;
+    const lead = document.querySelector('[data-screen="preview"] .lead');
+    if (lead) lead.textContent = 'Se è tutto ok, premi “Conferma foto”: il bot la userà al fischio. Puoi ancora tornare indietro e cambiarla.';
+    const note = document.querySelector('[data-screen="preview"] .note');
+    if (note) note.textContent = 'Anteprima con il risultato di adesso: al fischio la grafica userà quello finale.';
+    loadLiveState();
+  } else {
+    restoreCatalogCache();
+    refreshSearchSummaries();
+    loadCatalogs();
+  }
 
   buildStatRows();
   buildFlow();

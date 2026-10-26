@@ -85,7 +85,7 @@ def _photo_id(value):
     return value
 
 
-def _frame(value):
+def _frame(value, min_zoom=1.0):
     """Posizione della foto: spostamento del centro (frazione pagina) e zoom."""
     if not isinstance(value, dict):
         raise ValueError('Posizione foto non valida.')
@@ -97,7 +97,7 @@ def _frame(value):
         raise ValueError('Posizione foto non valida.')
     frame['x'] = max(-3.0, min(3.0, frame['x']))
     frame['y'] = max(-3.0, min(3.0, frame['y']))
-    frame['zoom'] = max(1.0, min(6.0, frame['zoom']))
+    frame['zoom'] = max(min_zoom, min(6.0, frame['zoom']))
     return {k: round(v, 5) for k, v in frame.items()}
 
 
@@ -227,6 +227,15 @@ def _build_state(envelope, catalog, now, expected_session):
 
     elif kind in ('second', 'half', 'full', 'end_of_90'):
         data['score'] = _score(incoming.get('score'))
+        if kind != 'second':
+            # Sfondo (foto) + persona: scontornata dalla foto stessa (person_id
+            # assente) o caricata a parte; person_frame assente = segue lo sfondo.
+            data['photo_id'] = _photo_id(incoming.get('photo_id'))
+            data['frame'] = _frame(incoming.get('frame'))
+            person_id = incoming.get('person_id')
+            data['person_id'] = _photo_id(person_id) if person_id else None
+            person_frame = incoming.get('person_frame')
+            data['person_frame'] = _frame(person_frame, min_zoom=0.2) if person_frame else None
         if kind == 'full':
             # Spunta "Supplementari": solo dicitura sotto il risultato.
             data['extra_time'] = incoming.get('extra_time') is True

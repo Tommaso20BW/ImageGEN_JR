@@ -55,6 +55,13 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check -q -r requirements.txt
 
+      # Modello di scontorno (HALF/END/FULL TIME): scaricato una volta, poi dalla cache.
+      - name: Cache modello scontorno
+        uses: actions/cache@v6
+        with:
+          path: ~/.rembg
+          key: rembg-isnet-general-use-v1
+
       - name: Prepara browser per STATS
         shell: bash
         run: |
@@ -129,9 +136,6 @@ jobs:
           MANUAL_GRAPHICS_TELEGRAM_TOKEN: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_TOKEN }}
           MANUAL_GRAPHICS_TELEGRAM_CHAT_ID: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_CHAT_ID }}
           MANUAL_GRAPHICS_WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/?v=${{ github.sha }}
-          IMAGEGEN_CANVA_CLIENT_ID: ${{ secrets.IMAGEGEN_CANVA_CLIENT_ID }}
-          IMAGEGEN_CANVA_CLIENT_SECRET: ${{ secrets.IMAGEGEN_CANVA_CLIENT_SECRET }}
-          IMAGEGEN_CANVA_REFRESH_TOKEN: ${{ secrets.IMAGEGEN_CANVA_REFRESH_TOKEN }}
           IMAGEGEN_GH_PAT: ${{ secrets.IMAGEGEN_GH_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/_graphics_core

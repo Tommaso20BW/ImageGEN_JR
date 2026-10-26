@@ -15,7 +15,6 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from canva import CanvaTokenProvider
 from catalog import Catalog
 from logo_bundle import build_team_bundle
 from render import Renderer
@@ -26,7 +25,9 @@ from graphics.starting_xi import MAX_PHOTO_BYTES, check_photo
 
 
 SESSION_DURATION_SECONDS = 600
-MAX_PHOTOS = 6
+MAX_PHOTOS = 8
+# Campi che spostano o cambiano solo le foto: non cambiano la sagoma dell'editor.
+PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame')
 LOCK_WAIT_SECONDS = 75        # un nuovo tentativo aspetta la richiesta ancora in corso
 RESEND_GUARD_SECONDS = 45     # stessa grafica reinviata entro 45 s = doppione (rete persa)
 DIRECT_PORT = 8765
@@ -131,6 +132,16 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 self._png(self.service.overlay(query.get('name', ''), query.get('kit', '')))
             except (KeyError, ValueError, OSError):
                 self._json(404, {'ok': False, 'error': 'Modello non trovato.'})
+            return
+        if parts.path.rstrip('/') == '/cutout':
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            try:
+                self._png(self.service.cutout_preview(query.get('id', '')))
+            except ValueError as exc:
+                self._json(404, {'ok': False, 'error': str(exc)})
             return
         if parts.path.rstrip('/') == '/progress':
             token = dict(parse_qsl(parts.query)).get('session', '')
@@ -256,6 +267,7 @@ class Service:
         # Foto caricate dalla Mini App (solo in memoria, per questa sessione).
         self.photos = {}
         self.overlays = {}
+        self.preview_cutouts = {}
         self.preview_jpeg_cache = {}
         self.ghost_cache = {}
         self.recent_sends = {}
@@ -269,6 +281,19 @@ class Service:
             self.photos.pop(next(iter(self.photos)))
         print(f'INFO IMAGEGEN: foto caricata | id={photo_id} | {width}x{height}', flush=True)
         return {'photo_id': photo_id, 'width': width, 'height': height}
+
+    def cutout_preview(self, photo_id):
+        """Persona scontornata, ridotta per l'editor (l'invio usa quella piena)."""
+        from PIL import Image
+        if photo_id not in self.preview_cutouts:
+            with Image.open(io.BytesIO(self.renderer.cutout(photo_id))) as image:
+                image.thumbnail((1400, 1400), Image.Resampling.LANCZOS)
+                out = io.BytesIO()
+                image.save(out, 'PNG')
+            self.preview_cutouts[photo_id] = out.getvalue()
+            while len(self.preview_cutouts) > MAX_PHOTOS:
+                self.preview_cutouts.pop(next(iter(self.preview_cutouts)))
+        return self.preview_cutouts[photo_id]
 
     def overlay(self, name, kit):
         key = (name, kit)
@@ -351,7 +376,7 @@ class Service:
     def ghost(self, envelope):
         """Grafica senza foto, trasparente e leggera: l'editor la mostra sopra la foto."""
         data = self._parse_request(envelope)['data']
-        key = self._fingerprint({k: v for k, v in data.items() if k not in ('frame', 'photo_id')})
+        key = self._fingerprint({k: v for k, v in data.items() if k not in PHOTO_FIELDS})
         if self.ghost_cache.get('key') != key:
             if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
                 raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
@@ -602,6 +627,7 @@ class Service:
         self._start_http_server()
         # Browser per le grafiche acceso subito: la prima anteprima non aspetta l'avvio.
         threading.Thread(target=_warm_up_renderer, daemon=True).start()
+        threading.Thread(target=_warm_up_cutout, daemon=True).start()
 
         parts = urlsplit(webapp_url)
         query = dict(parse_qsl(parts.query, keep_blank_values=True))
@@ -640,6 +666,17 @@ def _warm_up_renderer():
         print(f'WARN IMAGEGEN: browser grafiche non avviato: {type(exc).__name__}: {exc}', flush=True)
 
 
+def _warm_up_cutout():
+    """Modello di scontorno caricato subito: la prima foto HALF/END/FULL TIME non aspetta."""
+    try:
+        from livescore.graphics import phase_layers
+        from PIL import Image
+        phase_layers.cutout(Image.new('RGB', (64, 64)))
+        print('INFO IMAGEGEN: scontorno pronto', flush=True)
+    except Exception as exc:
+        print(f'WARN IMAGEGEN: scontorno non avviato: {type(exc).__name__}: {exc}', flush=True)
+
+
 def main():
     token = os.environ.get('MANUAL_GRAPHICS_TELEGRAM_TOKEN', '')
     chat_id = os.environ.get('MANUAL_GRAPHICS_TELEGRAM_CHAT_ID', '')
@@ -647,8 +684,7 @@ def main():
     telegram = Telegram(token, chat_id)
     telegram.validate_private_chat()
 
-    canva = CanvaTokenProvider()
-    renderer = Renderer(token_provider=canva.refresh_access_token)
+    renderer = Renderer()
 
     service = Service(
         telegram,
