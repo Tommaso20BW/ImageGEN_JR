@@ -1,11 +1,12 @@
 """CALENDARIO del mese (pagina 24): titolo del mese e da 1 a 9 partite.
 
 Regole (dai post pubblicati):
-  - titolo: prima parte nera, seconda oro ("nove|mbre"); più grande se le
-    partite sono poche, sempre limitato dalla larghezza della parola;
+  - titolo: prima parte nera, seconda oro ("nove|mbre"); stessa grandezza per
+    un mese qualunque sia il numero di partite: riempie la larghezza, ma le
+    parole corte ("marzo") non superano TITLE_CAP;
   - righe (giorno a due cifre, barretta, due loghi, linea dorata): occupano
-    tutto lo spazio sotto il titolo, crescono se sono poche e si
-    rimpiccioliscono se sono tante;
+    lo spazio sotto il titolo; da TWO_COLS partite vanno su due colonne
+    (prima la sinistra, dall'alto), così non diventano minuscole;
   - giorni sempre a due cifre ("05"): colonna dei numeri e barretta restano
     nello stesso punto in ogni mese e il gruppo è centrato come su Canva.
 """
@@ -26,8 +27,7 @@ MAX_ROWS = 9
 # Titolo. Su Canva "novembre" è 236 px con 7 partite e largo ~952 px.
 TITLE_SIZE = 236.02
 TITLE_MAX_W = 930          # larghezza massima della parola
-TITLE_GROW = 0.35          # +35% di grandezza per ogni partita in meno di 7
-TITLE_MAX_SIZE = 236.02 * 1.9
+TITLE_CAP = 330            # parole corte: non oltre questa grandezza
 TITLE_BASE = 258           # base delle lettere nei post pubblicati
 TITLE_LOW = 300            # le lettere che scendono (g) non vanno oltre
 TITLE_TOP_MIN = 40         # margine sopra le lettere più alte
@@ -47,6 +47,11 @@ FEW_GROW = {1: 2.1, 2: 1.9, 3: 1.7}   # con pochissime partite possono crescere 
 FILL = 0.92                           # quota dello spazio occupata dalle righe
 MAX_GAP = 1.06                        # passo massimo rispetto all'altezza della riga
 LINE_MAX_W = 1040                     # la linea dorata non supera questa larghezza
+TWO_COLS = 8                          # da qui in su: due colonne (in una sarebbero sotto 0,8)
+COL_CENTERS = (276, 804)              # centro del gruppo numero+loghi nelle due colonne
+COL_SCALE = 1.08                      # massima scala in due colonne (larghezza mezza pagina)
+COL_LINE_W = 490                      # linea dorata in due colonne
+COL_GAP = 1.3                         # in due colonne le righe si allargano di più in altezza
 
 
 def _font(size):
@@ -90,24 +95,33 @@ def parse_matches(month, year, rows):
     return sorted(out, key=lambda r: r['day'])
 
 
-def title_layout(word, n):
-    """Grandezza e linea di base del titolo per questo mese e numero di partite."""
-    grow = 1 + TITLE_GROW * (7 - n) if n < 7 else 7 / n
+def title_layout(word, n=None):
+    """Grandezza e linea di base del titolo del mese (non dipende dalle partite)."""
     width_at_base, _up, _down = _ink(word, TITLE_SIZE)
-    size = min(TITLE_SIZE * grow, TITLE_SIZE * TITLE_MAX_W / width_at_base, TITLE_MAX_SIZE)
+    size = min(TITLE_SIZE * TITLE_MAX_W / width_at_base, TITLE_CAP)
     _w, up, down = _ink(word, size)
     base = max(min(TITLE_BASE, TITLE_LOW - max(0, down)), TITLE_TOP_MIN + up)
     return size, base, base + max(0, down)
 
 
-def layout(n, rows_top):
-    """Linea di base e scala di ogni riga nello spazio fra rows_top e il fondo."""
+def _column(n, rows_top, max_scale, gap=MAX_GAP):
     step = 164.36                                    # passo Canva fra le righe
     room = ROWS_BOTTOM - rows_top
-    scale = min(FEW_GROW.get(n, MAX_GROW), FILL * room / (n * step))
-    pitch = min(room / n, step * scale * MAX_GAP)
+    scale = min(max_scale, FILL * room / (n * step))
+    pitch = min(room / n, step * scale * gap)
     middle = (rows_top + ROWS_BOTTOM) / 2 + (ROW_UP - ROW_DOWN) / 2 * scale
-    return [(middle + (k - (n - 1) / 2) * pitch, scale) for k in range(n)]
+    return [middle + (k - (n - 1) / 2) * pitch for k in range(n)], scale
+
+
+def layout(n, rows_top):
+    """[(centro x, linea di base, scala, larghezza max linea)] di ogni riga."""
+    if n < TWO_COLS:
+        bases, scale = _column(n, rows_top, FEW_GROW.get(n, MAX_GROW))
+        return [(GROUP_X, b, scale, LINE_MAX_W) for b in bases]
+    left = (n + 1) // 2
+    bases, scale = _column(left, rows_top, COL_SCALE, COL_GAP)
+    return [(COL_CENTERS[k >= left], bases[k if k < left else k - left], scale, COL_LINE_W)
+            for k in range(n)]
 
 
 def _pattern(pid, file, rect):
@@ -146,7 +160,7 @@ def build_html(*, month, matches, **_):
     rows_top = max(t_base, t_bottom - 20) + TITLE_GAP
 
     logo_ids = {}
-    for k_row, ((base, scale), match, day) in enumerate(zip(layout(n, rows_top), matches, days)):
+    for k_row, ((gx, base, scale, line_w), match, day) in enumerate(zip(layout(n, rows_top), matches, days)):
         ref = meta['rows'][k_row % len(meta['rows'])]          # texture e misure della riga Canva
         r0 = ref['base']
         defs.append(_pattern(f'd{k_row}', ref['ink'], ref['ink_rect']))
@@ -167,14 +181,15 @@ def build_html(*, month, matches, **_):
         deco_img = (f'<image href="{deco_uri}" x="{deco["x"]}" y="{r0 + deco["dy"]}" width="{deco["w"]}" '
                     f'height="{deco["h"]}" preserveAspectRatio="none"')
         cut = r0 + deco['dy'] + deco['h'] - 10
-        line_sx = min(scale, LINE_MAX_W / deco['w'])
+        line_sx = min(scale, line_w / deco['w'])
         line_x = deco['x'] + deco['w'] / 2
+        shift = gx - GROUP_X                                    # colonna: tutto spostato in orizzontale
         defs.append(f'<clipPath id="line{k_row}"><rect x="0" y="{cut}" width="{DESIGN_W}" height="20"/></clipPath>'
                     f'<clipPath id="bar{k_row}"><rect x="0" y="0" width="{DESIGN_W}" height="{cut}"/></clipPath>')
         body.append(
-            f'<g transform="translate({line_x} {base}) scale({line_sx} {scale}) translate({-line_x} {-r0})">'
+            f'<g transform="translate({line_x + shift} {base}) scale({line_sx} {scale}) translate({-line_x} {-r0})">'
             f'{deco_img} clip-path="url(#line{k_row})"/></g>'
-            f'<g transform="translate({GROUP_X} {base}) scale({scale}) translate({-pivot} {-r0})">'
+            f'<g transform="translate({gx} {base}) scale({scale}) translate({-pivot} {-r0})">'
             f'{deco_img} clip-path="url(#bar{k_row})"/>'
             f'<text x="{DAY_RIGHT}" y="{r0}" text-anchor="end" font-family="Allogist" font-style="italic" '
             f'style="{FONT_FEATURES}" font-size="{ref["size"]}" fill="url(#d{k_row})">{day}</text>{"".join(logos)}</g>'
