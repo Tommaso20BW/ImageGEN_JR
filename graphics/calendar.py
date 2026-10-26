@@ -70,17 +70,35 @@ def _ink(text, size):
     return (x1 - x0) / 4, -y0 / 4, y1 / 4
 
 
-def _title_fit(word, rows_top):
+def _title_fit(word, rows_top, fill_w=TITLE_FILL_W):
     """(grandezza, x del centro della scritta, base) per riempire la fascia sopra le righe:
     larga TITLE_FILL_W, o meno se l'altezza della fascia non basta; inchiostro centrato."""
     x0, y0, x1, y1 = (v / 4 for v in _font(TITLE_SIZE).getbbox(word, anchor='ls'))
     advance = _font(TITLE_SIZE).getlength(word) / 4
     band = rows_top - TITLE_ROWS_GAP - TITLE_MARGIN_TOP
-    k = min(TITLE_FILL_W / (x1 - x0), band / (y1 - y0))
+    k = min(fill_w / (x1 - x0), band / (y1 - y0))
     ink_top = TITLE_MARGIN_TOP + (band - (y1 - y0) * k) / 2
     base = ink_top - y0 * k
     shift = ((x0 + x1) / 2 - advance / 2) * k        # text-anchor middle centra l'avanzamento, non l'inchiostro
     return TITLE_SIZE * k, DESIGN_W / 2 - shift, base, base + y1 * k
+
+
+def fit_page(word, n):
+    """Titolo e righe definitivi: (titolo, righe).
+    titolo = (grandezza, x, base, fondo lettere); righe = layout().
+    Se le lettere che scendono (g, p) toccherebbero le righe centrate, il titolo
+    si rimpicciolisce un poco: così lo spazio sopra e sotto resta uguale."""
+    rows_top = title_layout(word, n)[3]
+    fill_w = TITLE_FILL_W
+    while True:
+        title = _title_fit(word, rows_top, fill_w)
+        rows = layout(n, rows_top, (title[2], title[3]))
+        s = rows[0][2]
+        above = min(b for _x, b, _s, _w in rows) - ROW_UP * s - title[2]
+        below = DESIGN_H - (max(b for _x, b, _s, _w in rows) + ROW_LINE * s)
+        if above - below <= 1 or fill_w < TITLE_FILL_W * 0.6:
+            return title, rows
+        fill_w -= 6                                  # stesso centro, scritta un po' più piccola
 
 
 def _number_width(text, size):
@@ -146,32 +164,34 @@ def title_layout(word, n):
     return _title_at(max(k, TITLE_K[0]))
 
 
-def _column(n, rows_top, max_scale, title_bottom=None):
+def _column(n, rows_top, max_scale, title=None):
     """Righe più grandi possibile nello spazio fra rows_top e il fondo (o fino a max_scale).
-    Con title_bottom (fondo delle lettere del mese) il blocco sta a metà fra il titolo
-    e il fondo pagina: stesso spazio sopra e sotto."""
+    Con title = (base, fondo delle lettere che scendono) il blocco sta a metà fra la base
+    del mese e il fondo pagina (le "g" e le "p" non contano), ma mai addosso a quelle lettere."""
     room = ROWS_BOTTOM - rows_top
     scale = min(max_scale, room / ((n - 1) * PITCH * ROW_H + ROW_H))
     pitch = PITCH * ROW_H * scale
     if n > 1:                                   # spazio avanzato: righe un po' più distanziate
         pitch = max(pitch, min((room - ROW_H * scale) / (n - 1), PITCH_MAX * ROW_H * scale))
     block = (n - 1) * pitch + ROW_H * scale
-    if title_bottom is None:
+    if title is None:
         top = rows_top + (room - block) * BLOCK_UP
     else:
         # Fondo visibile della riga = linea dorata (ROW_LINE sotto la base), non ROW_DOWN.
-        top = (title_bottom + DESIGN_H - (block - (ROW_DOWN - ROW_LINE) * scale)) / 2
+        base, ink_bottom = title
+        top = (base + DESIGN_H - (block - (ROW_DOWN - ROW_LINE) * scale)) / 2
+        top = max(top, ink_bottom + TITLE_ROWS_GAP)
     first = top + ROW_UP * scale
     return [first + k * pitch for k in range(n)], scale
 
 
-def layout(n, rows_top, title_bottom=None):
+def layout(n, rows_top, title=None):
     """[(centro x, linea di base, scala, larghezza max linea)] di ogni riga."""
     if n < TWO_COLS:
-        bases, scale = _column(n, rows_top, ROW_MAX, title_bottom)
+        bases, scale = _column(n, rows_top, ROW_MAX, title)
         return [(GROUP_X, b, scale, LINE_MAX_W) for b in bases]
     left = (n + 1) // 2
-    bases, scale = _column(left, rows_top, COL_SCALE, title_bottom)
+    bases, scale = _column(left, rows_top, COL_SCALE, title)
     return [(COL_CENTERS[k >= left], bases[k if k < left else k - left], scale, COL_LINE_W)
             for k in range(n)]
 
@@ -195,8 +215,7 @@ def build_html(*, month, matches, **_):
     n = len(matches)
 
     # Titolo: la texture oro segue grandezza e posizione della scritta.
-    rows_top = title_layout(word, n)[3]
-    t_size, t_x, t_base, t_ink_bottom = _title_fit(word, rows_top)
+    (t_size, t_x, t_base, _t_ink_bottom), rows_layout = fit_page(word, n)
     k = t_size / title['size']
     x, y, w, h = title['ink_rect']
     cx, b0 = title['center'], title['base']
@@ -212,7 +231,7 @@ def build_html(*, month, matches, **_):
     pivot = (DAY_RIGHT - widest + LOGO_RIGHT) / 2
 
     logo_ids = {}
-    for k_row, ((gx, base, scale, line_w), match, day) in enumerate(zip(layout(n, rows_top, t_ink_bottom), matches, days)):
+    for k_row, ((gx, base, scale, line_w), match, day) in enumerate(zip(rows_layout, matches, days)):
         ref = meta['rows'][k_row % len(meta['rows'])]          # texture e misure della riga Canva
         r0 = ref['base']
         defs.append(_pattern(f'd{k_row}', ref['ink'], ref['ink_rect']))
