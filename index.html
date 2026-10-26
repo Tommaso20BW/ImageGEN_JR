@@ -292,7 +292,9 @@
     .field-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .field-pair .field-input{width:100%;min-width:0;padding:0 12px;font-size:19px}
     /* Strumenti foto e pulsante "Aggiungi partita" */
-    .photo-tools{margin-top:14px;max-width:380px}
+    .photo-tools{margin-top:10px;max-width:380px;justify-content:center}
+    .photo-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .photo-head .btn{flex:0 0 auto;min-height:42px;padding:0 16px}
     .photo-tools .btn{flex:0 0 auto;min-height:44px;padding:0 16px}
     .photo-tools .link-btn{flex:0 0 auto;padding:10px 4px}
     #calAdd{min-height:44px;padding:0 16px}
@@ -426,7 +428,6 @@
     .photo-frame .overlay.ghost{opacity:.72}
     .photo-frame .empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-weight:700;text-align:center;padding:20px}
     .photo-tools{display:flex;gap:10px;align-items:center;max-width:380px;margin:12px auto 0}
-    .photo-tools input[type=range]{flex:1;accent-color:var(--accent)}
     .quick{display:flex;gap:8px;margin-top:12px}
     .quick button{flex:1 1 0;min-width:0}
     .quick button{
@@ -899,17 +900,18 @@
           </section>
 
           <section class="screen" data-screen="photo">
-            <div id="photoEyebrow" class="eyebrow">Foto</div>
-            <h1>Foto</h1>
-            <p class="lead">Scegli la foto, poi trascinala per spostarla e usa due dita o il cursore per lo zoom.</p>
+            <div id="photoEyebrow" class="eyebrow">Starting XI</div>
+            <div class="photo-head">
+              <h1>Foto</h1>
+              <button id="photoPick" class="btn ghost" type="button">Scegli foto</button>
+            </div>
+            <p class="lead">Trascina la foto per spostarla, due dita per lo zoom.</p>
             <div id="photoFrame" class="photo-frame">
               <img id="photoImg" alt="" hidden>
               <img id="photoOverlay" class="overlay" alt="">
               <div id="photoEmpty" class="empty" aria-label="Nessuna foto"></div>
             </div>
             <div class="photo-tools">
-              <button id="photoPick" class="btn ghost" type="button">Scegli foto</button>
-              <input id="photoZoom" type="range" min="1" max="4" step="0.01" value="1" aria-label="Zoom foto">
               <button id="photoReset" class="link-btn" type="button">Centra</button>
             </div>
             <input id="photoFile" type="file" accept="image/*" hidden>
@@ -1497,7 +1499,7 @@
       if (el !== screen) el.classList.remove('active');
     });
     if (screen) screen.classList.add('active');
-    if (screenName === 'photo') { updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
+    if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Foto + JR'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
     if (screenName === 'lineup') renderXiRows();
     if (screenName === 'calrows') { if (!calRows.length) calRows.push({day:'', team:'', side:'home'}); renderCalRows(); }
     if (screenName === 'xi11' && $('pxiSlots').dataset.module !== pxiModule + players.length) {
@@ -2551,7 +2553,6 @@
     $('photoImg').hidden = true;
     $('photoImg').removeAttribute('src');
     $('photoEmpty').hidden = false;
-    $('photoZoom').value = '1';
     $('photoSummary').textContent = '';
   }
 
@@ -2571,7 +2572,6 @@
     const img = $('photoImg');
     img.style.left = `${left * k}px`; img.style.top = `${top * k}px`;
     img.style.width = `${w * k}px`; img.style.height = `${h * k}px`;
-    $('photoZoom').value = String(photoState.zoom);
   }
 
   // Sopra la foto: prima il livello Canva, poi (foto caricata) la grafica completa
@@ -2639,7 +2639,7 @@
       $('photoImg').src = photoState.url;
       $('photoImg').hidden = false;
       $('photoEmpty').hidden = true;
-      $('photoSummary').textContent = 'Trascina per spostare · due dita o cursore per lo zoom';
+      $('photoSummary').textContent = '';
       layoutPhoto();
       haptic('success');
       updatePhotoOverlay();
@@ -2694,7 +2694,6 @@
       photoState.zoom *= Math.exp(-e.deltaY * 0.0015);
       layoutPhoto();
     },{passive:false});
-    $('photoZoom').addEventListener('input',e => { photoState.zoom = Number(e.target.value) || 1; layoutPhoto(); });
     $('photoReset').addEventListener('click',() => { photoState.x = 0; photoState.y = 0; photoState.zoom = 1; layoutPhoto(); });
     $('photoPick').addEventListener('click',() => $('photoFile').click());
     $('photoFile').addEventListener('change',e => { uploadPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
