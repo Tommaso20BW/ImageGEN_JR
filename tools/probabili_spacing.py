@@ -64,38 +64,53 @@ def centre(line):
     return sum(y for _x, y in line) / len(line)
 
 
+# Forme fisse di alcune linee (x, scalino) che sostituiscono quelle attuali.
+SHAPES = {
+    # 3-5-2: esterni più alti delle mezzali, regista al centro più basso.
+    '3-5-2': {1: [(123.53, -70.0), (340.0, 0.0), (540.0, 70.0), (740.0, 0.0), (956.47, -70.0)]},
+}
+
+
 def respace(module):
-    """Carta più grande possibile (da 100% in giù) con linee equidistanti."""
-    for s in (1.0, 0.97, 0.94, 0.91, 0.88, 0.85, 0.82, 0.79):
+    """Misura piena se possibile; si rimpicciolisce solo se a misura piena le
+    carte si toccano comunque."""
+    for s in (1.0, 0.97, 0.94, 0.91, 0.9, 0.88, 0.85, 0.82):
         result = respace_at(module, s)
-        if result[2] >= GAP_MIN:
+        if result:
             return result + (s,)
-    return result + (s,)
+    raise ValueError(module)
 
 
 def respace_at(module, s):
-    """Centri delle linee equidistanti fra difesa e attacco; l'attacco più in alto
-    possibile. Se due carte si toccano, l'attacco scende un poco e si riprova."""
+    """Linee il più possibile equidistanti, senza carte sovrapposte.
+    Prova l'attacco a diverse altezze e sposta le linee intermedie attorno alla
+    posizione "equidistante" (scostamento minimo)."""
+    import itertools
     gk = tuple(MODULES[module][0])
     lines = lines_of(module)
+    for k, shape in SHAPES.get(module, {}).items():
+        c = centre(lines[k])
+        lines[k] = [(x, c + dy) for x, dy in shape]
     base = centre(lines[0])
+    n = len(lines) - 1
     best = None
-    for drop in range(0, 160, 4):
-        top_shift = TOP_HEAD_MIN - extent(lines[-1], s)[0] + drop
-        top_c = centre(lines[-1]) + top_shift
-        n = len(lines) - 1
-        shifts = []
-        for k in range(1, len(lines)):
-            target = base + (top_c - base) * k / n
-            shifts.append(target - centre(lines[k]))
-        placed = place(lines, shifts)
-        cards = [gk] + [c for line in placed for c in line]
-        c = clearance(cards, s)
-        if c >= GAP_MIN:
-            return cards, gaps(placed, s), c
-        if best is None or c > best[2]:
-            best = (cards, gaps(placed, s), c)
-    return best
+    for drop in range(0, 81, 8):
+        top_c = centre(lines[-1]) + TOP_HEAD_MIN - extent(lines[-1], s)[0] + drop
+        even = [base + (top_c - base) * k / n for k in range(1, len(lines))]
+        offsets = range(-80, 81, 10)
+        for devs in itertools.product(offsets, repeat=n - 1):
+            targets = [e + d for e, d in zip(even[:-1], devs)] + [even[-1]]
+            shifts = [t - centre(line) for t, line in zip(targets, lines[1:])]
+            placed = place(lines, shifts)
+            cards = [gk] + [c for line in placed for c in line]
+            if clearance(cards, s) < GAP_MIN:
+                continue
+            score = (max([abs(d) for d in devs] or [0]), drop)
+            if best is None or score < best[0]:
+                best = (score, cards, gaps(placed, s), clearance(cards, s))
+        if best and best[0][0] == 0:
+            break
+    return best[1:] if best else None
 
 
 def main():
