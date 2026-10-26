@@ -1,9 +1,9 @@
 """CALENDARIO del mese (pagina 24): titolo del mese e da 1 a 9 partite.
 
 Regole (dai post pubblicati):
-  - titolo: prima parte nera, seconda oro ("nove|mbre"); stessa grandezza per
-    un mese qualunque sia il numero di partite: riempie la larghezza, ma le
-    parole corte ("marzo") non superano TITLE_CAP;
+  - titolo: prima parte nera, seconda oro ("nove|mbre"); stessa grandezza e
+    stessa linea di base in tutti i mesi (quelle di Canva), così ogni mese ha
+    lo stesso aspetto e le righe partono sempre dallo stesso punto;
   - righe (giorno a due cifre, barretta, due loghi, linea dorata): occupano
     lo spazio sotto il titolo; da TWO_COLS partite vanno su due colonne
     (prima la sinistra, dall'alto), così non diventano minuscole;
@@ -22,14 +22,11 @@ MONTHS = ('gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio'
 SPLIT = {'gennaio': 'genn', 'febbraio': 'febb', 'marzo': 'mar', 'aprile': 'apr', 'maggio': 'mag',
          'giugno': 'giu', 'luglio': 'lug', 'agosto': 'ago', 'settembre': 'sette', 'ottobre': 'otto',
          'novembre': 'nove', 'dicembre': 'dice'}
-MAX_ROWS = 9
+MAX_ROWS = 14
 
 # Titolo. Su Canva "novembre" è 236 px con 7 partite e largo ~952 px.
 TITLE_SIZE = 236.02
-TITLE_MAX_W = 930          # larghezza massima della parola
-TITLE_CAP = 330            # parole corte: non oltre questa grandezza
 TITLE_BASE = 258           # base delle lettere nei post pubblicati
-TITLE_LOW = 300            # le lettere che scendono (g) non vanno oltre
 TITLE_TOP_MIN = 40         # margine sopra le lettere più alte
 TITLE_GAP = 53             # dalla base del titolo all'inizio delle righe (come su Canva)
 # Nei post pubblicati le lettere sono quelle normali: le legature del font
@@ -47,7 +44,8 @@ FEW_GROW = {1: 2.1, 2: 1.9, 3: 1.7}   # con pochissime partite possono crescere 
 FILL = 0.92                           # quota dello spazio occupata dalle righe
 MAX_GAP = 1.06                        # passo massimo rispetto all'altezza della riga
 LINE_MAX_W = 1040                     # la linea dorata non supera questa larghezza
-TWO_COLS = 8                          # da qui in su: due colonne (in una sarebbero sotto 0,8)
+BLOCK_UP = 0.38                       # quota dello spazio avanzato messa sopra le righe
+TWO_COLS = 11                         # da 11 partite in su: due colonne
 COL_CENTERS = (276, 804)              # centro del gruppo numero+loghi nelle due colonne
 COL_SCALE = 1.08                      # massima scala in due colonne (larghezza mezza pagina)
 COL_LINE_W = 490                      # linea dorata in due colonne
@@ -95,13 +93,18 @@ def parse_matches(month, year, rows):
     return sorted(out, key=lambda r: r['day'])
 
 
+@lru_cache(maxsize=1)
+def _title_box():
+    """(sopra, sotto la base) più grandi fra tutti i mesi: stesso spazio per ogni mese."""
+    inks = [_ink(word, TITLE_SIZE) for word in MONTHS]
+    return max(up for _w, up, _d in inks), max(max(0, down) for _w, _u, down in inks)
+
+
 def title_layout(word, n=None):
-    """Grandezza e linea di base del titolo del mese (non dipende dalle partite)."""
-    width_at_base, _up, _down = _ink(word, TITLE_SIZE)
-    size = min(TITLE_SIZE * TITLE_MAX_W / width_at_base, TITLE_CAP)
-    _w, up, down = _ink(word, size)
-    base = max(min(TITLE_BASE, TITLE_LOW - max(0, down)), TITLE_TOP_MIN + up)
-    return size, base, base + max(0, down)
+    """Grandezza, linea di base e fondo del titolo: uguali per tutti i mesi."""
+    up, down = _title_box()
+    base = max(TITLE_BASE, TITLE_TOP_MIN + up)
+    return TITLE_SIZE, base, base + down
 
 
 def _column(n, rows_top, max_scale, gap=MAX_GAP):
@@ -109,7 +112,8 @@ def _column(n, rows_top, max_scale, gap=MAX_GAP):
     room = ROWS_BOTTOM - rows_top
     scale = min(max_scale, FILL * room / (n * step))
     pitch = min(room / n, step * scale * gap)
-    middle = (rows_top + ROWS_BOTTOM) / 2 + (ROW_UP - ROW_DOWN) / 2 * scale
+    # Spazio avanzato: un po' più sotto che sopra, così le righe restano vicine al mese.
+    middle = rows_top + (room - pitch * n) * BLOCK_UP + pitch * n / 2 + (ROW_UP - ROW_DOWN) / 2 * scale
     return [middle + (k - (n - 1) / 2) * pitch for k in range(n)], scale
 
 
