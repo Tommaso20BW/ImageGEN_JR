@@ -140,15 +140,13 @@ HOME_FX_COLOR = (237, 231, 221)
 def canva_layers(meta, photo, frame):
     """Livelli Canva sopra la foto: sfumature/grana + titolo e JR.
 
-    - senza foto (anteprima nell'editor): solo titolo e JR, niente sfumature;
+    - senza foto (anteprima nell'editor): sfumature, titolo e JR su fondo trasparente;
     - sfumatura chiara (home): ricolorata nel crema dello sfondo delle foto home,
       così non si vede lo stacco col bianco freddo di Canva (grana intatta).
     """
     canva = asset_dir() / 'canva'
     full = f'style="position:absolute;left:0;top:0;width:{DESIGN_W}px;height:{DESIGN_H}px"'
     text = f'<img src="{data_uri(canva / meta["text_overlay"])}" {full}>'
-    if photo is None:
-        return text
     fx = _home_fx(meta['fx']) if meta.get('fx_light') else data_uri(canva / meta['fx'])
     return f'<img src="{fx}" {full}>' + text
 
