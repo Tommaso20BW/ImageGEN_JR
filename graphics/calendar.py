@@ -47,6 +47,7 @@ GROUP_X = (319.46 + LOGO_RIGHT) / 2   # centro del gruppo numero (2 cifre) -> lo
 ROW_UP, ROW_DOWN = 102.64, 39.0       # ingombro sopra / sotto la linea di base
 ROWS_BOTTOM = 1354.39 + ROW_DOWN      # fondo della zona righe (ultima linea Canva)
 ROW_H = ROW_UP + ROW_DOWN             # altezza di una riga a scala 1
+ROW_LINE = 31.0                       # la linea dorata finisce qui sotto la base (scala 1)
 ROW_MAX = 2.0                         # una colonna: le righe crescono fino a quasi tutta la larghezza
 PITCH = 1.12                          # passo fra le righe rispetto alla loro altezza (minimo)
 PITCH_MAX = 1.35                      # con spazio avanzato le righe si allargano fino a qui
@@ -79,7 +80,7 @@ def _title_fit(word, rows_top):
     ink_top = TITLE_MARGIN_TOP + (band - (y1 - y0) * k) / 2
     base = ink_top - y0 * k
     shift = ((x0 + x1) / 2 - advance / 2) * k        # text-anchor middle centra l'avanzamento, non l'inchiostro
-    return TITLE_SIZE * k, DESIGN_W / 2 - shift, base
+    return TITLE_SIZE * k, DESIGN_W / 2 - shift, base, base + y1 * k
 
 
 def _number_width(text, size):
@@ -145,26 +146,32 @@ def title_layout(word, n):
     return _title_at(max(k, TITLE_K[0]))
 
 
-def _column(n, rows_top, max_scale):
-    """Righe più grandi possibile nello spazio fra rows_top e il fondo (o fino a max_scale)."""
+def _column(n, rows_top, max_scale, title_bottom=None):
+    """Righe più grandi possibile nello spazio fra rows_top e il fondo (o fino a max_scale).
+    Con title_bottom (fondo delle lettere del mese) il blocco sta a metà fra il titolo
+    e il fondo pagina: stesso spazio sopra e sotto."""
     room = ROWS_BOTTOM - rows_top
     scale = min(max_scale, room / ((n - 1) * PITCH * ROW_H + ROW_H))
     pitch = PITCH * ROW_H * scale
     if n > 1:                                   # spazio avanzato: righe un po' più distanziate
         pitch = max(pitch, min((room - ROW_H * scale) / (n - 1), PITCH_MAX * ROW_H * scale))
     block = (n - 1) * pitch + ROW_H * scale
-    # Spazio ancora avanzato: un po' più sotto che sopra, così le righe restano vicine al mese.
-    first = rows_top + (room - block) * BLOCK_UP + ROW_UP * scale
+    if title_bottom is None:
+        top = rows_top + (room - block) * BLOCK_UP
+    else:
+        # Fondo visibile della riga = linea dorata (ROW_LINE sotto la base), non ROW_DOWN.
+        top = (title_bottom + DESIGN_H - (block - (ROW_DOWN - ROW_LINE) * scale)) / 2
+    first = top + ROW_UP * scale
     return [first + k * pitch for k in range(n)], scale
 
 
-def layout(n, rows_top):
+def layout(n, rows_top, title_bottom=None):
     """[(centro x, linea di base, scala, larghezza max linea)] di ogni riga."""
     if n < TWO_COLS:
-        bases, scale = _column(n, rows_top, ROW_MAX)
+        bases, scale = _column(n, rows_top, ROW_MAX, title_bottom)
         return [(GROUP_X, b, scale, LINE_MAX_W) for b in bases]
     left = (n + 1) // 2
-    bases, scale = _column(left, rows_top, COL_SCALE)
+    bases, scale = _column(left, rows_top, COL_SCALE, title_bottom)
     return [(COL_CENTERS[k >= left], bases[k if k < left else k - left], scale, COL_LINE_W)
             for k in range(n)]
 
@@ -189,7 +196,7 @@ def build_html(*, month, matches, **_):
 
     # Titolo: la texture oro segue grandezza e posizione della scritta.
     rows_top = title_layout(word, n)[3]
-    t_size, t_x, t_base = _title_fit(word, rows_top)
+    t_size, t_x, t_base, t_ink_bottom = _title_fit(word, rows_top)
     k = t_size / title['size']
     x, y, w, h = title['ink_rect']
     cx, b0 = title['center'], title['base']
@@ -205,7 +212,7 @@ def build_html(*, month, matches, **_):
     pivot = (DAY_RIGHT - widest + LOGO_RIGHT) / 2
 
     logo_ids = {}
-    for k_row, ((gx, base, scale, line_w), match, day) in enumerate(zip(layout(n, rows_top), matches, days)):
+    for k_row, ((gx, base, scale, line_w), match, day) in enumerate(zip(layout(n, rows_top, t_ink_bottom), matches, days)):
         ref = meta['rows'][k_row % len(meta['rows'])]          # texture e misure della riga Canva
         r0 = ref['base']
         defs.append(_pattern(f'd{k_row}', ref['ink'], ref['ink_rect']))
