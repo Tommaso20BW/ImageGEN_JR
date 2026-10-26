@@ -16,9 +16,9 @@ from PIL import Image
 from livescore.graphics import goal as g
 
 # Numeri di maglia per la Starting XI (la Mini App li propone in automatico).
-SHIRT_NUMBERS = {k: v for k, v in json.loads(
-    (Path(__file__).parent / 'data' / 'shirt_numbers.json').read_text(encoding='utf-8')).items()
-    if not k.startswith('_')}
+from shirt_numbers import load as _load_shirts
+
+SHIRT_NUMBERS = _load_shirts()
 
 LOGO_SIZE = 96
 MANIFEST_RELATIVE = Path('data/fclogo_manifest.json')

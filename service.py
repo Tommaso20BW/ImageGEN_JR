@@ -340,6 +340,18 @@ class Service:
                 self.operation_lock.release()
         return self.ghost_cache['png']
 
+    def _remember_shirts(self, lineup):
+        """Numeri nuovi o cambiati della Starting XI inviata -> repository."""
+        try:
+            import logo_bundle
+            import shirt_numbers
+            from livescore.graphics import goal as g
+            updates = shirt_numbers.changes(lineup, g.load_players(), shirt_numbers.load())
+            if updates and shirt_numbers.save(updates):
+                logo_bundle.SHIRT_NUMBERS.update(updates)
+        except Exception as exc:
+            print(f'WARN IMAGEGEN: numeri di maglia non salvati: {type(exc).__name__}: {exc}', flush=True)
+
     def preview_jpeg(self, png):
         """Anteprima per il telefono: JPEG ~10 volte più leggero del PNG."""
         key = hashlib.sha256(png).hexdigest()
@@ -402,6 +414,8 @@ class Service:
             )
             self.generated_message_ids.append(int(message_id))
             self.recent_sends[fingerprint] = (int(message_id), time.time())
+            if data['kind'] == 'xi':
+                threading.Thread(target=self._remember_shirts, args=(data['lineup'],), daemon=True).start()
             print(f"INFO IMAGEGEN: foto PNG inviata | id={request_state['id']}", flush=True)
             return int(message_id)
         finally:

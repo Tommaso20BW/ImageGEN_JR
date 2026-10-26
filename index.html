@@ -2307,6 +2307,7 @@
       if (new Set(rows.map(r => r.name)).size !== 11) { showError('Lo stesso giocatore è scelto due volte.'); return false; }
       const bad = rows.find(r => !/^\d{1,2}$/.test(r.number));
       if (bad) { showError(`Manca il numero di maglia di ${bad.name}.`); return false; }
+      rememberShirts();
     }
 
     if (step === 'match') {
@@ -2491,6 +2492,21 @@
     $('lineupSummary').textContent = `${n} / 11 giocatori`;
   }
 
+  // Numeri di maglia: quelli noti arrivano dal repository (data/shirt_numbers.json).
+  // Se ne scrivi o cambi uno, all'invio il server lo salva nel repository; qui vale
+  // subito per il resto della sessione.
+  function shirtFor(name) {
+    const player = players.find(p => p.name === name);
+    return player && player.number ? String(player.number) : '';
+  }
+
+  function rememberShirts() {
+    lineupRows().forEach(r => {
+      const player = players.find(p => p.name === r.name);
+      if (player && /^\d{1,2}$/.test(r.number)) player.number = Number(r.number);
+    });
+  }
+
   function renderXiRows() {
     const box = $('xiRows');
     box.innerHTML = '';
@@ -2506,9 +2522,8 @@
       num.value = pick.number; sel.value = pick.name;
       sel.addEventListener('change',() => {
         pick.name = sel.value;
-        const player = players.find(p => p.name === sel.value);
-        // Numero automatico dalla rosa, salvo che non sia stato scritto a mano.
-        if (pick.auto || !pick.number) { pick.number = player && player.number ? String(player.number) : ''; pick.auto = true; }
+        // Numero automatico (ricordato o dalla rosa), salvo che non sia stato scritto a mano.
+        if (pick.auto || !pick.number) { pick.number = shirtFor(sel.value); pick.auto = true; }
         num.value = pick.number;
         updateLineupSummary(); clearError(); renderSteps();
         if (pick.name && !pick.number) num.focus();
