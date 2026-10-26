@@ -131,3 +131,39 @@ def overlay_preview(name, kit, width=540):
         out = io.BytesIO()
         small.save(out, format='PNG', optimize=True)
         return out.getvalue()
+
+
+# Colore dello sfondo delle foto home (crema): la sfumatura chiara Canva lo prende.
+HOME_FX_COLOR = (237, 231, 221)
+
+
+def canva_layers(meta, photo, frame):
+    """Livelli Canva sopra la foto: sfumature/grana + titolo e JR.
+
+    - senza foto (anteprima nell'editor): solo titolo e JR, niente sfumature;
+    - sfumatura chiara (home): ricolorata nel crema dello sfondo delle foto home,
+      così non si vede lo stacco col bianco freddo di Canva (grana intatta).
+    """
+    canva = asset_dir() / 'canva'
+    full = f'style="position:absolute;left:0;top:0;width:{DESIGN_W}px;height:{DESIGN_H}px"'
+    text = f'<img src="{data_uri(canva / meta["text_overlay"])}" {full}>'
+    if photo is None:
+        return text
+    fx = _home_fx(meta['fx']) if meta.get('fx_light') else data_uri(canva / meta['fx'])
+    return f'<img src="{fx}" {full}>' + text
+
+
+@lru_cache(maxsize=4)
+def _home_fx(name):
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    a = np.asarray(Image.open(asset_dir() / 'canva' / name).convert('RGBA')).astype(float)
+    solid = a[..., 3] > 240
+    base = np.median(a[solid][:, :3], axis=0)                   # bianco Canva della sfumatura
+    a[..., :3] = np.clip(a[..., :3] * (np.array(HOME_FX_COLOR) / base), 0, 255)
+    out = io.BytesIO()
+    Image.fromarray(a.astype('uint8'), 'RGBA').save(out, format='PNG')
+    return 'data:image/png;base64,' + base64.b64encode(out.getvalue()).decode('ascii')

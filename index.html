@@ -2580,18 +2580,12 @@
   async function updatePhotoOverlay() {
     if (!directBase || !session) return;
     const overlay = $('photoOverlay');
-    const url = `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${OVERLAY_NAMES[kind] || 'starting_xi'}&kit=${encodeURIComponent(kind === 'jr' ? (jrColor || 'white') : (kit || 'home'))}`;
-    if (!photoState.id) {
-      ghostKey = '';
-      overlay.classList.remove('ghost');
-      if (overlay.dataset.url !== url) { overlay.dataset.url = url; overlay.src = url; }
-      return;
-    }
     let payload;
-    try { payload = buildPayload(); } catch (_) { return; }
+    try { payload = buildPayload(true); } catch (_) { return; }
     const key = JSON.stringify({...payload.data, frame:null, photo_id:null});
     if (key === ghostKey) return;
     ghostKey = key;
+    overlay.removeAttribute('src');            // riquadro pulito finché non arriva l'anteprima
     try {
       const response = await netFetch(`${directBase}/ghost`, {
         method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
@@ -2600,7 +2594,7 @@
       if (!response.ok || key !== ghostKey) return;
       const blob = await response.blob();
       if (overlay.dataset.blob) { try { URL.revokeObjectURL(overlay.dataset.blob); } catch (_) {} }
-      overlay.dataset.blob = overlay.dataset.url = URL.createObjectURL(blob);
+      overlay.dataset.blob = URL.createObjectURL(blob);
       overlay.src = overlay.dataset.blob;
       overlay.classList.add('ghost');
     } catch (_) { ghostKey = ''; }
@@ -2745,7 +2739,9 @@
     return pair;
   }
 
-  function buildPayload() {
+  // ghost=true: anteprima nell'editor, valida anche senza foto (id segnaposto).
+  function buildPayload(ghost=false) {
+    const photoId = photoState.id || (ghost ? '0'.repeat(16) : '');
     if (kind === 'cal') {
       return {v:1, action:'render', session, data:{
         kind:'cal', month:calMonth, year:Number($('calYear').value),
@@ -2753,9 +2749,9 @@
       }};
     }
     if (kind === 'jr') {
-      if (!photoState.id) throw new Error('Scegli una foto.');
+      if (!photoId) throw new Error('Scegli una foto.');
       return {v:1, action:'render', session, data:{
-        kind:'jr', color:jrColor, photo_id:photoState.id,
+        kind:'jr', color:jrColor, photo_id:photoId,
         frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}
       }};
     }
@@ -2780,13 +2776,13 @@
         data.shootout = scorePair('homePens','awayPens',true);
       }
     } else if (kind === 'xi') {
-      if (!photoState.id) throw new Error('Scegli una foto.');
+      if (!photoId) throw new Error('Scegli una foto.');
       data.lineup = xiPicks.map(p => ({number:p.number, name:p.name}));
-      data.photo_id = photoState.id;
+      data.photo_id = photoId;
       data.frame = {x:photoState.x, y:photoState.y, zoom:photoState.zoom};
     } else if (kind === 'md') {
-      if (!photoState.id) throw new Error('Scegli una foto.');
-      data.photo_id = photoState.id;
+      if (!photoId) throw new Error('Scegli una foto.');
+      data.photo_id = photoId;
       data.frame = {x:photoState.x, y:photoState.y, zoom:photoState.zoom};
       data.stadium = $('matchStadium').value;
       data.time = $('matchTime').value;

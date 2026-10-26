@@ -11,7 +11,7 @@ from functools import lru_cache
 
 from PIL import Image
 
-from graphics.common import photo_layer
+from graphics.common import canva_layers, photo_layer
 from graphics.common import (
     DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, font_face, render_html, team_logo,
 )
@@ -153,7 +153,7 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{pa
 svg{{position:absolute;left:0;top:0}}
 </style></head><body>
 {photo_html}
-<img class="abs" src="{data_uri(canva / meta['overlay'])}" style="left:0;top:0;width:{DESIGN_W}px;height:{DESIGN_H}px">
+{canva_layers(meta, photo, frame)}
 {logos}
 <svg width="{DESIGN_W}" height="{DESIGN_H}" viewBox="0 0 {DESIGN_W} {DESIGN_H}">{numbers}{names}</svg>
 </body></html>'''

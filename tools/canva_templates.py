@@ -195,7 +195,8 @@ class _Tree:
 
     def roles(self):
         """Foto, gruppo loghi e gruppo testi (nomi + numeri)."""
-        page_images = [i for i in self.images if i[2] == 0]
+        # Foto = immagine verticale più grande (le copie quadrate 2400x2400 sono effetti).
+        page_images = [i for i in self.images if i[2] == 0 and i[4] > i[3]]
         photo = max(page_images, key=lambda i: i[3] * i[4])
         logo_parents = {self.top(i[2]) for i in self.images
                         if i[2] and i[3] == i[4] and 300 <= i[3] <= 800}
@@ -349,10 +350,36 @@ def build_layered(source, name, pages, out):
         solid = Counter(p[:3] for p in rgba.getdata() if p[3] > 250)
         logo_color = '#%02x%02x%02x' % solid.most_common(1)[0][0]
 
+        # Copie della foto usate da Canva per effetti (ritagli 2400x2400): via ovunque.
+        photo_copies = sorted({n for _x, n, _p, w, h in tree.images if (w, h) == (2400, 2400)})
+
+        # Livello "solo scritte" per l'editor: titolo (blocchi con font) e logo JR.
+        title_forms = {tree.name(tree.top(ref)) for fname, ref in tree.fonts
+                       if ref and tree.top(ref) != text_group}
+        jr = [n for _x, n, p, w, h in tree.images if p == 0 and w < 400 and h < 600]
+        doc_t, page_t = _single_page(source, page_number)
+        _no_background(doc_t, page_t)
+        data = b''.join(doc_t.xref_stream(x) for x in _page_streams(page_t))
+        keep = title_forms | set(jr)
+        data = re.sub(rb'/(X\d+)\s+Do', lambda m: m.group(0) if m.group(1).decode() in keep else b'', data)
+        data = re.sub(rb'BT.*?ET', b'', data, flags=re.S)        # testi della pagina (riga info): li scrive ImageGEN
+        xrefs = _page_streams(page_t)
+        doc_t.update_stream(xrefs[0], data)
+        for x in xrefs[1:]:
+            doc_t.update_stream(x, b'')
+        for form, (fname, _p) in _Tree(page_t).forms.items():
+            if photo_copies:
+                _drop_do(doc_t, form, photo_copies)
+        text_overlay = f'{name}_{kit}_text.png'
+        _png(page_t, alpha=True).save(str(out / text_overlay))
+
         # Livello fisso: tutto tranne foto, loghi, testi e fondo pagina.
         _no_background(doc, page)
         for xref in _page_streams(page):
-            _drop_do(doc, xref, [photo, logos] + ([tree.name(text_group)] if text_group else []))
+            _drop_do(doc, xref, [photo, logos] + photo_copies + ([tree.name(text_group)] if text_group else []))
+        for form in tree.forms:
+            if photo_copies:
+                _drop_do(doc, form, photo_copies)
         if page_spec:
             for block in page.get_text('dict')['blocks']:
                 for line in block.get('lines', []):
@@ -364,6 +391,17 @@ def build_layered(source, name, pages, out):
                                   text=pymupdf.PDF_REDACT_TEXT_REMOVE)
         overlay = f'{name}_{kit}_overlay.png'
         _png(page, alpha=True).save(str(out / overlay))
+
+        # Solo sfumature e grana (senza titolo e JR): si può ricolorare sulla foto.
+        for xref in _page_streams(page):
+            _drop_do(doc, xref, sorted(keep))
+        fx_img = Image.open(io.BytesIO(_png(page, alpha=True).tobytes('png')))
+        fx = f'{name}_{kit}_fx.png'
+        fx_img.save(out / fx)
+        import numpy as np
+        a = np.asarray(fx_img.convert('RGBA')).astype(float)
+        strong = a[..., 3] > 128
+        fx_light = bool(strong.any() and a[strong][:, :3].mean() > 200)
 
         # Testi: colore pieno oppure texture riga per riga.
         text = {}
@@ -386,7 +424,8 @@ def build_layered(source, name, pages, out):
                              'w': (box[2] - box[0]) * scale, 'h': (box[3] - box[1]) * scale})
             text[role] = {'rows': rows}
 
-        meta[kit] = {'overlay': overlay, 'logo_color': logo_color, 'text': text}
+        meta[kit] = {'overlay': overlay, 'text_overlay': text_overlay, 'fx': fx, 'fx_light': fx_light,
+                     'logo_color': logo_color, 'text': text}
         if info:
             meta[kit]['info'] = info
             text['info'] = {'color': ' '.join(
