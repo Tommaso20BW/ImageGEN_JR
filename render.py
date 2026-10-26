@@ -147,7 +147,8 @@ class Renderer:
             raise ValueError('Foto non trovata: ricaricala nella Mini App.')
         return photo
 
-    def render(self, data, progress=None):
+    def render(self, data, progress=None, ghost=False):
+        """ghost=True (grafiche con foto): versione leggera senza foto per l'editor."""
         """Render a graphic. `progress(stage)` is called at the real steps of Canva graphics."""
         from livescore.canva.page_one import export_page_one
         from livescore.graphics import goal as g
@@ -169,7 +170,8 @@ class Renderer:
         if kind == 'jr':
             from graphics import photo_jr
 
-            return photo_jr.render(color=data['color'], photo=self._photo(data), frame=data['frame'])
+            return photo_jr.render(color=data['color'], photo=None if ghost else self._photo(data),
+                                   frame=data['frame'], ghost=ghost)
 
         common = {
             **teams(data),
@@ -253,11 +255,19 @@ class Renderer:
         if kind == 'xi':
             from graphics import starting_xi
 
+            from graphics.probabili import label_name
+            from livescore.graphics import goal as g
+
+            # Nomi dalla rosa -> nome breve come su Canva ("MCKENNIE", "NICO GONZALEZ").
+            roster = {p.name: p for p in g.load_players()}
+            lineup = [(number, label_name(roster[name]) if name in roster else name)
+                      for number, name in data['lineup']]
             return starting_xi.render(
                 **teams(data),
                 kit=data['kit'],
-                lineup=data['lineup'],
-                photo=self._photo(data),
+                lineup=lineup,
+                photo=None if ghost else self._photo(data),
+                ghost=ghost,
                 frame=data['frame'],
             )
 
@@ -267,7 +277,8 @@ class Renderer:
             return matchday.render(
                 **teams(data),
                 kit=data['kit'],
-                photo=self._photo(data),
+                photo=None if ghost else self._photo(data),
+                ghost=ghost,
                 frame=data['frame'],
                 info=data['info'],
                 competition=data['competition'],

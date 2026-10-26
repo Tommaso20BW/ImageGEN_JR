@@ -6,7 +6,7 @@ import base64
 import json
 from functools import lru_cache
 
-from graphics.common import DESIGN_H, DESIGN_W, asset_dir, data_uri, render_html
+from graphics.common import photo_layer, DESIGN_H, DESIGN_W, asset_dir, data_uri, render_html
 from graphics.starting_xi import check_photo, photo_box
 
 COLORS = ('black', 'white', 'gold')
@@ -20,19 +20,19 @@ def _meta():
 def build_html(*, color, photo, frame, **_):
     if color not in COLORS:
         raise ValueError('Colore JR non valido.')
-    left, top, width, height = photo_box(check_photo(photo), frame)
-    mime = 'image/png' if photo.startswith(b'\x89PNG') else 'image/jpeg'
-    photo_uri = f'data:{mime};base64,' + base64.b64encode(photo).decode('ascii')
+    photo_html, page_bg = photo_layer(photo, frame)
     overlay = data_uri(asset_dir() / 'canva' / _meta()[color]['overlay'])
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 *{{margin:0;padding:0}}
-html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#fff}}
+html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{page_bg}}}
 img{{position:absolute}}
 </style></head><body>
-<img src="{photo_uri}" style="left:{left}px;top:{top}px;width:{width}px;height:{height}px">
+{photo_html}
 <img src="{overlay}" style="left:0;top:0;width:{DESIGN_W}px;height:{DESIGN_H}px">
 </body></html>'''
 
 
-def render(**kwargs):
-    return render_html(build_html(**kwargs))
+def render(ghost=False, **kwargs):
+    if ghost:
+        kwargs['photo'] = None
+    return render_html(build_html(**kwargs), ghost=ghost)

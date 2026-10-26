@@ -6,7 +6,7 @@ import uuid
 
 from constants import COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
 from graphics.squad_list import BACKGROUNDS as SQUAD_COMPETITIONS, parse_squad
-from graphics.starting_xi import parse_lineup
+from graphics.starting_xi import PLAYERS as PLAYERS_IN_XI, parse_lineup
 from graphics.matchday import parse_info
 from graphics.photo_jr import COLORS as JR_COLORS
 from graphics.probabili import MODULES as PXI_MODULES
@@ -226,7 +226,12 @@ def _build_state(envelope, catalog, now, expected_session):
             )
 
     elif kind == 'xi':
-        data['lineup'] = parse_lineup(incoming.get('lineup'))
+        lineup = parse_lineup(incoming.get('lineup'))
+        if isinstance(incoming.get('lineup'), list):
+            lineup = [(number, _canonical_player(catalog, name)) for number, name in lineup]
+            if len({name for _n, name in lineup}) != PLAYERS_IN_XI:
+                raise ValueError('Lo stesso giocatore è stato scelto due volte.')
+        data['lineup'] = lineup
         data['photo_id'] = _photo_id(incoming.get('photo_id'))
         data['frame'] = _frame(incoming.get('frame'))
 

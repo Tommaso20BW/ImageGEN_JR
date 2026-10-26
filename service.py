@@ -5,6 +5,7 @@ Telegram getUpdates. This lets it coexist with LiveScore on the same bot token.
 """
 import copy
 import hashlib
+import io
 import json
 import os
 import secrets
@@ -26,6 +27,8 @@ from graphics.starting_xi import MAX_PHOTO_BYTES, check_photo
 
 SESSION_DURATION_SECONDS = 600
 MAX_PHOTOS = 6
+LOCK_WAIT_SECONDS = 75        # un nuovo tentativo aspetta la richiesta ancora in corso
+RESEND_GUARD_SECONDS = 45     # stessa grafica reinviata entro 45 s = doppione (rete persa)
 DIRECT_PORT = 8765
 
 
@@ -67,10 +70,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _png(self, payload):
+    def _png(self, payload, content_type='image/png'):
         self.send_response(200)
         self._cors()
-        self.send_header('Content-Type', 'image/png')
+        self.send_header('Content-Type', content_type)
         self.send_header('Content-Length', str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
@@ -159,7 +162,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
         if path == '/upload':
             self._upload()
             return
-        if path not in ('/preview', '/submit', '/close'):
+        if path not in ('/preview', '/submit', '/close', '/ghost'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -182,9 +185,13 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 self.service.request_stop()
                 return
 
+            if path == '/ghost':
+                self._png(self.service.ghost(envelope))
+                return
+
             if path == '/preview':
-                png = self.service.preview(envelope)
-                self._png(png)
+                # Al telefono va un JPEG leggero; a Telegram resta il PNG.
+                self._png(self.service.preview_jpeg(self.service.preview(envelope)), 'image/jpeg')
                 return
 
             message_id = self.service.submit(envelope)
@@ -228,6 +235,9 @@ class Service:
         # Foto caricate dalla Mini App (solo in memoria, per questa sessione).
         self.photos = {}
         self.overlays = {}
+        self.preview_jpeg_cache = {}
+        self.ghost_cache = {}
+        self.recent_sends = {}
         self.renderer.photos = self.photos
 
     def store_photo(self, raw):
@@ -306,7 +316,8 @@ class Service:
         return png, request_state['id']
 
     def preview(self, envelope):
-        if not self.operation_lock.acquire(blocking=False):
+        # Un nuovo tentativo aspetta quello in corso e poi riusa l'anteprima già pronta.
+        if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
             raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
         try:
             request_state = self._parse_request(envelope)
@@ -316,13 +327,43 @@ class Service:
             self._set_stage('idle')
             self.operation_lock.release()
 
+    def ghost(self, envelope):
+        """Grafica senza foto, trasparente e leggera: l'editor la mostra sopra la foto."""
+        data = self._parse_request(envelope)['data']
+        key = self._fingerprint({k: v for k, v in data.items() if k not in ('frame', 'photo_id')})
+        if self.ghost_cache.get('key') != key:
+            if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
+                raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
+            try:
+                self.ghost_cache = {'key': key, 'png': self.renderer.render(data, ghost=True)}
+            finally:
+                self.operation_lock.release()
+        return self.ghost_cache['png']
+
+    def preview_jpeg(self, png):
+        """Anteprima per il telefono: JPEG ~10 volte più leggero del PNG."""
+        key = hashlib.sha256(png).hexdigest()
+        if self.preview_jpeg_cache.get('key') != key:
+            from PIL import Image
+            out = io.BytesIO()
+            Image.open(io.BytesIO(png)).convert('RGB').save(out, format='JPEG', quality=88, optimize=True)
+            self.preview_jpeg_cache = {'key': key, 'jpeg': out.getvalue()}
+        return self.preview_jpeg_cache['jpeg']
+
     def submit(self, envelope):
-        if not self.operation_lock.acquire(blocking=False):
+        # Un nuovo tentativo della Mini App (rete instabile) aspetta il primo invece di fallire.
+        if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
             raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
         try:
             request_state = self._parse_request(envelope)
             data = copy.deepcopy(request_state['data'])
             fingerprint = self._fingerprint(data)
+
+            # Stessa grafica appena inviata (risposta persa per strada): niente doppione.
+            sent = self.recent_sends.get(fingerprint)
+            if sent and time.time() - sent[1] < RESEND_GUARD_SECONDS:
+                print(f"INFO IMAGEGEN: invio già fatto, non ripeto | kind={data['kind']}", flush=True)
+                return sent[0]
 
             with self.preview_cache_lock:
                 cached = self.preview_cache
@@ -360,6 +401,7 @@ class Service:
                 f"{data['kind']}-{request_state['id']}.png",
             )
             self.generated_message_ids.append(int(message_id))
+            self.recent_sends[fingerprint] = (int(message_id), time.time())
             print(f"INFO IMAGEGEN: foto PNG inviata | id={request_state['id']}", flush=True)
             return int(message_id)
         finally:

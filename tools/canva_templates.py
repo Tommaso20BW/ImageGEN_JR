@@ -27,8 +27,10 @@ DESIGN_W = 1080
 #   fonts:  testi con questi font vengono rimossi
 #   images: immagini il cui riquadro (in punti PDF, pagina 810x1080) sta
 #           tutto dentro questa zona vengono rimosse
+#   bg:     sostituisce lo sfondo a pagina intera con questa immagine degli asset
+#   paper:  ricolora il foglio di carta (colore medio RGB), nastro escluso
 SQUAD_LIST = {
-    'fonts': ('BebasNeue',),
+    'fonts': ('BebasNeue', 'Allogist'),        # nomi e titolo li scrive ImageGEN
     'images': [(300, 880, 510, 1000)],
 }
 
@@ -36,6 +38,11 @@ FLAT = {
     'squad_list_serie_a': (17, SQUAD_LIST),
     'squad_list_coppa_italia': (18, SQUAD_LIST),
     'squad_list_europa_league': (19, SQUAD_LIST),
+    # Non su Canva: stile Europa League con sfondi e colori della competizione.
+    'squad_list_champions_league': (17, {**SQUAD_LIST, 'bg': 'portrait/ucl_clean_1086x1448.png',
+                                         'paper': (14, 24, 82)}),      # pagina con JR bianco
+    'squad_list_conference_league': (19, {**SQUAD_LIST, 'bg': 'portrait/conference_clean_1086x1448.png',
+                                          'paper': (16, 56, 33)}),
 }
 
 # Modelli "a livelli": foto (caricata dall'utente) sotto, livello fisso sopra,
@@ -80,9 +87,52 @@ def _png(page, alpha):
     return pix
 
 
-def clean_page(source, page_number, spec):
+def _recolor_paper(doc, img, tint):
+    """Foglio di carta ricolorato: stessa texture, nastro adesivo invariato."""
+    import numpy as np
+    pix = pymupdf.Pixmap(pymupdf.Pixmap(doc, img[0]), pymupdf.Pixmap(doc, img[1]))
+    if pix.colorspace and pix.colorspace.n != 3:
+        pix = pymupdf.Pixmap(pymupdf.csRGB, pix)
+    rgba = np.asarray(Image.open(io.BytesIO(pix.tobytes('png'))).convert('RGBA')).astype(float)
+    rgb, alpha = rgba[..., :3], rgba[..., 3]
+    lum = rgb.mean(axis=2)
+    paper = (alpha > 250) & (lum < np.percentile(lum[alpha > 250], 80))
+    shade = lum / lum[paper].mean()                               # texture: luce/ombra della carta
+    tinted = shade[..., None] * np.array(tint, dtype=float)
+    weight = np.clip((150 - lum) / 70, 0, 1)[..., None]          # zone chiare (nastro) invariate
+    out = np.clip(rgb * (1 - weight) + tinted * weight, 0, 255)
+    image = Image.fromarray(np.dstack([out, alpha]).astype('uint8'), 'RGBA')
+    buf = io.BytesIO(); image.save(buf, format='PNG')
+    return pymupdf.Pixmap(buf.getvalue())
+
+
+def _background(path):
+    """Sfondo competizione (asset 'portrait'): il pannello scuro centrale sbucherebbe
+    sopra e sotto il foglio. Si stringe in verticale il pannello (finisce tutto
+    sotto il foglio) e si allungano le fasce del bordo: strisce continue, senza copie."""
+    image = Image.open(path).convert('RGB')
+    w, h = image.size
+    top, bottom = 76, 1371                   # bordi del pannello (foto 1086x1448)
+    new_top, new_bottom = 128, 1336          # dentro il foglio di carta (che va da ~122 a ~1343)
+    out = Image.new('RGB', (w, h))
+    for (y0, y1), (t0, t1) in (((0, top), (0, new_top)), ((top, bottom), (new_top, new_bottom)),
+                               ((bottom, h), (new_bottom, h))):
+        out.paste(image.crop((0, y0, w, y1)).resize((w, t1 - t0), Image.LANCZOS), (0, t0))
+    buf = io.BytesIO(); out.save(buf, format='PNG')
+    return buf.getvalue()
+
+
+def clean_page(source, page_number, spec, assets=None):
     """Ritorna i byte PNG della pagina senza le parti variabili."""
     doc, page = _single_page(source, page_number)
+
+    if spec.get('bg') or spec.get('paper'):
+        for img in page.get_images(full=True):
+            if img[2] == 1086 and img[3] == 1448:
+                if not img[1] and spec.get('bg'):
+                    page.replace_image(img[0], stream=_background(assets / spec['bg']))
+                elif img[1] and spec.get('paper'):
+                    page.replace_image(img[0], pixmap=_recolor_paper(doc, img, spec['paper']))
 
     for xref, *_ in page.get_images(full=True):
         rects = page.get_image_rects(xref)
@@ -381,7 +431,7 @@ def main():
         for name, (page_number, spec) in FLAT.items():
             if args.names and name not in args.names:
                 continue
-            (args.out / f'{name}.png').write_bytes(clean_page(source, page_number, spec))
+            (args.out / f'{name}.png').write_bytes(clean_page(source, page_number, spec, args.out.parent))
             print(f'OK {name} (pagina {page_number})')
         if not args.names or 'jr' in args.names:
             build_jr(source, args.out)

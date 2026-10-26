@@ -11,7 +11,7 @@ from datetime import date
 from functools import lru_cache
 
 from constants import COMPETITIONS
-from graphics.common import DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html, team_logo
+from graphics.common import photo_layer, DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html, team_logo
 from graphics.starting_xi import KITS, check_photo, photo_box
 
 # Misure dal PDF Canva (pixel 1080x1440).
@@ -74,9 +74,7 @@ def build_html(*, kit, photo, frame, info, competition, home_name, home_id, away
         raise ValueError('Maglia non valida.')
     meta = _meta()[kit]
     canva = asset_dir() / 'canva'
-    left, top, width, height = photo_box(check_photo(photo), frame)
-    mime = 'image/png' if photo.startswith(b'\x89PNG') else 'image/jpeg'
-    photo_uri = f'data:{mime};base64,' + base64.b64encode(photo).decode('ascii')
+    photo_html, page_bg = photo_layer(photo, frame)
 
     values = {**info, 'competition': competition_label(competition)}
     texts = ''.join(_info_text(slot, values[slot], meta['info'][slot]) for slot in SLOTS)
@@ -89,19 +87,21 @@ def build_html(*, kit, photo, frame, info, competition, home_name, home_id, away
 
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#fff}}
+html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{page_bg}}}
 .abs{{position:absolute}}
 .logo{{position:absolute;width:{LOGO_SIZE}px;height:{LOGO_SIZE}px;
 -webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}}
 @font-face{{font-family:'Matchday Info';src:url({data_uri(asset_dir() / 'fonts' / 'MatchdayInfo.ttf')})}}
 svg{{position:absolute;left:0;top:0}}
 </style></head><body>
-<img class="abs" src="{photo_uri}" style="left:{left}px;top:{top}px;width:{width}px;height:{height}px">
+{photo_html}
 <img class="abs" src="{data_uri(canva / meta['overlay'])}" style="left:0;top:0;width:{DESIGN_W}px;height:{DESIGN_H}px">
 {logos}
 <svg width="{DESIGN_W}" height="{DESIGN_H}" viewBox="0 0 {DESIGN_W} {DESIGN_H}">{texts}</svg>
 </body></html>'''
 
 
-def render(**kwargs):
-    return render_html(build_html(**kwargs))
+def render(ghost=False, **kwargs):
+    if ghost:
+        kwargs['photo'] = None
+    return render_html(build_html(**kwargs), ghost=ghost)

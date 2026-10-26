@@ -18,8 +18,8 @@ from graphics.common import DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render
 MONTHS = ('gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio',
           'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre')
 # Parte nera del titolo (il resto è oro): per sillabe, come "nove|mbre" su Canva.
-SPLIT = {'gennaio': 'gen', 'febbraio': 'feb', 'marzo': 'mar', 'aprile': 'apri', 'maggio': 'mag',
-         'giugno': 'giu', 'luglio': 'lu', 'agosto': 'ago', 'settembre': 'sette', 'ottobre': 'otto',
+SPLIT = {'gennaio': 'genn', 'febbraio': 'febb', 'marzo': 'mar', 'aprile': 'apr', 'maggio': 'mag',
+         'giugno': 'giu', 'luglio': 'lug', 'agosto': 'ago', 'settembre': 'sette', 'ottobre': 'otto',
          'novembre': 'nove', 'dicembre': 'dice'}
 MAX_ROWS = 9
 

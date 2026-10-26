@@ -11,6 +11,7 @@ from functools import lru_cache
 
 from PIL import Image
 
+from graphics.common import photo_layer
 from graphics.common import (
     DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, font_face, render_html, team_logo,
 )
@@ -36,7 +37,23 @@ def _meta():
 
 
 def parse_lineup(text):
-    """11 righe 'numero nome' nell'ordine scritto (es. '25 Vicario')."""
+    """11 giocatori nell'ordine scelto. Dalla Mini App arriva una lista
+    [{'number': '25', 'name': 'Guglielmo Vicario'}]; resta valido anche il testo
+    con 11 righe 'numero nome' (es. '25 Vicario')."""
+    if isinstance(text, list):
+        rows = []
+        for item in text:
+            if not isinstance(item, dict):
+                raise ValueError('Formazione non valida.')
+            number, name = str(item.get('number') or '').strip(), str(item.get('name') or '').strip()
+            if not re.fullmatch(r'\d{1,2}', number):
+                raise ValueError(f'Manca il numero di maglia di {name or "un giocatore"}.')
+            if not name:
+                raise ValueError('Scegli tutti gli 11 giocatori.')
+            rows.append((str(int(number)), name))
+        if len(rows) != PLAYERS:
+            raise ValueError(f'Servono 11 giocatori, ne ho trovati {len(rows)}.')
+        return rows
     rows = []
     for line in str(text or '').splitlines():
         line = ' '.join(line.split())
@@ -109,9 +126,7 @@ def build_html(*, kit, lineup, photo, frame, home_name, home_id, away_name, away
         raise ValueError('Maglia non valida.')
     meta = _meta()[kit]
     canva = asset_dir() / 'canva'
-    left, top, width, height = photo_box(check_photo(photo), frame)
-    mime = 'image/png' if photo.startswith(b'\x89PNG') else 'image/jpeg'
-    photo_uri = f'data:{mime};base64,' + base64.b64encode(photo).decode('ascii')
+    photo_html, page_bg = photo_layer(photo, frame)
 
     numbers = _text_rows(
         'n', [n for n, _ in lineup], meta['text']['number'], NUMBER_RIGHT, NUMBER_BASE, 'end',
@@ -129,7 +144,7 @@ def build_html(*, kit, lineup, photo, frame, home_name, home_id, away_name, away
 
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#fff}}
+html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{page_bg}}}
 .abs{{position:absolute}}
 .logo{{position:absolute;width:{LOGO_SIZE}px;height:{LOGO_SIZE}px;
 -webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}}
@@ -137,12 +152,14 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#ff
 @font-face{{font-family:'Allogist';font-style:italic;src:url({data_uri(asset_dir() / 'fonts' / 'AllogistItalic.ttf')})}}
 svg{{position:absolute;left:0;top:0}}
 </style></head><body>
-<img class="abs" src="{photo_uri}" style="left:{left}px;top:{top}px;width:{width}px;height:{height}px">
+{photo_html}
 <img class="abs" src="{data_uri(canva / meta['overlay'])}" style="left:0;top:0;width:{DESIGN_W}px;height:{DESIGN_H}px">
 {logos}
 <svg width="{DESIGN_W}" height="{DESIGN_H}" viewBox="0 0 {DESIGN_W} {DESIGN_H}">{numbers}{names}</svg>
 </body></html>'''
 
 
-def render(**kwargs):
-    return render_html(build_html(**kwargs))
+def render(ghost=False, **kwargs):
+    if ghost:
+        kwargs['photo'] = None
+    return render_html(build_html(**kwargs), ghost=ghost)

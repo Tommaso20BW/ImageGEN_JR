@@ -76,8 +76,11 @@ def team_logo(name, team_id=''):
     raise FileNotFoundError(f'Logo non trovato per {name!r}')
 
 
-def render_html(markup):
-    """Render della pagina 1080x1440 in PNG 1920x2560."""
+def render_html(markup, ghost=False):
+    """Render della pagina 1080x1440 in PNG 1920x2560.
+
+    ghost=True: versione leggera (540x720) con sfondo trasparente, per l'editor foto.
+    """
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
@@ -86,13 +89,26 @@ def render_html(markup):
         try:
             page = browser.new_page(
                 viewport={'width': DESIGN_W, 'height': DESIGN_H},
-                device_scale_factor=OUT_W / DESIGN_W,
+                device_scale_factor=0.5 if ghost else OUT_W / DESIGN_W,
             )
             page.set_content(markup, wait_until='load')
             page.evaluate('() => document.fonts.ready')
-            return page.screenshot(type='png')
+            return page.screenshot(type='png', omit_background=ghost)
         finally:
             browser.close()
+
+
+def photo_layer(photo, frame):
+    """(<img> della foto, colore di fondo pagina). Senza foto: niente <img> e fondo
+    trasparente, per la versione "fantasma" mostrata sopra la foto nell'editor."""
+    if photo is None:
+        return '', 'transparent'
+    from graphics.starting_xi import check_photo, photo_box
+    left, top, width, height = photo_box(check_photo(photo), frame)
+    mime = 'image/png' if photo.startswith(b'\x89PNG') else 'image/jpeg'
+    uri = f'data:{mime};base64,' + base64.b64encode(photo).decode('ascii')
+    return (f'<img src="{uri}" style="position:absolute;left:{left}px;top:{top}px;'
+            f'width:{width}px;height:{height}px">'), '#fff'
 
 
 BASE_CSS = (

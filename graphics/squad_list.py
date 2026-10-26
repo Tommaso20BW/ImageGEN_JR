@@ -1,4 +1,8 @@
-"""SQUAD LIST: pagine 17 (Serie A), 18 (Coppa Italia), 19 (Europa League)."""
+"""SQUAD LIST: pagine 17 (Serie A), 18 (Coppa Italia), 19 (Europa League).
+
+Champions League e Conference League non sono su Canva: stesso stile, con
+sfondo e colori della competizione (vedi tools/canva_templates.py).
+"""
 import re
 
 from graphics.common import (
@@ -9,7 +13,17 @@ BACKGROUNDS = {
     'ita.1': 'squad_list_serie_a.png',
     'ita.coppa_italia': 'squad_list_coppa_italia.png',
     'uefa.europa': 'squad_list_europa_league.png',
+    'uefa.champions': 'squad_list_champions_league.png',
+    'uefa.europa.conf': 'squad_list_conference_league.png',
 }
+
+# Titolo "squad List" (Allogist Italic, misure Canva): "List" nel colore della competizione.
+TITLE_SIZE, TITLE_BASE, TITLE_X = 206.7, 324.75, 540.0
+TITLE_ACCENT = {
+    'ita.1': '#ffffff', 'ita.coppa_italia': '#ffffff', 'uefa.europa': '#fa6c08',
+    'uefa.champions': '#73aabf', 'uefa.europa.conf': '#11b913',
+}
+NO_LIGATURES = "font-variant-ligatures:none;font-feature-settings:'liga' 0,'clig' 0,'dlig' 0"
 
 # Misure prese dal design Canva (pixel 1080x1440).
 LEFT_X, RIGHT_X, COL_W = 214, 541, 323
@@ -44,9 +58,9 @@ def columns(players):
     return players[:half], players[half:]
 
 
-def build_html(*, players, competition, home_name, home_id, away_name, away_id, **_):
+def build_html(*, players, competition, home_name, home_id, away_name, away_id, title_word='List', **_):
     if competition not in BACKGROUNDS:
-        raise ValueError('Squad list disponibile solo per Serie A, Coppa Italia ed Europa League.')
+        raise ValueError('Squad list disponibile per Serie A, Coppa Italia, Champions, Europa e Conference League.')
     assets = asset_dir()
     left, right = columns(players)
     top = CENTER_Y - len(left) * ROW_H / 2
@@ -67,8 +81,13 @@ def build_html(*, players, competition, home_name, home_id, away_name, away_id, 
 .col{{width:{COL_W}px;font-family:'Bebas Neue';font-size:{FONT_SIZE}px;
 letter-spacing:{LETTER_SPACING}px;line-height:{ROW_H}px;color:#fff;text-transform:uppercase;white-space:nowrap;opacity:{OPACITY}}}
 .logo{{opacity:{OPACITY}}}
+@font-face{{font-family:'Allogist';font-style:italic;src:url({data_uri(assets / 'fonts' / 'AllogistItalic.ttf')})}}
+svg{{position:absolute;left:0;top:0}}
 </style></head><body>
 <img class="abs" src="{data_uri(assets / 'canva' / BACKGROUNDS[competition])}" style="left:0;top:0;width:1080px;height:1440px">
+<svg width="1080" height="1440" viewBox="0 0 1080 1440"><text x="{TITLE_X}" y="{TITLE_BASE}" text-anchor="middle"
+ font-family="Allogist" font-style="italic" font-size="{TITLE_SIZE}" style="{NO_LIGATURES}" fill="#fff" opacity="{OPACITY}">squad <tspan
+ fill="{TITLE_ACCENT[competition]}">{esc(title_word)}</tspan></text></svg>
 {column(left, LEFT_X, 'left')}{column(right, RIGHT_X, 'right')}{logos}
 </body></html>'''
 
