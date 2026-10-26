@@ -111,9 +111,8 @@
     .kind-ind{
       position:absolute;left:0;right:0;top:0;height:40px;border-radius:10px;
       background:var(--accent-soft);pointer-events:none;
-      transition:transform .26s var(--spring-soft),height .3s var(--ease-out);
+      transform-origin:0 0;will-change:transform;      /* animata in JS solo con transform */
     }
-    .kind-ind:not(.ready){transition:none}
     .kind-item{
       position:relative;z-index:1;
       border:0;background:transparent;text-align:left;
@@ -237,10 +236,8 @@
     .chip-ind{
       position:absolute;top:8px;left:0;height:34px;width:0;border-radius:999px;
       background:var(--accent);pointer-events:none;
-      transition:transform .26s var(--spring-soft),width .26s var(--ease-out);
-      will-change:transform,width;
+      transform-origin:0 0;will-change:transform;      /* animata in JS solo con transform (fluida) */
     }
-    .chip-ind:not(.ready){transition:none}
     .chip{
       flex:1 0 auto;border:1px solid var(--line);background:var(--surface);
       height:34px;padding:0 10px;border-radius:999px;
@@ -2044,6 +2041,8 @@
   }
 
   // Pillola che scivola sotto il tipo selezionato (orizzontale su mobile, verticale su desktop).
+  // Fluida anche su telefoni lenti: si anima solo transform (lo fa la GPU). La pillola prende
+  // subito misura e posto finali e parte "schiacciata" da dove si trovava (tecnica FLIP).
   function placeIndicator(box, itemSel, cls, vertical) {
     let ind = box.querySelector('.' + cls);
     if (!ind) {
@@ -2054,20 +2053,28 @@
     }
     const sel = box.querySelector(itemSel + '.selected');
     if (!sel || !sel.offsetWidth) return;
-    if (vertical) {
-      ind.style.height = sel.offsetHeight + 'px';
-      ind.style.transform = `translate3d(0,${sel.offsetTop}px,0)`;
-    } else {
-      ind.style.width = sel.offsetWidth + 'px';
-      ind.style.transform = `translate3d(${sel.offsetLeft}px,0,0)`;
-      // Barra scorrevole: tieni visibile il tipo selezionato.
-      if (sel.offsetLeft < box.scrollLeft || sel.offsetLeft + sel.offsetWidth > box.scrollLeft + box.clientWidth) {
-        box.scrollTo({left:Math.max(0,sel.offsetLeft - 16), behavior:motionOK() ? 'smooth' : 'auto'});
-      }
+    const pos = vertical ? sel.offsetTop : sel.offsetLeft;
+    const size = vertical ? sel.offsetHeight : sel.offsetWidth;
+    if (!vertical && (sel.offsetLeft < box.scrollLeft || sel.offsetLeft + sel.offsetWidth > box.scrollLeft + box.clientWidth)) {
+      box.scrollTo({left:Math.max(0,sel.offsetLeft - 16), behavior:motionOK() ? 'smooth' : 'auto'});
     }
-    if (!ind.classList.contains('ready')) {
-      void ind.offsetWidth; // fissa la posizione iniziale prima di attivare le transizioni
-      ind.classList.add('ready');
+    const last = ind._at;
+    if (last && last.pos === pos && last.size === size) return;
+    // Da dove parte: la posizione che si vede adesso (anche a metà di un'altra animazione).
+    let from = last;
+    if (ind._anim && ind._anim.playState === 'running') {
+      const r = ind.getBoundingClientRect(), b = box.getBoundingClientRect();
+      from = vertical ? {pos:r.top - b.top + box.scrollTop, size:r.height}
+                      : {pos:r.left - b.left + box.scrollLeft, size:r.width};
+      ind._anim.cancel();
+    }
+    const at = (p, k) => vertical ? `translate3d(0,${p}px,0) scaleY(${k})` : `translate3d(${p}px,0,0) scaleX(${k})`;
+    ind.style[vertical ? 'height' : 'width'] = size + 'px';
+    ind.style.transform = at(pos, 1);
+    ind._at = {pos, size};
+    if (from && motionOK() && ind.animate) {
+      ind._anim = ind.animate([{transform:at(from.pos, from.size / size)},{transform:at(pos, 1)}],
+        {duration:300, easing:'cubic-bezier(.2,.8,.2,1)'});
     }
   }
   function placeIndicators() {
@@ -2138,12 +2145,18 @@
   function changeTab(value) {
     if (value === tab && !previewMode) return;
     tab = value;
-    changeKind(TAB_KINDS[value] ? '' : value, true);
+    // Prima parte la pillola, poi (al fotogramma dopo) il cambio di schermata:
+    // così il lavoro della pagina nuova non la fa scattare.
+    renderKindMenu();
+    haptic('select');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (tab === value) changeKind(TAB_KINDS[value] ? '' : value, true, true);
+    }));
   }
 
-  function changeKind(value, force=false) {
+  function changeKind(value, force=false, quiet=false) {
     if (value === kind && !previewMode && !force) return;
-    haptic('select');
+    if (!quiet) haptic('select');
     previewMode = false;
     kind = value;
     resetAllData();
