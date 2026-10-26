@@ -83,22 +83,38 @@ def _title_fit(word, rows_top, fill_w=TITLE_FILL_W):
     return TITLE_SIZE * k, DESIGN_W / 2 - shift, base, base + y1 * k
 
 
+ROW_SPAN = LOGO_RIGHT - 319.46          # larghezza del gruppo numero (2 cifre) + loghi, scala 1
+
+
+def _ink_bottom_between(word, size, t_x, base, lo, hi):
+    """Punto più basso delle lettere del titolo fra x=lo e x=hi (pagina).
+    Una "g" o una "p" conta solo se sta sopra le partite."""
+    import numpy as np
+    from PIL import Image, ImageDraw
+    font = _font(size)
+    x0, y0, x1, y1 = font.getbbox(word, anchor='ls')
+    img = Image.new('L', (x1 - x0 + 8, y1 - y0 + 8), 0)
+    ImageDraw.Draw(img).text((4 - x0, 4 - y0), word, font=font, fill=255, anchor='ls')
+    ink = np.asarray(img) > 64
+    start = t_x - font.getlength(word) / 4 / 2              # text-anchor middle
+    cols = [j for j in range(ink.shape[1]) if lo <= start + (j - 4 + x0) / 4 <= hi]
+    rows = np.where(ink[:, cols].any(axis=1))[0] if cols else []
+    if not len(rows):
+        return base
+    return max(base, base + (rows[-1] - 4 + y0) / 4)
+
+
 def fit_page(word, n):
-    """Titolo e righe definitivi: (titolo, righe).
-    titolo = (grandezza, x, base, fondo lettere); righe = layout().
-    Se le lettere che scendono (g, p) toccherebbero le righe centrate, il titolo
-    si rimpicciolisce un poco: così lo spazio sopra e sotto resta uguale."""
+    """Titolo e righe definitivi: (titolo, righe); titolo = (grandezza, x, base, fondo lettere).
+    Le righe stanno a metà fra il fondo del titolo e il fondo pagina; del titolo conta
+    solo la parte sopra le partite (la "g" di gennaio a sinistra no, quella di maggio sì)."""
     rows_top = title_layout(word, n)[3]
-    fill_w = TITLE_FILL_W
-    while True:
-        title = _title_fit(word, rows_top, fill_w)
-        rows = layout(n, rows_top, (title[2], title[3]))
-        s = rows[0][2]
-        above = min(b for _x, b, _s, _w in rows) - ROW_UP * s - title[2]
-        below = DESIGN_H - (max(b for _x, b, _s, _w in rows) + ROW_LINE * s)
-        if above - below <= 1 or fill_w < TITLE_FILL_W * 0.6:
-            return title, rows
-        fill_w -= 6                                  # stesso centro, scritta un po' più piccola
+    title = _title_fit(word, rows_top)
+    rows = layout(n, rows_top)
+    half = ROW_SPAN * rows[0][2] / 2
+    xs = [x for x, _b, _s, _w in rows]
+    anchor = _ink_bottom_between(word, title[0], title[1], title[2], min(xs) - half, max(xs) + half)
+    return title, layout(n, rows_top, (anchor, anchor))
 
 
 def _number_width(text, size):
@@ -166,8 +182,8 @@ def title_layout(word, n):
 
 def _column(n, rows_top, max_scale, title=None):
     """Righe più grandi possibile nello spazio fra rows_top e il fondo (o fino a max_scale).
-    Con title = (base, fondo delle lettere che scendono) il blocco sta a metà fra la base
-    del mese e il fondo pagina (le "g" e le "p" non contano), ma mai addosso a quelle lettere."""
+    Con title = (fondo del titolo sopra le righe, idem) il blocco sta a metà fra il titolo
+    e il fondo pagina: stesso spazio sopra e sotto."""
     room = ROWS_BOTTOM - rows_top
     scale = min(max_scale, room / ((n - 1) * PITCH * ROW_H + ROW_H))
     pitch = PITCH * ROW_H * scale
