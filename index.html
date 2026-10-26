@@ -413,6 +413,20 @@
       border-radius:var(--radius);background:var(--surface2);border:1.5px solid var(--line);touch-action:none;cursor:grab;user-select:none}
     .photo-frame.dragging{cursor:grabbing}
     .pxi-slots{display:grid;gap:8px}
+    /* Matchday: schede partita */
+    .fx-list{display:grid;gap:8px}
+    .fx-card{display:flex;align-items:center;gap:14px;width:100%;min-height:76px;padding:12px 16px;text-align:left;
+      border-radius:var(--radius);background:var(--surface);border:1.5px solid var(--line);box-shadow:var(--shadow-soft);
+      transition:transform .18s var(--spring),border-color .15s ease,background-color .15s ease}
+    .fx-card:active{transform:scale(.98)}
+    .fx-card.selected{border-color:var(--accent);background:var(--accent-soft)}
+    .fx-card[disabled]{opacity:.45}
+    .fx-card .fx-logo,.fx-card .fx-logo img{width:46px;height:46px}
+    .fx-main{display:grid;gap:2px;min-width:0}
+    .fx-team{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fx-when{font-size:14px;font-weight:700}
+    .fx-info{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fx-other{min-height:52px;justify-content:center;font-weight:750;color:var(--muted)}
     .xi-rows{display:grid;gap:8px}
     .xi-row{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center}
     .xi-row .field-input{min-height:48px;font-size:16px;font-weight:700;padding:0 12px;min-width:0}
@@ -845,7 +859,7 @@
             <div class="eyebrow">Matchday</div>
             <h1>Scegli la partita</h1>
             <p class="lead">Dal calendario della Juventus: competizione, avversario, stadio, data e ora si compilano da soli.</p>
-            <div id="mdPickOpts" class="opts" role="radiogroup"></div>
+            <div id="mdPickOpts" class="fx-list" role="list"></div>
             <div id="mdPickHint" class="hint"></div>
           </section>
 
@@ -1612,7 +1626,7 @@
       flowIndex = 0;
       setTimeout(() => nextField(),120);
     });
-    renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); });
+    renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); autoCalendar(); });
     renderOptions('poseOpts',POSES,pose,v => pose = v);
     renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
     renderOptions('phaseOpts',PHASES,phase,v => {
@@ -2472,6 +2486,28 @@
       : `${d} ${MONTHS_SHORT[mo - 1]} · ${m.time} · ${who} (${where}) · ${COMP_SHORT[m.competition] || m.competition}`;
   }
 
+  const WEEKDAYS = ['dom','lun','mar','mer','gio','ven','sab'];
+
+  function fixtureCard(m) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fx-card' + (mdPick === m.id ? ' selected' : '');
+    const team = teams.find(t => t.name === m.opponent);
+    const [y,mo,d] = m.date.split('-').map(Number);
+    const day = WEEKDAYS[new Date(y, mo - 1, d).getDay()];
+    b.innerHTML = `<span class="logo fx-logo"></span>
+      <span class="fx-main"><span class="fx-team"></span>
+        <span class="fx-when"></span><span class="fx-info"></span></span>`;
+    b.querySelector('.fx-team').textContent = displayTeamName(m.opponent || m.opponent_espn);
+    b.querySelector('.fx-when').textContent = `${day} ${d} ${MONTHS_SHORT[mo - 1]} · ${m.time}`;
+    b.querySelector('.fx-info').textContent =
+      `${COMP_SHORT[m.competition] || m.competition} · ${m.side === 'home' ? 'Casa' : 'Trasferta'} · ${m.stadium || 'stadio da inserire'}`;
+    fillLogo(b.querySelector('.fx-logo'), team || null);
+    if (!team) { b.disabled = true; b.title = 'Logo squadra mancante nel catalogo'; }
+    b.addEventListener('click',() => { haptic('select'); pickMdFixture(m.id); });
+    return b;
+  }
+
   async function loadMdFixtures() {
     const hint = $('mdPickHint');
     if (!fixtureList.length) {
@@ -2482,9 +2518,15 @@
       catch (_) { fixtureList = []; }
     }
     hint.textContent = fixtureList.length ? '' : 'Calendario non disponibile: usa “Altra partita”.';
-    const options = fixtureList.slice(0,10).map(m => [m.id, fixtureLabel(m), !m.opponent]);
-    options.push(['manual','Altra partita (inserisci a mano)']);
-    renderOptions('mdPickOpts', options, mdPick, pickMdFixture);
+    const box = $('mdPickOpts');
+    box.innerHTML = '';
+    fixtureList.slice(0,10).forEach(m => box.appendChild(fixtureCard(m)));
+    const other = document.createElement('button');
+    other.type = 'button';
+    other.className = 'fx-card fx-other' + (mdPick === 'manual' ? ' selected' : '');
+    other.textContent = 'Altra partita (inserisci a mano)';
+    other.addEventListener('click',() => { haptic('select'); pickMdFixture('manual'); });
+    box.appendChild(other);
   }
 
   // Un tocco: competizione, campo, avversario, stadio, data e ora.
@@ -2503,6 +2545,22 @@
     buildFlow();
     renderSteps();
     setTimeout(() => nextField(), 120);
+  }
+
+  // Calendario: tocco sul mese -> partite del mese e anteprima subito.
+  // "Modifica" nell'anteprima riporta all'elenco delle partite da correggere.
+  async function autoCalendar() {
+    const now = new Date();
+    // Stagione: un mese già passato da più di un mese è quello dell'anno dopo.
+    $('calYear').value = String(now.getFullYear() + (calMonth < now.getMonth() ? 1 : 0));
+    calRows = [];
+    await fillCalendarFromFixtures();
+    buildFlow();
+    flowIndex = Math.max(0, flow.indexOf('calrows'));
+    renderFlow();
+    const complete = calRows.length && calRows.every(r => r.day && r.team);
+    if (complete) previewGraphic();
+    else if (calRows.length) showError('Alcune partite non hanno la squadra: completale qui.');
   }
 
   // Calendario: scelto il mese, le partite si compilano da sole (modificabili).
