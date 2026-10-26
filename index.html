@@ -1333,17 +1333,20 @@
     // le UEFA hanno lo sfondo della competizione. Stats: come half/end/full. Kick off: mai.
     const italy = competition.startsWith('ita.');
     const withKit = [...base,'kit'];
-    if (kind === 'goal' || kind === 'saved') flow = [...withKit,'player','minute','pose'];
-    else if (kind === 'kick') flow = base;
-    else if (kind === 'match' && phase === 'kick') flow = ['phase',...base];
-    else if (kind === 'match') flow = ['phase',...(italy ? withKit : base),'score'];
-    else if (kind === 'stats') flow = [...(italy ? withKit : base),'moment','stats'];
-    // Pre-gara: prima si sceglie la partita dal calendario (competizione, campo,
-    // avversario e per il Matchday stadio, data e ora), oppure "Altra partita" a mano.
+    // Prima si sceglie la partita dal calendario Juventus (competizione, campo e
+    // avversario si compilano da soli; Matchday anche stadio, data e ora), oppure
+    // "Altra partita" per scrivere tutto a mano, anche dati inventati.
+    // Pre-gara: prossime partite; Goal/Event/Stats: partita in corso o già giocate.
+    const picked = mdPick && mdPick !== 'manual';
+    const pick = steps => ['mdpick',...(picked ? steps.filter(s => !base.includes(s)) : steps)];
+    if (kind === 'goal' || kind === 'saved') flow = pick([...withKit,'player','minute','pose']);
+    else if (kind === 'kick') flow = pick(base);
+    else if (kind === 'match' && phase === 'kick') flow = ['phase',...pick(base)];
+    else if (kind === 'match') flow = ['phase',...pick([...(italy ? withKit : base),'score'])];
+    else if (kind === 'stats') flow = pick([...(italy ? withKit : base),'moment','stats']);
     else if (PREMATCH.includes(kind)) {
-      const picked = mdPick && mdPick !== 'manual';
       const rest = {squad:['squad'], xi:['kit','lineup','photo'], md:['kit','match','photo'], pxi:['kit','xi11']}[kind];
-      flow = ['mdpick',...(picked ? [] : base),...rest];
+      flow = pick([...base,...rest]);
     }
     else if (kind === 'jr') flow = ['jrcolor','photo'];
     else if (kind === 'cal') flow = ['calmonth','calrows'];
@@ -1559,10 +1562,13 @@
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Foto + JR'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
     if (screenName === 'lineup') readXiText();
     if (screenName === 'mdpick') {
-      $('mdPickEyebrow').textContent = ({squad:'Squad list', xi:'Starting XI', md:'Matchday', pxi:'Probabile XI'})[kind] || 'Partita';
+      $('mdPickEyebrow').textContent = ({squad:'Squad list', xi:'Starting XI', md:'Matchday', pxi:'Probabile XI',
+        goal:'Gol', saved:'Parata', match:'Event', kick:'Kick off', stats:'Statistiche'})[kind] || 'Partita';
       $('mdPickLead').textContent = kind === 'md'
         ? 'Dal calendario della Juventus: competizione, avversario, stadio, data e ora si compilano da soli.'
-        : 'Dal calendario della Juventus: competizione, campo e avversario si compilano da soli.';
+        : PREMATCH.includes(kind)
+          ? 'Dal calendario della Juventus: competizione, campo e avversario si compilano da soli.'
+          : 'Partita di oggi o già giocata: competizione, campo e avversario si compilano da soli.';
       loadMdFixtures();
     }
     if (screenName === 'calrows') fillCalendarFromFixtures();
@@ -2557,15 +2563,24 @@
     return b;
   }
 
+  // Due elenchi: prossime partite (pre-gara) e partite di oggi/già giocate (dalla più recente).
+  const fixtureCache = {};
   async function loadMdFixtures() {
     const hint = $('mdPickHint');
-    if (!fixtureList.length) {
+    const mode = PREMATCH.includes(kind) ? 'next' : 'past';
+    if (!fixtureCache[mode] || !fixtureCache[mode].length) {
       hint.textContent = 'Carico le partite…';
+      $('mdPickOpts').innerHTML = '';
       const today = new Date();
-      const to = new Date(today.getTime() + 60 * 86400000);
-      try { fixtureList = (await fetchFixtures(isoDay(today), isoDay(to))).filter(m => COMP_SHORT[m.competition]); }
-      catch (_) { fixtureList = []; }
+      const day = n => isoDay(new Date(today.getTime() + n * 86400000));
+      try {
+        const rows = (mode === 'next' ? await fetchFixtures(day(0), day(60)) : await fetchFixtures(day(-30), day(0)))
+          .filter(m => COMP_SHORT[m.competition]);
+        fixtureCache[mode] = mode === 'next' ? rows : rows.reverse();
+      } catch (_) { fixtureCache[mode] = []; }
+      if (mode !== (PREMATCH.includes(kind) ? 'next' : 'past')) return;     // nel frattempo è cambiata grafica
     }
+    fixtureList = fixtureCache[mode];
     hint.textContent = fixtureList.length ? '' : 'Calendario non disponibile: usa “Altra partita”.';
     const box = $('mdPickOpts');
     box.innerHTML = '';
@@ -2573,7 +2588,7 @@
     const other = document.createElement('button');
     other.type = 'button';
     other.className = 'fx-card fx-other' + (mdPick === 'manual' ? ' selected' : '');
-    other.textContent = 'Altra partita (inserisci a mano)';
+    other.textContent = 'Altra partita o dati inventati (a mano)';
     other.addEventListener('click',() => { haptic('select'); pickMdFixture('manual'); });
     box.appendChild(other);
   }
