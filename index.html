@@ -470,9 +470,6 @@
        cornice su 1086x1448); dentro, la pagina dei livelli 1086x1448 ridotta a 972x1296. */
     .pp-window{position:absolute;left:6.998%;top:5.249%;width:86.004%;height:89.503%;overflow:hidden}
     .pp-page{position:absolute;left:-2.034%;top:0;width:104.069%;height:100%}
-    .pp-tools{display:flex;flex-direction:column;align-items:center;gap:4px;margin:10px auto 0}
-    .pp-tools .module-chips{margin-top:0;justify-content:center}
-    .pp-links{display:flex;gap:18px;justify-content:center}
     /* Modalita' live (dal LiveScore): solo foto della fase e conferma */
     /* Restano al loro posto (righe e colonne della griglia invariate), solo invisibili */
     body.live #closeWorkflowButton{visibility:hidden}
@@ -986,13 +983,6 @@
               </div></div>
               <img id="ppOverlay" class="overlay ghost" alt="" hidden>
               <div id="ppEmpty" class="empty" aria-label="Nessuna foto"></div>
-            </div>
-            <div id="ppTools" class="pp-tools" hidden>
-              <div id="ppModeOpts" class="module-chips" role="radiogroup"></div>
-              <div class="pp-links">
-                <button id="ppBgButton" class="link-btn" type="button">Cambia sfondo</button>
-                <button id="ppPersonButton" class="link-btn" type="button">Cambia persona</button>
-              </div>
             </div>
             <input id="ppFile" type="file" accept="image/*" hidden>
             <div id="ppSummary" class="hint" style="text-align:center"></div>
@@ -1610,7 +1600,7 @@
     try {
       if (tg && tg.disableVerticalSwipes) editing ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
     } catch (_) {}
-    if (screenName === 'phasephoto') { $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); renderPpMode(); loadPpGhost(); requestAnimationFrame(layoutPhase); }
+    if (screenName === 'phasephoto') { $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Foto + JR'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
     if (screenName === 'lineup') readXiText();
     if (screenName === 'mdpick') {
@@ -3118,7 +3108,6 @@
   // persona.follow = scontornata dallo sfondo e ferma su di esso (combacia esattamente).
   const PP_W = 1086, PP_H = 1448;
   const ppState = {bg:null, person:null, mode:'both', uploading:false, ghostKey:'', pick:'photo'};
-  const PP_MODES = [['both','Insieme'],['bg','Sfondo'],['person','Persona']];
 
   function ppRevoke(url) { if (url) { try { URL.revokeObjectURL(url); } catch (_) {} } }
 
@@ -3128,7 +3117,6 @@
     Object.assign(ppState,{bg:null, person:null, mode:'both', uploading:false});
     ['ppBg','ppPerson'].forEach(id => { $(id).hidden = true; $(id).removeAttribute('src'); });
     $('ppEmpty').hidden = false;
-    $('ppTools').hidden = true;
     $('ppSummary').textContent = '';
   }
 
@@ -3161,7 +3149,7 @@
   function layoutPhase() {
     const frame = $('ppFrame'), stage = $('stage');
     if (frame.offsetParent) {
-      const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 74;
+      const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 34;
       const width = Math.max(200, Math.min(frame.parentElement.clientWidth, free * 0.75));
       frame.style.maxWidth = 'none';
       frame.style.width = `${Math.floor(width)}px`;
@@ -3184,10 +3172,6 @@
     if (mode === 'both') return person && !person.follow ? [bg, person] : [bg];
     ppDetach();
     return mode === 'bg' ? [bg] : (person ? [person] : []);
-  }
-
-  function renderPpMode() {
-    renderOptions('ppModeOpts',PP_MODES,ppState.mode,v => { ppState.mode = v; });
   }
 
   function phasePhotoData(ghost) {
@@ -3293,9 +3277,7 @@
       $('ppBg').src = ppState.bg.url;
       $('ppBg').hidden = false;
       $('ppEmpty').hidden = true;
-      $('ppTools').hidden = false;
       if ($('ppSummary').textContent === 'Caricamento foto…') $('ppSummary').textContent = '';
-      renderPpMode();
       layoutPhase();
       haptic('success');
     } catch (err) {
@@ -3354,8 +3336,6 @@
       layoutPhase();
     },{passive:false});
     $('ppPick').addEventListener('click',() => pick('photo'));
-    $('ppBgButton').addEventListener('click',() => pick('bg'));
-    $('ppPersonButton').addEventListener('click',() => pick('person'));
     $('ppFile').addEventListener('change',e => { uploadPhasePhoto(e.target.files && e.target.files[0], ppState.pick); e.target.value = ''; });
     window.addEventListener('resize',layoutPhase);
     frame.addEventListener('touchmove',e => e.preventDefault(),{passive:false});
@@ -3564,7 +3544,7 @@
       await finishBusy();
       $('nextButton').textContent = LIVE ? 'Confermata ✓' : 'Inviato ✓';
       $('busyTitle').textContent = LIVE ? 'Confermata ✓' : 'Inviata ✓';
-      $('busySub').textContent = LIVE ? 'Puoi cambiarla dal pulsante del bot fino al fischio.' : 'Trovi la foto nella chat del bot.';
+      $('busySub').textContent = LIVE ? 'Il bot la userà per la grafica al fischio.' : 'Trovi la foto nella chat del bot.';
       haptic('success');
       setTimeout(() => {
         try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}
@@ -3602,8 +3582,8 @@
         ppState.mode = 'both';
         $('ppBg').src = ppState.bg.url; $('ppBg').hidden = false;
         $('ppPerson').src = ppState.person.url; $('ppPerson').hidden = false;
-        $('ppEmpty').hidden = true; $('ppTools').hidden = false;
-        renderPpMode(); layoutPhase(); renderSteps();
+        $('ppEmpty').hidden = true;
+        layoutPhase(); renderSteps();
       }
     } catch (err) {
       showError(err && err.message ? err.message : 'LiveScore non raggiungibile.');
