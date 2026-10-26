@@ -108,5 +108,5 @@ def build_team_bundle(assets=g.DEFAULT_ASSET_DIR):
         players = []
     print(f'INFO IMAGEGEN: calciatori nel pacchetto {len(players)}', flush=True)
     return json.dumps(
-        {**manifest, 'teams': rows, 'players': players}, ensure_ascii=False
+        {**manifest, 'teams': rows, 'players': players, 'shirts': dict(SHIRT_NUMBERS)}, ensure_ascii=False
     ).encode('utf-8')

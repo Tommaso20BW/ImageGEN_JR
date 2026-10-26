@@ -67,6 +67,17 @@ def _canonical_player(catalog, value, *, goalkeeper=False):
     raise ValueError('Giocatore ambiguo: selezionalo dall’elenco.')
 
 
+def _lineup_name(catalog, value):
+    """Starting XI: nome del catalogo se il giocatore è in rosa, altrimenti il nome scritto."""
+    try:
+        return _canonical_player(catalog, value)
+    except ValueError:
+        name = ' '.join(str(value or '').split())
+        if not name or len(name) > 30:
+            raise ValueError('Nome giocatore non valido.')
+        return name
+
+
 def _photo_id(value):
     value = str(value or '')
     if not re.fullmatch(r'[0-9a-f]{16}', value):
@@ -228,7 +239,8 @@ def _build_state(envelope, catalog, now, expected_session):
     elif kind == 'xi':
         lineup = parse_lineup(incoming.get('lineup'))
         if isinstance(incoming.get('lineup'), list):
-            lineup = [(number, _canonical_player(catalog, name)) for number, name in lineup]
+            # Chi è in rosa prende il nome del catalogo; gli altri restano come scritti.
+            lineup = [(number, _lineup_name(catalog, name)) for number, name in lineup]
             if len({name for _n, name in lineup}) != PLAYERS_IN_XI:
                 raise ValueError('Lo stesso giocatore è stato scelto due volte.')
         data['lineup'] = lineup

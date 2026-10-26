@@ -263,6 +263,8 @@
     }
 
     .stage{min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+    /* Editor foto: pagina ferma, il riquadro si adatta allo spazio libero (vedi fitPhotoFrame) */
+    .stage.photo-mode{overflow:hidden}
     .content{
       --pad-top:26px;--pad-x:16px;
       position:relative;width:100%;max-width:none;margin:0 auto;
@@ -428,6 +430,28 @@
     .fx-info{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .fx-other{min-height:52px;justify-content:center;font-weight:750;color:var(--muted)}
     .xi-rows{display:grid;gap:8px}
+    /* Liste incollate: elenco letto (numero + cognome) */
+    textarea.paste{min-height:150px}
+    .parsed{display:grid;gap:6px;margin-top:12px}
+    .parsed-row{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;min-height:40px;padding:0 12px;
+      border-radius:12px;background:var(--surface);border:1px solid var(--line);font-weight:750}
+    .parsed-row .pr-num{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted)}
+    .parsed-row .pr-role{font-size:12px;font-weight:800;color:var(--muted)}
+    .parsed-row.miss .pr-num{color:var(--danger)}
+    .parsed-row.new .pr-role{color:var(--danger)}
+    button.parsed-row{width:100%;text-align:left;color:inherit;font:inherit;font-weight:750}
+    .module-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+    .module-chips .opt{min-height:38px;padding:0 13px;font-size:14px;width:auto;flex:0 0 auto;gap:0}
+    .module-chips .opt .radio{display:none}
+    /* Popup numero di maglia */
+    .ask{position:fixed;inset:0;z-index:50;display:none;place-items:center;padding:24px;background:rgba(0,0,0,.45)}
+    .ask.open{display:grid}
+    .ask-card{width:100%;max-width:340px;padding:20px;border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-hover)}
+    .ask-card h2{margin:0 0 6px;font-size:20px}
+    .ask-card p{margin:0 0 14px;color:var(--muted);font-weight:600}
+    .ask-card .field-input{text-align:center;font-size:24px;font-weight:800}
+    .ask-btns{display:flex;gap:10px;margin-top:14px}
+    .ask-btns .btn{flex:1;min-height:46px}
     .xi-row{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center}
     .xi-row .field-input{min-height:48px;font-size:16px;font-weight:700;padding:0 12px;min-width:0}
     .xi-num{text-align:center}
@@ -850,9 +874,11 @@
           <section class="screen" data-screen="lineup">
             <div class="eyebrow">Starting XI</div>
             <h1>Formazione</h1>
-            <p class="lead">Scegli gli 11 titolari nell’ordine della grafica: il numero di maglia si compila da solo (puoi cambiarlo).</p>
-            <div id="xiRows" class="xi-rows"></div>
+            <p class="lead">Incolla la formazione così come la trovi: i numeri di maglia si mettono da soli.</p>
+            <textarea id="xiText" class="field-input paste" maxlength="600" autocapitalize="words" spellcheck="false"
+              placeholder="Buffon; Barzagli, Bonucci, Chiellini; Lichtsteiner, Vidal, Pirlo, Marchisio, Asamoah; Vucinic, Giovinco"></textarea>
             <div id="lineupSummary" class="hint">0 / 11 giocatori</div>
+            <div id="xiParsed" class="parsed"></div>
           </section>
 
           <section class="screen" data-screen="mdpick">
@@ -900,18 +926,15 @@
             </div>
           </section>
 
-          <section class="screen" data-screen="module">
-            <div class="eyebrow">Probabile XI</div>
-            <h1>Modulo</h1>
-            <p class="lead">4-2-3-1, 3-4-2-1 e 3-4-1-2 sono quelli del design Canva; gli altri usano le stesse posizioni del campo.</p>
-            <div id="moduleOpts" class="opts grid" role="radiogroup"></div>
-          </section>
-
           <section class="screen" data-screen="xi11">
             <div class="eyebrow">Probabile XI</div>
-            <h1>Giocatori</h1>
-            <p class="lead">Un giocatore per ruolo: portiere, difesa da sinistra a destra, centrocampo, attacco.</p>
-            <div id="pxiSlots" class="pxi-slots"></div>
+            <h1>Formazione</h1>
+            <p class="lead">Incolla la formazione: ogni reparto si legge da sinistra a destra. Il modulo lo trovo da solo.</p>
+            <textarea id="pxiText" class="field-input paste" maxlength="600" autocapitalize="words" spellcheck="false"
+              placeholder="Juventus (3-5-2): Buffon; Barzagli, Bonucci, Chiellini; Lichtsteiner, Vidal, Pirlo, Marchisio, Asamoah; Vucinic, Giovinco"></textarea>
+            <div id="pxiSummary" class="hint">Modulo: —</div>
+            <div id="moduleOpts" class="module-chips" role="radiogroup"></div>
+            <div id="pxiParsed" class="parsed"></div>
           </section>
 
           <section class="screen" data-screen="jrcolor">
@@ -941,7 +964,7 @@
             <div class="eyebrow">Squad list</div>
             <h1>Convocati</h1>
             <p class="lead">Incolla l’elenco, un giocatore per riga. I numeri vengono tolti e i nomi messi in ordine alfabetico su due colonne.</p>
-            <textarea id="squadText" class="field-input" maxlength="1500" autocapitalize="words" spellcheck="false" placeholder="1 Di Gregorio&#10;23 Pinsoglio&#10;4 Gatti&#10;…"></textarea>
+            <textarea id="squadText" class="field-input" maxlength="1500" autocapitalize="words" spellcheck="false" placeholder="1 Buffon&#10;3 Chiellini&#10;10 Del Piero&#10;…"></textarea>
             <div id="squadSummary" class="hint">0 giocatori</div>
           </section>
 
@@ -1322,7 +1345,7 @@
       : ['mdpick',...withKit,'match','photo'];
     else if (kind === 'jr') flow = ['jrcolor','photo'];
     else if (kind === 'cal') flow = ['calmonth','calrows'];
-    else if (kind === 'pxi') flow = [...withKit,'module','xi11'];
+    else if (kind === 'pxi') flow = [...withKit,'xi11'];
     if (TAB_KINDS[tab]) flow = ['subkind',...flow];
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
   }
@@ -1338,7 +1361,7 @@
       case 'side': return labelOf(SIDES,side);
       case 'opponent': return selectedTeam ? displayTeamName(selectedTeam.name) : '';
       case 'kit': return labelOf(KITS,kit);
-      case 'player': return selectedPlayer ? selectedPlayer.name : '';
+      case 'player': return selectedPlayer ? surnameOf(selectedPlayer) : '';
       case 'minute': {
         const min = $('minute').value.trim();
         const h = $('evHomeScore').value.trim(), a = $('evAwayScore').value.trim();
@@ -1368,7 +1391,7 @@
       case 'mdpick': { const m = fixtureList.find(f => f.id === mdPick); return mdPick === 'manual' ? 'A mano' : (m ? fixtureLabel(m, true) : ''); }
       case 'calmonth': return calMonth ? `${CAL_MONTHS[calMonth - 1]} ${$('calYear').value}` : '';
       case 'calrows': { const n = calRows.length; return n ? `${n} partit${n === 1 ? 'a' : 'e'}` : ''; }
-      case 'xi11': { const n = pxiPicks.filter(Boolean).length; return n ? `${n} / 11` : ''; }
+      case 'xi11': { const n = pxiPicks.filter(Boolean).length; return n ? `${pxiModule || '?'} · ${n} / 11` : ''; }
       case 'match': {
         const t = $('matchTime').value, d = $('matchDate').value;
         return t && d ? `${d.split('-').reverse().join('/')} · ${t}` : '';
@@ -1527,15 +1550,17 @@
       if (el !== screen) el.classList.remove('active');
     });
     if (screen) screen.classList.add('active');
+    $('stage').classList.toggle('photo-mode', screenName === 'photo');
+    if (screenName === 'photo') $('stage').scrollTop = 0;
+    try {
+      if (tg && tg.disableVerticalSwipes) screenName === 'photo' ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
+    } catch (_) {}
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Foto + JR'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
-    if (screenName === 'lineup') renderXiRows();
+    if (screenName === 'lineup') readXiText();
     if (screenName === 'mdpick') loadMdFixtures();
     if (screenName === 'calrows') fillCalendarFromFixtures();
     if (screenName === 'calrows') { if (!calRows.length) calRows.push({day:'', team:'', side:'home'}); renderCalRows(); }
-    if (screenName === 'xi11' && $('pxiSlots').dataset.module !== pxiModule + players.length) {
-      $('pxiSlots').dataset.module = pxiModule + players.length;
-      renderPxiSlots();
-    }
+    if (screenName === 'xi11') readPxiText();
     lastRenderedScreen = screenName || '';
     lastRenderedFlowIndex = flowIndex;
     lastRenderedPreviewMode = previewMode;
@@ -1621,7 +1646,7 @@
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
     renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; });
     renderOptions('jrColorOpts',JR_COLORS,jrColor,v => { jrColor = v; });
-    renderOptions('moduleOpts',PXI_MODULES,pxiModule,v => { pxiModule = v; renderPxiSlots(); });
+    renderOptions('moduleOpts',PXI_MODULES,pxiModule,v => { pxiModule = v; pxiModuleManual = true; readPxiText(); });
     $('subkindTitle').textContent = labelOf(TABS,tab);
     renderOptions('subkindOpts',TAB_KINDS[tab] || [],kind,v => {
       // Scelta del tipo: riparte da zero e passa subito al primo passaggio.
@@ -2031,8 +2056,9 @@
     etOn = false;
     selectedTeam = null;
     selectedPlayer = null;
-    ['opponentSearch','playerSearch','minute','homePens','awayPens','squadText','matchStadium','matchTime','matchDate'].forEach(id => { $(id).value = ''; });
-    xiPicks = Array.from({length:11},() => ({name:'', number:'', auto:true}));
+    ['opponentSearch','playerSearch','minute','homePens','awayPens','squadText','matchStadium','matchTime','matchDate','xiText','pxiText'].forEach(id => { $(id).value = ''; });
+    xiPicks = [];
+    pxiModuleManual = false;
     updateSquadSummary();
     updateLineupSummary();
     clearPhoto();
@@ -2241,20 +2267,20 @@
     playerMatches = playersLoaded ? searchItems(currentPlayerPool(),pq) : [];
 
     if (selectedPlayer && !playerMatches.some(item => item.name === selectedPlayer.name)) {
-      if (norm(pq) !== norm(selectedPlayer.name)) selectedPlayer = null;
+      if (norm(pq) !== norm(selectedPlayer.name) && norm(pq) !== norm(surnameOf(selectedPlayer))) selectedPlayer = null;
     }
 
     if (!playersLoaded) $('playerSummary').textContent = 'Caricamento giocatori…';
     else if (!norm(pq)) $('playerSummary').textContent = `${playerMatches.length} ${kind === 'saved' ? 'portieri' : 'giocatori'}`;
     else if (!playerMatches.length) $('playerSummary').textContent = 'Nessun risultato.';
-    else if (selectedPlayer) $('playerSummary').textContent = `Selezionato: ${selectedPlayer.name}`;
+    else if (selectedPlayer) $('playerSummary').textContent = `Selezionato: ${surnameOf(selectedPlayer)}`;
     else $('playerSummary').textContent = `${playerMatches.length} risultat${playerMatches.length === 1 ? 'o' : 'i'}`;
 
     renderResults('playerList',playerMatches,selectedPlayer && selectedPlayer.name,
-      item => item.name,
+      item => surnameOf(item),
       item => {
         selectedPlayer = item;
-        $('playerSearch').value = item.name;
+        $('playerSearch').value = surnameOf(item);
         refreshSearchSummaries();
         renderSteps();
         document.activeElement && document.activeElement.blur && document.activeElement.blur();
@@ -2338,10 +2364,10 @@
 
     if (step === 'lineup') {
       const rows = lineupRows();
-      if (rows.length !== 11) { showError(`Scegli tutti gli 11 giocatori (ora ${rows.length}).`); return false; }
-      if (new Set(rows.map(r => r.name)).size !== 11) { showError('Lo stesso giocatore è scelto due volte.'); return false; }
+      if (rows.length !== 11) { showError(`Servono 11 giocatori (ora ${rows.length}).`); return false; }
+      if (new Set(rows.map(r => r.name)).size !== 11) { showError('Lo stesso giocatore compare due volte.'); return false; }
       const bad = rows.find(r => !/^\d{1,2}$/.test(r.number));
-      if (bad) { showError(`Manca il numero di maglia di ${bad.name}.`); return false; }
+      if (bad) { showError(`Manca il numero di maglia di ${bad.label}.`); return false; }
       rememberShirts();
     }
 
@@ -2372,9 +2398,14 @@
     }
 
     if (step === 'xi11') {
-      const picks = pxiPicks.filter(Boolean);
-      if (picks.length !== 11) { showError(`Scegli tutti gli 11 giocatori (ora ${picks.length}).`); return false; }
-      if (new Set(picks).size !== 11) { showError('Lo stesso giocatore è scelto due volte.'); return false; }
+      const n = pxiRead.length;
+      if (n !== 11) { showError(`Servono 11 giocatori (ora ${n}).`); return false; }
+      const unknown = pxiRead.find(r => !r.player);
+      if (unknown) { showError(`${unknown.label} non è nella rosa: serve la sua foto.`); return false; }
+      if (new Set(pxiPicks).size !== 11) { showError('Lo stesso giocatore compare due volte.'); return false; }
+      if (!pxiModule) { showError('Scegli il modulo.'); return false; }
+      const keeper = pxiRead[0].player;
+      if (keeper.role !== 'goalkeeper') { showError(`Il primo deve essere il portiere (ora ${keeper.name}).`); return false; }
     }
 
     if (step === 'squad') {
@@ -2414,6 +2445,7 @@
         await loadCatalogs();
         refreshSearchSummaries();
       }
+      if (step === 'lineup' && !(await askMissingNumbers())) return;
       if (!validateCurrent()) return;
     }
 
@@ -2615,84 +2647,188 @@
     $('calSummary').textContent = `${calRows.length} / ${CAL_MAX} partite`;
   }
 
-  /* ---------- Probabile XI: un menu per ruolo ---------- */
-  function renderPxiSlots() {
-    const box = $('pxiSlots');
-    const roles = PXI_ROLES[pxiModule] || [];
-    box.innerHTML = '';
-    if (!roles.length) { box.innerHTML = '<div class="hint">Scegli prima il modulo.</div>'; return; }
-    const sorted = players.slice().sort((a,b) => a.name.localeCompare(b.name,'it',{sensitivity:'base'}));
-    roles.forEach((role,i) => {
-      const row = document.createElement('label');
-      row.className = 'pxi-row';
-      const tag = document.createElement('span'); tag.className = 'pxi-role'; tag.textContent = role;
-      const sel = document.createElement('select'); sel.className = 'field-input pxi-select';
-      const keepers = i === 0;
-      sel.innerHTML = '<option value="">— scegli —</option>' + sorted
-        .filter(p => keepers ? p.role === 'goalkeeper' : p.role !== 'goalkeeper')
-        .map(p => `<option value="${p.name.replace(/"/g,'&quot;')}">${p.name}</option>`).join('');
-      sel.value = pxiPicks[i] || '';
-      sel.addEventListener('change',() => { pxiPicks[i] = sel.value; clearError(); renderSteps(); });
-      row.append(tag, sel);
-      box.appendChild(row);
-    });
+  /* ---------- Liste incollate (Starting XI e Probabili) ---------- */
+  // Formati accettati:
+  //   "Juventus (3-4-1-2): Vicario; Gatti, Bremer, Lucumì; ...; Woltemade, Kolo Muani ⚪️⚫️"
+  //   un giocatore per riga, con o senza numero ("25 Vicario", "Vicario 25").
+  // ";" separa i reparti, "," i giocatori dello stesso reparto (da sinistra a destra).
+  // Cognomi sulla grafica e nella ricerca; il nome completo serve solo per la rosa.
+  const SHORT_NAMES = {nicolas_gonzalez:'Nico Gonzalez', douglas_luiz:'Douglas Luiz', randal_kolo_muani:'Kolo Muani',
+    khephren_thuram_ulien:'Thuram', neto_murara:'Neto', lloyd_casius_kelly:'Kelly', pape_matar_sarr:'Sarr', juan_david_cabal:'Cabal'};
+  const shirtBook = {};              // slug -> numero (data/shirt_numbers.json, anche giocatori fuori rosa)
+  let xiPicks = [];                  // [{name, label, number, player}]
+  let pxiRead = [];
+  let pxiModuleManual = false;
+
+  function surnameOf(p) {
+    if (!p) return '';
+    if (SHORT_NAMES[p.slug]) return SHORT_NAMES[p.slug];
+    const words = String(p.name || '').split(/\s+/);
+    const singles = (p.aliases || []).filter(a => !a.includes('.') && !a.trim().includes(' '));
+    for (const a of singles) { const w = words.find(w => norm(w) === norm(a)); if (w) return w; }
+    return singles[singles.length - 1] || words[words.length - 1] || p.name;
   }
 
-  /* ---------- Starting XI: formazione ---------- */
-  // 11 righe: giocatore dalla rosa + numero di maglia (proposto in automatico,
-  // modificabile). L'ordine è quello delle righe.
-  let xiPicks = Array.from({length:11},() => ({name:'', number:'', auto:true}));
+  const slugOf = name => norm(name).replace(/ /g,'_');
+
+  // Giocatore della rosa dal testo scritto: nome, alias o cognome (accenti e maiuscole non contano).
+  function findPlayer(text) {
+    const q = norm(text);
+    if (!q) return null;
+    const keys = p => [p.name, surnameOf(p), ...(p.aliases || [])].map(norm);
+    const exact = players.filter(p => keys(p).includes(q));
+    if (exact.length === 1) return exact[0];
+    const byWord = players.filter(p => norm(p.name).split(' ').includes(q) || norm(p.name).endsWith(' ' + q));
+    return byWord.length === 1 ? byWord[0] : null;
+  }
+
+  function cleanName(text) {
+    const t = text.replace(/\s+/g,' ').trim();
+    return t === t.toLowerCase() || t === t.toUpperCase()
+      ? t.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, m => m.toUpperCase()) : t;
+  }
+
+  // Testo -> {module, groups:[[{label, number}]]}
+  function parseFormation(raw) {
+    let text = String(raw || '').replace(/\r/g,'');
+    const mod = text.match(/\b(\d(?:\s*-\s*\d){2,4})\b/);
+    const module = mod ? mod[1].replace(/\s/g,'') : '';
+    // Via l'intestazione ("Lecce Juve:", "🎯 UFFICIALE Juventus (3-4-1-2):") e le parentesi.
+    if (/[;,]/.test(text)) text = text.replace(/^[^;,\n]*:\s*/,'');
+    text = text.replace(/\([^)]*\)/g,' ');
+    const lines = /;/.test(text) ? text.split(/[;\n]/) : /,/.test(text) ? [text] : text.split('\n');
+    const single = !/[;,]/.test(text);
+    const groups = [];
+    lines.forEach(line => {
+      const parts = (single ? [line] : line.split(',')).map(part => {
+        const clean = part.replace(/[^\p{L}\p{N}\s'’.\-]/gu,' ').replace(/\s+/g,' ').trim();
+        if (!clean || clean.endsWith(':')) return null;
+        const m = clean.match(/^(\d{1,2})[\s.)-]+(.+)$/) || clean.match(/^(.+?)\s+(\d{1,2})$/);
+        let number = '', label = clean;
+        if (m) { if (/^\d/.test(m[1])) { number = m[1]; label = m[2]; } else { label = m[1]; number = m[2]; } }
+        label = label.replace(/[.\-\s]+$/,'').trim();
+        return label && /\p{L}/u.test(label) ? {label, number:number ? String(Number(number)) : ''} : null;
+      }).filter(Boolean);
+      if (parts.length) groups.push(parts);
+    });
+    return {module, groups};
+  }
+
+  function numberFor(player, label) {
+    if (player && player.number) return String(player.number);
+    const slug = player ? player.slug : slugOf(label);
+    return shirtBook[slug] ? String(shirtBook[slug]) : '';
+  }
+
+  function readXiText() {
+    const {groups} = parseFormation($('xiText').value);
+    const old = new Map(xiPicks.map(r => [r.name, r.number]));
+    xiPicks = groups.flat().slice(0,11).map(({label, number}) => {
+      const player = findPlayer(label);
+      const name = player ? player.name : cleanName(label);
+      return {name, player, label:player ? surnameOf(player) : cleanName(label),
+              number:number || old.get(name) || numberFor(player, label)};
+    });
+    renderXiParsed();
+  }
+
+  function renderXiParsed() {
+    const box = $('xiParsed');
+    box.innerHTML = '';
+    xiPicks.forEach(r => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'parsed-row' + (r.number ? '' : ' miss') + (r.player ? '' : ' new');
+      row.innerHTML = '<span class="pr-num"></span><span class="pr-name"></span><span class="pr-role"></span>';
+      row.querySelector('.pr-num').textContent = r.number || '?';
+      row.querySelector('.pr-name').textContent = r.label.toUpperCase();
+      row.querySelector('.pr-role').textContent = r.player ? '' : 'nuovo';
+      row.addEventListener('click', async () => {
+        const n = await askNumber(r.label, r.number);
+        if (n !== null) { r.number = n; renderXiParsed(); }
+      });
+      box.appendChild(row);
+    });
+    updateLineupSummary();
+    renderSteps();
+  }
 
   function lineupRows() { return xiPicks.filter(p => p.name); }
 
   function updateLineupSummary() {
     const n = lineupRows().length;
-    $('lineupSummary').textContent = `${n} / 11 giocatori`;
+    const miss = xiPicks.filter(r => !r.number).length;
+    $('lineupSummary').textContent = `${n} / 11 giocatori` + (miss ? ` · ${miss} senza numero (tocca per scriverlo)` : '');
   }
 
-  // Numeri di maglia: quelli noti arrivano dal repository (data/shirt_numbers.json).
-  // Se ne scrivi o cambi uno, all'invio il server lo salva nel repository; qui vale
-  // subito per il resto della sessione.
-  function shirtFor(name) {
-    const player = players.find(p => p.name === name);
-    return player && player.number ? String(player.number) : '';
-  }
-
+  // Numeri: quelli noti arrivano dal repository (data/shirt_numbers.json); quelli
+  // scritti qui valgono subito e all'invio il server li salva nel repository.
   function rememberShirts() {
     lineupRows().forEach(r => {
-      const player = players.find(p => p.name === r.name);
-      if (player && /^\d{1,2}$/.test(r.number)) player.number = Number(r.number);
+      if (!/^\d{1,2}$/.test(r.number)) return;
+      if (r.player) r.player.number = Number(r.number);
+      shirtBook[r.player ? r.player.slug : slugOf(r.name)] = Number(r.number);
     });
   }
 
-  function renderXiRows() {
-    const box = $('xiRows');
+  // Popup: "Che numero ha X?" -> stringa o null (annullato).
+  function askNumber(label, current='') {
+    return new Promise(resolve => {
+      const box = $('ask'), input = $('askInput');
+      $('askText').textContent = `Che numero ha ${label}?`;
+      input.value = current || '';
+      box.classList.add('open');
+      setTimeout(() => input.focus(), 50);
+      const done = value => {
+        box.classList.remove('open');
+        $('askForm').onsubmit = null; $('askCancel').onclick = null; input.oninput = null;
+        resolve(value);
+      };
+      input.oninput = () => { input.value = input.value.replace(/\D/g,'').slice(0,2); };
+      $('askForm').onsubmit = e => { e.preventDefault(); if (/^\d{1,2}$/.test(input.value)) { haptic('select'); done(String(Number(input.value))); } };
+      $('askCancel').onclick = () => done(null);
+    });
+  }
+
+  async function askMissingNumbers() {
+    for (const r of xiPicks) {
+      if (r.number) continue;
+      const n = await askNumber(r.label);
+      if (n === null) { renderXiParsed(); return false; }
+      r.number = n;
+    }
+    renderXiParsed();
+    return true;
+  }
+
+  // Probabili: il modulo è quello scritto (es. "(3-4-1-2)"), altrimenti si ricava dai reparti.
+  function readPxiText() {
+    const {module, groups} = parseFormation($('pxiText').value);
+    const flat = groups.flat().slice(0,11);
+    if (!pxiModuleManual) {
+      const fromLines = groups.length > 2 ? groups.slice(1).map(g => g.length).join('-') : '';
+      pxiModule = PXI_ROLES[module] ? module : PXI_ROLES[fromLines] ? fromLines : (flat.length ? '' : pxiModule);
+    }
+    pxiRead = flat.map(({label}) => {
+      const player = findPlayer(label);
+      return {player, label:player ? surnameOf(player) : cleanName(label)};
+    });
+    pxiPicks = pxiRead.map(r => r.player ? r.player.name : '');
+    renderOptions('moduleOpts',PXI_MODULES,pxiModule,v => { pxiModule = v; pxiModuleManual = true; readPxiText(); });
+    const roles = PXI_ROLES[pxiModule] || [];
+    const box = $('pxiParsed');
     box.innerHTML = '';
-    const sorted = players.slice().sort((a,b) => a.name.localeCompare(b.name,'it',{sensitivity:'base'}));
-    const options = '<option value="">— giocatore —</option>' + sorted
-      .map(p => `<option value="${p.name.replace(/"/g,'&quot;')}">${p.name}</option>`).join('');
-    xiPicks.forEach((pick,i) => {
+    pxiRead.forEach((r,i) => {
       const row = document.createElement('div');
-      row.className = 'xi-row';
-      row.innerHTML = `<input class="field-input xi-num" type="text" inputmode="numeric" maxlength="2" placeholder="n°" aria-label="Numero di maglia">
-        <select class="field-input xi-player" aria-label="Giocatore ${i + 1}">${options}</select>`;
-      const [num,sel] = row.children;
-      num.value = pick.number; sel.value = pick.name;
-      sel.addEventListener('change',() => {
-        pick.name = sel.value;
-        // Numero automatico (ricordato o dalla rosa), salvo che non sia stato scritto a mano.
-        if (pick.auto || !pick.number) { pick.number = shirtFor(sel.value); pick.auto = true; }
-        num.value = pick.number;
-        updateLineupSummary(); clearError(); renderSteps();
-        if (pick.name && !pick.number) num.focus();
-      });
-      num.addEventListener('input',() => {
-        num.value = num.value.replace(/\D/g,'').slice(0,2);
-        pick.number = num.value; pick.auto = false;
-      });
+      row.className = 'parsed-row' + (r.player ? '' : ' new');
+      row.innerHTML = '<span class="pr-num pr-role"></span><span class="pr-name"></span><span class="pr-role"></span>';
+      row.children[0].textContent = roles[i] || '';
+      row.children[1].textContent = r.label.toUpperCase();
+      row.children[2].textContent = r.player ? '' : 'non in rosa';
       box.appendChild(row);
     });
-    updateLineupSummary();
+    $('pxiSummary').textContent = `Modulo: ${pxiModule || 'scegli qui sotto'} · ${pxiRead.length} / 11 giocatori`;
+    renderSteps();
   }
 
   /* ---------- Starting XI: foto ---------- */
@@ -2712,7 +2848,19 @@
     $('photoSummary').textContent = '';
   }
 
+  // Riquadro foto grande quanto lo spazio libero sotto il titolo: niente scorrimento,
+  // così trascinando la foto la pagina resta ferma.
+  function fitPhotoFrame() {
+    const frame = $('photoFrame'), stage = $('stage');
+    if (!frame.offsetParent) return;
+    const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 34;
+    const width = Math.max(200, Math.min(frame.parentElement.clientWidth, free * 0.75));
+    frame.style.maxWidth = 'none';
+    frame.style.width = `${Math.floor(width)}px`;
+  }
+
   function layoutPhoto() {
+    fitPhotoFrame();
     if (!photoState.w) return;
     const frameW = $('photoFrame').clientWidth || 1;
     const k = frameW / DESIGN_W;
@@ -2837,8 +2985,12 @@
       layoutPhoto();
     },{passive:false});
     $('photoPick').addEventListener('click',() => $('photoFile').click());
+    $('xiText').addEventListener('input',() => { clearError(); readXiText(); });
+    $('pxiText').addEventListener('input',() => { clearError(); readPxiText(); });
     $('photoFile').addEventListener('change',e => { uploadPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
     window.addEventListener('resize',layoutPhoto);
+    // iOS: il dito sulla foto non deve far scorrere la pagina né chiudere la Mini App.
+    frame.addEventListener('touchmove',e => e.preventDefault(),{passive:false});
   }
 
   // Stessa pulizia di ImageGEN: via numeri e simboli, righe vuote e doppioni.
@@ -2917,7 +3069,7 @@
       }
     } else if (kind === 'xi') {
       if (!photoId) throw new Error('Scegli una foto.');
-      data.lineup = xiPicks.map(p => ({number:p.number, name:p.name}));
+      data.lineup = lineupRows().map(p => ({number:p.number, name:p.name}));
       data.photo_id = photoId;
       data.frame = {x:photoState.x, y:photoState.y, zoom:photoState.zoom};
     } else if (kind === 'md') {
@@ -3151,6 +3303,8 @@
       }
 
       if (playersResult.status === 'fulfilled') {
+        const book = playersResult.value.shirts;
+        if (book && typeof book === 'object') Object.assign(shirtBook, book);
         const rows = Array.isArray(playersResult.value.players) ? playersResult.value.players : [];
         if (rows.length) normalizeCatalogs(rows,null);
       }
@@ -3246,6 +3400,7 @@
 
   // Invio: su desktop avanza, su mobile chiude solo la tastiera.
   document.addEventListener('keydown',event => {
+    if (event.key === 'Enter' && event.target && event.target.closest && event.target.closest('#ask')) return;   // invio del popup
     if (event.key === 'Enter' && event.target && event.target.matches && event.target.matches('input')) {
       event.preventDefault();
       if (event.target.closest('.stat-row')) {
@@ -3288,5 +3443,16 @@
   if (sessionExpiresAt && !sessionExpired()) timerHandle = setInterval(updateSessionTimer,1000);
 })();
 </script>
+<div id="ask" class="ask" role="dialog" aria-modal="true" aria-labelledby="askTitle">
+  <form id="askForm" class="ask-card">
+    <h2 id="askTitle">Numero di maglia</h2>
+    <p id="askText"></p>
+    <input id="askInput" class="field-input" type="text" inputmode="numeric" maxlength="2" autocomplete="off" enterkeyhint="done">
+    <div class="ask-btns">
+      <button id="askCancel" class="btn ghost" type="button">Annulla</button>
+      <button class="btn primary" type="submit">OK</button>
+    </div>
+  </form>
+</div>
 </body>
 </html>

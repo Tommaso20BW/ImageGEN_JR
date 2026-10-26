@@ -22,12 +22,25 @@ def load():
     return {k: v for k, v in data.items() if not k.startswith('_')}
 
 
+def slug_of(name):
+    """Chiave per chi non è nella rosa: come slugOf nella Mini App ("Kenan Yıldız" -> "kenan_yildiz")."""
+    import re
+    import unicodedata
+    text = str(name).lower()
+    for a, b in (('ı', 'i'), ('ł', 'l'), ('đ', 'd'), ('ð', 'd'), ('þ', 'th'), ('ø', 'o'),
+                 ('æ', 'ae'), ('œ', 'oe'), ('ß', 'ss')):
+        text = text.replace(a, b)
+    text = ''.join(c for c in unicodedata.normalize('NFKD', text) if not unicodedata.combining(c))
+    return '_'.join(re.sub(r'[^a-z0-9]+', ' ', text).split())
+
+
 def changes(lineup, players, known):
-    """{slug: numero} dei giocatori della formazione con numero nuovo o diverso."""
+    """{slug: numero} dei giocatori della formazione con numero nuovo o diverso
+    (anche quelli fuori rosa, con la chiave del nome scritto)."""
     by_name = {p.name: p.slug for p in players}
     out = {}
     for number, name in lineup:
-        slug = by_name.get(name)
+        slug = by_name.get(name) or slug_of(name)
         if slug and str(number).isdigit() and known.get(slug) != int(number):
             out[slug] = int(number)
     return out
