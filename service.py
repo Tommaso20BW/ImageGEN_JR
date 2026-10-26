@@ -592,18 +592,8 @@ class Service:
             self.launcher_message_id,
         ])
 
-        cleanup_message_id = None
-        try:
-            cleanup_message_id = self.telegram.remove_keyboard()
-        except TelegramError:
-            pass
-
-        if cleanup_message_id:
-            try:
-                self.telegram.delete(cleanup_message_id)
-            except TelegramError:
-                pass
-
+        # Nessun messaggio in chiusura (farebbe notifica): il pulsante sta nel messaggio
+        # appena cancellato e nel tasto menu, rimesso com'era qui sotto.
         try:
             self.telegram.reset_menu_button()
         except TelegramError:

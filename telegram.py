@@ -142,21 +142,19 @@ class Telegram:
         if parsed.scheme != 'https' or not parsed.netloc:
             raise TelegramError('URL Mini App non HTTPS')
 
-        keyboard = {
-            'keyboard': [[{
-                'text': 'Apri ImageGEN',
-                'web_app': {'url': str(url).strip()},
-            }]],
-            'resize_keyboard': True,
-            'is_persistent': True,
-            'input_field_placeholder': 'ImageGEN',
-        }
-
+        # Pulsante sotto il messaggio + tasto menu della chat (niente tastiera): alla chiusura
+        # basta cancellare il messaggio e rimettere il menu normale, senza inviare nulla
+        # (una tastiera si toglie solo con un messaggio, che fa sempre notifica).
+        url = str(url).strip()
+        keyboard = {'inline_keyboard': [[{'text': 'Apri ImageGEN', 'web_app': {'url': url}}]]}
+        try:
+            self.call('setChatMenuButton', {
+                'chat_id': self.chat_id,
+                'menu_button': json.dumps({'type': 'web_app', 'text': 'ImageGEN', 'web_app': {'url': url}}),
+            })
+        except TelegramError:
+            pass
         return self.prompt(SESSION_TEXT, keyboard, SESSION_ENTITIES)
-
-    def remove_keyboard(self):
-        # Messaggio invisibile (poi cancellato) che toglie il pulsante: senza notifica.
-        return self.prompt('\u2063', {'remove_keyboard': True}, silent=True)
 
     def delete(self, message_id):
         return self.call(
