@@ -45,13 +45,16 @@ MODULES = {
                           [384.53, 307.52], [695.47, 307.52]],
     '4-3-2-1': GK + B4 + [[225.0, 716.0], [540.0, 716.0], [855.0, 716.0], [300.0, 476.0],
                           [780.0, 476.0], [540.0, 307.52]],
-    '3-4-3': GK + B3 + [[123.53, 732.0], [384.53, 732.0], [695.47, 732.0], [956.47, 732.0],
-                        [225.0, 307.52], [540.0, 307.52], [855.0, 307.52]],
-    '3-5-2': GK + B3 + [WB[0], [384.53, 717.76], [695.47, 717.76], WB[1], [540.0, 480.64],
-                        [306.01, 341.12], [773.99, 341.12]],
-    '5-4-1': GK + [[123.53, 720.0]] + B3 + [[956.47, 720.0], [123.53, 470.0], [384.53, 550.0],
-                                            [695.47, 550.0], [956.47, 470.0], [540.0, 307.52]],
+    '3-4-3': GK + B3 + [[123.53, 740.0], [384.53, 740.0], [695.47, 740.0], [956.47, 740.0],
+                        [225.0, 480.0], [540.0, 307.52], [855.0, 480.0]],
+    '3-5-2': GK + B3 + [[100.0, 620.0], [300.0, 740.0], [540.0, 760.0], [780.0, 740.0], [980.0, 620.0],
+                        [330.0, 307.52], [750.0, 307.52]],
+    '5-4-1': GK + [[96.0, 840.0], [318.0, 982.4], [540.0, 982.4], [762.0, 982.4], [984.0, 840.0],
+                   [123.53, 600.0], [384.53, 600.0], [695.47, 600.0], [956.47, 600.0], [540.0, 380.0]],
 }
+# Carte rimpicciolite solo dove i giocatori non entrano a misura piena.
+MODULE_SCALE = {'3-5-2': 0.85, '5-4-1': 0.82}
+
 ROLES = {
     '4-2-3-1': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CDC', 'AS', 'COC', 'AD', 'ATT'],
     '4-3-3': ['POR', 'TS', 'DC', 'DC', 'TD', 'CC', 'CC', 'CC', 'AS', 'ATT', 'AD'],
@@ -63,7 +66,7 @@ ROLES = {
     '4-2-2-2': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CDC', 'AS', 'AD', 'ATT', 'ATT'],
     '4-3-2-1': ['POR', 'TS', 'DC', 'DC', 'TD', 'CC', 'CC', 'CC', 'TRQ', 'TRQ', 'ATT'],
     '3-4-3': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CC', 'ED', 'AS', 'ATT', 'AD'],
-    '3-5-2': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CC', 'ED', 'CC', 'ATT', 'ATT'],
+    '3-5-2': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CDC', 'CC', 'ED', 'ATT', 'ATT'],
     '5-4-1': ['POR', 'TS', 'DC', 'DC', 'DC', 'TD', 'ES', 'CC', 'CC', 'ED', 'ATT'],
 }
 SHORT_NAMES = {'nicolas_gonzalez': 'Nico Gonzalez', 'douglas_luiz': 'Douglas Luiz',
@@ -102,16 +105,18 @@ def head_photo(player, kit):
     return path
 
 
-def _rect(base, rel):
-    return base[0] + rel[0], base[1] + rel[1], rel[2], rel[3]
+def _rect(base, rel, s=1.0):
+    """Riquadro relativo alla carta; s = scala della carta (1 = misura Canva)."""
+    return base[0] + rel[0] * s, base[1] + rel[1] * s, rel[2] * s, rel[3] * s
 
 
 def check_layout(module):
     """Nessuna etichetta deve coprire un'altra carta (testa o etichetta)."""
     meta = _meta()['home']
     boxes = []
+    s = MODULE_SCALE.get(module, 1.0)
     for cx, top in MODULES[module]:
-        boxes.append((_rect((cx, top), meta['box']), _rect((cx, top), meta['head_rect'])))
+        boxes.append((_rect((cx, top), meta['box'], s), _rect((cx, top), meta['head_rect'], s)))
     clashes = []
     for i, (label_i, _h) in enumerate(boxes):
         for j, (label_j, head_j) in enumerate(boxes):
@@ -137,13 +142,14 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
     plates = data_uri(canva / meta['plates'])
     label = data_uri(canva / meta['label'])
     text = meta['text']
-    k = meta['head_rect'][2] / (HEAD_CROP[2] - HEAD_CROP[0])
+    s = MODULE_SCALE.get(module, 1.0)
+    k = meta['head_rect'][2] * s / (HEAD_CROP[2] - HEAD_CROP[0])
 
     cards, names = [], []
     for i, ((cx, top), player) in enumerate(zip(MODULES[module], players)):
-        px, py, pw, ph = _rect((cx, top), meta['plates_rect'])
-        hx, hy, hw, hh = _rect((cx, top), meta['head_rect'])
-        lx, ly, lw, lh = _rect((cx, top), meta['label_rect'])
+        px, py, pw, ph = _rect((cx, top), meta['plates_rect'], s)
+        hx, hy, hw, hh = _rect((cx, top), meta['head_rect'], s)
+        lx, ly, lw, lh = _rect((cx, top), meta['label_rect'], s)
         cards.append(
             f'<img class="abs" src="{plates}" style="left:{px}px;top:{py}px;width:{pw}px;height:{ph}px">'
             f'<div class="head" style="left:{hx}px;top:{hy}px;width:{hw}px;height:{hh}px">'
@@ -151,12 +157,12 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
             f'top:{-HEAD_CROP[1] * k}px;width:{1254 * k}px;height:{1254 * k}px"></div>'
             f'<img class="abs" src="{label}" style="left:{lx}px;top:{ly}px;width:{lw}px;height:{lh}px">'
         )
-        x, base = cx + text['cx'], top + text['base']
+        x, base = cx + text['cx'] * s, top + text['base'] * s
         t = (f'<text x="{x}" y="{base}" text-anchor="middle" font-family="{NAME_FONT}" font-weight="500" '
-             f'font-size="{NAME_SIZE}" letter-spacing="{NAME_SPACING}" data-fit="{NAME_MAX_W}">'
+             f'font-size="{NAME_SIZE * s}" letter-spacing="{NAME_SPACING * s}" data-fit="{NAME_MAX_W * s}">'
              f'{esc(label_name(player))}</text>')
         if 'texture' in text:
-            bx, by, bw, bh = _rect((cx, top), meta['box'])
+            bx, by, bw, bh = _rect((cx, top), meta['box'], s)
             names.append(f'<clipPath id="n{i}">{t}</clipPath><image href="{data_uri(canva / text["texture"])}" '
                          f'x="{bx}" y="{by}" width="{bw}" height="{bh}" preserveAspectRatio="none" '
                          f'clip-path="url(#n{i})"/>')
