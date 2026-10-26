@@ -60,7 +60,7 @@ def columns(players):
 
 def build_html(*, players, competition, home_name, home_id, away_name, away_id, title_word='List', **_):
     if competition not in BACKGROUNDS:
-        raise ValueError('Squad list disponibile per Serie A, Coppa Italia, Champions, Europa e Conference League.')
+        raise ValueError('Squad List disponibile per Serie A, Coppa Italia, Champions, Europa e Conference League.')
     assets = asset_dir()
     left, right = columns(players)
     top = CENTER_Y - len(left) * ROW_H / 2

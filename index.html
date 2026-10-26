@@ -961,7 +961,7 @@
           </section>
 
           <section class="screen" data-screen="squad">
-            <div class="eyebrow">Squad list</div>
+            <div class="eyebrow">Squad List</div>
             <h1>Convocati</h1>
             <p class="lead">Incolla l’elenco, un giocatore per riga. I numeri vengono tolti e i nomi messi in ordine alfabetico su due colonne.</p>
             <textarea id="squadText" class="field-input" maxlength="1500" autocapitalize="words" spellcheck="false" placeholder="1 Buffon&#10;3 Chiellini&#10;10 Del Piero&#10;…"></textarea>
@@ -1084,7 +1084,7 @@
   const TABS = [['goal','GOAL'],['match','EVENT'],['stats','STATS'],['pre','PRE-GARA'],['extra','ALTRO']];
   const TAB_KINDS = {
     goal:[['goal','Gol'],['saved','Parata']],
-    pre:[['md','Matchday'],['pxi','Probabile XI'],['squad','Squad list'],['xi','Starting XI']],
+    pre:[['md','Matchday'],['pxi','Probabile XI'],['squad','Squad List'],['xi','Starting XI']],
     extra:[['cal','Calendario'],['jr','Foto + JR']]
   };
   const COMPETITIONS_UEFA = [
@@ -1562,7 +1562,7 @@
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Foto + JR'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
     if (screenName === 'lineup') readXiText();
     if (screenName === 'mdpick') {
-      $('mdPickEyebrow').textContent = ({squad:'Squad list', xi:'Starting XI', md:'Matchday', pxi:'Probabile XI',
+      $('mdPickEyebrow').textContent = ({squad:'Squad List', xi:'Starting XI', md:'Matchday', pxi:'Probabile XI',
         goal:'Gol', saved:'Parata', match:'Event', kick:'Kick off', stats:'Statistiche'})[kind] || 'Partita';
       $('mdPickLead').textContent = kind === 'md'
         ? 'Dal calendario della Juventus: competizione, avversario, stadio, data e ora si compilano da soli.'

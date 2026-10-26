@@ -267,7 +267,7 @@ def _build_state(envelope, catalog, now, expected_session):
 
     elif kind == 'squad':
         if competition not in SQUAD_COMPETITIONS:
-            raise ValueError('Squad list solo per Serie A, Coppa Italia ed Europa League.')
+            raise ValueError('Squad List solo per Serie A, Coppa Italia ed Europa League.')
         data['players'] = parse_squad(incoming.get('squad'))
 
     elif kind == 'stats':
