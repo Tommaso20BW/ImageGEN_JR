@@ -3199,29 +3199,27 @@
     return out;
   }
 
-  // Placeholder: la grafica senza foto (cornice, scritta, risultato, stemmi), semitrasparente.
-  async function loadPpGhost() {
+  // Sagoma fissa (dati finti: Juventus - Juventus 0-0) di cornice, scritta, risultato e
+  // stemmi, semitrasparente: immagine statica per fase e sfondo, compare subito.
+  // Fatte da tools/phase_placeholders.py; sfondo come theme() di portrait.py.
+  function phaseTheme(competition, kit) {
+    const c = String(competition || '').toLowerCase();
+    if (c.includes('conf')) return 'conference';
+    if (c.includes('champions')) return 'ucl';
+    if (c.includes('europa')) return 'uel';
+    return ['home','away','third'].includes(kit) ? kit : 'home';
+  }
+
+  function loadPpGhost() {
     if (!directBase || !session) return;
-    let payload;
-    try { payload = buildPayload(true); } catch (_) { return; }
-    const {photo_id, frame, person_id, person_frame, ...rest} = payload.data;
-    const key = JSON.stringify(rest);
-    if (key === ppState.ghostKey) return;
-    ppState.ghostKey = key;
-    try {
-      const response = await netFetch(`${directBase}/ghost`,{
-        method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body:JSON.stringify(payload)
-      }, 60000);
-      if (!response.ok) throw new Error(String(response.status));
-      const url = URL.createObjectURL(await response.blob());
-      if (ppState.ghostKey !== key) { ppRevoke(url); return; }
-      ppRevoke($('ppOverlay').dataset.url);
-      $('ppOverlay').dataset.url = url;
-      $('ppOverlay').src = url;
-      $('ppOverlay').hidden = false;
-    } catch (_) {
-      if (ppState.ghostKey === key) ppState.ghostKey = '';
-    }
+    let data;
+    try { data = buildPayload(true).data; } catch (_) { return; }
+    const kind = PHOTO_PHASES.has(data.kind) ? data.kind : 'half';
+    const url = `${directBase}/overlay?session=${encodeURIComponent(session)}&name=phase_${kind}`
+      + `&kit=${phaseTheme(data.competition, data.kit)}`;
+    const overlay = $('ppOverlay');
+    if (overlay.getAttribute('src') !== url) overlay.src = url;
+    overlay.hidden = false;
   }
 
   async function ppSend(blob, type) {
