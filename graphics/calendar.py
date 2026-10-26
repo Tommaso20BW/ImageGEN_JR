@@ -26,9 +26,12 @@ MAX_ROWS = 14
 
 # Titolo. Su Canva "novembre" è 236 px con 7 partite e largo ~952 px.
 TITLE_SIZE = 236.02
-TITLE_BASE = 258           # base delle lettere nei post pubblicati
-TITLE_TOP_MIN = 40         # margine sopra le lettere più alte
+TITLE_BASE = 258           # base delle lettere nei post pubblicati (a grandezza Canva)
+TITLE_TOP = TITLE_BASE - 150   # dove arrivano le lettere più alte: fisso per ogni grandezza
 TITLE_GAP = 53             # dalla base del titolo all'inizio delle righe (come su Canva)
+TITLE_MAX_W = 930          # il titolo non supera questa larghezza
+TITLE_K = (0.6, 1.7)       # grandezza del titolo rispetto a Canva: minima e massima
+ROWS_VS_TITLE = 0.95       # le righe non diventano più piccole del titolo (in proporzione)
 # Nei post pubblicati le lettere sono quelle normali: le legature del font
 # ("tt", "st", "et"... con riccioli e svolazzi) restano spente.
 FONT_FEATURES = "font-variant-ligatures:none;font-feature-settings:'liga' 0,'clig' 0,'dlig' 0"
@@ -95,16 +98,35 @@ def parse_matches(month, year, rows):
 
 @lru_cache(maxsize=1)
 def _title_box():
-    """(sopra, sotto la base) più grandi fra tutti i mesi: stesso spazio per ogni mese."""
+    """(sopra, sotto la base) più grandi fra tutti i mesi, a grandezza Canva."""
     inks = [_ink(word, TITLE_SIZE) for word in MONTHS]
     return max(up for _w, up, _d in inks), max(max(0, down) for _w, _u, down in inks)
 
 
-def title_layout(word, n=None):
-    """Grandezza, linea di base e fondo del titolo: uguali per tutti i mesi."""
+def _title_at(k):
+    """(grandezza, base, fondo, inizio righe) col titolo a k volte la grandezza Canva."""
     up, down = _title_box()
-    base = max(TITLE_BASE, TITLE_TOP_MIN + up)
-    return TITLE_SIZE, base, base + down
+    base = TITLE_TOP + up * k
+    bottom = base + down * k
+    return TITLE_SIZE * k, base, bottom, max(base, bottom - 20) + max(36, TITLE_GAP * k)
+
+
+def title_layout(word, n):
+    """Titolo e righe si dividono la pagina, nelle proporzioni di Canva.
+
+    Il titolo è il più grande possibile finché le righe restano grandi almeno
+    quanto lui (in proporzione): con poche partite cresce fino a riempire la
+    larghezza, con tante si rimpicciolisce insieme alle righe.
+    Ritorna (grandezza, base, fondo, inizio righe)."""
+    width_at_canva, _u, _d = _ink(word, TITLE_SIZE)
+    k_max = min(TITLE_MAX_W / width_at_canva, TITLE_K[1])
+    k = k_max
+    while k > TITLE_K[0]:
+        rows_top = _title_at(k)[3]
+        if layout(n, rows_top)[0][2] >= k * ROWS_VS_TITLE:
+            break
+        k -= 0.01
+    return _title_at(max(k, TITLE_K[0]))
 
 
 def _column(n, rows_top, max_scale, gap=MAX_GAP):
@@ -147,7 +169,7 @@ def build_html(*, month, matches, **_):
     n = len(matches)
 
     # Titolo: la texture oro segue grandezza e posizione della scritta.
-    t_size, t_base, t_bottom = title_layout(word, n)
+    t_size, t_base, t_bottom, rows_top = title_layout(word, n)
     k = t_size / title['size']
     x, y, w, h = title['ink_rect']
     cx, b0 = title['center'], title['base']
@@ -161,7 +183,6 @@ def build_html(*, month, matches, **_):
     days = [f'{m["day"]:02d}' for m in matches]
     widest = max(_number_width(d, meta['rows'][0]['size']) for d in days)
     pivot = (DAY_RIGHT - widest + LOGO_RIGHT) / 2
-    rows_top = max(t_base, t_bottom - 20) + TITLE_GAP
 
     logo_ids = {}
     for k_row, ((gx, base, scale, line_w), match, day) in enumerate(zip(layout(n, rows_top), matches, days)):
