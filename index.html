@@ -876,7 +876,7 @@
             <h1>Formazione</h1>
             <p class="lead">Incolla la formazione così come la trovi: i numeri di maglia si mettono da soli.</p>
             <textarea id="xiText" class="field-input paste" maxlength="600" autocapitalize="words" spellcheck="false"
-              placeholder="Buffon; Barzagli, Bonucci, Chiellini; Lichtsteiner, Vidal, Pirlo, Marchisio, Asamoah; Vucinic, Giovinco"></textarea>
+              placeholder="Inserisci formazione"></textarea>
             <div id="lineupSummary" class="hint">0 / 11 giocatori</div>
             <div id="xiParsed" class="parsed"></div>
           </section>
@@ -931,7 +931,7 @@
             <h1>Formazione</h1>
             <p class="lead">Incolla la formazione: ogni reparto si legge da sinistra a destra. Il modulo lo trovo da solo.</p>
             <textarea id="pxiText" class="field-input paste" maxlength="600" autocapitalize="words" spellcheck="false"
-              placeholder="Juventus (3-5-2): Buffon; Barzagli, Bonucci, Chiellini; Lichtsteiner, Vidal, Pirlo, Marchisio, Asamoah; Vucinic, Giovinco"></textarea>
+              placeholder="Inserisci formazione"></textarea>
             <div id="pxiSummary" class="hint">Modulo: —</div>
             <div id="moduleOpts" class="module-chips" role="radiogroup"></div>
             <div id="pxiParsed" class="parsed"></div>
@@ -2719,17 +2719,29 @@
     // Via l'intestazione ("Lecce Juve:", "🎯 UFFICIALE Juventus (3-4-1-2):") e le parentesi.
     if (/[;,]/.test(text)) text = text.replace(/^[^;,\n]*:\s*/,'');
     text = text.replace(/\([^)]*\)/g,' ');
-    const lines = /;/.test(text) ? text.split(/[;\n]/) : /,/.test(text) ? [text] : text.split('\n');
     const single = !/[;,]/.test(text);
+    let lines = /;/.test(text) ? text.split(/[;\n]/) : /,/.test(text) ? [text] : text.split('\n');
+    if (single) {
+      // Un giocatore per riga: via punti elenco e righe vuote; un numero da solo
+      // su una riga va col nome della riga dopo ("25" + "Vicario G.").
+      const rows = lines.map(l => l.replace(/^[\s*•·\-–—>]+/,'').trim()).filter(Boolean);
+      lines = [];
+      for (let i = 0; i < rows.length; i++) {
+        if (/^\d{1,2}\.?$/.test(rows[i]) && rows[i + 1] && !/^\d/.test(rows[i + 1])) { lines.push(`${rows[i]} ${rows[i + 1]}`); i++; }
+        else lines.push(rows[i]);
+      }
+    }
     const groups = [];
     lines.forEach(line => {
       const parts = (single ? [line] : line.split(',')).map(part => {
-        const clean = part.replace(/[^\p{L}\p{N}\s'’.\-]/gu,' ').replace(/\s+/g,' ').trim();
-        if (!clean || clean.endsWith(':')) return null;
+        if (/:\s*$/.test(part.trim())) return null;                       // "Juventus:", "Panchina:"
+        const clean = part.replace(/[^\p{L}\p{N}\s'’.\-]/gu,' ').replace(/\s+/g,' ').replace(/^[\s.\-]+/,'').trim();
+        if (!clean) return null;
         const m = clean.match(/^(\d{1,2})[\s.)-]+(.+)$/) || clean.match(/^(.+?)\s+(\d{1,2})$/);
         let number = '', label = clean;
         if (m) { if (/^\d/.test(m[1])) { number = m[1]; label = m[2]; } else { label = m[1]; number = m[2]; } }
-        label = label.replace(/[.\-\s]+$/,'').trim();
+        // Via le iniziali del nome: "Vicario G." / "G. Vicario" -> "Vicario".
+        label = label.replace(/\s+\p{L}\.$/u,'').replace(/^\p{L}\.\s+/u,'').replace(/[.\-\s]+$/,'').trim();
         return label && /\p{L}/u.test(label) ? {label, number:number ? String(Number(number)) : ''} : null;
       }).filter(Boolean);
       if (parts.length) groups.push(parts);
@@ -2830,7 +2842,8 @@
     const flat = groups.flat().slice(0,11);
     if (!pxiModuleManual) {
       const fromLines = groups.length > 2 ? groups.slice(1).map(g => g.length).join('-') : '';
-      pxiModule = PXI_ROLES[module] ? module : PXI_ROLES[fromLines] ? fromLines : (flat.length ? '' : pxiModule);
+      // Elenco senza reparti (un giocatore per riga): resta il modulo scelto.
+      pxiModule = PXI_ROLES[module] ? module : PXI_ROLES[fromLines] ? fromLines : pxiModule;
     }
     pxiRead = flat.map(({label}) => {
       const player = findPlayer(label);
