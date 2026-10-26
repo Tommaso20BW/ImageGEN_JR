@@ -11,6 +11,12 @@ KINDS = [
     ("END OF 90'", 'end_of_90'),
     ('FULL TIME', 'full'),
     ('STATS', 'stats'),
+    ('MATCHDAY', 'md'),
+    ('PROBABILE XI', 'pxi'),
+    ('SQUAD LIST', 'squad'),
+    ('STARTING XI', 'xi'),
+    ('CALENDARIO', 'cal'),
+    ('FOTO + JR', 'jr'),
 ]
 
 COMPETITIONS = [

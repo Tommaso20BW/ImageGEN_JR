@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p _graphics_core/assets/goal_graphics
-          cp -a _private_assets/players _private_assets/fonts _private_assets/team_logos _private_assets/overlays _private_assets/portrait _private_assets/word_textures _graphics_core/assets/goal_graphics/
+          cp -a _private_assets/players _private_assets/fonts _private_assets/team_logos _private_assets/overlays _private_assets/portrait _private_assets/word_textures _private_assets/canva _graphics_core/assets/goal_graphics/
 
       - name: Configura Python
         uses: actions/setup-python@v6
@@ -64,6 +64,7 @@ jobs:
 
           if [ -n "$CHROME" ]; then
             echo "Chrome di sistema trovato: $CHROME"
+            echo "IMAGEGEN_CHROME=$CHROME" >> "$GITHUB_ENV"
             python - "$CHROME" <<'PY'
           from pathlib import Path
           import sys

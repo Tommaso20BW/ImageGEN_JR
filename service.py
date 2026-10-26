@@ -20,9 +20,12 @@ from logo_bundle import build_team_bundle
 from render import Renderer
 from telegram import DeliveryUncertain, Telegram, TelegramError
 from webapp_payload import parse_webapp_request
+from graphics.common import overlay_preview
+from graphics.starting_xi import MAX_PHOTO_BYTES, check_photo
 
 
 SESSION_DURATION_SECONDS = 600
+MAX_PHOTOS = 6
 DIRECT_PORT = 8765
 
 
@@ -95,6 +98,16 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parts = urlsplit(self.path)
+        if parts.path.rstrip('/') == '/overlay':
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            try:
+                self._png(self.service.overlay(query.get('name', ''), query.get('kit', '')))
+            except (KeyError, ValueError, OSError):
+                self._json(404, {'ok': False, 'error': 'Modello non trovato.'})
+            return
         if parts.path.rstrip('/') == '/progress':
             token = dict(parse_qsl(parts.query)).get('session', '')
             if token != self.service.session:
@@ -125,8 +138,27 @@ class _DirectHandler(BaseHTTPRequestHandler):
         self._cors()
         self.end_headers()
 
+    def _upload(self):
+        if self.headers.get('X-ImageGEN-Session', '') != self.service.session:
+            self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+            return
+        try:
+            length = int(self.headers.get('Content-Length', '0'))
+        except ValueError:
+            length = 0
+        if length <= 0 or length > MAX_PHOTO_BYTES:
+            self._json(413, {'ok': False, 'error': 'Foto troppo grande (max 12 MB).'})
+            return
+        try:
+            self._json(200, {'ok': True, **self.service.store_photo(self.rfile.read(length))})
+        except ValueError as exc:
+            self._json(400, {'ok': False, 'error': str(exc)})
+
     def do_POST(self):
         path = self.path.rstrip('/')
+        if path == '/upload':
+            self._upload()
+            return
         if path not in ('/preview', '/submit', '/close'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
@@ -193,6 +225,25 @@ class Service:
         self.preview_cache = None
         # Passo reale del render in corso, letto dalla Mini App tramite GET /progress.
         self.progress_stage = 'idle'
+        # Foto caricate dalla Mini App (solo in memoria, per questa sessione).
+        self.photos = {}
+        self.overlays = {}
+        self.renderer.photos = self.photos
+
+    def store_photo(self, raw):
+        width, height = check_photo(raw)
+        photo_id = hashlib.sha256(raw).hexdigest()[:16]
+        self.photos[photo_id] = raw
+        while len(self.photos) > MAX_PHOTOS:
+            self.photos.pop(next(iter(self.photos)))
+        print(f'INFO IMAGEGEN: foto caricata | id={photo_id} | {width}x{height}', flush=True)
+        return {'photo_id': photo_id, 'width': width, 'height': height}
+
+    def overlay(self, name, kit):
+        key = (name, kit)
+        if key not in self.overlays:
+            self.overlays[key] = overlay_preview(name, kit)
+        return self.overlays[key]
 
     def _set_stage(self, stage):
         self.progress_stage = str(stage)

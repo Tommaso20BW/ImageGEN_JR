@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 _graphics_core/
 _private_assets/
+
+_canva_ref/

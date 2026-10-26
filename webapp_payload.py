@@ -1,9 +1,16 @@
 """Validate ImageGEN Mini App requests."""
 import json
 import math
+import re
 import uuid
 
 from constants import COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
+from graphics.squad_list import BACKGROUNDS as SQUAD_COMPETITIONS, parse_squad
+from graphics.starting_xi import parse_lineup
+from graphics.matchday import parse_info
+from graphics.photo_jr import COLORS as JR_COLORS
+from graphics.probabili import MODULES as PXI_MODULES
+from graphics.calendar import parse_matches
 
 VALID_KINDS = {value for _, value in KINDS}
 VALID_COMPETITIONS = {value for _, value in COMPETITIONS}
@@ -58,6 +65,29 @@ def _canonical_player(catalog, value, *, goalkeeper=False):
     if len(matches) == 1:
         return matches[0]
     raise ValueError('Giocatore ambiguo: selezionalo dall’elenco.')
+
+
+def _photo_id(value):
+    value = str(value or '')
+    if not re.fullmatch(r'[0-9a-f]{16}', value):
+        raise ValueError('Carica una foto.')
+    return value
+
+
+def _frame(value):
+    """Posizione della foto: spostamento del centro (frazione pagina) e zoom."""
+    if not isinstance(value, dict):
+        raise ValueError('Posizione foto non valida.')
+    try:
+        frame = {k: float(value.get(k, d)) for k, d in (('x', 0), ('y', 0), ('zoom', 1))}
+    except (TypeError, ValueError):
+        raise ValueError('Posizione foto non valida.') from None
+    if not all(math.isfinite(v) for v in frame.values()):
+        raise ValueError('Posizione foto non valida.')
+    frame['x'] = max(-3.0, min(3.0, frame['x']))
+    frame['y'] = max(-3.0, min(3.0, frame['y']))
+    frame['zoom'] = max(1.0, min(6.0, frame['zoom']))
+    return {k: round(v, 5) for k, v in frame.items()}
 
 
 def _rows(value):
@@ -117,6 +147,44 @@ def _build_state(envelope, catalog, now, expected_session):
 
     if kind not in VALID_KINDS:
         raise ValueError('Tipo grafica non valido.')
+
+    # CALENDARIO: mese e partite (avversario e casa/trasferta per riga).
+    if kind == 'cal':
+        try:
+            month, year = int(incoming.get('month')), int(incoming.get('year'))
+        except (TypeError, ValueError):
+            raise ValueError('Mese non valido.') from None
+        if not 2000 <= year <= 2100:
+            raise ValueError('Anno non valido.')
+        rows = incoming.get('matches')
+        matches = parse_matches(month, year, rows)
+        for match in matches:
+            match['opponent'] = _canonical_team(catalog, match['opponent'])
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {'kind': 'cal', 'month': month, 'year': year, 'matches': matches},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
+    # FOTO + JR: niente partita, solo foto e colore del logo.
+    if kind == 'jr':
+        color = str(incoming.get('color') or '')
+        if color not in JR_COLORS:
+            raise ValueError('Scegli il colore del JR.')
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {
+                'kind': 'jr',
+                'color': color,
+                'photo_id': _photo_id(incoming.get('photo_id')),
+                'frame': _frame(incoming.get('frame')),
+            },
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
     if competition not in VALID_COMPETITIONS:
         raise ValueError('Competizione non valida.')
     if kit not in VALID_KITS:
@@ -156,6 +224,34 @@ def _build_state(envelope, catalog, now, expected_session):
                 optional=True,
                 shootout=True,
             )
+
+    elif kind == 'xi':
+        data['lineup'] = parse_lineup(incoming.get('lineup'))
+        data['photo_id'] = _photo_id(incoming.get('photo_id'))
+        data['frame'] = _frame(incoming.get('frame'))
+
+    elif kind == 'md':
+        data['photo_id'] = _photo_id(incoming.get('photo_id'))
+        data['frame'] = _frame(incoming.get('frame'))
+        data['info'] = parse_info(incoming.get('stadium'), incoming.get('time'), incoming.get('date'))
+
+    elif kind == 'pxi':
+        module = str(incoming.get('module') or '')
+        if module not in PXI_MODULES:
+            raise ValueError('Modulo non valido.')
+        names = incoming.get('players')
+        if not isinstance(names, list) or len(names) != 11:
+            raise ValueError('Scegli 11 giocatori.')
+        players = [_canonical_player(catalog, n) for n in names]
+        if len(set(players)) != 11:
+            raise ValueError('Lo stesso giocatore è stato scelto due volte.')
+        data['module'] = module
+        data['players'] = players
+
+    elif kind == 'squad':
+        if competition not in SQUAD_COMPETITIONS:
+            raise ValueError('Squad list solo per Serie A, Coppa Italia ed Europa League.')
+        data['players'] = parse_squad(incoming.get('squad'))
 
     elif kind == 'stats':
         moment = str(incoming.get('moment') or '')

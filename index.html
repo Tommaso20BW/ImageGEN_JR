@@ -227,7 +227,13 @@
 
     .kind-chips{
       display:flex;gap:6px;padding:8px 16px 4px;position:relative;
+      overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
     }
+    .kind-chips::-webkit-scrollbar{display:none}
+    @media(max-width:374px){.kind-chips{gap:4px;padding-left:12px;padding-right:12px}.chip{padding:0 7px}}
+    .kind-chips.more-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent)}
+    .kind-chips.more-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px);mask-image:linear-gradient(90deg,transparent,#000 44px)}
+    .kind-chips.more-l.more-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent)}
     .chip-ind{
       position:absolute;top:8px;left:0;height:34px;width:0;border-radius:999px;
       background:var(--accent);pointer-events:none;
@@ -236,8 +242,8 @@
     }
     .chip-ind:not(.ready){transition:none}
     .chip{
-      flex:1 1 0;min-width:0;border:1px solid var(--line);background:var(--surface);
-      height:34px;padding:0 4px;border-radius:999px;
+      flex:1 0 auto;border:1px solid var(--line);background:var(--surface);
+      height:34px;padding:0 10px;border-radius:999px;
       font-size:clamp(10.5px,3.3vw,12.5px);font-weight:750;color:var(--muted);
       white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis;
       position:relative;z-index:1;
@@ -386,6 +392,24 @@
     }
     .field-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft),var(--shadow-soft)}
     .field-input::placeholder{color:var(--muted);font-weight:500}
+    textarea.field-input{min-height:300px;padding:14px 18px;font-size:16px;font-weight:600;line-height:1.45;resize:vertical;font-family:inherit;color:inherit}
+    /* Editor foto: stessa proporzione della grafica (3:4) con sopra il livello Canva */
+    .photo-frame{position:relative;width:100%;max-width:380px;aspect-ratio:3/4;margin:0 auto;overflow:hidden;
+      border-radius:var(--radius);background:var(--surface2);border:1.5px solid var(--line);touch-action:none;cursor:grab;user-select:none}
+    .photo-frame.dragging{cursor:grabbing}
+    #matchTime,#matchDate{flex:1 1 0;min-width:0;padding:0 12px;font-size:20px}
+    .pxi-slots{display:grid;gap:8px}
+    .cal-rows{display:grid;gap:8px}
+    .cal-row{display:grid;grid-template-columns:62px 1fr 92px 36px;gap:6px;align-items:center}
+    .cal-row .field-input{min-height:48px;font-size:15px;font-weight:700;padding:0 8px;min-width:0}
+    .pxi-row{display:flex;align-items:center;gap:10px}
+    .pxi-role{flex:0 0 46px;font-weight:800;font-size:13px;color:var(--muted);text-align:center}
+    .pxi-select{min-height:48px;font-size:16px;font-weight:700;padding:0 12px}
+    .photo-frame img{position:absolute;max-width:none;pointer-events:none;-webkit-user-drag:none}
+    .photo-frame .overlay{left:0;top:0;width:100%;height:100%}
+    .photo-frame .empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-weight:700;text-align:center;padding:20px}
+    .photo-tools{display:flex;gap:10px;align-items:center;max-width:380px;margin:12px auto 0}
+    .photo-tools input[type=range]{flex:1;accent-color:var(--accent)}
     .quick{display:flex;gap:8px;margin-top:12px}
     .quick button{flex:1 1 0;min-width:0}
     .quick button{
@@ -627,6 +651,12 @@
         <div class="content">
           <div id="error" class="error"></div>
 
+          <section class="screen" data-screen="subkind">
+            <div id="subkindTitle" class="eyebrow">Grafica</div>
+            <h1>Che grafica?</h1>
+            <div id="subkindOpts" class="opts" role="radiogroup"></div>
+          </section>
+
           <section class="screen active" data-screen="competition">
             <div class="eyebrow">Partita</div>
             <h1>Competizione</h1>
@@ -785,6 +815,92 @@
             <div id="momentOpts" class="opts" role="radiogroup"></div>
           </section>
 
+          <section class="screen" data-screen="lineup">
+            <div class="eyebrow">Starting XI</div>
+            <h1>Formazione</h1>
+            <p class="lead">Incolla gli 11 titolari, uno per riga, con il numero di maglia (es. “25 Vicario”). L’ordine resta quello che scrivi.</p>
+            <textarea id="lineupText" class="field-input" maxlength="800" autocapitalize="words" spellcheck="false" placeholder="25 Vicario&#10;15 Kalulu&#10;3 Bremer&#10;…"></textarea>
+            <div id="lineupSummary" class="hint">0 / 11 giocatori</div>
+          </section>
+
+          <section class="screen" data-screen="match">
+            <div class="eyebrow">Matchday</div>
+            <h1>Partita</h1>
+            <p class="lead">Stadio, orario d’inizio (CET) e data: compaiono nella riga in basso.</p>
+            <label class="hint" for="matchStadium">Stadio</label>
+            <input id="matchStadium" class="field-input" maxlength="28" autocapitalize="characters" spellcheck="false" placeholder="ALLIANZ STADIUM" style="text-transform:uppercase">
+            <div class="quick" style="margin-top:12px">
+              <input id="matchTime" class="field-input" type="time" aria-label="Orario" value="20:45">
+              <input id="matchDate" class="field-input" type="date" aria-label="Data">
+            </div>
+          </section>
+
+          <section class="screen" data-screen="calmonth">
+            <div class="eyebrow">Calendario</div>
+            <h1>Mese</h1>
+            <p class="lead">Il nome del mese va nel titolo; l’anno serve a controllare i giorni.</p>
+            <div id="calMonthOpts" class="opts grid" role="radiogroup"></div>
+            <input id="calYear" class="field-input" type="number" inputmode="numeric" aria-label="Anno" style="margin-top:12px">
+          </section>
+
+          <section class="screen" data-screen="calrows">
+            <div class="eyebrow">Calendario</div>
+            <h1>Partite</h1>
+            <p class="lead">Una riga per partita (da 1 a 9). L’ordine per giorno lo fa ImageGEN.</p>
+            <div id="calRowsBox" class="cal-rows"></div>
+            <div class="photo-tools" style="max-width:none">
+              <button id="calAdd" class="btn ghost" type="button">+ Aggiungi partita</button>
+              <span id="calSummary" class="hint"></span>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="module">
+            <div class="eyebrow">Probabile XI</div>
+            <h1>Modulo</h1>
+            <p class="lead">I primi tre sono quelli del design Canva; gli altri usano le stesse posizioni del campo.</p>
+            <div id="moduleOpts" class="opts grid" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="xi11">
+            <div class="eyebrow">Probabile XI</div>
+            <h1>Giocatori</h1>
+            <p class="lead">Un giocatore per ruolo: portiere, difesa da sinistra a destra, centrocampo, attacco.</p>
+            <div id="pxiSlots" class="pxi-slots"></div>
+          </section>
+
+          <section class="screen" data-screen="jrcolor">
+            <div class="eyebrow">Foto + JR</div>
+            <h1>Colore del JR</h1>
+            <p class="lead">Il logo JR va in alto a destra, come nel design Canva. Scegli il colore che si legge meglio sulla tua foto.</p>
+            <div id="jrColorOpts" class="opts" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="photo">
+            <div id="photoEyebrow" class="eyebrow">Foto</div>
+            <h1>Foto</h1>
+            <p class="lead">Scegli la foto, poi trascinala per spostarla e usa due dita o il cursore per lo zoom.</p>
+            <div id="photoFrame" class="photo-frame">
+              <img id="photoImg" alt="" hidden>
+              <img id="photoOverlay" class="overlay" alt="">
+              <div id="photoEmpty" class="empty">Nessuna foto</div>
+            </div>
+            <div class="photo-tools">
+              <button id="photoPick" class="btn ghost" type="button">Scegli foto</button>
+              <input id="photoZoom" type="range" min="1" max="4" step="0.01" value="1" aria-label="Zoom foto">
+              <button id="photoReset" class="link-btn" type="button">Centra</button>
+            </div>
+            <input id="photoFile" type="file" accept="image/*" hidden>
+            <div id="photoSummary" class="hint" style="text-align:center"></div>
+          </section>
+
+          <section class="screen" data-screen="squad">
+            <div class="eyebrow">Squad list</div>
+            <h1>Convocati</h1>
+            <p class="lead">Incolla l’elenco, un giocatore per riga. I numeri vengono tolti e i nomi messi in ordine alfabetico su due colonne.</p>
+            <textarea id="squadText" class="field-input" maxlength="1500" autocapitalize="words" spellcheck="false" placeholder="1 Di Gregorio&#10;23 Pinsoglio&#10;4 Gatti&#10;…"></textarea>
+            <div id="squadSummary" class="hint">0 giocatori</div>
+          </section>
+
           <section class="screen" data-screen="stats">
             <div class="eyebrow">Statistiche</div>
             <h1>Statistiche</h1>
@@ -894,14 +1010,19 @@
     'https://api.github.com/repos/Tommaso20BW/LiveScore_JR/contents/data/teams.json?ref=main'
   ];
 
-  const KINDS = [
-    ['goal','GOAL'],['saved','SAVED'],['match','EVENT'],['stats','STATS']
-  ];
+  // Schede in alto. Quelle con più tipi chiedono il tipo come primo passaggio.
+  const TABS = [['goal','GOAL'],['match','EVENT'],['stats','STATS'],['pre','PRE-GARA'],['extra','ALTRO']];
+  const TAB_KINDS = {
+    goal:[['goal','Gol'],['saved','Parata']],
+    pre:[['md','Matchday'],['pxi','Probabile XI'],['squad','Squad list'],['xi','Starting XI']],
+    extra:[['cal','Calendario'],['jr','Foto + JR']]
+  };
   const COMPETITIONS_UEFA = [
     ['uefa.champions','Champions League'],['uefa.europa','Europa League'],
     ['uefa.europa.conf','Conference League']
   ];
   function competitionOptions() {
+    if (kind === 'squad') return [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['uefa.europa','Europa League']];
     const italy = [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana']];
     return [...italy, ...COMPETITIONS_UEFA];
   }
@@ -914,6 +1035,11 @@
   };
   const SIDES = [['home','In casa'],['away','In trasferta']];
   const KITS = [['home','Home'],['away','Away'],['third','Third']];
+  const JR_COLORS = [['black','Nero'],['white','Bianco'],['gold','Oro']];
+  const CAL_MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const CAL_MAX = 9;
+  const PXI_MODULES = [["4-2-3-1", "4-2-3-1"], ["4-3-3", "4-3-3"], ["4-4-2", "4-4-2"], ["4-1-2-1-2", "4-1-2-1-2"], ["3-4-2-1", "3-4-2-1"], ["3-4-1-2", "3-4-1-2"]];
+  const PXI_ROLES = {"4-2-3-1": ["POR", "TS", "DC", "DC", "TD", "CDC", "CDC", "AS", "COC", "AD", "ATT"], "4-3-3": ["POR", "TS", "DC", "DC", "TD", "CC", "CC", "CC", "AS", "ATT", "AD"], "4-4-2": ["POR", "TS", "DC", "DC", "TD", "ES", "CC", "CC", "ED", "ATT", "ATT"], "4-1-2-1-2": ["POR", "TS", "DC", "DC", "TD", "CDC", "CC", "CC", "COC", "ATT", "ATT"], "3-4-2-1": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "TRQ", "TRQ", "ATT"], "3-4-1-2": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "TRQ", "ATT", "ATT"]};
   const POSES = [['arms_crossed','Braccia incrociate'],['pointing','Indica']];
   const MOMENTS = [['HT','HALF TIME'],['2H_END',"END OF 90'"],['FT','FULL TIME']];
   const STATS = [
@@ -927,7 +1053,7 @@
   const STEP_NAMES = {
     competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
     player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
-    phase:'Fase', moment:'Momento', stats:'Statistiche'
+    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite'
   };
 
   const $ = id => document.getElementById(id);
@@ -951,7 +1077,8 @@
   const MAX_RESULTS = 150;
   const finePointer = window.matchMedia('(pointer:fine)').matches;
 
-  let kind = 'goal';
+  let tab = 'goal';
+  let kind = '';          // tipo reale; vuoto finché non si sceglie nella scheda
   // Nessuna opzione preselezionata: ogni scelta la fa l'utente.
   let phase = '';
   let pensOn = false;
@@ -961,6 +1088,11 @@
   let side = '';
   let kit = '';
   let kitAuto = false;   // kit messo in automatico (competizione UEFA, passo nascosto)
+  let jrColor = '';      // FOTO + JR: colore del logo
+  let pxiModule = '';    // PROBABILE XI: modulo
+  let calMonth = 0;      // CALENDARIO: mese (1-12)
+  let calRows = [];
+  let pxiPicks = Array(11).fill('');
   let pose = '';
   let moment = '';
 
@@ -1122,6 +1254,7 @@
 
   /* ---------- Flow ---------- */
   function buildFlow() {
+    flow = [];
     const base = ['competition','side','opponent'];
     // Goal/saved: maglia sempre. Half/end/full: solo con "Italia" (serve per lo sfondo);
     // le UEFA hanno lo sfondo della competizione. Stats: come half/end/full. Kick off: mai.
@@ -1132,6 +1265,13 @@
     else if (kind === 'match' && phase === 'kick') flow = ['phase',...base];
     else if (kind === 'match') flow = ['phase',...(italy ? withKit : base),'score'];
     else if (kind === 'stats') flow = [...(italy ? withKit : base),'moment','stats'];
+    else if (kind === 'squad') flow = [...base,'squad'];
+    else if (kind === 'xi') flow = [...withKit,'lineup','photo'];
+    else if (kind === 'md') flow = [...withKit,'match','photo'];
+    else if (kind === 'jr') flow = ['jrcolor','photo'];
+    else if (kind === 'cal') flow = ['calmonth','calrows'];
+    else if (kind === 'pxi') flow = [...withKit,'module','xi11'];
+    if (TAB_KINDS[tab]) flow = ['subkind',...flow];
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
   }
 
@@ -1165,6 +1305,25 @@
       }
       case 'phase': return labelOf(PHASES,phase);
       case 'moment': return labelOf(MOMENTS,moment);
+      case 'lineup': {
+        const n = lineupRows().length;
+        return n ? `${n} / 11` : '';
+      }
+      case 'photo': return photoState.id ? 'Caricata' : '';
+      case 'jrcolor': return labelOf(JR_COLORS,jrColor);
+      case 'module': return pxiModule;
+      case 'subkind': return labelOf(TAB_KINDS[tab] || [],kind);
+      case 'calmonth': return calMonth ? `${CAL_MONTHS[calMonth - 1]} ${$('calYear').value}` : '';
+      case 'calrows': { const n = calRows.length; return n ? `${n} partit${n === 1 ? 'a' : 'e'}` : ''; }
+      case 'xi11': { const n = pxiPicks.filter(Boolean).length; return n ? `${n} / 11` : ''; }
+      case 'match': {
+        const t = $('matchTime').value, d = $('matchDate').value;
+        return t && d ? `${d.split('-').reverse().join('/')} · ${t}` : '';
+      }
+      case 'squad': {
+        const n = squadNames().length;
+        return n ? `${n} giocatori` : '';
+      }
       case 'stats': {
         const n = STATS.filter(l => statRows[l].home || statRows[l].away).length;
         return n ? `${n} / ${STATS.length} voci` : '';
@@ -1218,11 +1377,13 @@
   }
 
   function renderProgress() {
-    const p = previewMode ? 1 : (flowIndex + 1) / (flow.length + 1);
+    // Tipo non ancora scelto: percorso sconosciuto, barra quasi vuota.
+    const p = previewMode ? 1 : (!kind && flow[flowIndex] === 'subkind') ? 0.04 : (flowIndex + 1) / (flow.length + 1);
     $('progressBar').style.width = `${Math.round(p * 1000) / 10}%`;
   }
 
-  function finalStepLabel() { return 'Anteprima ›'; }
+  // Finché il tipo non è scelto si va avanti, non all'anteprima.
+  function finalStepLabel() { return flow[flowIndex] === 'subkind' ? 'Avanti ›' : 'Anteprima ›'; }
 
   function setPreviewError(message='') {
     $('previewError').textContent = message;
@@ -1313,6 +1474,12 @@
       if (el !== screen) el.classList.remove('active');
     });
     if (screen) screen.classList.add('active');
+    if (screenName === 'photo') { updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
+    if (screenName === 'calrows') { if (!calRows.length) calRows.push({day:'', team:'', side:'home'}); renderCalRows(); }
+    if (screenName === 'xi11' && $('pxiSlots').dataset.module !== pxiModule + players.length) {
+      $('pxiSlots').dataset.module = pxiModule + players.length;
+      renderPxiSlots();
+    }
     lastRenderedScreen = screenName || '';
     lastRenderedFlowIndex = flowIndex;
     lastRenderedPreviewMode = previewMode;
@@ -1388,13 +1555,25 @@
     renderOptions('competitionOpts',competitionOptions(),competition,v => {
       competition = v;
       // UEFA (fuori da goal/saved): la maglia non si chiede, sfondo della competizione.
-      if (!v.startsWith('ita.') && kind !== 'goal' && kind !== 'saved') { kit = 'home'; kitAuto = true; }
+      if (!v.startsWith('ita.') && kind !== 'goal' && kind !== 'saved' && kind !== 'xi' && kind !== 'md' && kind !== 'pxi') { kit = 'home'; kitAuto = true; }
       else if (kitAuto) { kit = ''; kitAuto = false; }
       buildFlow();
       refreshSearchSummaries();
     });
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
     renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; });
+    renderOptions('jrColorOpts',JR_COLORS,jrColor,v => { jrColor = v; });
+    renderOptions('moduleOpts',PXI_MODULES,pxiModule,v => { pxiModule = v; renderPxiSlots(); });
+    $('subkindTitle').textContent = labelOf(TABS,tab);
+    renderOptions('subkindOpts',TAB_KINDS[tab] || [],kind,v => {
+      // Scelta del tipo: riparte da zero e passa subito al primo passaggio.
+      kind = v;
+      resetAllData();
+      buildFlow();
+      flowIndex = 0;
+      setTimeout(() => nextField(),120);
+    });
+    renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { calMonth = Number(v); });
     renderOptions('poseOpts',POSES,pose,v => pose = v);
     renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
     renderOptions('phaseOpts',PHASES,phase,v => {
@@ -1568,7 +1747,7 @@
     full:'Avvio la generazione…',
     stats:'Preparo la tabella delle statistiche.'
   };
-  const DEFAULT_MS = {goal:4000, saved:4000, kick:4000, second:4000, stats:7000, half:12000, end_of_90:12000, full:12000, submit:2500};
+  const DEFAULT_MS = {goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, pxi:9000, cal:5000, half:12000, end_of_90:12000, full:12000, submit:2500};
   const MIN_FAST_MS = 3000;
   const DURATIONS_KEY = 'imagegen-jr-durations';
   const SLOW_SUB = 'Ci sta mettendo più del solito: attendi ancora qualche secondo.';
@@ -1712,18 +1891,18 @@
       const box = $(id);
       const mobile = id === 'kindListMobile';
       if (!box.querySelector('.chip,.kind-item')) {
-        KINDS.forEach(([value,label]) => {
+        TABS.forEach(([value,label]) => {
           const b = document.createElement('button');
           b.type = 'button';
           b.className = mobile ? 'chip' : 'kind-item';
           b.dataset.v = value;
           if (mobile) b.textContent = label;
           else b.innerHTML = '<span class="dot"></span><span></span>', b.lastChild.textContent = label;
-          b.addEventListener('click',() => changeKind(value));
+          b.addEventListener('click',() => changeTab(value));
           box.appendChild(b);
         });
       }
-      box.querySelectorAll('.chip,.kind-item').forEach(b => b.classList.toggle('selected',b.dataset.v === kind));
+      box.querySelectorAll('.chip,.kind-item').forEach(b => b.classList.toggle('selected',b.dataset.v === tab));
     });
     placeIndicators();
   }
@@ -1745,6 +1924,10 @@
     } else {
       ind.style.width = sel.offsetWidth + 'px';
       ind.style.transform = `translate3d(${sel.offsetLeft}px,0,0)`;
+      // Barra scorrevole: tieni visibile il tipo selezionato.
+      if (sel.offsetLeft < box.scrollLeft || sel.offsetLeft + sel.offsetWidth > box.scrollLeft + box.clientWidth) {
+        box.scrollTo({left:Math.max(0,sel.offsetLeft - 16), behavior:motionOK() ? 'smooth' : 'auto'});
+      }
     }
     if (!ind.classList.contains('ready')) {
       void ind.offsetWidth; // fissa la posizione iniziale prima di attivare le transizioni
@@ -1759,6 +1942,15 @@
   if (window.ResizeObserver) {
     const ro = new ResizeObserver(placeIndicators);
     ro.observe($('kindListMobile'));
+    const chips = $('kindListMobile');
+    const edgeFade = () => {
+      const max = chips.scrollWidth - chips.clientWidth;
+      chips.classList.toggle('more-l', chips.scrollLeft > 2);
+      chips.classList.toggle('more-r', chips.scrollLeft < max - 2);
+    };
+    chips.addEventListener('scroll', edgeFade, {passive:true});
+    window.addEventListener('resize', edgeFade);
+    requestAnimationFrame(edgeFade);
     ro.observe($('kindListSide'));
   }
 
@@ -1768,6 +1960,11 @@
     side = '';
     kit = '';
     kitAuto = false;
+    jrColor = '';
+    pxiModule = '';
+    pxiPicks = Array(11).fill('');
+    calMonth = 0;
+    calRows = [];
     pose = '';
     moment = '';
     phase = '';
@@ -1775,7 +1972,13 @@
     etOn = false;
     selectedTeam = null;
     selectedPlayer = null;
-    ['opponentSearch','playerSearch','minute','homePens','awayPens'].forEach(id => { $(id).value = ''; });
+    ['opponentSearch','playerSearch','minute','homePens','awayPens','squadText','lineupText','matchStadium','matchTime','matchDate'].forEach(id => { $(id).value = ''; });
+    updateSquadSummary();
+    updateLineupSummary();
+    clearPhoto();
+    $('calYear').value = String(new Date().getFullYear());
+    $('matchTime').value = '20:45';
+    $('matchDate').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,10);
     // Il risultato parte da 0–0: se non lo tocchi resta così.
     $('homeScore').value = '0';
     $('awayScore').value = '0';
@@ -1791,8 +1994,14 @@
     setPreviewError('');
   }
 
-  function changeKind(value) {
-    if (value === kind && !previewMode) return;
+  function changeTab(value) {
+    if (value === tab && !previewMode) return;
+    tab = value;
+    changeKind(TAB_KINDS[value] ? '' : value, true);
+  }
+
+  function changeKind(value, force=false) {
+    if (value === kind && !previewMode && !force) return;
     haptic('select');
     previewMode = false;
     kind = value;
@@ -2041,7 +2250,7 @@
   function validateCurrent() {
     const step = flow[flowIndex];
 
-    const choice = {competition, side, kit, pose, phase, moment};
+    const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, subkind:kind};
     if (step in choice && !choice[step]) { showError('Seleziona un’opzione per continuare.'); return false; }
 
     if (step === 'opponent') return resolveTeam();
@@ -2065,6 +2274,49 @@
       if (phase === 'full' && pensOn) {
         return validateScoreValue('homePens') && validateScoreValue('awayPens');
       }
+    }
+
+    if (step === 'lineup') {
+      const rows = lineupRows();
+      const bad = rows.find(r => !r.number);
+      if (bad) { showError(`Manca il numero di maglia: “${bad.line}”.`); return false; }
+      if (rows.length !== 11) { showError(`Servono 11 giocatori (ora ${rows.length}).`); return false; }
+    }
+
+    if (step === 'match') {
+      if (!$('matchStadium').value.trim()) { showError('Scrivi lo stadio.'); return false; }
+      if (!/^([01]?\d|2[0-3])[:.][0-5]\d$/.test($('matchTime').value.trim())) { showError('Inserisci l’orario (es. 20:45).'); return false; }
+      if (!$('matchDate').value) { showError('Scegli la data.'); return false; }
+    }
+
+    if (step === 'photo') {
+      if (photoState.uploading) { showError('Attendi il caricamento della foto.'); return false; }
+      if (!photoState.id) { showError('Scegli una foto.'); return false; }
+    }
+
+    if (step === 'calmonth') {
+      if (!calMonth) { showError('Scegli il mese.'); return false; }
+      const y = Number($('calYear').value);
+      if (!Number.isInteger(y) || y < 2000 || y > 2100) { showError('Anno non valido.'); return false; }
+    }
+
+    if (step === 'calrows') {
+      if (!calRows.length) { showError('Aggiungi almeno una partita.'); return false; }
+      const last = new Date(Number($('calYear').value), calMonth, 0).getDate();
+      const bad = calRows.find(r => !(Number.isInteger(Number(r.day)) && r.day >= 1 && r.day <= last) || !r.team);
+      if (bad) { showError(`Completa ogni partita: giorno da 1 a ${last} e avversario.`); return false; }
+    }
+
+    if (step === 'xi11') {
+      const picks = pxiPicks.filter(Boolean);
+      if (picks.length !== 11) { showError(`Scegli tutti gli 11 giocatori (ora ${picks.length}).`); return false; }
+      if (new Set(picks).size !== 11) { showError('Lo stesso giocatore è scelto due volte.'); return false; }
+    }
+
+    if (step === 'squad') {
+      const n = squadNames().length;
+      if (!n) { showError('Incolla almeno un giocatore.'); return false; }
+      if (n > 30) { showError('Massimo 30 giocatori.'); return false; }
     }
 
     if (step === 'stats') {
@@ -2093,7 +2345,8 @@
 
     if (validate) {
       const step = flow[flowIndex];
-      if ((step === 'opponent' && !teamsLoaded) || (step === 'player' && !playersLoaded)) {
+      if ((step === 'opponent' && !teamsLoaded) || (step === 'player' && !playersLoaded) ||
+          (step === 'calmonth' && !teamsLoaded)) {
         await loadCatalogs();
         refreshSearchSummaries();
       }
@@ -2152,6 +2405,232 @@
     return n;
   }
 
+  /* ---------- Calendario: righe partita ---------- */
+  function renderCalRows() {
+    const box = $('calRowsBox');
+    box.innerHTML = '';
+    const pool = teams.slice().sort((a,b) => displayTeamName(a.name).localeCompare(displayTeamName(b.name),'it',{sensitivity:'base'}));
+    const options = '<option value="">— avversario —</option>' + pool
+      .map(t => `<option value="${t.name.replace(/"/g,'&quot;')}">${displayTeamName(t.name)}</option>`).join('');
+    calRows.forEach((row,i) => {
+      const line = document.createElement('div'); line.className = 'cal-row';
+      line.innerHTML = `<input class="field-input cal-day" type="number" inputmode="numeric" min="1" max="31" placeholder="gg">
+        <select class="field-input cal-team">${options}</select>
+        <select class="field-input cal-side"><option value="home">Casa</option><option value="away">Trasf.</option></select>
+        <button class="icon-btn cal-del" type="button" aria-label="Togli partita">×</button>`;
+      const [day,team,side,del] = line.children;
+      day.value = row.day || ''; team.value = row.team || ''; side.value = row.side;
+      day.addEventListener('input',() => { row.day = day.value; renderSteps(); });
+      team.addEventListener('change',() => { row.team = team.value; clearError(); renderSteps(); });
+      side.addEventListener('change',() => { row.side = side.value; });
+      del.addEventListener('click',() => { calRows.splice(i,1); renderCalRows(); renderSteps(); });
+      box.appendChild(line);
+    });
+    $('calAdd').disabled = calRows.length >= CAL_MAX;
+    $('calSummary').textContent = `${calRows.length} / ${CAL_MAX} partite`;
+  }
+
+  /* ---------- Probabile XI: un menu per ruolo ---------- */
+  function renderPxiSlots() {
+    const box = $('pxiSlots');
+    const roles = PXI_ROLES[pxiModule] || [];
+    box.innerHTML = '';
+    if (!roles.length) { box.innerHTML = '<div class="hint">Scegli prima il modulo.</div>'; return; }
+    const sorted = players.slice().sort((a,b) => a.name.localeCompare(b.name,'it',{sensitivity:'base'}));
+    roles.forEach((role,i) => {
+      const row = document.createElement('label');
+      row.className = 'pxi-row';
+      const tag = document.createElement('span'); tag.className = 'pxi-role'; tag.textContent = role;
+      const sel = document.createElement('select'); sel.className = 'field-input pxi-select';
+      const keepers = i === 0;
+      sel.innerHTML = '<option value="">— scegli —</option>' + sorted
+        .filter(p => keepers ? p.role === 'goalkeeper' : p.role !== 'goalkeeper')
+        .map(p => `<option value="${p.name.replace(/"/g,'&quot;')}">${p.name}</option>`).join('');
+      sel.value = pxiPicks[i] || '';
+      sel.addEventListener('change',() => { pxiPicks[i] = sel.value; clearError(); renderSteps(); });
+      row.append(tag, sel);
+      box.appendChild(row);
+    });
+  }
+
+  /* ---------- Starting XI: formazione ---------- */
+  // Stessa lettura di ImageGEN: "25 Vicario", "25 - Vicario" oppure "Vicario 25".
+  function lineupRows() {
+    return $('lineupText').value.split(/\r?\n/)
+      .map(line => line.replace(/\s+/g,' ').trim())
+      .filter(line => line && !line.endsWith(':'))
+      .map(line => {
+        let m = line.match(/^#?(\d{1,2})\s*[-.)–—]?\s*(.+)$/);
+        if (m) return {line, number:m[1], name:m[2]};
+        m = line.match(/^(.+?)\s*[-–—]?\s*#?(\d{1,2})$/);
+        if (m) return {line, number:m[2], name:m[1]};
+        return {line, number:'', name:line};
+      });
+  }
+
+  function updateLineupSummary() {
+    $('lineupSummary').textContent = `${lineupRows().length} / 11 giocatori`;
+  }
+
+  /* ---------- Starting XI: foto ---------- */
+  // La foto resta solo in memoria (qui e nel workflow) per questa sessione.
+  // x/y: spostamento del centro in frazione della pagina; zoom >= 1 = "riempi la pagina".
+  // Stessi calcoli di graphics/starting_xi.py (photo_box), così l'anteprima coincide.
+  const DESIGN_W = 1080, DESIGN_H = 1440;
+  const OVERLAY_NAMES = {xi:'starting_xi', md:'matchday', jr:'jr'};
+  const photoState = {id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, uploading:false};
+
+  function clearPhoto() {
+    if (photoState.url) { try { URL.revokeObjectURL(photoState.url); } catch (_) {} }
+    Object.assign(photoState,{id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, uploading:false});
+    $('photoImg').hidden = true;
+    $('photoImg').removeAttribute('src');
+    $('photoEmpty').hidden = false;
+    $('photoZoom').value = '1';
+    $('photoSummary').textContent = '';
+  }
+
+  function layoutPhoto() {
+    if (!photoState.w) return;
+    const frameW = $('photoFrame').clientWidth || 1;
+    const k = frameW / DESIGN_W;
+    const cover = Math.max(DESIGN_W / photoState.w, DESIGN_H / photoState.h);
+    photoState.zoom = Math.min(4, Math.max(1, photoState.zoom));
+    const w = photoState.w * cover * photoState.zoom, h = photoState.h * cover * photoState.zoom;
+    let left = (DESIGN_W - w) / 2 + photoState.x * DESIGN_W;
+    let top = (DESIGN_H - h) / 2 + photoState.y * DESIGN_H;
+    left = Math.min(0, Math.max(DESIGN_W - w, left));
+    top = Math.min(0, Math.max(DESIGN_H - h, top));
+    photoState.x = (left - (DESIGN_W - w) / 2) / DESIGN_W;
+    photoState.y = (top - (DESIGN_H - h) / 2) / DESIGN_H;
+    const img = $('photoImg');
+    img.style.left = `${left * k}px`; img.style.top = `${top * k}px`;
+    img.style.width = `${w * k}px`; img.style.height = `${h * k}px`;
+    $('photoZoom').value = String(photoState.zoom);
+  }
+
+  function updatePhotoOverlay() {
+    if (!directBase || !session) return;
+    const url = `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${OVERLAY_NAMES[kind] || 'starting_xi'}&kit=${encodeURIComponent(kind === 'jr' ? (jrColor || 'white') : (kit || 'home'))}`;
+    if ($('photoOverlay').dataset.url !== url) {
+      $('photoOverlay').dataset.url = url;
+      $('photoOverlay').src = url;
+    }
+  }
+
+  // Riduce la foto a max 2560 px (lato lungo) in JPEG: qualità piena per la grafica,
+  // invio veloce dal telefono.
+  async function preparePhoto(file) {
+    let source;
+    try { source = await createImageBitmap(file,{imageOrientation:'from-image'}); }
+    catch (_) {
+      source = await new Promise((resolve,reject) => {
+        const im = new Image(); im.onload = () => resolve(im); im.onerror = reject;
+        im.src = URL.createObjectURL(file);
+      });
+    }
+    const sw = source.width, sh = source.height;
+    const scale = Math.min(1, 2560 / Math.max(sw,sh));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(sw * scale); canvas.height = Math.round(sh * scale);
+    canvas.getContext('2d').drawImage(source,0,0,canvas.width,canvas.height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve,'image/jpeg',0.92));
+    if (!blob) throw new Error('Foto non leggibile.');
+    return {blob, w:canvas.width, h:canvas.height};
+  }
+
+  async function uploadPhoto(file) {
+    if (!file) return;
+    clearError();
+    if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+    photoState.uploading = true;
+    $('photoSummary').textContent = 'Caricamento foto…';
+    try {
+      const {blob,w,h} = await preparePhoto(file);
+      const response = await fetch(`${directBase}/upload`,{
+        method:'POST', headers:{'Content-Type':'image/jpeg','X-ImageGEN-Session':session}, body:blob
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) throw new Error(body.error || 'Caricamento non riuscito.');
+      clearPhoto();
+      Object.assign(photoState,{id:body.photo_id, w, h, url:URL.createObjectURL(blob)});
+      $('photoImg').src = photoState.url;
+      $('photoImg').hidden = false;
+      $('photoEmpty').hidden = true;
+      $('photoSummary').textContent = 'Trascina per spostare · due dita o cursore per lo zoom';
+      layoutPhoto();
+      haptic('success');
+    } catch (err) {
+      photoState.uploading = false;
+      $('photoSummary').textContent = '';
+      showError(err && err.message ? err.message : 'Caricamento non riuscito.');
+    } finally {
+      photoState.uploading = false;
+      renderSteps();
+    }
+  }
+
+  function initPhotoEditor() {
+    const frame = $('photoFrame');
+    const pointers = new Map();
+    let last = null;
+    const snapshot = () => {
+      const pts = [...pointers.values()];
+      if (pts.length === 1) return {x:pts[0].x, y:pts[0].y, d:0};
+      const [a,b] = pts;
+      return {x:(a.x + b.x) / 2, y:(a.y + b.y) / 2, d:Math.hypot(a.x - b.x, a.y - b.y)};
+    };
+    frame.addEventListener('pointerdown',e => {
+      if (!photoState.id) { $('photoFile').click(); return; }
+      frame.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId,{x:e.clientX, y:e.clientY});
+      last = snapshot();
+      frame.classList.add('dragging');
+    });
+    frame.addEventListener('pointermove',e => {
+      if (!pointers.has(e.pointerId) || !last) return;
+      pointers.set(e.pointerId,{x:e.clientX, y:e.clientY});
+      const now = snapshot();
+      const fw = frame.clientWidth, fh = frame.clientHeight;
+      photoState.x += (now.x - last.x) / fw;
+      photoState.y += (now.y - last.y) / fh;
+      if (now.d && last.d) photoState.zoom *= now.d / last.d;
+      last = now;
+      layoutPhoto();
+    });
+    const end = e => {
+      pointers.delete(e.pointerId);
+      last = pointers.size ? snapshot() : null;
+      if (!pointers.size) frame.classList.remove('dragging');
+    };
+    frame.addEventListener('pointerup',end);
+    frame.addEventListener('pointercancel',end);
+    frame.addEventListener('wheel',e => {
+      if (!photoState.id) return;
+      e.preventDefault();
+      photoState.zoom *= Math.exp(-e.deltaY * 0.0015);
+      layoutPhoto();
+    },{passive:false});
+    $('photoZoom').addEventListener('input',e => { photoState.zoom = Number(e.target.value) || 1; layoutPhoto(); });
+    $('photoReset').addEventListener('click',() => { photoState.x = 0; photoState.y = 0; photoState.zoom = 1; layoutPhoto(); });
+    $('photoPick').addEventListener('click',() => $('photoFile').click());
+    $('photoFile').addEventListener('change',e => { uploadPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
+    window.addEventListener('resize',layoutPhoto);
+  }
+
+  // Stessa pulizia di ImageGEN: via numeri e simboli, righe vuote e doppioni.
+  function squadNames() {
+    const seen = new Set();
+    return $('squadText').value.split(/\r?\n/)
+      .map(line => line.replace(/^[\s\d#.\-–—)]+|[\s\d#.\-–—(]+$/g,'').replace(/\s+/g,' ').trim())
+      .filter(name => name && !name.endsWith(':') && !seen.has(name.toLocaleLowerCase('it')) && seen.add(name.toLocaleLowerCase('it')));
+  }
+
+  function updateSquadSummary() {
+    const n = squadNames().length;
+    $('squadSummary').textContent = n === 1 ? '1 giocatore' : `${n} giocatori`;
+  }
+
   function saveCurrentStatDraft() {
     if (flow[flowIndex] === 'stats') collectStats();
   }
@@ -2178,6 +2657,19 @@
   }
 
   function buildPayload() {
+    if (kind === 'cal') {
+      return {v:1, action:'render', session, data:{
+        kind:'cal', month:calMonth, year:Number($('calYear').value),
+        matches:calRows.map(r => ({day:Number(r.day), side:r.side, opponent:{name:r.team}}))
+      }};
+    }
+    if (kind === 'jr') {
+      if (!photoState.id) throw new Error('Scegli una foto.');
+      return {v:1, action:'render', session, data:{
+        kind:'jr', color:jrColor, photo_id:photoState.id,
+        frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}
+      }};
+    }
     if (!selectedTeam) throw new Error('Avversario mancante.');
 
     const data = {
@@ -2198,6 +2690,23 @@
       if (phase === 'full' && pensOn) {
         data.shootout = scorePair('homePens','awayPens',true);
       }
+    } else if (kind === 'xi') {
+      if (!photoState.id) throw new Error('Scegli una foto.');
+      data.lineup = $('lineupText').value;
+      data.photo_id = photoState.id;
+      data.frame = {x:photoState.x, y:photoState.y, zoom:photoState.zoom};
+    } else if (kind === 'md') {
+      if (!photoState.id) throw new Error('Scegli una foto.');
+      data.photo_id = photoState.id;
+      data.frame = {x:photoState.x, y:photoState.y, zoom:photoState.zoom};
+      data.stadium = $('matchStadium').value;
+      data.time = $('matchTime').value;
+      data.date = $('matchDate').value;
+    } else if (kind === 'pxi') {
+      data.module = pxiModule;
+      data.players = pxiPicks.slice();
+    } else if (kind === 'squad') {
+      data.squad = $('squadText').value;
     } else if (kind === 'stats') {
       collectStats();
       data.moment = moment;
@@ -2473,6 +2982,10 @@
   ['homeScore','awayScore','homePens','awayPens','evHomeScore','evAwayScore'].forEach(id => $(id).addEventListener('input',renderSteps));
   $('statRows').addEventListener('input',() => { collectStats(); renderSteps(); });
   $('statClear').addEventListener('click',() => { clearStats(); clearError(); renderSteps(); });
+  $('squadText').addEventListener('input',() => { updateSquadSummary(); clearError(); renderSteps(); });
+  $('lineupText').addEventListener('input',() => { updateLineupSummary(); clearError(); renderSteps(); });
+  initPhotoEditor();
+  $('calAdd').addEventListener('click',() => { if (calRows.length < CAL_MAX) { calRows.push({day:'', team:'', side:'home'}); renderCalRows(); renderSteps(); } });
 
   $('minuteQuick').addEventListener('click',event => {
     const b = event.target.closest('button[data-v]');

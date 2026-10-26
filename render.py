@@ -138,6 +138,14 @@ class Renderer:
     def __init__(self, token_provider=None, design_id='DAHI3ytu6yQ'):
         self.token_provider = token_provider
         self.design_id = design_id
+        # Foto caricate dalla Mini App (id -> byte), riempito da service.Service.
+        self.photos = {}
+
+    def _photo(self, data):
+        photo = self.photos.get(data.get('photo_id'))
+        if not photo:
+            raise ValueError('Foto non trovata: ricaricala nella Mini App.')
+        return photo
 
     def render(self, data, progress=None):
         """Render a graphic. `progress(stage)` is called at the real steps of Canva graphics."""
@@ -153,6 +161,16 @@ class Renderer:
                     pass
 
         kind = data['kind']
+        if kind == 'cal':
+            from graphics import calendar
+
+            return calendar.render(month=data['month'], matches=data['matches'])
+
+        if kind == 'jr':
+            from graphics import photo_jr
+
+            return photo_jr.render(color=data['color'], photo=self._photo(data), frame=data['frame'])
+
         common = {
             **teams(data),
             'kit': data['kit'],
@@ -230,6 +248,50 @@ class Renderer:
                 away_goals=score[1] if kind == 'second' else 0,
                 shootout=None,
                 layers=None,
+            )
+
+        if kind == 'xi':
+            from graphics import starting_xi
+
+            return starting_xi.render(
+                **teams(data),
+                kit=data['kit'],
+                lineup=data['lineup'],
+                photo=self._photo(data),
+                frame=data['frame'],
+            )
+
+        if kind == 'md':
+            from graphics import matchday
+
+            return matchday.render(
+                **teams(data),
+                kit=data['kit'],
+                photo=self._photo(data),
+                frame=data['frame'],
+                info=data['info'],
+                competition=data['competition'],
+            )
+
+        if kind == 'pxi':
+            from graphics import probabili
+            from livescore.graphics import goal as g
+
+            roster = {p.name: p for p in g.load_players()}
+            return probabili.render(
+                **teams(data),
+                kit=data['kit'],
+                module=data['module'],
+                players=[roster[name] for name in data['players']],
+            )
+
+        if kind == 'squad':
+            from graphics import squad_list
+
+            return squad_list.render(
+                **teams(data),
+                players=data['players'],
+                competition=data['competition'],
             )
 
         if kind == 'stats':
