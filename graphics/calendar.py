@@ -32,6 +32,10 @@ TITLE_GAP = 53             # dalla base del titolo all'inizio delle righe (come 
 TITLE_MAX_W = 930          # il titolo non supera questa larghezza
 TITLE_K = (0.6, 2.0)       # grandezza del titolo rispetto a Canva: minima e massima
 ROWS_VS_TITLE = 0.95       # le righe non diventano più piccole del titolo (in proporzione)
+# Disegno del titolo: occupa tutta la fascia sopra le righe, larghezza quasi piena.
+TITLE_FILL_W = 950         # larghezza dell'inchiostro (il logo JR resta libero in alto a destra)
+TITLE_MARGIN_TOP = 30      # dal bordo in alto alle lettere più alte
+TITLE_ROWS_GAP = 22        # dal fondo delle lettere all'inizio delle righe
 # Nei post pubblicati le lettere sono quelle normali: le legature del font
 # ("tt", "st", "et"... con riccioli e svolazzi) restano spente.
 FONT_FEATURES = "font-variant-ligatures:none;font-feature-settings:'liga' 0,'clig' 0,'dlig' 0"
@@ -63,6 +67,19 @@ def _ink(text, size):
     """(larghezza, sopra la base, sotto la base) dell'inchiostro, in pixel design."""
     x0, y0, x1, y1 = _font(size).getbbox(text, anchor='ls')
     return (x1 - x0) / 4, -y0 / 4, y1 / 4
+
+
+def _title_fit(word, rows_top):
+    """(grandezza, x del centro della scritta, base) per riempire la fascia sopra le righe:
+    larga TITLE_FILL_W, o meno se l'altezza della fascia non basta; inchiostro centrato."""
+    x0, y0, x1, y1 = (v / 4 for v in _font(TITLE_SIZE).getbbox(word, anchor='ls'))
+    advance = _font(TITLE_SIZE).getlength(word) / 4
+    band = rows_top - TITLE_ROWS_GAP - TITLE_MARGIN_TOP
+    k = min(TITLE_FILL_W / (x1 - x0), band / (y1 - y0))
+    ink_top = TITLE_MARGIN_TOP + (band - (y1 - y0) * k) / 2
+    base = ink_top - y0 * k
+    shift = ((x0 + x1) / 2 - advance / 2) * k        # text-anchor middle centra l'avanzamento, non l'inchiostro
+    return TITLE_SIZE * k, DESIGN_W / 2 - shift, base
 
 
 def _number_width(text, size):
@@ -171,13 +188,14 @@ def build_html(*, month, matches, **_):
     n = len(matches)
 
     # Titolo: la texture oro segue grandezza e posizione della scritta.
-    t_size, t_base, t_bottom, rows_top = title_layout(word, n)
+    rows_top = title_layout(word, n)[3]
+    t_size, t_x, t_base = _title_fit(word, rows_top)
     k = t_size / title['size']
     x, y, w, h = title['ink_rect']
     cx, b0 = title['center'], title['base']
-    ink_rect = (cx + (x - cx) * k, t_base + (y - b0) * k, w * k, h * k)
+    ink_rect = (t_x + (x - cx) * k, t_base + (y - b0) * k, w * k, h * k)
     defs = [_pattern('gold', title['ink'], ink_rect)]
-    body = [f'<text x="{cx}" y="{t_base}" text-anchor="middle" font-family="Allogist" '
+    body = [f'<text x="{t_x}" y="{t_base}" text-anchor="middle" font-family="Allogist" '
             f'font-style="italic" font-size="{t_size}" style="{FONT_FEATURES}"><tspan fill="{title["color"]}">{esc(word[:half])}</tspan>'
             f'<tspan fill="url(#gold)">{esc(word[half:])}</tspan></text>']
 
