@@ -882,9 +882,9 @@
           </section>
 
           <section class="screen" data-screen="mdpick">
-            <div class="eyebrow">Matchday</div>
+            <div id="mdPickEyebrow" class="eyebrow">Matchday</div>
             <h1>Scegli la partita</h1>
-            <p class="lead">Dal calendario della Juventus: competizione, avversario, stadio, data e ora si compilano da soli.</p>
+            <p id="mdPickLead" class="lead">Dal calendario della Juventus: competizione, campo e avversario si compilano da soli.</p>
             <div id="mdPickOpts" class="fx-list" role="list"></div>
             <div id="mdPickHint" class="hint"></div>
           </section>
@@ -1161,6 +1161,7 @@
   let jrColor = '';      // FOTO + JR: colore del logo
   let pxiModule = '';    // PROBABILE XI: modulo
   let calMonth = 0;      // CALENDARIO: mese (1-12)
+  const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
   let mdPick = '';       // MATCHDAY: id partita ESPN scelta, 'manual' o ''
   let fixtureList = [];
   let calRows = [];
@@ -1337,15 +1338,15 @@
     else if (kind === 'match' && phase === 'kick') flow = ['phase',...base];
     else if (kind === 'match') flow = ['phase',...(italy ? withKit : base),'score'];
     else if (kind === 'stats') flow = [...(italy ? withKit : base),'moment','stats'];
-    else if (kind === 'squad') flow = [...base,'squad'];
-    else if (kind === 'xi') flow = [...withKit,'lineup','photo'];
-    // Matchday: prima si sceglie la partita dal calendario (compila tutto),
-    // oppure "Altra partita" per inserirla a mano.
-    else if (kind === 'md') flow = mdPick && mdPick !== 'manual' ? ['mdpick','kit','match','photo']
-      : ['mdpick',...withKit,'match','photo'];
+    // Pre-gara: prima si sceglie la partita dal calendario (competizione, campo,
+    // avversario e per il Matchday stadio, data e ora), oppure "Altra partita" a mano.
+    else if (PREMATCH.includes(kind)) {
+      const picked = mdPick && mdPick !== 'manual';
+      const rest = {squad:['squad'], xi:['kit','lineup','photo'], md:['kit','match','photo'], pxi:['kit','xi11']}[kind];
+      flow = ['mdpick',...(picked ? [] : base),...rest];
+    }
     else if (kind === 'jr') flow = ['jrcolor','photo'];
     else if (kind === 'cal') flow = ['calmonth','calrows'];
-    else if (kind === 'pxi') flow = [...withKit,'xi11'];
     if (TAB_KINDS[tab]) flow = ['subkind',...flow];
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
   }
@@ -1557,7 +1558,13 @@
     } catch (_) {}
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Foto + JR'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
     if (screenName === 'lineup') readXiText();
-    if (screenName === 'mdpick') loadMdFixtures();
+    if (screenName === 'mdpick') {
+      $('mdPickEyebrow').textContent = ({squad:'Squad list', xi:'Starting XI', md:'Matchday', pxi:'Probabile XI'})[kind] || 'Partita';
+      $('mdPickLead').textContent = kind === 'md'
+        ? 'Dal calendario della Juventus: competizione, avversario, stadio, data e ora si compilano da soli.'
+        : 'Dal calendario della Juventus: competizione, campo e avversario si compilano da soli.';
+      loadMdFixtures();
+    }
     if (screenName === 'calrows') fillCalendarFromFixtures();
     if (screenName === 'calrows') { if (!calRows.length) calRows.push({day:'', team:'', side:'home'}); renderCalRows(); }
     if (screenName === 'xi11') readPxiText();
@@ -2545,6 +2552,7 @@
       `${COMP_SHORT[m.competition] || m.competition} · ${m.side === 'home' ? 'Casa' : 'Trasferta'} · ${m.stadium || 'stadio da inserire'}`;
     fillLogo(b.querySelector('.fx-logo'), team || null);
     if (!team) { b.disabled = true; b.title = 'Logo squadra mancante nel catalogo'; }
+    else if (!competitionOptions().some(([v]) => v === m.competition)) { b.disabled = true; b.title = 'Competizione non prevista per questa grafica'; }
     b.addEventListener('click',() => { haptic('select'); pickMdFixture(m.id); });
     return b;
   }
