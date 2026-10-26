@@ -911,9 +911,6 @@
               <img id="photoOverlay" class="overlay" alt="">
               <div id="photoEmpty" class="empty" aria-label="Nessuna foto"></div>
             </div>
-            <div class="photo-tools">
-              <button id="photoReset" class="link-btn" type="button">Centra</button>
-            </div>
             <input id="photoFile" type="file" accept="image/*" hidden>
             <div id="photoSummary" class="hint" style="text-align:center"></div>
           </section>
@@ -2694,7 +2691,6 @@
       photoState.zoom *= Math.exp(-e.deltaY * 0.0015);
       layoutPhoto();
     },{passive:false});
-    $('photoReset').addEventListener('click',() => { photoState.x = 0; photoState.y = 0; photoState.zoom = 1; layoutPhoto(); });
     $('photoPick').addEventListener('click',() => $('photoFile').click());
     $('photoFile').addEventListener('change',e => { uploadPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
     window.addEventListener('resize',layoutPhoto);
