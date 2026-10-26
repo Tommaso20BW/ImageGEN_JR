@@ -30,7 +30,7 @@ TITLE_BASE = 258           # base delle lettere nei post pubblicati (a grandezza
 TITLE_TOP = TITLE_BASE - 150   # dove arrivano le lettere più alte: fisso per ogni grandezza
 TITLE_GAP = 53             # dalla base del titolo all'inizio delle righe (come su Canva)
 TITLE_MAX_W = 930          # il titolo non supera questa larghezza
-TITLE_K = (0.6, 1.7)       # grandezza del titolo rispetto a Canva: minima e massima
+TITLE_K = (0.6, 2.0)       # grandezza del titolo rispetto a Canva: minima e massima
 ROWS_VS_TITLE = 0.95       # le righe non diventano più piccole del titolo (in proporzione)
 # Nei post pubblicati le lettere sono quelle normali: le legature del font
 # ("tt", "st", "et"... con riccioli e svolazzi) restano spente.
@@ -42,17 +42,16 @@ LOGO_RIGHT = 771.7
 GROUP_X = (319.46 + LOGO_RIGHT) / 2   # centro del gruppo numero (2 cifre) -> logo destro
 ROW_UP, ROW_DOWN = 102.64, 39.0       # ingombro sopra / sotto la linea di base
 ROWS_BOTTOM = 1354.39 + ROW_DOWN      # fondo della zona righe (ultima linea Canva)
-MAX_GROW = 1.45                       # numeri, loghi e barretta crescono al massimo così (da 4 partite)
-FEW_GROW = {1: 2.1, 2: 1.9, 3: 1.7}   # con pochissime partite possono crescere di più
-FILL = 0.92                           # quota dello spazio occupata dalle righe
-MAX_GAP = 1.06                        # passo massimo rispetto all'altezza della riga
+ROW_H = ROW_UP + ROW_DOWN             # altezza di una riga a scala 1
+ROW_MAX = 2.0                         # una colonna: le righe crescono fino a quasi tutta la larghezza
+PITCH = 1.12                          # passo fra le righe rispetto alla loro altezza (minimo)
+PITCH_MAX = 1.35                      # con spazio avanzato le righe si allargano fino a qui
 LINE_MAX_W = 1040                     # la linea dorata non supera questa larghezza
 BLOCK_UP = 0.38                       # quota dello spazio avanzato messa sopra le righe
 TWO_COLS = 11                         # da 11 partite in su: due colonne
 COL_CENTERS = (276, 804)              # centro del gruppo numero+loghi nelle due colonne
 COL_SCALE = 1.08                      # massima scala in due colonne (larghezza mezza pagina)
 COL_LINE_W = 490                      # linea dorata in due colonne
-COL_GAP = 1.3                         # in due colonne le righe si allargano di più in altezza
 
 
 def _font(size):
@@ -129,23 +128,26 @@ def title_layout(word, n):
     return _title_at(max(k, TITLE_K[0]))
 
 
-def _column(n, rows_top, max_scale, gap=MAX_GAP):
-    step = 164.36                                    # passo Canva fra le righe
+def _column(n, rows_top, max_scale):
+    """Righe più grandi possibile nello spazio fra rows_top e il fondo (o fino a max_scale)."""
     room = ROWS_BOTTOM - rows_top
-    scale = min(max_scale, FILL * room / (n * step))
-    pitch = min(room / n, step * scale * gap)
-    # Spazio avanzato: un po' più sotto che sopra, così le righe restano vicine al mese.
-    middle = rows_top + (room - pitch * n) * BLOCK_UP + pitch * n / 2 + (ROW_UP - ROW_DOWN) / 2 * scale
-    return [middle + (k - (n - 1) / 2) * pitch for k in range(n)], scale
+    scale = min(max_scale, room / ((n - 1) * PITCH * ROW_H + ROW_H))
+    pitch = PITCH * ROW_H * scale
+    if n > 1:                                   # spazio avanzato: righe un po' più distanziate
+        pitch = max(pitch, min((room - ROW_H * scale) / (n - 1), PITCH_MAX * ROW_H * scale))
+    block = (n - 1) * pitch + ROW_H * scale
+    # Spazio ancora avanzato: un po' più sotto che sopra, così le righe restano vicine al mese.
+    first = rows_top + (room - block) * BLOCK_UP + ROW_UP * scale
+    return [first + k * pitch for k in range(n)], scale
 
 
 def layout(n, rows_top):
     """[(centro x, linea di base, scala, larghezza max linea)] di ogni riga."""
     if n < TWO_COLS:
-        bases, scale = _column(n, rows_top, FEW_GROW.get(n, MAX_GROW))
+        bases, scale = _column(n, rows_top, ROW_MAX)
         return [(GROUP_X, b, scale, LINE_MAX_W) for b in bases]
     left = (n + 1) // 2
-    bases, scale = _column(left, rows_top, COL_SCALE, COL_GAP)
+    bases, scale = _column(left, rows_top, COL_SCALE)
     return [(COL_CENTERS[k >= left], bases[k if k < left else k - left], scale, COL_LINE_W)
             for k in range(n)]
 
