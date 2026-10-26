@@ -76,26 +76,78 @@ def team_logo(name, team_id=''):
     raise FileNotFoundError(f'Logo non trovato per {name!r}')
 
 
+class _Renderer:
+    """Un solo Chrome sempre acceso, in un thread dedicato (Playwright non si può
+    usare da thread diversi): ogni grafica apre solo una pagina nuova.
+    Avviare il browser costa ~2-3 s; con il browser già acceso un render ~0,5 s."""
+
+    def __init__(self):
+        import queue
+        import threading
+        self.jobs = queue.Queue()
+        self.thread = threading.Thread(target=self._run, name='imagegen-render', daemon=True)
+        self.thread.start()
+
+    def _run(self):
+        from playwright.sync_api import sync_playwright
+        playwright = browser = None
+        while True:
+            markup, ghost, done = self.jobs.get()
+            try:
+                if browser is None or not browser.is_connected():
+                    if playwright is None:
+                        playwright = sync_playwright().start()
+                    chrome = os.environ.get('IMAGEGEN_CHROME') or None
+                    browser = playwright.chromium.launch(executable_path=chrome)
+                page = browser.new_page(
+                    viewport={'width': DESIGN_W, 'height': DESIGN_H},
+                    device_scale_factor=0.5 if ghost else OUT_W / DESIGN_W,
+                )
+                try:
+                    page.set_content(markup, wait_until='load')
+                    page.evaluate('() => document.fonts.ready')
+                    done['png'] = page.screenshot(type='png', omit_background=ghost)
+                finally:
+                    page.close()
+            except Exception as exc:          # il prossimo render riparte con un browser nuovo
+                done['error'] = exc
+                try:
+                    if browser is not None:
+                        browser.close()
+                except Exception:
+                    pass
+                browser = None
+            finally:
+                done['event'].set()
+
+    def render(self, markup, ghost):
+        import threading
+        done = {'event': threading.Event()}
+        self.jobs.put((markup, ghost, done))
+        if not done['event'].wait(120):
+            raise TimeoutError('Render della grafica troppo lento.')
+        if 'error' in done:
+            raise done['error']
+        return done['png']
+
+
+_RENDERER = None
+
+
 def render_html(markup, ghost=False):
     """Render della pagina 1080x1440 in PNG 1920x2560.
 
     ghost=True: versione leggera (540x720) con sfondo trasparente, per l'editor foto.
     """
-    from playwright.sync_api import sync_playwright
+    global _RENDERER
+    if _RENDERER is None:
+        _RENDERER = _Renderer()
+    return _RENDERER.render(markup, ghost)
 
-    with sync_playwright() as playwright:
-        chrome = os.environ.get('IMAGEGEN_CHROME') or None
-        browser = playwright.chromium.launch(executable_path=chrome)
-        try:
-            page = browser.new_page(
-                viewport={'width': DESIGN_W, 'height': DESIGN_H},
-                device_scale_factor=0.5 if ghost else OUT_W / DESIGN_W,
-            )
-            page.set_content(markup, wait_until='load')
-            page.evaluate('() => document.fonts.ready')
-            return page.screenshot(type='png', omit_background=ghost)
-        finally:
-            browser.close()
+
+def warm_up():
+    """Accende il browser in anticipo (all'avvio del servizio)."""
+    render_html('<!doctype html><html><body></body></html>', ghost=True)
 
 
 def photo_layer(photo, frame):
@@ -120,10 +172,17 @@ BASE_CSS = (
 
 
 def overlay_preview(name, kit, width=540):
-    """Livello fisso Canva rimpicciolito, da mostrare nell'editor foto della Mini App."""
+    """Sagoma per l'editor foto: canva/<nome>_<maglia>_placeholder.png (fatta da
+    tools/placeholders.py, già 540x720); se manca, il livello fisso Canva ridotto."""
     import io
 
     from PIL import Image
+
+    if not name.replace('_', '').isalnum() or not kit.isalnum():
+        raise ValueError('Modello non valido.')
+    ready = asset_dir() / 'canva' / f'{name}_{kit}_placeholder.png'
+    if ready.is_file():
+        return ready.read_bytes()
 
     meta = json.loads((asset_dir() / 'canva' / f'{name}.json').read_text(encoding='utf-8'))
     with Image.open(asset_dir() / 'canva' / meta[kit]['overlay']) as image:

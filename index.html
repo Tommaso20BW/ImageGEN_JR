@@ -2730,30 +2730,16 @@
     img.style.width = `${w * k}px`; img.style.height = `${h * k}px`;
   }
 
-  // Sopra la foto: prima il livello Canva, poi (foto caricata) la grafica completa
-  // senza foto — nomi, numeri, loghi, testi — semitrasparente, per posizionarla bene.
-  let ghostKey = '';
-  async function updatePhotoOverlay() {
-    if (!directBase || !session) return;
+  // Sopra la foto: sagoma fissa della grafica (sfumature, titolo, riquadri di loghi
+  // e testi), semitrasparente, solo per posizionare la foto. Immagine statica: subito.
+  function updatePhotoOverlay() {
     const overlay = $('photoOverlay');
-    let payload;
-    try { payload = buildPayload(true); } catch (_) { return; }
-    const key = JSON.stringify({...payload.data, frame:null, photo_id:null});
-    if (key === ghostKey) return;
-    ghostKey = key;
-    overlay.removeAttribute('src');            // riquadro pulito finché non arriva l'anteprima
-    try {
-      const response = await netFetch(`${directBase}/ghost`, {
-        method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-        body:JSON.stringify(payload)
-      }, 60000);
-      if (!response.ok || key !== ghostKey) return;
-      const blob = await response.blob();
-      if (overlay.dataset.blob) { try { URL.revokeObjectURL(overlay.dataset.blob); } catch (_) {} }
-      overlay.dataset.blob = URL.createObjectURL(blob);
-      overlay.src = overlay.dataset.blob;
-      overlay.classList.add('ghost');
-    } catch (_) { ghostKey = ''; }
+    if (!directBase || !session) return;
+    const name = kind === 'jr' ? 'jr' : kind === 'md' ? 'matchday' : 'starting_xi';
+    const variant = kind === 'jr' ? (jrColor || 'black') : (kit || 'home');
+    const url = `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${name}&kit=${encodeURIComponent(variant)}`;
+    if (overlay.getAttribute('src') !== url) overlay.src = url;
+    overlay.classList.add('ghost');
   }
 
   // Riduce la foto a max 2560 px (lato lungo) in JPEG: qualità piena per la grafica,

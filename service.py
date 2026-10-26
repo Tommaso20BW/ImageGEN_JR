@@ -584,6 +584,8 @@ class Service:
             print(f'WARN IMAGEGEN: pacchetto loghi non disponibile: {type(exc).__name__}: {exc}', flush=True)
 
         self._start_http_server()
+        # Browser per le grafiche acceso subito: la prima anteprima non aspetta l'avvio.
+        threading.Thread(target=_warm_up_renderer, daemon=True).start()
 
         parts = urlsplit(webapp_url)
         query = dict(parse_qsl(parts.query, keep_blank_values=True))
@@ -611,6 +613,15 @@ class Service:
         finally:
             self._stop_http_server()
             self.cleanup()
+
+
+def _warm_up_renderer():
+    try:
+        from graphics.common import warm_up
+        warm_up()
+        print('INFO IMAGEGEN: browser grafiche pronto', flush=True)
+    except Exception as exc:
+        print(f'WARN IMAGEGEN: browser grafiche non avviato: {type(exc).__name__}: {exc}', flush=True)
 
 
 def main():
