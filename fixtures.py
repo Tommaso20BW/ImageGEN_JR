@@ -63,6 +63,32 @@ def _fetch(session=None):
     return out
 
 
+SUMMARY_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/{league}/summary'
+KITS = ('home', 'away', 'third')
+_kits = {}
+
+
+def kit(event_id, league, session=None):
+    """Maglia indossata dalla Juventus in quella partita ('home'/'away'/'third'), o ''.
+    ESPN la dà nel riepilogo (boxscore -> uniform.type) per le partite giocate o in corso."""
+    key = (str(event_id), str(league))
+    if key in _kits:
+        return _kits[key]
+    if not re.fullmatch(r'\d{1,12}', key[0]) or not re.fullmatch(r'[a-z0-9._]{2,40}', key[1]):
+        return ''
+    http = session or requests
+    response = http.get(SUMMARY_URL.format(league=key[1]), params={'event': key[0]}, timeout=15)
+    response.raise_for_status()
+    found = ''
+    for team in response.json().get('boxscore', {}).get('teams', []):
+        if str(team.get('team', {}).get('id')) == JUVENTUS_ID:
+            found = (team['team'].get('uniform') or {}).get('type', '')
+    found = found if found in KITS else ''
+    if found:                                   # una maglia trovata non cambia più
+        _kits[key] = found
+    return found
+
+
 def _names(team):
     return {norm(team.get(k)) for k in ('displayName', 'shortDisplayName', 'name', 'location', 'abbreviation')
             if team.get(k)}

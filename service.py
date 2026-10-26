@@ -115,6 +115,13 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 return
             self._json(200, {'ok': True, 'fixture': self.service.fixture(query.get('opponent', ''), query.get('side', ''))})
             return
+        if parts.path.rstrip('/') == '/kit':
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            self._json(200, {'ok': True, 'kit': self.service.kit(query.get('event', ''), query.get('league', ''))})
+            return
         if parts.path.rstrip('/') == '/overlay':
             query = dict(parse_qsl(parts.query))
             if query.get('session', '') != self.service.session:
@@ -381,6 +388,15 @@ class Service:
         except Exception as exc:
             print(f'WARN IMAGEGEN: calendario ESPN non disponibile: {type(exc).__name__}: {exc}', flush=True)
             return []
+
+    def kit(self, event_id, league):
+        """Maglia della Juventus nella partita ESPN (partite giocate), '' se non si sa."""
+        try:
+            import fixtures
+            return fixtures.kit(event_id, league)
+        except Exception as exc:
+            print(f'WARN IMAGEGEN: maglia non trovata su ESPN: {type(exc).__name__}: {exc}', flush=True)
+            return ''
 
     def fixture(self, opponent, side):
         """Stadio, data e ora della partita contro l'avversario (calendario ESPN)."""

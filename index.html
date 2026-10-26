@@ -1162,7 +1162,8 @@
   let pxiModule = '';    // PROBABILE XI: modulo
   let calMonth = 0;      // CALENDARIO: mese (1-12)
   const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
-  let mdPick = '';       // MATCHDAY: id partita ESPN scelta, 'manual' o ''
+  let mdPick = '';       // id partita ESPN scelta, 'manual' o ''
+  let kitFromMatch = false;   // maglia presa da ESPN (partite giocate): niente passaggio "Maglia"
   let fixtureList = [];
   let calRows = [];
   let pxiPicks = Array(11).fill('');
@@ -1338,7 +1339,8 @@
     // "Altra partita" per scrivere tutto a mano, anche dati inventati.
     // Pre-gara: prossime partite; Goal/Event/Stats: partita in corso o già giocate.
     const picked = mdPick && mdPick !== 'manual';
-    const pick = steps => ['mdpick',...(picked ? steps.filter(s => !base.includes(s)) : steps)];
+    // Partita scelta: via competizione/campo/avversario; via anche la maglia se ESPN la sa.
+    const pick = steps => ['mdpick',...(picked ? steps.filter(s => !base.includes(s) && !(s === 'kit' && kitFromMatch)) : steps)];
     if (kind === 'goal' || kind === 'saved') flow = pick([...withKit,'player','minute','pose']);
     else if (kind === 'kick') flow = pick(base);
     else if (kind === 'match' && phase === 'kick') flow = ['phase',...pick(base)];
@@ -2061,6 +2063,7 @@
     pxiPicks = Array(11).fill('');
     calMonth = 0;
     mdPick = '';
+    kitFromMatch = false;
     calRows = [];
     pose = '';
     moment = '';
@@ -2594,9 +2597,27 @@
   }
 
   // Un tocco: competizione, campo, avversario, stadio, data e ora.
-  function pickMdFixture(id) {
+  async function matchKit(m) {
+    if (!directBase || !session) return '';
+    try {
+      const url = `${directBase}/kit?session=${encodeURIComponent(session)}&event=${encodeURIComponent(m.id)}&league=${encodeURIComponent(m.competition)}`;
+      const body = await (await netFetch(url, {method:'GET'}, 8000)).json();
+      return body && body.ok && ['home','away','third'].includes(body.kit) ? body.kit : '';
+    } catch (_) { return ''; }
+  }
+
+  async function pickMdFixture(id) {
     mdPick = id;
     const m = fixtureList.find(f => f.id === id);
+    kitFromMatch = false;
+    // Partite giocate (Goal/Event/Stats): la maglia la dice ESPN.
+    if (m && !PREMATCH.includes(kind)) {
+      $('mdPickHint').textContent = 'Cerco la maglia della partita…';
+      const k = await matchKit(m);
+      $('mdPickHint').textContent = '';
+      if (mdPick !== id) return;
+      if (k) { kit = k; kitAuto = false; kitFromMatch = true; }
+    }
     if (m) {
       competition = m.competition;
       side = m.side;
