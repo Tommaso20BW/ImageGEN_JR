@@ -6,12 +6,23 @@ import requests
 
 
 # Session message: bold title + italic line, both with custom emoji (offsets in UTF-16 units).
-SESSION_TEXT = "🎨 ImageGEN · JR\n\n⏳ Sessione attiva per almeno 10min."
+SESSION_TITLE = "🎨 ImageGEN · JR"
+SESSION_LINE = "Sessione attiva per almeno 10min."
+SESSION_TEXT = f"{SESSION_TITLE}\n\n⏳ {SESSION_LINE}"
+
+
+def _u16(text):
+    """Lunghezza in unità UTF-16, come la contano le entità di Telegram."""
+    return len(text.encode('utf-16-le')) // 2
+
+
+# Corsivo su tutta la riga, calcolato dal testo (prima era fisso a 26 e "10min." restava fuori).
+_LINE_AT = _u16(SESSION_TEXT) - _u16(SESSION_LINE)
 SESSION_ENTITIES = [
-    {'type': 'bold', 'offset': 0, 'length': 16},
+    {'type': 'bold', 'offset': 0, 'length': _u16(SESSION_TITLE)},
     {'type': 'custom_emoji', 'offset': 0, 'length': 2, 'custom_emoji_id': '5431456208487716895'},
-    {'type': 'custom_emoji', 'offset': 18, 'length': 1, 'custom_emoji_id': '5451732530048802485'},
-    {'type': 'italic', 'offset': 20, 'length': 26},
+    {'type': 'custom_emoji', 'offset': _LINE_AT - 2, 'length': 1, 'custom_emoji_id': '5451732530048802485'},
+    {'type': 'italic', 'offset': _LINE_AT, 'length': _u16(SESSION_LINE)},
 ]
 
 
