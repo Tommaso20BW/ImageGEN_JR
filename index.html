@@ -501,8 +501,9 @@
     .lay-frame{position:relative;flex:none;width:min(100%,calc((var(--app-h) - 290px) * .75));aspect-ratio:3/4;margin:0 auto;
       overflow:hidden;border-radius:12px;background:#ddd;box-shadow:var(--preview-shadow);touch-action:none}
     .lay-frame img,.lay-frame svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-    .lay-grid line{stroke:rgba(17,17,19,.22);stroke-width:1.5;vector-effect:non-scaling-stroke}
-    .lay-grid circle{fill:rgba(17,17,19,.32)}
+    .lay-grid line{stroke:rgba(17,17,19,.16);stroke-width:1;vector-effect:non-scaling-stroke}
+    .lay-grid line.main{stroke:rgba(17,17,19,.3)}
+    .lay-grid circle{fill:rgba(17,17,19,.3)}
     .lay-frame.picking .lay-grid line{stroke:rgba(17,17,19,.38)}
     .lay-frame.picking .lay-grid circle{fill:rgba(17,17,19,.55)}
     .lay-card{position:absolute;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
@@ -3880,7 +3881,9 @@
      Ogni modulo ha posizioni e grandezza sue, salvate per sempre nel repository. */
   const CARD = {left:-117, right:117, top:-175.4, bottom:58.9};   // card rispetto a (centro x, alto etichetta)
   const CARD_MID = (CARD.top + CARD.bottom) / 2;                   // centro visivo della card
-  const pxiLay = {layouts:{}, defaults:{}, grid:null, min:.7, max:1.3, loaded:null, sel:-1, before:''};
+  // undo[modulo] = disposizioni prima di ogni modifica: Ripristina torna indietro di una.
+  const pxiLay = {layouts:{}, defaults:{}, grid:null, min:.7, max:1.3, loaded:null, sel:-1, before:'', undo:{}};
+  function layRemember() { (pxiLay.undo[pxiModule] = pxiLay.undo[pxiModule] || []).push(layCopy(pxiLay.layouts[pxiModule])); }
 
   function loadLayouts() {
     if (!directBase || !session) return Promise.resolve();
@@ -3920,10 +3923,11 @@
     const s = layout.scale;
     // Griglia sul centro delle card (cambia con la grandezza).
     const ys = pxiLay.grid.y.map(y => y + CARD_MID * s);
+    // Una linea su due più marcata (la griglia originale), le altre più leggere.
     $('layGrid').innerHTML =
-      pxiLay.grid.x.map(x => `<line x1="${x}" y1="0" x2="${x}" y2="1440"/>`).join('') +
-      ys.map(y => `<line x1="0" y1="${y}" x2="1080" y2="${y}"/>`).join('') +
-      pxiLay.grid.x.map(x => ys.map(y => `<circle cx="${x}" cy="${y}" r="6"/>`).join('')).join('');
+      pxiLay.grid.x.map((x,i) => `<line class="${i % 2 ? '' : 'main'}" x1="${x}" y1="0" x2="${x}" y2="1440"/>`).join('') +
+      ys.map((y,i) => `<line class="${i % 2 ? '' : 'main'}" x1="0" y1="${y}" x2="1080" y2="${y}"/>`).join('') +
+      pxiLay.grid.x.map(x => ys.map(y => `<circle cx="${x}" cy="${y}" r="4"/>`).join('')).join('');
     const box = $('layCards');
     if (rebuild || box.children.length !== 11) {
       box.innerHTML = '';
@@ -3955,6 +3959,7 @@
     });
     $('layFrame').classList.toggle('picking', pxiLay.sel >= 0);
     $('layScale').textContent = `${Math.round(s * 100)}%`;
+    $('layReset').disabled = !(pxiLay.undo[pxiModule] || []).length;
     $('layMinus').disabled = s <= pxiLay.min + 1e-6;
     $('layPlus').disabled = s >= pxiLay.max - 1e-6;
     document.querySelectorAll('.lay-pad button').forEach(b => {
@@ -3984,6 +3989,7 @@
     const to = gridStep(from, dx, dy);
     if (!to) return;
     const other = layout.cards.findIndex((c,i) => i !== pxiLay.sel && Math.abs(c[0] - to[0]) < 1 && Math.abs(c[1] - to[1]) < 1);
+    layRemember();
     if (other >= 0) layout.cards[other] = from.slice();
     layout.cards[pxiLay.sel] = to;
     haptic('select');
@@ -3992,8 +3998,10 @@
 
   function stepScale(dir) {
     const layout = pxiLay.layouts[pxiModule];
-    const next = Math.round((layout.scale + dir * .05) * 100) / 100;
-    layout.scale = Math.min(pxiLay.max, Math.max(pxiLay.min, next));
+    const next = Math.min(pxiLay.max, Math.max(pxiLay.min, Math.round((layout.scale + dir * .01) * 100) / 100));  // 1% alla volta
+    if (next === layout.scale) return;
+    layRemember();
+    layout.scale = next;
     haptic('select');
     renderLayout();
   }
@@ -4021,12 +4029,13 @@
     $('layMinus').addEventListener('click',() => stepScale(-1));
     $('layPlus').addEventListener('click',() => stepScale(1));
     $('layDone').addEventListener('click',closeLayoutEditor);
+    // Ripristina: annulla l'ultima modifica (spostamento o grandezza).
     $('layReset').addEventListener('click',() => {
-      if (!pxiLay.defaults[pxiModule]) return;
+      const stack = pxiLay.undo[pxiModule] || [];
+      if (!stack.length) return;
       haptic('select');
-      pxiLay.layouts[pxiModule] = layCopy(pxiLay.defaults[pxiModule]);
-      pxiLay.sel = -1;
-      renderLayout(true);
+      pxiLay.layouts[pxiModule] = stack.pop();
+      renderLayout();
     });
     $('lay').addEventListener('touchmove',e => { if (e.target.closest('#layFrame')) e.preventDefault(); },{passive:false});
   }
