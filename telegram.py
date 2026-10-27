@@ -6,7 +6,7 @@ import requests
 
 
 # Session message: bold title + italic line, both with custom emoji (offsets in UTF-16 units).
-SESSION_TEXT = "🎨 ImageGEN · JR\n\n⏳ Sessione attiva per 10min."
+SESSION_TEXT = "🎨 ImageGEN · JR\n\n⏳ Sessione attiva per almeno 10min."
 SESSION_ENTITIES = [
     {'type': 'bold', 'offset': 0, 'length': 16},
     {'type': 'custom_emoji', 'offset': 0, 'length': 2, 'custom_emoji_id': '5431456208487716895'},
