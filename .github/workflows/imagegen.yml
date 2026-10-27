@@ -210,10 +210,13 @@ jobs:
 
           CURRENT_RUN_ID="${{ github.run_id }}"
 
-          echo "Pulisco vecchi run di ImageGen..."
+          # Restano gli ultimi 3 run (questo + i 2 precedenti) con i loro log, per capire
+          # eventuali errori della Mini App; quelli più vecchi si cancellano.
+          echo "Pulisco vecchi run di ImageGen (tengo gli ultimi 3)..."
           gh api --paginate \
             "repos/${{ github.repository }}/actions/workflows/imagegen.yml/runs?per_page=100" \
             --jq '.workflow_runs[] | select(.status == "completed") | .id' |
+          tail -n +3 |
           while read -r RUN_ID; do
             if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "$CURRENT_RUN_ID" ]; then
               echo "Elimino vecchio run ImageGen $RUN_ID"

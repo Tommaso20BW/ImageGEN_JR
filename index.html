@@ -3972,17 +3972,33 @@
   // Richiesta al workflow con nuovo tentativo automatico se la rete si interrompe
   // (sul telefono, attraverso il tunnel, capita: il server ha già fatto il lavoro
   // e ripetere è sicuro, anche l'invio a Telegram non crea doppioni).
-  async function netFetch(url, options, timeoutMs=90000, tries=3) {
+  // Il collegamento passa da un tunnel Cloudflare gratuito: ogni tanto la rete cade o il
+  // tunnel risponde 502/503/504/52x/530 per un attimo. In quei casi si riprova da soli.
+  // Tutte le chiamate si possono ripetere senza danni: il servizio riconosce lo stesso
+  // invio (niente doppioni su Telegram) e riusa l'anteprima già pronta.
+  // retryAbort: anche l'attesa scaduta si riprova (anteprima e invio).
+  const TUNNEL_HICCUP = new Set([502,503,504,520,521,522,523,524,530]);
+  async function netFetch(url, options, timeoutMs=90000, tries=3, retryAbort=false) {
+    let lastAbort = null;
     for (let attempt = 1; attempt <= tries; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        return await fetch(url, {...options, mode:'cors', cache:'no-store', credentials:'omit', signal:controller.signal});
+        const response = await fetch(url, {...options, mode:'cors', cache:'no-store', credentials:'omit', signal:controller.signal});
+        if (TUNNEL_HICCUP.has(response.status) && attempt < tries) {
+          await new Promise(resolve => setTimeout(resolve, 1200 * attempt));
+          continue;
+        }
+        return response;
       } catch (error) {
-        if (error && error.name === 'AbortError') throw error;
+        if (error && error.name === 'AbortError') {
+          if (!retryAbort || attempt >= tries) throw error;
+          lastAbort = error;
+        }
         if (attempt < tries) await new Promise(resolve => setTimeout(resolve, 700 * attempt));
       } finally { clearTimeout(timer); }
     }
+    if (lastAbort) throw lastAbort;
     throw new Error('Connessione con ImageGEN instabile. Riprova tra qualche secondo.');
   }
 
@@ -4164,9 +4180,10 @@
       $('nextButton').textContent = 'Anteprima…';
       showBusy('Genero l’anteprima…',BUSY_SUB[realKind()] || '',realKind());
 
+      // Il servizio può aspettare un'altra richiesta (fino a 75 s) e poi fare il render.
       const response = await netFetch(`${directBase}/preview`, {
         method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body:raw
-      }, 90000);
+      }, 150000, 2, true);
 
       if (!response.ok) {
         let answer = {};
@@ -4208,9 +4225,11 @@
       if (LIVE) showBusy('Confermo la foto…','Il bot la userà per la grafica.','submit');
       else showBusy('Invio su Telegram…','La foto arriva nella chat del bot.','submit');
 
+      // Il servizio può aspettare l'anteprima in corso (fino a 75 s) e Telegram (fino a 60 s).
+      // Ripetere è sicuro: lo stesso invio non parte due volte.
       const response = await netFetch(`${directBase}/submit`, {
         method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body:raw
-      }, 30000);
+      }, 150000, 2, true);
 
       let answer = {};
       try { answer = await response.json(); } catch (_) {}
@@ -4235,7 +4254,7 @@
       const message = sessionExpired()
         ? EXPIRED_MESSAGE
         : (error && error.name === 'AbortError'
-          ? 'ImageGEN non risponde. Riapri la Mini App e riprova.'
+          ? 'ImageGEN non risponde. Controlla la chat del bot: la foto potrebbe essere arrivata.'
           : (error.message || 'Invio non riuscito.'));
       setPreviewError(message);
     }

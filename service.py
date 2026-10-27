@@ -29,7 +29,7 @@ MAX_PHOTOS = 8
 # Campi che spostano o cambiano solo le foto: non cambiano la sagoma dell'editor.
 PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame')
 LOCK_WAIT_SECONDS = 75        # un nuovo tentativo aspetta la richiesta ancora in corso
-RESEND_GUARD_SECONDS = 45     # stessa grafica reinviata entro 45 s = doppione (rete persa)
+RESEND_GUARD_SECONDS = 180    # stessa grafica reinviata entro 3 min = doppione (la Mini App riprova da sola)
 DIRECT_PORT = 8765
 
 
@@ -439,9 +439,11 @@ class Service:
         # Un nuovo tentativo aspetta quello in corso e poi riusa l'anteprima già pronta.
         if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
             raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
+        started = time.time()
         try:
             request_state = self._parse_request(envelope)
             png, _ = self._render_and_cache(request_state)
+            print(f"INFO IMAGEGEN: anteprima pronta | {request_state['data']['kind']} | {time.time() - started:.1f}s", flush=True)
             return png
         finally:
             self._set_stage('idle')
@@ -524,8 +526,11 @@ class Service:
 
     def submit(self, envelope):
         # Un nuovo tentativo della Mini App (rete instabile) aspetta il primo invece di fallire.
+        asked = time.time()
         if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
+            print(f'WARN IMAGEGEN: invio rifiutato, servizio occupato da {LOCK_WAIT_SECONDS}s', flush=True)
             raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
+        waited = time.time() - asked
         try:
             request_state = self._parse_request(envelope)
             data = copy.deepcopy(request_state['data'])
@@ -568,15 +573,22 @@ class Service:
                     flush=True,
                 )
 
-            message_id = self.telegram.photo(
-                png,
-                f"{data['kind']}-{request_state['id']}.png",
-            )
+            sending = time.time()
+            try:
+                message_id = self.telegram.photo(
+                    png,
+                    f"{data['kind']}-{request_state['id']}.png",
+                )
+            except Exception as exc:
+                print(f'WARN IMAGEGEN: Telegram non ha confermato | {type(exc).__name__} | '
+                      f'{time.time() - sending:.1f}s | {len(png) // 1024} KB', flush=True)
+                raise
             self.generated_message_ids.append(int(message_id))
             self.recent_sends[fingerprint] = (int(message_id), time.time())
             if data['kind'] == 'xi':
                 threading.Thread(target=self._remember_shirts, args=(data['lineup'],), daemon=True).start()
-            print(f"INFO IMAGEGEN: foto PNG inviata | id={request_state['id']}", flush=True)
+            print(f"INFO IMAGEGEN: foto PNG inviata | id={request_state['id']} | attesa {waited:.1f}s | "
+                  f"Telegram {time.time() - sending:.1f}s | {len(png) // 1024} KB", flush=True)
             return int(message_id)
         finally:
             self.operation_lock.release()
