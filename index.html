@@ -2960,13 +2960,22 @@
   // Testo -> {module, groups:[[{label, number}]]}
   function parseFormation(raw) {
     let text = String(raw || '').replace(/\r/g,'');
+    // Messaggi inoltrati ("📲 X - _Morik92_" / formazione / "Apri X"): resta solo la formazione.
+    // Formazione su una riga (reparti separati da ;): si tiene la riga più lunga con almeno due ;.
+    // Altrimenti via le righe che non sono giocatori: link, @account, 📲, "Apri …",
+    // "X - …" / "Instagram - …" e nomi tra _trattini bassi_.
+    const rawRows = text.split('\n');
+    const semi = rawRows.filter(l => (l.match(/;/g) || []).length >= 2);
+    if (semi.length) text = semi.reduce((a,b) => b.length > a.length ? b : a);
+    else text = rawRows.filter(l => !/https?:\/\/|www\.|@\w|📲|^\W*apri\b|^\W*(x|twitter|instagram|ig|telegram|tiktok|facebook)\s*[-–—:|]|_[^_\s][^_]*_/i.test(l)).join('\n');
     const mod = text.match(/\b(\d(?:\s*-\s*\d){2,4})\b/);
     const module = mod ? mod[1].replace(/\s/g,'') : '';
     // Via l'intestazione ("Lecce Juve:", "🎯 UFFICIALE Juventus (3-4-1-2):") e le parentesi.
     if (/[;,]/.test(text)) text = text.replace(/^[^;,\n]*:\s*/,'');
     text = text.replace(/\([^)]*\)/g,' ');
     const single = !/[;,]/.test(text);
-    let lines = /;/.test(text) ? text.split(/[;\n]/) : /,/.test(text) ? [text] : text.split('\n');
+    // Reparti separati da ; oppure uno per riga con le virgole ("Gatti, Bremer, Lucumi").
+    let lines = /;/.test(text) ? text.split(/[;\n]/) : text.split('\n');
     if (single) {
       // Un giocatore per riga: via punti elenco e righe vuote; un numero da solo
       // su una riga va col nome della riga dopo ("25" + "Vicario G.").
