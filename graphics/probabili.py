@@ -48,10 +48,11 @@ MODULE_SCALE = {'3-5-2': 0.91, '5-4-1': 0.9}
 
 # Griglia di "Modifica" nella Mini App: le card si spostano solo su questi punti
 # (centro x, alto dell'etichetta). 19 colonne (le 17 fra le fasce più una per lato,
-# a 67,5 e 1012,5), 24 righe (23 da attacco a portiere più una sotto il portiere):
-# passo dimezzato rispetto alla prima griglia 9x12, i cui punti restano tutti.
+# a 67,5 e 1012,5), 24 righe (23 da attacco a portiere più una mezzo passo sotto il
+# portiere): passo dimezzato rispetto alla prima griglia 9x12, i cui punti restano tutti.
 GRID_X = [round(120 + 52.5 * i, 2) for i in range(-1, 18)]
-GRID_Y = [round(295.4 + i * (1228.16 - 295.4) / 22, 2) for i in range(24)]
+GRID_Y = [round(295.4 + i * (1228.16 - 295.4) / 22, 2) for i in range(23)]
+GRID_Y.append(round(1228.16 + (1228.16 - 295.4) / 44, 2))   # mezzo passo sotto il portiere
 
 # Parte visibile della card rispetto a (centro x, alto etichetta), a misura piena:
 # lastre/etichetta ±117 in larghezza, dalla testa (-175,4) al fondo etichetta (+58,9).
