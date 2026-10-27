@@ -1,4 +1,4 @@
-"""PROBABILE XI: probabile formazione della Juventus letta da Gazzetta, Sky Sport o Fantacalcio.it.
+"""PROBABILE XI: probabile formazione della Juventus letta da Gazzetta o Sky Sport.
 
 Ogni sito diventa lo stesso testo che si incolla a mano nella Mini App:
     "Juventus (3-5-2): Vicario; Gatti, Bremer, Lucumi; Kalulu, …; Woltemade, Kolo Muani"
@@ -8,8 +8,7 @@ che la Mini App sa già leggere e mettere da sinistra a destra nella grafica.
 Ordine dei giocatori nei siti (controllato il 27/10/2026, 20 squadre):
 - Gazzetta: portiere, poi reparti da destra a sinistra (come il testo);
 - Sky: dati JSON nella pagina, formationPlace 1..11 nello stesso ordine;
-- Fantacalcio: dall'attacco al portiere, ogni reparto da sinistra a destra (si capovolge).
-Tutte e tre le pagine rispondono anche dai server di GitHub.
+Entrambe le pagine rispondono anche dai server di GitHub.
 """
 import html
 import json
@@ -27,7 +26,6 @@ TEAM = 'juventus'
 SOURCES = {
     'gazzetta': ('Gazzetta', 'https://www.gazzetta.it/Calcio/prob_form/'),
     'sky': ('Sky Sport', 'https://sport.sky.it/calcio/serie-a/probabili-formazioni'),
-    'fantacalcio': ('Fantacalcio.it', 'https://www.fantacalcio.it/probabili-formazioni-serie-a'),
 }
 
 
@@ -131,37 +129,7 @@ def parse_sky(page):
     raise LineupError('Sky Sport: partita della Juventus non trovata.')
 
 
-# ---------- Fantacalcio.it ----------
-def parse_fantacalcio(page):
-    for m in re.finditer(r'<div class="team team-(home|away)"[^>]*>\s*<ul class="team-lineup"[^>]*>(.*?)</ul>',
-                         page, re.S):
-        body = m.group(2)
-        if f'/squadre/{TEAM}/' not in body:
-            continue
-        # Righe separate da <li class="separator">: dall'attacco al portiere, ognuna da sinistra a destra.
-        rows = []
-        for chunk in re.split(r'<li class="separator"></li>', body):
-            names = [_text(n) for n in re.findall(r'<span>(.*?)</span>', chunk, re.S)]
-            if names:
-                rows.append(names)
-        lines = [list(reversed(r)) for r in reversed(rows)]
-        players = [p for line in lines for p in line]
-        sizes = [len(line) for line in lines[1:]]
-        _check(players, sizes, 'Fantacalcio.it')
-        if len(lines[0]) != 1:
-            raise LineupError('Fantacalcio.it: portiere della Juventus non trovato.')
-        # "Ultimo aggiornamento 27/10/2026 - 13:59" della partita: dopo le schede delle due
-        # squadre, prima della partita successiva.
-        nxt = page.find('<div class="team team-home"', m.end())
-        upd = re.compile(r'last-update[^>]*>\s*Ultimo aggiornamento\s*<span class="date">\s*'
-                         r'(\d{1,2})/(\d{1,2})/\d{4}\s*-\s*(\d{1,2})[:.](\d{2})').search(
-            page, m.end(), nxt if nxt > 0 else len(page))
-        updated = f'{int(upd[1]):02d}/{int(upd[2]):02d} {int(upd[3]):02d}:{upd[4]}' if upd else ''
-        return {'module': _module(sizes), 'lines': lines, 'match': '', 'updated': updated}
-    raise LineupError('Fantacalcio.it: partita della Juventus non trovata.')
-
-
-PARSERS = {'gazzetta': parse_gazzetta, 'sky': parse_sky, 'fantacalcio': parse_fantacalcio}
+PARSERS = {'gazzetta': parse_gazzetta, 'sky': parse_sky}
 
 
 def fetch(source):

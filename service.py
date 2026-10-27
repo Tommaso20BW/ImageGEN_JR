@@ -175,7 +175,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._json(200, {'ok': True, 'updated': probabili_web.updates()})
             return
         if parts.path.rstrip('/') == '/probabili':
-            # PROBABILE XI: formazione della Juventus da Gazzetta, Sky Sport o Fantacalcio.it.
+            # PROBABILE XI: formazione della Juventus da Gazzetta o Sky Sport.
             query = dict(parse_qsl(parts.query))
             if query.get('session', '') != self.service.session:
                 self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
@@ -373,17 +373,24 @@ class Service:
         """PROBABILE XI: disposizioni in uso per modulo + griglia di Modifica."""
         import layouts
         from graphics.probabili import GRID_X, GRID_Y
-        from graphics.probabili import MODULES
-        return {'layouts': layouts.all_layouts(), 'defaults': {m: layouts.default(m) for m in MODULES},
+        everything = layouts.all_layouts()
+        return {'layouts': everything, 'defaults': everything,
                 'grid': {'x': GRID_X, 'y': GRID_Y},
                 'scale': {'min': layouts.SCALE_MIN, 'max': layouts.SCALE_MAX}}
 
     def save_layout(self, envelope):
         """Salva subito in locale; il commit nel repository va in un thread."""
         import layouts
-        if str(envelope.get('session') or '') != self.session or envelope.get('action') != 'layout':
+        action = envelope.get('action')
+        if str(envelope.get('session') or '') != self.session or action not in ('layout', 'module_add', 'module_delete'):
             raise ValueError('Richiesta non valida.')
+        if action == 'module_add':           # "+": nuovo modulo con disposizione automatica
+            module, layout = layouts.create(envelope.get('module'))
+            return {'module': module, 'layout': layout}
         module = str(envelope.get('module') or '')
+        if action == 'module_delete':
+            layouts.delete(module)
+            return {'module': module}
         layout = layouts.clean(module, envelope.get('layout'))
         print(f"INFO IMAGEGEN: posizioni {module} ricevute da Fatto | {round(layout['scale'] * 100)}%", flush=True)
         threading.Thread(target=self._save_layout, args=(module, layout), daemon=True).start()

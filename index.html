@@ -471,6 +471,32 @@
     #pxiSrcHint:empty{display:none}
     .module-chips .opt{min-height:38px;padding:0 13px;font-size:14px;width:auto;flex:0 0 auto;gap:0}
     .module-chips .opt .radio{display:none}
+    /* Scelta modulo: pulsante + pannello dal basso, 5 colonne */
+    .mod-btn{width:100%;display:flex;align-items:center;gap:14px;margin-top:12px;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+    .mod-btn svg{width:56px;flex:none}.mod-btn b{display:block;font-size:22px;font-weight:800}
+    .mod-btn small{display:block;color:var(--muted);font-size:12px;font-weight:600}.mod-btn i{margin-left:auto;font-style:normal;color:var(--muted)}
+    .mod-btn svg,.mod-tile svg,.mod-new svg{border-radius:6px;background:rgba(127,127,127,.14)}
+    .mod-btn circle,.mod-new circle{fill:var(--text)}.mod-tile circle{fill:var(--muted)}.mod-tile.on circle{fill:var(--text)}
+    .mod-ov{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;background:rgba(0,0,0,.4)}
+    .mod-ov.open{display:flex}
+    .mod-sh{width:100%;max-width:560px;margin:0 auto;max-height:82vh;overflow:auto;background:var(--bg);border-radius:18px 18px 0 0;padding:10px 12px calc(20px + env(safe-area-inset-bottom,0px))}
+    .mod-bar{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px}
+    .mod-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .mod-top button{border:0;background:none;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;padding:4px 2px}
+    .mod-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+    .mod-tile{position:relative;display:grid;gap:3px;justify-items:center;padding:4px 4px 5px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--text);font:inherit;font-weight:700;font-size:11.5px;letter-spacing:-.01em;cursor:pointer}
+    .mod-tile svg{width:100%;height:auto;display:block}
+    .mod-tile.on{border-color:var(--text);box-shadow:inset 0 0 0 1px var(--text)}
+    .mod-tile.del::after{content:"\00d7";position:absolute;top:-6px;right:-4px;width:18px;height:18px;border-radius:50%;background:#d33;color:#fff;font-size:14px;line-height:18px}
+    .mod-tile.armed{border-color:#d33;color:#d33}
+    .mod-tile.add{align-content:center;color:var(--muted);border-style:dashed}.mod-tile .plus{font-size:30px;line-height:1;font-weight:300}
+    .mod-new{display:none;margin-top:12px;gap:10px;align-items:center}.mod-new.open{display:flex;flex-wrap:wrap}
+    .mod-new input{flex:1;min-width:120px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--text);font:inherit;font-size:18px}
+    .mod-new svg{width:44px;flex:none}.mod-new button{min-height:44px;padding:0 16px;border-radius:12px;border:0;background:var(--text);color:var(--bg);font:inherit;font-weight:800;cursor:pointer}
+    .mod-new button:disabled{opacity:.35}.mod-new .err{flex-basis:100%;color:#d33;font-size:13px;min-height:16px}
+    .lay-role{display:flex;align-items:center;gap:10px;justify-content:center;margin:6px 0}.lay-role[hidden]{display:none}
+    .lay-role label{color:var(--muted);font-size:13px;font-weight:700}
+    .lay-role input{width:92px;min-height:38px;text-align:center;text-transform:uppercase;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--text);font:inherit;font-weight:800;font-size:16px}
     /* Popup numero di maglia */
     .ask{position:fixed;inset:0;z-index:50;display:none;place-items:center;padding:24px;background:rgba(0,0,0,.45)}
     .ask.open{display:grid}
@@ -1028,13 +1054,12 @@
             <div class="src-row" role="group" aria-label="Probabile formazione da un sito">
               <button class="btn ghost" type="button" data-src="gazzetta"><span class="src-name">Gazzetta</span><span class="src-upd"></span></button>
               <button class="btn ghost" type="button" data-src="sky"><span class="src-name">Sky Sport</span><span class="src-upd"></span></button>
-              <button class="btn ghost" type="button" data-src="fantacalcio"><span class="src-name">Fantacalcio</span><span class="src-upd"></span></button>
             </div>
             <div id="pxiSrcHint" class="hint"></div>
             <textarea id="pxiText" class="field-input paste" maxlength="600" autocapitalize="words" spellcheck="false"
               placeholder="Inserisci formazione"></textarea>
             <div id="pxiSummary" class="hint">Modulo: —</div>
-            <div id="moduleOpts" class="module-chips" role="radiogroup"></div>
+            <div id="moduleOpts"></div>
             <div id="pxiParsed" class="parsed"></div>
           </section>
 
@@ -1195,6 +1220,7 @@
     </div>
   </div>
   <p id="layHint" class="lay-hint">Tocca una card, poi spostala con le frecce.</p>
+  <div id="layRoleBox" class="lay-role" hidden><label for="layRole">Etichetta</label><input id="layRole" maxlength="5" autocapitalize="characters" autocomplete="off" spellcheck="false"></div>
   <div id="layFrame" class="lay-frame">
     <img id="layBg" alt="">
     <svg id="layGrid" class="lay-grid" viewBox="0 0 1080 1440" preserveAspectRatio="none"></svg>
@@ -1301,8 +1327,8 @@
   const JR_STYLES = [['classic','Classica'],['blur','Sfocata']];
   const CAL_MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const CAL_MAX = 14;
-  const PXI_MODULES = [["4-2-3-1", "4-2-3-1"], ["4-3-3", "4-3-3"], ["4-4-2", "4-4-2"], ["4-3-1-2", "4-3-1-2"], ["4-2-2-2", "4-2-2-2"], ["4-3-2-1", "4-3-2-1"], ["4-1-2-1-2", "4-1-2-1-2"], ["3-4-2-1", "3-4-2-1"], ["3-4-1-2", "3-4-1-2"], ["3-5-2", "3-5-2"], ["3-5-1-1", "3-5-1-1"], ["3-4-3", "3-4-3"], ["5-4-1", "5-4-1"]];
-  const PXI_ROLES = {"4-2-3-1": ["POR", "TS", "DC", "DC", "TD", "CDC", "CDC", "AS", "COC", "AD", "ATT"], "4-3-3": ["POR", "TS", "DC", "DC", "TD", "CC", "CC", "CC", "AS", "ATT", "AD"], "4-4-2": ["POR", "TS", "DC", "DC", "TD", "ES", "CC", "CC", "ED", "ATT", "ATT"], "4-3-1-2": ["POR", "TS", "DC", "DC", "TD", "CC", "CC", "CC", "TRQ", "ATT", "ATT"], "4-2-2-2": ["POR", "TS", "DC", "DC", "TD", "CDC", "CDC", "AS", "AD", "ATT", "ATT"], "4-3-2-1": ["POR", "TS", "DC", "DC", "TD", "CC", "CC", "CC", "TRQ", "TRQ", "ATT"], "4-1-2-1-2": ["POR", "TS", "DC", "DC", "TD", "CDC", "CC", "CC", "COC", "ATT", "ATT"], "3-4-2-1": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "TRQ", "TRQ", "ATT"], "3-4-1-2": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "TRQ", "ATT", "ATT"], "3-5-2": ["POR", "DC", "DC", "DC", "ES", "CC", "CDC", "CC", "ED", "ATT", "ATT"], "3-5-1-1": ["POR", "DC", "DC", "DC", "ES", "CC", "CDC", "CC", "ED", "TRQ", "ATT"], "3-4-3": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "AS", "ATT", "AD"], "5-4-1": ["POR", "TS", "DC", "DC", "DC", "TD", "ES", "CC", "CC", "ED", "ATT"]};
+  let PXI_MODULES = [["4-2-3-1", "4-2-3-1"], ["4-3-3", "4-3-3"], ["4-4-2", "4-4-2"], ["4-3-1-2", "4-3-1-2"], ["4-2-2-2", "4-2-2-2"], ["4-3-2-1", "4-3-2-1"], ["4-1-2-1-2", "4-1-2-1-2"], ["3-4-2-1", "3-4-2-1"], ["3-4-1-2", "3-4-1-2"], ["3-5-2", "3-5-2"], ["3-5-1-1", "3-5-1-1"], ["3-4-3", "3-4-3"], ["5-4-1", "5-4-1"]];
+  let PXI_ROLES = {"4-2-3-1": ["POR", "TS", "DC", "DC", "TD", "CDC", "CDC", "AS", "COC", "AD", "ATT"], "4-3-3": ["POR", "TS", "DC", "DC", "TD", "CC", "CC", "CC", "AS", "ATT", "AD"], "4-4-2": ["POR", "TS", "DC", "DC", "TD", "ES", "CC", "CC", "ED", "ATT", "ATT"], "4-3-1-2": ["POR", "TS", "DC", "DC", "TD", "CC", "CC", "CC", "TRQ", "ATT", "ATT"], "4-2-2-2": ["POR", "TS", "DC", "DC", "TD", "CDC", "CDC", "AS", "AD", "ATT", "ATT"], "4-3-2-1": ["POR", "TS", "DC", "DC", "TD", "CC", "CC", "CC", "TRQ", "TRQ", "ATT"], "4-1-2-1-2": ["POR", "TS", "DC", "DC", "TD", "CDC", "CC", "CC", "COC", "ATT", "ATT"], "3-4-2-1": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "TRQ", "TRQ", "ATT"], "3-4-1-2": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "TRQ", "ATT", "ATT"], "3-5-2": ["POR", "DC", "DC", "DC", "ES", "CC", "CDC", "CC", "ED", "ATT", "ATT"], "3-5-1-1": ["POR", "DC", "DC", "DC", "ES", "CC", "CDC", "CC", "ED", "TRQ", "ATT"], "3-4-3": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "AS", "ATT", "AD"], "5-4-1": ["POR", "TS", "DC", "DC", "DC", "TD", "ES", "CC", "CC", "ED", "ATT"]};
   const POSES = [['arms_crossed','Braccia incrociate'],['pointing','Indica']];
   const MOMENTS = [['HT','HALF TIME'],['2H_END',"END OF 90'"],['FT','FULL TIME']];
   const STATS = [
@@ -1792,7 +1818,7 @@
     }
     if (screenName === 'calrows') fillCalendarFromFixtures();
     if (screenName === 'calrows') { if (!calRows.length) calRows.push({day:'', team:'', side:'home'}); renderCalRows(); }
-    if (screenName === 'xi11') { readPxiText(); loadPxiUpdates(); }
+    if (screenName === 'xi11') { readPxiText(); loadPxiUpdates(); loadLayouts().then(() => { syncModules(); readPxiText(); }); }
     lastRenderedScreen = screenName || '';
     lastRenderedFlowIndex = flowIndex;
     lastRenderedPreviewMode = previewMode;
@@ -1879,7 +1905,7 @@
     renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; });
     renderOptions('jrColorOpts',JR_COLORS,jrColor,v => { jrColor = v; });
     renderOptions('jrStyleOpts',JR_STYLES,jrb.style,v => { jrb.style = v; buildFlow(); });
-    renderOptions('moduleOpts',PXI_MODULES,pxiModule,v => { pxiModule = v; pxiModuleManual = true; readPxiText(); });
+    renderModuleButton();
     $('subkindTitle').textContent = labelOf(TABS,tab);
     renderOptions('subkindOpts',TAB_KINDS[tab] || [],kind,v => {
       // Scelta del tipo: riparte da zero e passa subito al primo passaggio.
@@ -3152,7 +3178,7 @@
   }
 
   // Probabili: il modulo è quello scritto (es. "(3-4-1-2)"), altrimenti si ricava dai reparti.
-  // Probabile formazione della Juventus da Gazzetta, Sky Sport o Fantacalcio.it (servizio:
+  // Probabile formazione della Juventus da Gazzetta o Sky Sport (servizio:
   // probabili_web.py): riempie il campo come se fosse incollata, poi si può correggere.
   async function loadPxiSource(btn) {
     const src = btn.dataset.src;
@@ -3199,6 +3225,104 @@
     }
   }
 
+  /* ---------- Scelta modulo: pannello dal basso (5 colonne), + per crearne, Elimina ---------- */
+  const rolesOf = m => { try { return ((pxiLay.layouts[m] || {}).roles) || PXI_ROLES[m] || []; } catch (_) { return PXI_ROLES[m] || []; } };
+
+  // I moduli stanno tutti in data/probabili_layouts.json: la lista si aggiorna da lì.
+  function syncModules() {
+    const all = pxiLay.layouts, keys = Object.keys(all);
+    if (!keys.length) return;
+    keys.sort((a,b) => a[0] - b[0]);                 // per difesa (3, 4, 5), poi l'ordine del file
+    PXI_MODULES = keys.map(m => [m, m]);
+    PXI_ROLES = Object.fromEntries(keys.map(m => [m, all[m].roles || PXI_ROLES[m] || []]));
+    if (!PXI_ROLES[pxiModule]) pxiModule = keys[0];
+    renderModuleButton();
+  }
+
+  // Mini campo: portiere in basso, attacco in alto, file e margini a distanza uguale.
+  function modPitch(name) {
+    const rows = [1, ...String(name).split('-').map(Number)], n = rows.length, top = 18;
+    let dots = '';
+    rows.forEach((k,i) => {
+      const y = top + (n - 1 - i) * (100 - 2 * top) / (n - 1);
+      for (let j = 0; j < k; j++) dots += `<circle cx="${(j + 1) * 100 / (k + 1)}" cy="${y}" r="5"/>`;
+    });
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">${dots}</svg>`;
+  }
+
+  // "451", "4 5 1" o "4-5-1" -> "4-5-1" se sono 10 giocatori di movimento, altrimenti ''.
+  function normMod(text) {
+    const d = String(text).match(/\d/g) || [], n = d.map(Number);
+    return n.length >= 2 && n.length <= 6 && n.every(x => x > 0) && n.reduce((a,b) => a + b, 0) === 10 ? d.join('-') : '';
+  }
+
+  function renderModuleButton() {
+    const box = $('moduleOpts');
+    if (!box) return;
+    box.innerHTML = `<button type="button" class="mod-btn">${pxiModule ? modPitch(pxiModule) : ''}<span><b>${pxiModule || 'Scegli il modulo'}</b><small>tocca per cambiare</small></span><i>▾</i></button>`;
+    box.firstChild.addEventListener('click',openModSheet);
+  }
+
+  let modEdit = false, modArmed = '';
+  async function openModSheet() {
+    haptic('select');
+    await loadLayouts();
+    syncModules();
+    modEdit = false; modArmed = '';
+    renderModSheet();
+    $('modOv').classList.add('open');
+  }
+  const closeModSheet = () => $('modOv').classList.remove('open');
+
+  function modPost(action, module) {
+    return netFetch(`${directBase}/layout`,{
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify({v:1, action, session, module})
+    }, 30000).then(async r => {
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok || !body.ok) throw new Error(body.error || 'Operazione non riuscita.');
+      return body.layout;
+    });
+  }
+
+  function renderModSheet(adding = false) {
+    const sh = $('modSh');
+    sh.innerHTML = `<div class="mod-bar"></div><div class="mod-top"><b>Modulo</b><button type="button" id="modEditBtn">${modEdit ? 'Fine' : 'Elimina'}</button></div>`
+      + `<div class="mod-grid">${PXI_MODULES.map(([m]) => `<button type="button" class="mod-tile${m === pxiModule ? ' on' : ''}${modEdit ? ' del' : ''}${modArmed === m ? ' armed' : ''}" data-m="${m}">${modPitch(m)}<span>${modArmed === m ? 'Elimina?' : m}</span></button>`).join('')}`
+      + `<button type="button" class="mod-tile add" id="modAdd"><span class="plus">+</span><span>Nuovo</span></button></div>`
+      + `<div class="mod-new${adding ? ' open' : ''}" id="modNew"><span id="modPrev"></span><input id="modIn" inputmode="numeric" maxlength="11" placeholder="Es. 451" autocomplete="off"><button type="button" id="modOk" disabled>Aggiungi</button><div class="err" id="modErr"></div></div>`;
+    $('modEditBtn').addEventListener('click',() => { modEdit = !modEdit; modArmed = ''; renderModSheet(); });
+    sh.querySelectorAll('.mod-tile[data-m]').forEach(b => b.addEventListener('click',async () => {
+      const m = b.dataset.m;
+      if (!modEdit) { pxiModule = m; pxiModuleManual = true; haptic('select'); closeModSheet(); readPxiText(); return; }
+      if (modArmed !== m) { modArmed = m; renderModSheet(); return; }   // secondo tocco: conferma
+      try {
+        await modPost('module_delete', m);
+        delete pxiLay.layouts[m];
+        modArmed = '';
+        if (pxiModule === m) { pxiModuleManual = false; pxiModule = ''; }
+        syncModules(); readPxiText(); renderModSheet();
+      } catch (err) { modArmed = ''; renderModSheet(); $('modErr').textContent = err.message; $('modNew').classList.add('open'); }
+    }));
+    $('modAdd').addEventListener('click',() => { modEdit = false; renderModSheet(true); $('modIn').focus(); });
+    const input = $('modIn'), ok = $('modOk');
+    input.addEventListener('input',() => {
+      const name = normMod(input.value);
+      $('modPrev').innerHTML = name ? modPitch(name) : '';
+      $('modErr').textContent = input.value && !name ? 'Servono 10 giocatori di movimento (es. 4-5-1).' : '';
+      ok.disabled = !name;
+    });
+    ok.addEventListener('click',async () => {
+      ok.disabled = true;
+      try {
+        const made = await modPost('module_add', input.value);
+        pxiLay.layouts[made.module] = made.layout;
+        pxiModule = made.module; pxiModuleManual = true;
+        syncModules(); closeModSheet(); readPxiText(); haptic('success');
+      } catch (err) { $('modErr').textContent = err.message; ok.disabled = false; }
+    });
+  }
+
   function readPxiText() {
     const {module, groups} = parseFormation($('pxiText').value);
     const flat = groups.flat().slice(0,11);
@@ -3224,8 +3348,8 @@
       return {player, label:player ? surnameOf(player) : cleanName(label)};
     });
     pxiPicks = pxiRead.map(r => r.player ? r.player.name : '');
-    renderOptions('moduleOpts',PXI_MODULES,pxiModule,v => { pxiModule = v; pxiModuleManual = true; readPxiText(); });
-    const roles = PXI_ROLES[pxiModule] || [];
+    renderModuleButton();
+    const roles = rolesOf(pxiModule);
     const box = $('pxiParsed');
     box.innerHTML = '';
     pxiRead.forEach((r,i) => {
@@ -4172,7 +4296,7 @@
     const box = $('layCards');
     if (rebuild || box.children.length !== 11) {
       box.innerHTML = '';
-      const roles = PXI_ROLES[pxiModule] || [];
+      const roles = rolesOf(pxiModule);
       layout.cards.forEach((_c,i) => {
         const card = document.createElement('button');
         card.type = 'button';
@@ -4200,6 +4324,8 @@
       card.classList.toggle('sel', i === pxiLay.sel);
     });
     $('layFrame').classList.toggle('picking', pxiLay.sel >= 0);
+    $('layRoleBox').hidden = pxiLay.sel < 0;
+    if (pxiLay.sel >= 0 && document.activeElement !== $('layRole')) $('layRole').value = rolesOf(pxiModule)[pxiLay.sel] || '';
     $('layScale').textContent = `${Math.round(s * 100)}%`;
     $('layReset').disabled = !(pxiLay.undo[pxiModule] || []).length;
     $('layMinus').disabled = s <= pxiLay.min + 1e-6;
@@ -4252,6 +4378,7 @@
     $('lay').classList.remove('open');
     try { if (tg && tg.enableVerticalSwipes) tg.enableVerticalSwipes(); } catch (_) {}
     const layout = pxiLay.layouts[pxiModule];
+    readPxiText();                      // etichette nuove anche nell'elenco
     if (JSON.stringify(layout) === pxiLay.before) return;
     // Salvataggio per sempre (repository) e nuova anteprima con le posizioni nuove.
     // Anche l'anteprima porta le posizioni e il servizio le salva se sono nuove,
@@ -4264,6 +4391,16 @@
   }
 
   function initLayoutEditor() {
+    $('modOv').addEventListener('click',e => { if (e.target.id === 'modOv') closeModSheet(); });
+    // Etichetta della card scelta (vale per ogni modulo, anche quelli già esistenti).
+    $('layRole').addEventListener('input',e => {
+      const layout = pxiLay.layouts[pxiModule];
+      if (pxiLay.sel < 0 || !layout) return;
+      if (!layout.roles) layout.roles = [...rolesOf(pxiModule)];
+      layout.roles[pxiLay.sel] = e.target.value.toUpperCase().slice(0,5);
+      const span = $('layCards').children[pxiLay.sel];
+      if (span) span.querySelector('.role').textContent = layout.roles[pxiLay.sel];
+    });
     // Tocco sul campo vuoto: deseleziona.
     $('layFrame').addEventListener('click',() => { if (pxiLay.sel >= 0) { pxiLay.sel = -1; renderLayout(); } });
     document.querySelectorAll('.lay-pad button').forEach(b => {
@@ -4671,5 +4808,6 @@
     </div>
   </form>
 </div>
+<div id="modOv" class="mod-ov"><div id="modSh" class="mod-sh"></div></div>
 </body>
 </html>

@@ -2,7 +2,7 @@
 
 Ogni giocatore è una "carta" Canva: lastre sfumate, testa (ritaglio fisso della
 foto braccia incrociate degli asset) ed etichetta col cognome. I moduli Canva
-sono 4-2-3-1, 3-4-2-1 e 3-4-1-2; gli altri usano le stesse righe del campo.
+sono 4-2-3-1, 3-4-2-1 e 3-4-1-2; gli altri (anche quelli creati da te) stanno in data/probabili_layouts.json.
 """
 import json
 import unicodedata
@@ -18,34 +18,6 @@ PHOTO_KIT = {'home': ('', 'keeper_blue'), 'away': ('away_pink', 'keeper_green'),
 HEAD_CROP = (303, 2, 953, 652)     # stesso ritaglio usato su Canva (foto 1254x1254)
 NAME_FONT, NAME_SIZE, NAME_SPACING = 'Poppins', 26.17, 1.26
 NAME_MAX_W = 214                   # oltre questa larghezza il nome si stringe
-
-# Carta = [centro x, alto del box etichetta] in pixel design, ordine:
-# portiere, difesa (sx -> dx), centrocampo, attacco.
-B4 = [[124.26, 956.16], [401.5, 991.04], [678.75, 991.04], [955.74, 956.16]]
-B3 = [[225.0, 982.4], [540.0, 982.4], [851.77, 982.4]]
-GK = [[540.0, 1228.16]]
-WB = ([123.53, 695.04], [956.47, 695.04])
-MODULES = {
-    '4-2-3-1': GK + B4 + [[284.38, 712.32], [795.62, 712.32], [225.0, 468.16], [540.0, 547.2],
-                          [855.0, 468.16], [540.0, 307.52]],
-    '4-3-3': [[540.0, 1228.16], [124.26, 956.16], [401.5, 991.04], [678.75, 991.04], [955.74, 956.16], [284.38, 715.49], [540.0, 603.17], [795.62, 715.49], [225.0, 456.04], [540.0, 295.4], [855.0, 456.04]],
-    '4-4-2': [[540.0, 1228.16], [124.26, 956.16], [401.5, 991.04], [678.75, 991.04], [955.74, 956.16], [123.53, 610.42], [384.53, 658.58], [695.47, 658.58], [956.47, 610.42], [306.01, 295.4], [773.99, 295.4]],
-    '4-1-2-1-2': [[540.0, 1228.16], [124.26, 956.16], [401.5, 991.04], [678.75, 991.04], [955.74, 956.16], [540.0, 754.05], [225.0, 584.5], [855.0, 584.5], [540.0, 414.95], [290.0, 295.4], [790.0, 295.4]],
-    '3-4-2-1': GK + B3 + [WB[0], [384.53, 708.16], [695.47, 708.16], WB[1], [225.0, 424.64],
-                          [855.0, 424.64], [540.0, 320.32]],
-    '3-4-1-2': GK + B3 + [WB[0], [384.53, 717.76], [695.47, 717.76], WB[1], [540.0, 480.64],
-                          [306.01, 341.12], [773.99, 341.12]],
-    # Linee equidistanti dalla difesa all'attacco: tools/probabili_spacing.py.
-    '4-3-1-2': [[540.0, 1228.16], [124.26, 956.16], [401.5, 991.04], [678.75, 991.04], [955.74, 956.16], [225.0, 717.53], [540.0, 717.53], [855.0, 717.53], [540.0, 471.47], [306.01, 295.4], [773.99, 295.4]],
-    '4-2-2-2': [[540.0, 1228.16], [124.26, 956.16], [401.5, 991.04], [678.75, 991.04], [955.74, 956.16], [384.53, 712.53], [695.47, 712.53], [123.53, 521.47], [956.47, 521.47], [384.53, 295.4], [695.47, 295.4]],
-    '4-3-2-1': [[540.0, 1228.16], [124.26, 956.16], [401.5, 991.04], [678.75, 991.04], [955.74, 956.16], [225.0, 717.53], [540.0, 717.53], [855.0, 717.53], [300.0, 471.47], [780.0, 471.47], [540.0, 295.4]],
-    '3-4-3': [[540.0, 1228.16], [225.0, 982.4], [540.0, 982.4], [851.77, 982.4], [123.53, 632.34], [384.53, 645.46], [695.47, 645.46], [956.47, 632.34], [200.0, 330.4], [540.0, 295.4], [880.0, 330.4]],
-    '3-5-2': [[540.0, 1228.16], [225.0, 982.4], [540.0, 982.4], [851.77, 982.4], [123.53, 575.01], [340.0, 645.01], [540.0, 715.01], [740.0, 645.01], [956.47, 575.01], [306.01, 341.12], [773.99, 341.12]],
-    '3-5-1-1': [[540.0, 1228.16], [225.0, 982.4], [540.0, 982.4], [851.77, 982.4], [123.53, 622.14], [340.0, 692.14], [540.0, 762.14], [740.0, 692.14], [956.47, 622.14], [540.0, 503.88], [540.0, 279.61]],
-    '5-4-1': [[540.0, 1228.16], [110.0, 930.0], [325.0, 982.4], [540.0, 982.4], [755.0, 982.4], [970.0, 930.0], [123.53, 595.57], [384.53, 643.73], [695.47, 643.73], [956.47, 595.57], [540.0, 341.12]],
-}
-# Carte rimpicciolite solo dove i giocatori non entrano a misura piena.
-MODULE_SCALE = {'3-5-2': 0.91, '3-5-1-1': 0.91, '5-4-1': 0.9}
 
 # Griglia di "Modifica" nella Mini App: le card si spostano solo su questi punti
 # (centro x, alto dell'etichetta). 19 colonne (le 17 fra le fasce più una per lato,
@@ -134,21 +106,6 @@ def place_cards(cards, s=1.0):
     return [tuple(p) for p in pos]
 
 
-ROLES = {
-    '4-2-3-1': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CDC', 'AS', 'COC', 'AD', 'ATT'],
-    '4-3-3': ['POR', 'TS', 'DC', 'DC', 'TD', 'CC', 'CC', 'CC', 'AS', 'ATT', 'AD'],
-    '4-4-2': ['POR', 'TS', 'DC', 'DC', 'TD', 'ES', 'CC', 'CC', 'ED', 'ATT', 'ATT'],
-    '4-1-2-1-2': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CC', 'CC', 'COC', 'ATT', 'ATT'],
-    '3-4-2-1': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CC', 'ED', 'TRQ', 'TRQ', 'ATT'],
-    '3-4-1-2': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CC', 'ED', 'TRQ', 'ATT', 'ATT'],
-    '3-5-1-1': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CDC', 'CC', 'ED', 'TRQ', 'ATT'],
-    '4-3-1-2': ['POR', 'TS', 'DC', 'DC', 'TD', 'CC', 'CC', 'CC', 'TRQ', 'ATT', 'ATT'],
-    '4-2-2-2': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CDC', 'AS', 'AD', 'ATT', 'ATT'],
-    '4-3-2-1': ['POR', 'TS', 'DC', 'DC', 'TD', 'CC', 'CC', 'CC', 'TRQ', 'TRQ', 'ATT'],
-    '3-4-3': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CC', 'ED', 'AS', 'ATT', 'AD'],
-    '3-5-2': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CDC', 'CC', 'ED', 'ATT', 'ATT'],
-    '5-4-1': ['POR', 'TS', 'DC', 'DC', 'DC', 'TD', 'ES', 'CC', 'CC', 'ED', 'ATT'],
-}
 SHORT_NAMES = {'nicolas_gonzalez': 'Nico Gonzalez', 'douglas_luiz': 'Douglas Luiz',
                'randal_kolo_muani': 'Kolo Muani', 'khephren_thuram_ulien': 'Thuram',
                'neto_murara': 'Neto', 'lloyd_casius_kelly': 'Kelly', 'pape_matar_sarr': 'Sarr',
@@ -194,8 +151,10 @@ def check_layout(module):
     """Nessuna etichetta deve coprire un'altra carta (testa o etichetta)."""
     meta = _meta()['home']
     boxes = []
-    s = MODULE_SCALE.get(module, 1.0)
-    for cx, top in MODULES[module]:
+    import layouts
+    layout = layouts.get(module)
+    s = layout['scale']
+    for cx, top in layout['cards']:
         boxes.append((_rect((cx, top), meta['box'], s), _rect((cx, top), meta['head_rect'], s)))
     clashes = []
     for i, (label_i, _h) in enumerate(boxes):
@@ -213,7 +172,8 @@ def check_layout(module):
 def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, layout=None, **_):
     if kit not in KITS:
         raise ValueError('Maglia non valida.')
-    if module not in MODULES:
+    import layouts
+    if layouts.sizes(module) is None:
         raise ValueError('Modulo non valido.')
     if len(players) != 11:
         raise ValueError('Servono 11 giocatori.')

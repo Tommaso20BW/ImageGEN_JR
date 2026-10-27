@@ -10,7 +10,6 @@ from graphics.starting_xi import PLAYERS as PLAYERS_IN_XI, parse_lineup
 from graphics.matchday import parse_info
 from graphics.photo_jr import COLORS as JR_COLORS
 from graphics import photo_jr
-from graphics.probabili import MODULES as PXI_MODULES
 from graphics.calendar import parse_matches
 
 VALID_KINDS = {value for _, value in KINDS}
@@ -278,7 +277,8 @@ def _build_state(envelope, catalog, now, expected_session):
 
     elif kind == 'pxi':
         module = str(incoming.get('module') or '')
-        if module not in PXI_MODULES:
+        import layouts as _layouts
+        if not _layouts.exists(module):
             raise ValueError('Modulo non valido.')
         names = incoming.get('players')
         if not isinstance(names, list) or len(names) != 11:

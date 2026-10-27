@@ -3,7 +3,7 @@
 Per ogni modulo (tranne quelli Canva) tiene la forma di ogni linea (x e piccoli
 scalini interni) e cerca le altezze delle linee che rendono UGUALI gli spazi vuoti
 fra una linea e l'altra (dalla difesa all'attacco), senza carte sovrapposte.
-Stampa il nuovo dizionario MODULES da incollare in graphics/probabili.py.
+Stampa le nuove posizioni da incollare nel modulo in data/probabili_layouts.json.
 
 Uso: python tools/probabili_spacing.py
 """
@@ -11,7 +11,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from graphics.probabili import MODULE_SCALE, MODULES  # noqa: E402
+import layouts  # noqa: E402
+
+_ALL = layouts.all_layouts()          # i moduli stanno in data/probabili_layouts.json
+MODULES = {m: v['cards'] for m, v in _ALL.items()}
+MODULE_SCALE = {m: v['scale'] for m, v in _ALL.items()}
 
 CANVA = {'4-2-3-1', '3-4-2-1', '3-4-1-2'}
 LABEL = (-117.0, 0.0, 233.9, 58.9)
