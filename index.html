@@ -3091,7 +3091,19 @@
       // Elenco senza reparti (un giocatore per riga): resta il modulo scelto.
       pxiModule = PXI_ROLES[module] ? module : PXI_ROLES[fromLines] ? fromLines : pxiModule;
     }
-    pxiRead = flat.map(({label}) => {
+    // Le formazioni incollate elencano ogni reparto da destra a sinistra (prima il
+    // terzino destro); nella grafica i ruoli vanno da sinistra a destra (TS … TD).
+    // Si divide l'elenco nei reparti del modulo (portiere, poi 4-3-3 → 4, 3, 3)
+    // e si legge ogni reparto al contrario.
+    const sizes = pxiModule ? [1, ...pxiModule.split('-').map(Number)] : [];
+    let ordered = flat;
+    if (sizes.length > 1) {
+      ordered = [];
+      let at = 0;
+      sizes.forEach(n => { ordered.push(...flat.slice(at, at + n).reverse()); at += n; });
+      ordered.push(...flat.slice(at));
+    }
+    pxiRead = ordered.map(({label}) => {
       const player = findPlayer(label);
       return {player, label:player ? surnameOf(player) : cleanName(label)};
     });
