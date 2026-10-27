@@ -3155,7 +3155,7 @@
     if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
     const all = [...document.querySelectorAll('.src-row .btn')];
     all.forEach(b => { b.disabled = true; b.classList.toggle('loading', b === btn); });
-    $('pxiSrcHint').textContent = `Leggo ${btn.querySelector('.src-name').textContent}…`;
+    // Mentre carica il pulsante toccato resta sbiadito (.loading): nessuna scritta.
     try {
       const response = await netFetch(`${directBase}/probabili?session=${encodeURIComponent(session)}&source=${encodeURIComponent(src)}`,{}, 60000, 1);
       const body = await response.json().catch(() => ({}));
