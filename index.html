@@ -490,6 +490,10 @@
     .guides i.h{left:0;right:0;height:1px;transform:translateY(-.5px)}
     .guides i.mid{background:rgba(255,255,255,.85)}
     .photo-frame:has(.empty:not([hidden])) .guides{display:none}
+    /* Aggancio al centro (come Canva): la linea centrale diventa rosa */
+    .snap-x .guides i.v.mid,.snap-y .guides i.h.mid{background:#ff2e8a;box-shadow:0 0 0 .5px rgba(255,46,138,.4)}
+    .snap-x .guides i.v.mid{width:2px;transform:translateX(-1px)}
+    .snap-y .guides i.h.mid{height:2px;transform:translateY(-1px)}
 
     /* PROBABILE XI: Modifica posizioni (card a scatti sulla griglia) e grandezza */
     .lay{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;background:var(--bg);
@@ -3228,6 +3232,29 @@
     }
   }
 
+  /* ---------- Aggancio al centro (come Canva) ----------
+     Trascinando, quando il centro della foto arriva a meno di 8 px (sullo schermo)
+     dal centro della pagina si ferma esattamente lì: linea rosa e piccola vibrazione.
+     Continuando a trascinare si sgancia. o._rx/_ry = posizione "vera" del dito. */
+  const SNAP_PX = 8;
+  function snapMove(o, dx, dy, thrX, thrY, cx=0, cy=0) {
+    if (o._rx === undefined) { o._rx = o.x; o._ry = o.y; }
+    o._rx += dx; o._ry += dy;
+    const sx = Math.abs(o._rx - cx) < thrX, sy = Math.abs(o._ry - cy) < thrY;
+    o.x = sx ? cx : o._rx;
+    o.y = sy ? cy : o._ry;
+    return [sx, sy];
+  }
+  // Dopo i limiti della foto (che deve coprire la pagina): il dito riparte da lì.
+  function snapSync(o, [sx, sy]) { if (!sx) o._rx = o.x; if (!sy) o._ry = o.y; }
+  function snapEnd(o) { if (o) { delete o._rx; delete o._ry; } }
+  function snapShow(frame, [sx, sy]) {
+    if ((sx && !frame.classList.contains('snap-x')) || (sy && !frame.classList.contains('snap-y'))) haptic('select');
+    frame.classList.toggle('snap-x', sx);
+    frame.classList.toggle('snap-y', sy);
+  }
+  function snapClear(frame) { frame.classList.remove('snap-x','snap-y'); }
+
   function initPhotoEditor() {
     const frame = $('photoFrame');
     const pointers = new Map();
@@ -3250,16 +3277,17 @@
       pointers.set(e.pointerId,{x:e.clientX, y:e.clientY});
       const now = snapshot();
       const fw = frame.clientWidth, fh = frame.clientHeight;
-      photoState.x += (now.x - last.x) / fw;
-      photoState.y += (now.y - last.y) / fh;
+      const snap = snapMove(photoState, (now.x - last.x) / fw, (now.y - last.y) / fh, SNAP_PX / fw, SNAP_PX / fh);
       if (now.d && last.d) photoState.zoom *= now.d / last.d;
       last = now;
       layoutPhoto();
+      snapSync(photoState, snap);
+      snapShow(frame, snap);
     });
     const end = e => {
       pointers.delete(e.pointerId);
       last = pointers.size ? snapshot() : null;
-      if (!pointers.size) frame.classList.remove('dragging');
+      if (!pointers.size) { frame.classList.remove('dragging'); snapEnd(photoState); snapClear(frame); }
     };
     frame.addEventListener('pointerup',end);
     frame.addEventListener('pointercancel',end);
@@ -3475,16 +3503,22 @@
       const now = snap();
       const c = jrb.cards[jrb.sel];
       if (c) {
-        c.x += (now.x - last.x) / frame.clientWidth;
-        c.y += (now.y - last.y) / frame.clientHeight;
+        const fw = frame.clientWidth, fh = frame.clientHeight;
+        const hit = snapMove(c, (now.x - last.x) / fw, (now.y - last.y) / fh, SNAP_PX / fw, SNAP_PX / fh, .5, .5);
         c.x = Math.min(1.5, Math.max(-.5, c.x));
         c.y = Math.min(1.5, Math.max(-.5, c.y));
         if (now.d && last.d) c.w = Math.min(JRB_W[1], Math.max(JRB_W[0], c.w * now.d / last.d));
+        snapSync(c, hit);
+        snapShow(frame, hit);
       }
       last = now;
       renderJrb();
     });
-    const end = e => { pointers.delete(e.pointerId); last = pointers.size ? snap() : null; };
+    const end = e => {
+      pointers.delete(e.pointerId);
+      last = pointers.size ? snap() : null;
+      if (!pointers.size) { jrb.cards.forEach(snapEnd); snapClear(frame); }
+    };
     frame.addEventListener('pointerup',end);
     frame.addEventListener('pointercancel',end);
     frame.addEventListener('wheel',e => {
@@ -3707,18 +3741,27 @@
       // La pagina dei livelli è larga 972/1086 del riquadro (e alta 1296/1448).
       const pw = frame.clientWidth * 972 / PP_W, ph = frame.clientHeight * 1296 / PP_H;
       const zoom = now.d && last.d ? now.d / last.d : 1;
-      ppTargets().forEach(o => {
-        o.x += (now.x - last.x) / pw;
-        o.y += (now.y - last.y) / ph;
-        o.zoom *= zoom;
-      });
+      // Il primo livello mosso decide l'aggancio; gli altri lo seguono dello stesso passo.
+      const [lead, ...rest] = ppTargets();
+      let snap = [false, false];
+      if (lead) {
+        const x0 = lead.x, y0 = lead.y;
+        snap = snapMove(lead, (now.x - last.x) / pw, (now.y - last.y) / ph, SNAP_PX / pw, SNAP_PX / ph);
+        rest.forEach(o => { o.x += lead.x - x0; o.y += lead.y - y0; });
+        ppTargets().forEach(o => { o.zoom *= zoom; });
+      }
       last = now;
       layoutPhase();
+      if (lead) { snapSync(lead, snap); snapShow(frame, snap); }
     });
     const end = e => {
       pointers.delete(e.pointerId);
       last = pointers.size ? snapshot() : null;
-      if (!pointers.size) frame.classList.remove('dragging');
+      if (!pointers.size) {
+        frame.classList.remove('dragging');
+        [ppState.bg, ppState.person].forEach(snapEnd);
+        snapClear(frame);
+      }
     };
     frame.addEventListener('pointerup',end);
     frame.addEventListener('pointercancel',end);
