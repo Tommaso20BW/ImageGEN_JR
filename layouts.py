@@ -1,7 +1,7 @@
 """PROBABILE XI: posizioni e grandezza delle card scelte con "Modifica", per modulo.
 
 Salvate per sempre nel repository (data/probabili_layouts.json) con un commit via
-API GitHub, come i numeri di maglia (token IMAGEGEN_GH_PAT, Contents read/write).
+API GitHub, come i numeri di maglia (token del workflow, contents: write in imagegen.yml).
 Un modulo mai modificato usa le posizioni Canva di graphics/probabili.py.
 """
 import base64
@@ -124,7 +124,7 @@ def save(module, layout, env=None, session=None):
             if status not in (409, 422):              # file cambiato nel frattempo: riprova
                 break
         print(f'WARN IMAGEGEN: posizioni non salvate (scrittura HTTP {status}); '
-              'serve il permesso Contents read/write su IMAGEGEN_GH_PAT', flush=True)
+              'serve contents: write nel workflow imagegen.yml', flush=True)
         return False
 
 

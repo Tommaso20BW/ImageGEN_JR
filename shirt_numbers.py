@@ -1,8 +1,8 @@
 """Numeri di maglia ricordati nel repository (data/shirt_numbers.json).
 
 Quando si invia una Starting XI, i numeri nuovi o cambiati vengono salvati con
-un commit nel repository ImageGEN_JR (API GitHub, token IMAGEGEN_GH_PAT).
-Serve il permesso "Contents: read and write" sul token.
+un commit nel repository ImageGEN_JR (API GitHub, token del workflow
+passato come IMAGEGEN_GH_PAT; serve contents: write in imagegen.yml).
 """
 import base64
 import json
@@ -84,5 +84,5 @@ def save(updates, env=None, session=None):
             if put.status_code != 409:              # 409 = file cambiato nel frattempo: riprova
                 break
         print(f'WARN IMAGEGEN: numeri di maglia non salvati (scrittura HTTP {put.status_code}); '
-              'serve il permesso Contents read/write su IMAGEGEN_GH_PAT', flush=True)
+              'serve contents: write nel workflow imagegen.yml', flush=True)
         return False
