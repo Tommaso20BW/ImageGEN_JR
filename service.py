@@ -156,6 +156,21 @@ class _DirectHandler(BaseHTTPRequestHandler):
             except (KeyError, ValueError, OSError):
                 self._json(404, {'ok': False, 'error': 'Sfondo non trovato.'})
             return
+        if parts.path.rstrip('/') == '/probabili':
+            # PROBABILE XI: formazione della Juventus da Gazzetta, Sky Sport o Fantacalcio.it.
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            import probabili_web
+            try:
+                lineup = probabili_web.fetch(query.get('source', ''))
+                print(f"INFO IMAGEGEN: probabili {lineup['source']} | {lineup['module']}", flush=True)
+                self._json(200, {'ok': True, 'lineup': lineup})
+            except ValueError as exc:
+                print(f'WARN IMAGEGEN: probabili non lette: {exc}', flush=True)
+                self._json(400, {'ok': False, 'error': str(exc)})
+            return
         if parts.path.rstrip('/') == '/progress':
             token = dict(parse_qsl(parts.query)).get('session', '')
             if token != self.service.session:

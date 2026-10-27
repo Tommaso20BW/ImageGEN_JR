@@ -460,6 +460,12 @@
     .parsed-row.new .pr-role{color:var(--danger)}
     button.parsed-row{width:100%;text-align:left;color:inherit;font:inherit;font-weight:750}
     .module-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+    /* Probabile XI: formazione presa dai siti */
+    .src-row{display:flex;gap:8px;margin-bottom:6px}
+    .src-row .btn{flex:1;min-height:44px;padding:0 6px;font-size:14px;font-weight:800}
+    .src-row .btn.loading{opacity:.55}
+    .src-row .btn.on{box-shadow:inset 0 0 0 2px var(--cta)}
+    #pxiSrcHint{margin:0 2px 10px}
     .module-chips .opt{min-height:38px;padding:0 13px;font-size:14px;width:auto;flex:0 0 auto;gap:0}
     .module-chips .opt .radio{display:none}
     /* Popup numero di maglia */
@@ -1010,7 +1016,13 @@
           <section class="screen" data-screen="xi11">
             <div class="eyebrow">Probabile XI</div>
             <h1>Formazione</h1>
-            <p class="lead">Incolla la formazione: ogni reparto si legge da sinistra a destra. Il modulo lo trovo da solo.</p>
+            <p class="lead">Prendila da un sito oppure incollala come la scrivono i giornali (ogni reparto da destra a sinistra). Il modulo lo trovo da solo.</p>
+            <div class="src-row" role="group" aria-label="Probabile formazione da un sito">
+              <button class="btn ghost" type="button" data-src="gazzetta">Gazzetta</button>
+              <button class="btn ghost" type="button" data-src="sky">Sky Sport</button>
+              <button class="btn ghost" type="button" data-src="fantacalcio">Fantacalcio</button>
+            </div>
+            <div id="pxiSrcHint" class="hint"></div>
             <textarea id="pxiText" class="field-input paste" maxlength="600" autocapitalize="words" spellcheck="false"
               placeholder="Inserisci formazione"></textarea>
             <div id="pxiSummary" class="hint">Modulo: —</div>
@@ -2282,6 +2294,8 @@
     ['opponentSearch','playerSearch','minute','homePens','awayPens','squadText','matchStadium','matchTime','matchDate','xiText','pxiText'].forEach(id => { $(id).value = ''; });
     xiPicks = [];
     pxiModuleManual = false;
+    $('pxiSrcHint').textContent = '';
+    document.querySelectorAll('.src-row .btn').forEach(b => b.classList.remove('on'));
     updateSquadSummary();
     updateLineupSummary();
     clearPhoto();
@@ -3092,6 +3106,34 @@
   }
 
   // Probabili: il modulo è quello scritto (es. "(3-4-1-2)"), altrimenti si ricava dai reparti.
+  // Probabile formazione della Juventus da Gazzetta, Sky Sport o Fantacalcio.it (servizio:
+  // probabili_web.py): riempie il campo come se fosse incollata, poi si può correggere.
+  async function loadPxiSource(btn) {
+    const src = btn.dataset.src;
+    clearError();
+    if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+    const all = [...document.querySelectorAll('.src-row .btn')];
+    all.forEach(b => { b.disabled = true; b.classList.toggle('loading', b === btn); });
+    $('pxiSrcHint').textContent = `Leggo ${btn.textContent}…`;
+    try {
+      const response = await netFetch(`${directBase}/probabili?session=${encodeURIComponent(session)}&source=${encodeURIComponent(src)}`,{}, 60000, 1);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) throw new Error(body.error || 'Formazione non trovata.');
+      const lineup = body.lineup;
+      $('pxiText').value = lineup.text;
+      pxiModuleManual = false;            // vale il modulo del sito
+      readPxiText();
+      all.forEach(b => b.classList.toggle('on', b === btn));
+      $('pxiSrcHint').textContent = [lineup.label, lineup.match, lineup.module].filter(Boolean).join(' · ');
+      haptic('success');
+    } catch (err) {
+      $('pxiSrcHint').textContent = '';
+      showError(err && err.message ? err.message : 'Formazione non trovata.');
+    } finally {
+      all.forEach(b => { b.disabled = false; b.classList.remove('loading'); });
+    }
+  }
+
   function readPxiText() {
     const {module, groups} = parseFormation($('pxiText').value);
     const flat = groups.flat().slice(0,11);
@@ -3320,7 +3362,11 @@
     },{passive:false});
     $('photoPick').addEventListener('click',() => $('photoFile').click());
     $('xiText').addEventListener('input',() => { clearError(); readXiText(); });
-    $('pxiText').addEventListener('input',() => { clearError(); readPxiText(); });
+    $('pxiText').addEventListener('input',() => {
+      clearError(); readPxiText();
+      document.querySelectorAll('.src-row .btn').forEach(b => b.classList.remove('on'));
+    });
+    document.querySelectorAll('.src-row .btn').forEach(b => b.addEventListener('click',() => loadPxiSource(b)));
     $('photoFile').addEventListener('change',e => { uploadPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
     window.addEventListener('resize',layoutPhoto);
     // iOS: il dito sulla foto non deve far scorrere la pagina né chiudere la Mini App.
