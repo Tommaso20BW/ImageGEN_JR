@@ -69,35 +69,65 @@ def fit_card(cx, top, s=1.0):
 
 
 LABEL_H = 58.9            # altezza della barra col nome (a misura piena)
-LABEL_GAP = 6             # spazio minimo fra due barre col nome affiancate
+LABEL_GAP = 12            # spazio minimo fra due barre col nome affiancate (come il bordo pagina)
 
 
 def place_cards(cards, s=1.0):
     """Posizioni disegnate di tutte le card: dentro la pagina e con le barre del nome
-    che non si toccano. Se due barre sono alla stessa altezza e a meno di LABEL_GAP,
-    le due card si allontanano in orizzontale (ognuna dalla sua parte) quanto basta.
-    Le foto sopra possono sovrapporsi un po': lì c'è spazio libero."""
+    ad almeno LABEL_GAP l'una dall'altra.
+
+    Due barre alla stessa altezza troppo vicine si allontanano in orizzontale, ognuna
+    dalla sua parte, solo quanto basta. La spinta passa anche alle card vicine
+    dall'altra parte (gli spazi fra card a contatto restano uguali) e, se una card è
+    già al bordo, si sposta di più l'altra. Le foto sopra possono sovrapporsi un po'
+    (lì c'è spazio libero). La posizione salvata non cambia.
+    """
     width = (CARD_EXTENT[1] - CARD_EXTENT[0]) * s
     height = LABEL_H * s
     pos = [list(fit_card(x, top, s)) for x, top in cards]
-    for _ in range(40):
+    for _ in range(200):
         moved = False
         for i in range(len(pos)):
             for j in range(i + 1, len(pos)):
                 (xi, ti), (xj, tj) = pos[i], pos[j]
                 if abs(ti - tj) >= height + LABEL_GAP:
-                    continue                      # barre ad altezze diverse
+                    continue                                   # barre ad altezze diverse
                 need = width + LABEL_GAP - abs(xi - xj)
                 if need <= 0.01:
                     continue
-                side = 1 if (xj, j) > (xi, i) else -1   # j a destra di i (a parità, l'ordine)
+                side = 1 if (xj, j) > (xi, i) else -1          # j a destra di i (a parità, l'ordine)
                 pos[i][0] -= side * need / 2
                 pos[j][0] += side * need / 2
                 moved = True
-        pos = [list(fit_card(x, top, s)) for x, top in pos]
+        pos = [list(fit_card(x, top, s)) for x, top in pos]    # dentro la pagina: spinge l'altra
         if not moved:
             break
+    # File impossibili (troppe card per la larghezza, es. 5 difensori grandi): a spazi
+    # uguali fra i due bordi, il massimo spazio possibile.
+    lo = CARD_MARGIN - CARD_EXTENT[0] * s
+    hi = DESIGN_W - CARD_MARGIN - CARD_EXTENT[1] * s
+    parent = list(range(len(pos)))
+
+    def root(a):
+        while parent[a] != a:
+            a = parent[a]
+        return a
+
+    for i in range(len(pos)):
+        for j in range(i + 1, len(pos)):
+            if (abs(pos[i][1] - pos[j][1]) < height + LABEL_GAP
+                    and abs(pos[i][0] - pos[j][0]) < width + LABEL_GAP - 0.5):
+                parent[root(j)] = root(i)
+    rows = {}
+    for i in range(len(pos)):
+        rows.setdefault(root(i), []).append(i)
+    for row in rows.values():
+        if len(row) > 1 and (width + LABEL_GAP) * (len(row) - 1) > hi - lo:
+            row.sort(key=lambda i: (pos[i][0], i))
+            for k, i in enumerate(row):
+                pos[i][0] = lo + k * (hi - lo) / (len(row) - 1)
     return [tuple(p) for p in pos]
+
 
 ROLES = {
     '4-2-3-1': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CDC', 'AS', 'COC', 'AD', 'ATT'],
