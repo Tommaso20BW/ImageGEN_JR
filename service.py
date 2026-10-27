@@ -165,6 +165,15 @@ class _DirectHandler(BaseHTTPRequestHandler):
             except (KeyError, ValueError, OSError):
                 self._json(404, {'ok': False, 'error': 'Sfondo non trovato.'})
             return
+        if parts.path.rstrip('/') == '/probabili_info':
+            # Giorno e ora dell'ultimo aggiornamento di ogni sito, per i pulsanti.
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            import probabili_web
+            self._json(200, {'ok': True, 'updated': probabili_web.updates()})
+            return
         if parts.path.rstrip('/') == '/probabili':
             # PROBABILE XI: formazione della Juventus da Gazzetta, Sky Sport o Fantacalcio.it.
             query = dict(parse_qsl(parts.query))

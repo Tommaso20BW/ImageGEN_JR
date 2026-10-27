@@ -14,6 +14,9 @@ Tutte e tre le pagine rispondono anche dai server di GitHub.
 import html
 import json
 import re
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
@@ -26,6 +29,14 @@ SOURCES = {
     'sky': ('Sky Sport', 'https://sport.sky.it/calcio/serie-a/probabili-formazioni'),
     'fantacalcio': ('Fantacalcio.it', 'https://www.fantacalcio.it/probabili-formazioni-serie-a'),
 }
+
+
+MONTHS = {m: i for i, m in enumerate(
+    ('gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto',
+     'settembre', 'ottobre', 'novembre', 'dicembre'), 1)}
+CACHE_SECONDS = 120       # pagina riletta al massimo ogni 2 minuti (data/ora e pulsante)
+_cache = {}
+_cache_lock = threading.Lock()
 
 
 class LineupError(ValueError):
@@ -80,8 +91,12 @@ def parse_gazzetta(page):
         module = modules[0 if side == 'home' else 1] if len(modules) >= 2 else ''
         sizes = [int(x) for x in module.split('-') if x.isdigit()]
         _check(players, sizes, 'Gazzetta')
+        # "Ultimo aggiornamento: 26 ottobre 2026, ore 19:40" della scheda della partita.
+        upd = re.search(r'aggiornamento:\s*(\d{1,2})\s+([a-zà]+)\s+\d{4},\s*ore\s*(\d{1,2})[:.](\d{2})', _text(block), re.I)
+        updated = (f'{int(upd[1]):02d}/{MONTHS.get(upd[2].lower(), 0):02d} {int(upd[3]):02d}:{upd[4]}'
+                   if upd and upd[2].lower() in MONTHS else '')
         return {'module': module, 'lines': _lines(players, sizes),
-                'match': f'{teams[0]} - {teams[1]}'}
+                'match': f'{teams[0]} - {teams[1]}', 'updated': updated}
     raise LineupError('Gazzetta: partita della Juventus non trovata.')
 
 
@@ -108,8 +123,11 @@ def parse_sky(page):
         seg = page[start:end if end > 0 else len(page)]
         teams = {k: v for k, v in re.findall(r'"(home|away)":\{"ctaUrl":"[^"]*","formation":"\d*","id":"\d+",'
                                              r'"logoUrl":"[^"]*","name":"([^"]+)"', seg)}
+        # "Aggiornato: 27/10, 13:16": uno solo per tutta la giornata.
+        upd = re.search(r'Aggiornato:\s*(\d{1,2})/(\d{1,2}),?\s*(\d{1,2})[:.](\d{2})', page)
         return {'module': _module(sizes), 'lines': _lines(players, sizes),
-                'match': f"{teams['home']} - {teams['away']}" if len(teams) == 2 else ''}
+                'match': f"{teams['home']} - {teams['away']}" if len(teams) == 2 else '',
+                'updated': f'{int(upd[1]):02d}/{int(upd[2]):02d} {int(upd[3]):02d}:{upd[4]}' if upd else ''}
     raise LineupError('Sky Sport: partita della Juventus non trovata.')
 
 
@@ -132,7 +150,14 @@ def parse_fantacalcio(page):
         _check(players, sizes, 'Fantacalcio.it')
         if len(lines[0]) != 1:
             raise LineupError('Fantacalcio.it: portiere della Juventus non trovato.')
-        return {'module': _module(sizes), 'lines': lines, 'match': ''}
+        # "Ultimo aggiornamento 27/10/2026 - 13:59" della partita: dopo le schede delle due
+        # squadre, prima della partita successiva.
+        nxt = page.find('<div class="team team-home"', m.end())
+        upd = re.compile(r'last-update[^>]*>\s*Ultimo aggiornamento\s*<span class="date">\s*'
+                         r'(\d{1,2})/(\d{1,2})/\d{4}\s*-\s*(\d{1,2})[:.](\d{2})').search(
+            page, m.end(), nxt if nxt > 0 else len(page))
+        updated = f'{int(upd[1]):02d}/{int(upd[2]):02d} {int(upd[3]):02d}:{upd[4]}' if upd else ''
+        return {'module': _module(sizes), 'lines': lines, 'match': '', 'updated': updated}
     raise LineupError('Fantacalcio.it: partita della Juventus non trovata.')
 
 
@@ -140,9 +165,42 @@ PARSERS = {'gazzetta': parse_gazzetta, 'sky': parse_sky, 'fantacalcio': parse_fa
 
 
 def fetch(source):
-    """{'source', 'label', 'module', 'text', 'match'} dalla pagina del sito."""
+    """{'source', 'label', 'module', 'text', 'match', 'updated'} dalla pagina del sito.
+
+    Il risultato (o l'errore) resta valido 2 minuti: la data mostrata sotto il pulsante
+    e la formazione caricata toccandolo vengono dalla stessa lettura.
+    """
     if source not in SOURCES:
         raise LineupError('Sito non valido.')
+    with _cache_lock:
+        hit = _cache.get(source)
+    if hit and time.monotonic() - hit[0] < CACHE_SECONDS:
+        if isinstance(hit[1], Exception):
+            raise hit[1]
+        return hit[1]
+    try:
+        result = _fetch(source)
+    except LineupError as exc:
+        with _cache_lock:
+            _cache[source] = (time.monotonic(), exc)
+        raise
+    with _cache_lock:
+        _cache[source] = (time.monotonic(), result)
+    return result
+
+
+def updates():
+    """{sito: 'gg/mm hh:mm' o ''} per tutti i siti, letti in parallelo."""
+    def one(source):
+        try:
+            return source, fetch(source).get('updated', '')
+        except LineupError:
+            return source, ''
+    with ThreadPoolExecutor(max_workers=len(SOURCES)) as pool:
+        return dict(pool.map(one, SOURCES))
+
+
+def _fetch(source):
     label, url = SOURCES[source]
     try:
         r = requests.get(url, headers={'User-Agent': UA, 'Accept-Language': 'it-IT,it'}, timeout=TIMEOUT)
@@ -158,4 +216,4 @@ def fetch(source):
     except Exception:
         raise LineupError(f'{label}: pagina cambiata, formazione non leggibile. Incollala a mano.') from None
     return {'source': source, 'label': label, 'module': found['module'],
-            'text': _as_text(found['lines']), 'match': found['match']}
+            'text': _as_text(found['lines']), 'match': found['match'], 'updated': found.get('updated', '')}

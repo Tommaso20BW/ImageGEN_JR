@@ -462,7 +462,9 @@
     .module-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
     /* Probabile XI: formazione presa dai siti */
     .src-row{display:flex;gap:8px;margin-bottom:6px}
-    .src-row .btn{flex:1;min-height:44px;padding:0 6px;font-size:14px;font-weight:800}
+    .src-row .btn{flex:1;min-height:48px;padding:4px 6px;font-size:14px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.15}
+    .src-row .src-upd{font-size:10.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+    .src-row .src-upd:empty{display:none}
     .src-row .btn.loading{opacity:.55}
     .src-row .btn.on{box-shadow:inset 0 0 0 2px var(--cta)}
     #pxiSrcHint{margin:0 2px 10px}
@@ -1018,9 +1020,9 @@
             <h1>Formazione</h1>
             <p class="lead">Prendila da un sito oppure incollala come la scrivono i giornali (ogni reparto da destra a sinistra). Il modulo lo trovo da solo.</p>
             <div class="src-row" role="group" aria-label="Probabile formazione da un sito">
-              <button class="btn ghost" type="button" data-src="gazzetta">Gazzetta</button>
-              <button class="btn ghost" type="button" data-src="sky">Sky Sport</button>
-              <button class="btn ghost" type="button" data-src="fantacalcio">Fantacalcio</button>
+              <button class="btn ghost" type="button" data-src="gazzetta"><span class="src-name">Gazzetta</span><span class="src-upd"></span></button>
+              <button class="btn ghost" type="button" data-src="sky"><span class="src-name">Sky Sport</span><span class="src-upd"></span></button>
+              <button class="btn ghost" type="button" data-src="fantacalcio"><span class="src-name">Fantacalcio</span><span class="src-upd"></span></button>
             </div>
             <div id="pxiSrcHint" class="hint"></div>
             <textarea id="pxiText" class="field-input paste" maxlength="600" autocapitalize="words" spellcheck="false"
@@ -1784,7 +1786,7 @@
     }
     if (screenName === 'calrows') fillCalendarFromFixtures();
     if (screenName === 'calrows') { if (!calRows.length) calRows.push({day:'', team:'', side:'home'}); renderCalRows(); }
-    if (screenName === 'xi11') readPxiText();
+    if (screenName === 'xi11') { readPxiText(); loadPxiUpdates(); }
     lastRenderedScreen = screenName || '';
     lastRenderedFlowIndex = flowIndex;
     lastRenderedPreviewMode = previewMode;
@@ -3152,7 +3154,7 @@
     if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
     const all = [...document.querySelectorAll('.src-row .btn')];
     all.forEach(b => { b.disabled = true; b.classList.toggle('loading', b === btn); });
-    $('pxiSrcHint').textContent = `Leggo ${btn.textContent}…`;
+    $('pxiSrcHint').textContent = `Leggo ${btn.querySelector('.src-name').textContent}…`;
     try {
       const response = await netFetch(`${directBase}/probabili?session=${encodeURIComponent(session)}&source=${encodeURIComponent(src)}`,{}, 60000, 1);
       const body = await response.json().catch(() => ({}));
@@ -3162,13 +3164,33 @@
       pxiModuleManual = false;            // vale il modulo del sito
       readPxiText();
       all.forEach(b => b.classList.toggle('on', b === btn));
-      $('pxiSrcHint').textContent = [lineup.label, lineup.match, lineup.module].filter(Boolean).join(' · ');
+      $('pxiSrcHint').textContent = [lineup.label, lineup.match, lineup.module,
+        lineup.updated ? `agg. ${lineup.updated.replace(' ', ' · ')}` : ''].filter(Boolean).join(' · ');
+      if (lineup.updated) btn.querySelector('.src-upd').textContent = lineup.updated.replace(' ', ' · ');
       haptic('success');
     } catch (err) {
       $('pxiSrcHint').textContent = '';
       showError(err && err.message ? err.message : 'Formazione non trovata.');
     } finally {
       all.forEach(b => { b.disabled = false; b.classList.remove('loading'); });
+    }
+  }
+
+  // Giorno e ora dell'ultimo aggiornamento di ogni sito, sotto i pulsanti (se il sito lo dice).
+  let pxiUpdLoaded = false;
+  async function loadPxiUpdates() {
+    if (pxiUpdLoaded || !directBase || !session) return;
+    pxiUpdLoaded = true;
+    try {
+      const response = await netFetch(`${directBase}/probabili_info?session=${encodeURIComponent(session)}`,{}, 60000, 1);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) throw new Error();
+      document.querySelectorAll('.src-row .btn').forEach(b => {
+        const when = body.updated && body.updated[b.dataset.src];
+        b.querySelector('.src-upd').textContent = when ? when.replace(' ', ' · ') : '';
+      });
+    } catch (_) {
+      pxiUpdLoaded = false;          // si riprova alla prossima apertura della schermata
     }
   }
 
