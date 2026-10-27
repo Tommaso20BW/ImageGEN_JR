@@ -1331,7 +1331,8 @@
   const SEND_LABEL = LIVE ? 'Conferma foto ✓' : 'Invia foto ✓';
   let liveTitle = '';
   // Scadenza reale della sessione (ms epoch), passata da service.py. Senza, il timer resta nascosto.
-  const sessionExpiresAt = Number(urlParams.get('expires')) || 0;
+  // Si aggiorna: all'apertura si legge quella vera dal servizio (può essere stata allungata).
+  let sessionExpiresAt = Number(urlParams.get('expires')) || 0;
   const sessionExpired = () => Boolean(sessionExpiresAt) && Date.now() >= sessionExpiresAt;
   const EXPIRED_MESSAGE = 'Sessione scaduta. Avvia di nuovo il workflow ImageGen.';
   const MIN_SEARCH = 2;
@@ -2012,6 +2013,43 @@
   /* ---------- Timer sessione ---------- */
   let timerHandle = null;
   let expiredShown = false;
+
+  /* Ultimo minuto: un tocco nella Mini App allunga la sessione di 5 minuti (servizio:
+     Service.extend, fino a 35 minuti in tutto per il limite del workflow GitHub). */
+  let extending = false;
+  let limitShown = false;
+  function applySessionInfo(info) {
+    if (!info || !Number(info.expires)) return;
+    sessionExpiresAt = Number(info.expires);
+    updateSessionTimer();
+    if (!timerHandle && !sessionExpired()) timerHandle = setInterval(updateSessionTimer,1000);
+  }
+  async function maybeExtendSession() {
+    if (!sessionExpiresAt || !directBase || !session || extending) return;
+    const left = sessionExpiresAt - Date.now();
+    if (left <= 0 || left > 60000) return;
+    extending = true;
+    try {
+      const response = await netFetch(`${directBase}/extend`,{
+        method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+        body:JSON.stringify({v:1, action:'extend', session})
+      }, 20000);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) return;
+      applySessionInfo(body);
+      if (body.extended) haptic('success');
+      else if (!limitShown && body.max && body.expires >= body.max - 1000) {
+        limitShown = true;
+        showError('Limite di 35 minuti raggiunto: dopo la scadenza riavvia ImageGen dal workflow.');
+      }
+    } catch (_) {
+    } finally {
+      extending = false;
+    }
+  }
+  // Qualsiasi tocco o tasto nell'ultimo minuto conta.
+  document.addEventListener('pointerdown',() => { maybeExtendSession(); },{capture:true, passive:true});
+  document.addEventListener('keydown',() => { maybeExtendSession(); },{capture:true});
 
   function updateSessionTimer() {
     const box = $('sessionTimer');
@@ -4587,6 +4625,12 @@
   if (!session) showError('Generatore non attivo. Avvia il workflow ImageGen.');
   updateSessionTimer();
   if (sessionExpiresAt && !sessionExpired()) timerHandle = setInterval(updateSessionTimer,1000);
+  // Scadenza vera dal servizio (riaprendo la Mini App il link ha quella iniziale).
+  if (directBase && session) {
+    netFetch(`${directBase}/session?session=${encodeURIComponent(session)}`,{}, 15000)
+      .then(r => r.ok ? r.json() : null).then(body => { if (body && body.ok) applySessionInfo(body); })
+      .catch(() => {});
+  }
 })();
 </script>
 <div id="ask" class="ask" role="dialog" aria-modal="true" aria-labelledby="askTitle">

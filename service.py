@@ -25,6 +25,12 @@ from graphics.starting_xi import MAX_PHOTO_BYTES, check_photo
 
 
 SESSION_DURATION_SECONDS = 600
+# Ultimo minuto: un tocco nella Mini App allunga la sessione di 5 minuti, ogni volta.
+EXTEND_WHEN_LEFT_SECONDS = 60
+EXTEND_BY_SECONDS = 300
+# Il job GitHub si ferma a 40 minuti (timeout-minutes in imagegen.yml): margine per
+# avvio e pulizia, la sessione non va oltre 35 minuti in tutto.
+SESSION_MAX_SECONDS = 35 * 60
 MAX_PHOTOS = 8
 # Campi che spostano o cambiano solo le foto: non cambiano la sagoma dell'editor.
 PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame')
@@ -174,6 +180,14 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 print(f'WARN IMAGEGEN: probabili non lette: {exc}', flush=True)
                 self._json(400, {'ok': False, 'error': str(exc)})
             return
+        if parts.path.rstrip('/') == '/session':
+            # Scadenza vera (può essere stata allungata): la Mini App la legge all'apertura.
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            self._json(200, {'ok': True, **self.service.session_info()})
+            return
         if parts.path.rstrip('/') == '/progress':
             token = dict(parse_qsl(parts.query)).get('session', '')
             if token != self.service.session:
@@ -225,7 +239,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
         if path == '/upload':
             self._upload()
             return
-        if path not in ('/preview', '/submit', '/close', '/ghost', '/layout'):
+        if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -246,6 +260,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 # principale termina e parte lo stesso cleanup usato a scadenza.
                 self._json(200, {'ok': True, 'closed': True})
                 self.service.request_stop()
+                return
+
+            if path == '/extend':
+                self._json(200, {'ok': True, **self.service.extend()})
                 return
 
             if path == '/layout':
@@ -287,6 +305,10 @@ class Service:
 
         self.session = secrets.token_urlsafe(18)
         self.stopped = False
+        # Fine sessione (time.monotonic) e inizio, per le estensioni dell'ultimo minuto.
+        self.started_at = time.monotonic()
+        self.deadline = self.started_at + SESSION_DURATION_SECONDS
+        self.deadline_lock = threading.Lock()
         self.generated_message_ids = []
         self.bot_message_ids = []
         self.launcher_message_id = None
@@ -317,6 +339,26 @@ class Service:
             self.photos.pop(next(iter(self.photos)))
         print(f'INFO IMAGEGEN: foto caricata | id={photo_id} | {width}x{height}', flush=True)
         return {'photo_id': photo_id, 'width': width, 'height': height}
+
+    def _expires_ms(self):
+        return int((time.time() + (self.deadline - time.monotonic())) * 1000)
+
+    def session_info(self):
+        return {'expires': self._expires_ms(),
+                'max': int((time.time() + (self.started_at + SESSION_MAX_SECONDS - time.monotonic())) * 1000)}
+
+    def extend(self):
+        """Ultimo minuto + tocco nella Mini App: +5 minuti (fino a 35 minuti in tutto)."""
+        with self.deadline_lock:
+            now = time.monotonic()
+            left = self.deadline - now
+            limit = self.started_at + SESSION_MAX_SECONDS
+            extended = False
+            if 0 < left <= EXTEND_WHEN_LEFT_SECONDS + 5 and self.deadline < limit and not self.stopped:
+                self.deadline = min(self.deadline + EXTEND_BY_SECONDS, limit)
+                extended = True
+                print(f'INFO IMAGEGEN: sessione allungata | mancano {self.deadline - now:.0f}s', flush=True)
+        return {**self.session_info(), 'extended': extended}
 
     def layouts(self):
         """PROBABILE XI: disposizioni in uso per modulo + griglia di Modifica."""
@@ -733,7 +775,9 @@ class Service:
         query['direct'] = direct_url.rstrip('/') + '/submit'
         # Scadenza in ms epoch, per il timer della Mini App (stessa durata del loop qui sotto).
         session_seconds = min(SESSION_DURATION_SECONDS, max(1, duration))
-        query['expires'] = str(int((time.time() + session_seconds) * 1000))
+        self.started_at = time.monotonic()
+        self.deadline = self.started_at + session_seconds
+        query['expires'] = str(self._expires_ms())
 
         launch_url = urlunsplit(
             (parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment)
@@ -745,10 +789,10 @@ class Service:
             pass
 
         self.launcher_message_id = self.telegram.webapp_launcher(launch_url)
-        deadline = time.monotonic() + session_seconds
 
         try:
-            while not self.stopped and time.monotonic() < deadline:
+            # self.deadline può spostarsi in avanti (extend) mentre la sessione è aperta.
+            while not self.stopped and time.monotonic() < self.deadline:
                 time.sleep(0.15)
         finally:
             self._stop_http_server()
