@@ -143,6 +143,19 @@ class _DirectHandler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self._json(404, {'ok': False, 'error': str(exc)})
             return
+        if parts.path.rstrip('/') in ('/layouts', '/pxibg'):
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            if parts.path.rstrip('/') == '/layouts':
+                self._json(200, {'ok': True, **self.service.layouts()})
+                return
+            try:
+                self._png(self.service.pxi_background(query.get('kit', '')), 'image/jpeg')
+            except (KeyError, ValueError, OSError):
+                self._json(404, {'ok': False, 'error': 'Sfondo non trovato.'})
+            return
         if parts.path.rstrip('/') == '/progress':
             token = dict(parse_qsl(parts.query)).get('session', '')
             if token != self.service.session:
@@ -194,7 +207,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
         if path == '/upload':
             self._upload()
             return
-        if path not in ('/preview', '/submit', '/close', '/ghost'):
+        if path not in ('/preview', '/submit', '/close', '/ghost', '/layout'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -215,6 +228,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 # principale termina e parte lo stesso cleanup usato a scadenza.
                 self._json(200, {'ok': True, 'closed': True})
                 self.service.request_stop()
+                return
+
+            if path == '/layout':
+                self._json(200, {'ok': True, 'layout': self.service.save_layout(envelope)})
                 return
 
             if path == '/ghost':
@@ -281,6 +298,48 @@ class Service:
             self.photos.pop(next(iter(self.photos)))
         print(f'INFO IMAGEGEN: foto caricata | id={photo_id} | {width}x{height}', flush=True)
         return {'photo_id': photo_id, 'width': width, 'height': height}
+
+    def layouts(self):
+        """PROBABILE XI: disposizioni in uso per modulo + griglia di Modifica."""
+        import layouts
+        from graphics.probabili import GRID_X, GRID_Y
+        from graphics.probabili import MODULES
+        return {'layouts': layouts.all_layouts(), 'defaults': {m: layouts.default(m) for m in MODULES},
+                'grid': {'x': GRID_X, 'y': GRID_Y},
+                'scale': {'min': layouts.SCALE_MIN, 'max': layouts.SCALE_MAX}}
+
+    def save_layout(self, envelope):
+        """Salva subito in locale; il commit nel repository va in un thread."""
+        import layouts
+        if str(envelope.get('session') or '') != self.session or envelope.get('action') != 'layout':
+            raise ValueError('Richiesta non valida.')
+        module = str(envelope.get('module') or '')
+        layout = layouts.clean(module, envelope.get('layout'))
+        threading.Thread(target=self._save_layout, args=(module, layout), daemon=True).start()
+        return layout
+
+    def _save_layout(self, module, layout):
+        try:
+            import layouts
+            layouts.save(module, layout)
+        except Exception as exc:
+            print(f'WARN IMAGEGEN: posizioni non salvate: {type(exc).__name__}: {exc}', flush=True)
+
+    def pxi_background(self, kit):
+        """Sfondo del campo di PROBABILE XI, ridotto, per l'editor delle posizioni."""
+        from PIL import Image
+        from graphics.common import asset_dir
+        from graphics.probabili import KITS, _meta
+        if kit not in KITS:
+            raise ValueError('Maglia non valida.')
+        key = ('pxibg', kit)
+        if key not in self.overlays:
+            with Image.open(asset_dir() / 'canva' / _meta()[kit]['bg']) as image:
+                small = image.convert('RGB').resize((540, 720), Image.LANCZOS)
+                out = io.BytesIO()
+                small.save(out, format='JPEG', quality=85)
+            self.overlays[key] = out.getvalue()
+        return self.overlays[key]
 
     def cutout_preview(self, photo_id):
         """Persona scontornata, ridotta per l'editor (l'invio usa quella piena)."""

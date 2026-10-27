@@ -46,6 +46,11 @@ MODULES = {
 # Carte rimpicciolite solo dove i giocatori non entrano a misura piena.
 MODULE_SCALE = {'3-5-2': 0.91, '5-4-1': 0.9}
 
+# Griglia di "Modifica" nella Mini App: le card si spostano solo su questi punti
+# (centro x, alto dell'etichetta). 9 colonne fra le fasce, 12 righe da attacco a portiere.
+GRID_X = [120 + 105 * i for i in range(9)]
+GRID_Y = [round(295.4 + i * (1228.16 - 295.4) / 11, 2) for i in range(12)]
+
 ROLES = {
     '4-2-3-1': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CDC', 'AS', 'COC', 'AD', 'ATT'],
     '4-3-3': ['POR', 'TS', 'DC', 'DC', 'TD', 'CC', 'CC', 'CC', 'AS', 'ATT', 'AD'],
@@ -121,7 +126,7 @@ def check_layout(module):
     return clashes
 
 
-def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, **_):
+def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, layout=None, **_):
     if kit not in KITS:
         raise ValueError('Maglia non valida.')
     if module not in MODULES:
@@ -133,11 +138,15 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
     plates = data_uri(canva / meta['plates'])
     label = data_uri(canva / meta['label'])
     text = meta['text']
-    s = MODULE_SCALE.get(module, 1.0)
+    # Posizioni e grandezza: quelle passate (Modifica), altrimenti salvate o Canva.
+    if layout is None:
+        import layouts
+        layout = layouts.get(module)
+    s = layout['scale']
     k = meta['head_rect'][2] * s / (HEAD_CROP[2] - HEAD_CROP[0])
 
     cards, names = [], []
-    for i, ((cx, top), player) in enumerate(zip(MODULES[module], players)):
+    for i, ((cx, top), player) in enumerate(zip(layout['cards'], players)):
         px, py, pw, ph = _rect((cx, top), meta['plates_rect'], s)
         hx, hy, hw, hh = _rect((cx, top), meta['head_rect'], s)
         lx, ly, lw, lh = _rect((cx, top), meta['label_rect'], s)
@@ -161,9 +170,9 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
             names.append(t.replace('<text ', f'<text fill="{text["color"]}" ', 1))
 
     logos = ''.join(
-        f'<div class="logo" style="left:{x}px;top:{y}px;width:{s}px;height:{s}px;background:{meta["logo_color"]};'
+        f'<div class="logo" style="left:{x}px;top:{y}px;width:{size}px;height:{size}px;background:{meta["logo_color"]};'
         f'--m:url({data_uri(team_logo(name, team_id))})"></div>'
-        for (x, y, s), (name, team_id) in zip(meta['logos'], ((home_name, home_id), (away_name, away_id)))
+        for (x, y, size), (name, team_id) in zip(meta['logos'], ((home_name, home_id), (away_name, away_id)))
     )
     poppins = data_uri(asset_dir() / 'fonts' / 'Poppins-Medium.ttf')
 

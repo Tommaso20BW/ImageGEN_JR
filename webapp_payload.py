@@ -273,6 +273,10 @@ def _build_state(envelope, catalog, now, expected_session):
             raise ValueError('Lo stesso giocatore è stato scelto due volte.')
         data['module'] = module
         data['players'] = players
+        # Disposizione di "Modifica" (assente = salvata o Canva).
+        if incoming.get('layout') is not None:
+            import layouts
+            data['layout'] = layouts.clean(module, incoming.get('layout'))
 
     elif kind == 'squad':
         if competition not in SQUAD_COMPETITIONS:

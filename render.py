@@ -308,6 +308,7 @@ class Renderer:
                 kit=data['kit'],
                 module=data['module'],
                 players=[roster[name] for name in data['players']],
+                layout=data.get('layout'),
             )
 
         if kind == 'squad':
