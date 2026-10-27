@@ -476,8 +476,8 @@
     .lay-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
     .lay-head h2{font-size:24px;line-height:1.1;margin:2px 0 0}
     .lay-hint{margin:6px 2px 10px;color:var(--muted);font-size:13px;min-height:18px}
-    .lay-frame{position:relative;flex:none;width:min(100%,calc((var(--app-h) - 210px) * .75));aspect-ratio:3/4;margin:0 auto;
-      overflow:hidden;border-radius:12px;background:#ddd;box-shadow:var(--preview-shadow);touch-action:none;cursor:crosshair}
+    .lay-frame{position:relative;flex:none;width:min(100%,calc((var(--app-h) - 290px) * .75));aspect-ratio:3/4;margin:0 auto;
+      overflow:hidden;border-radius:12px;background:#ddd;box-shadow:var(--preview-shadow);touch-action:none}
     .lay-frame img,.lay-frame svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
     .lay-grid line{stroke:rgba(17,17,19,.22);stroke-width:1.5;vector-effect:non-scaling-stroke}
     .lay-grid circle{fill:rgba(17,17,19,.32)}
@@ -493,12 +493,22 @@
     .lay-card.sel{background:rgba(255,204,51,.9);color:var(--cta-ink);border-color:var(--cta);
       box-shadow:0 0 0 3px rgba(255,204,51,.45);z-index:2}
     .lay-card.sel .nm{background:rgba(255,255,255,.35)}
-    .lay-tools{display:flex;align-items:center;gap:8px;margin:12px auto 0;width:min(100%,420px)}
-    .lay-tools .btn{min-height:46px}
-    .lay-size{display:flex;align-items:center;gap:6px;flex:none}
-    .lay-size .btn{width:46px;padding:0;font-size:22px;font-weight:800}
-    .lay-size output{min-width:56px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
-    .lay-tools .grow{flex:1}
+    /* Grandezza: piccola, in alto a destra, fuori dal campo */
+    .lay-size{display:flex;align-items:center;flex:none;border-radius:999px;background:var(--surface2);padding:3px}
+    .lay-size button{width:34px;height:34px;border:0;border-radius:50%;background:transparent;color:var(--text);
+      font-size:20px;font-weight:800;line-height:1;cursor:pointer}
+    .lay-size button:active:not(:disabled){background:var(--surface)}
+    .lay-size button:disabled{opacity:.3}
+    .lay-size output{min-width:46px;text-align:center;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+    /* Frecce: la card scelta si sposta di un punto di griglia */
+    .lay-pad{display:flex;justify-content:center;gap:10px;margin:12px auto 0}
+    .lay-pad button{width:60px;height:52px;border:0;border-radius:14px;background:var(--surface);color:var(--text);
+      box-shadow:var(--shadow-soft),inset 0 0 0 1px var(--line);font-size:24px;font-weight:800;cursor:pointer;
+      transition:transform .12s var(--ease-out),opacity .15s}
+    .lay-pad button:active:not(:disabled){transform:scale(.94);background:var(--surface2)}
+    .lay-pad button:disabled{opacity:.35}
+    .lay-tools{display:flex;gap:10px;margin:12px auto 0;width:min(100%,420px)}
+    .lay-tools .btn{flex:1;min-height:48px}
     .photo-frame .empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-weight:700;text-align:center;padding:20px}
     .photo-tools{display:flex;gap:10px;align-items:center;max-width:380px;margin:12px auto 0}
     /* HALF/END/FULL TIME: la foto sta solo nel riquadro interno della grafica (76 px di
@@ -1089,21 +1099,26 @@
 <div id="lay" class="lay" role="dialog" aria-modal="true" aria-labelledby="layTitle">
   <div class="lay-head">
     <div><div class="eyebrow">Probabile XI</div><h2 id="layTitle">Posizioni</h2></div>
-    <button id="layReset" class="btn ghost" type="button">Ripristina</button>
+    <div class="lay-size" role="group" aria-label="Grandezza card">
+      <button id="layMinus" type="button" aria-label="Card più piccole">−</button>
+      <output id="layScale">100%</output>
+      <button id="layPlus" type="button" aria-label="Card più grandi">+</button>
+    </div>
   </div>
-  <p id="layHint" class="lay-hint">Tocca una card, poi un punto della griglia.</p>
+  <p id="layHint" class="lay-hint">Tocca una card, poi spostala con le frecce.</p>
   <div id="layFrame" class="lay-frame">
     <img id="layBg" alt="">
     <svg id="layGrid" class="lay-grid" viewBox="0 0 1080 1440" preserveAspectRatio="none"></svg>
     <div id="layCards"></div>
   </div>
+  <div class="lay-pad" role="group" aria-label="Sposta card">
+    <button data-move="-1,0" type="button" aria-label="Sinistra">←</button>
+    <button data-move="0,-1" type="button" aria-label="Su">↑</button>
+    <button data-move="0,1" type="button" aria-label="Giù">↓</button>
+    <button data-move="1,0" type="button" aria-label="Destra">→</button>
+  </div>
   <div class="lay-tools">
-    <div class="lay-size" role="group" aria-label="Grandezza card">
-      <button id="layMinus" class="btn ghost" type="button" aria-label="Card più piccole">−</button>
-      <output id="layScale">100%</output>
-      <button id="layPlus" class="btn ghost" type="button" aria-label="Card più grandi">+</button>
-    </div>
-    <span class="grow"></span>
+    <button id="layReset" class="btn ghost" type="button">Ripristina</button>
     <button id="layDone" class="btn primary" type="button">Fatto</button>
   </div>
 </div>
@@ -3629,26 +3644,36 @@
     $('layScale').textContent = `${Math.round(s * 100)}%`;
     $('layMinus').disabled = s <= pxiLay.min + 1e-6;
     $('layPlus').disabled = s >= pxiLay.max - 1e-6;
+    document.querySelectorAll('.lay-pad button').forEach(b => {
+      const [dx, dy] = b.dataset.move.split(',').map(Number);
+      b.disabled = pxiLay.sel < 0 || gridStep(layout.cards[pxiLay.sel], dx, dy) === null;
+    });
     $('layHint').textContent = pxiLay.sel >= 0
-      ? `Tocca il punto dove spostare ${box.children[pxiLay.sel].querySelector('.nm').textContent || 'la card'}.`
-      : 'Tocca una card, poi un punto della griglia.';
+      ? `${box.children[pxiLay.sel].querySelector('.nm').textContent || 'Card'}: spostala con le frecce.`
+      : 'Tocca una card, poi spostala con le frecce.';
   }
 
-  // Tocco sul campo: la card scelta va sul punto della griglia più vicino;
+  // Punto di griglia successivo nella direzione (solo lungo quell'asse);
+  // una card ancora nella posizione Canva scatta sul primo punto oltre la sua.
+  function gridStep([x, top], dx, dy) {
+    const next = (list, v, dir) => dir > 0 ? list.find(g => g > v + .5) : [...list].reverse().find(g => g < v - .5);
+    if (dx) { const nx = next(pxiLay.grid.x, x, dx); return nx === undefined ? null : [nx, top]; }
+    const ny = next(pxiLay.grid.y, top, dy);
+    return ny === undefined ? null : [x, ny];
+  }
+
+  // Freccia: la card scelta va al punto di griglia vicino (resta selezionata);
   // se lì c'è già un'altra card, si scambiano di posto.
-  function placeOnGrid(e) {
+  function moveSelected(dx, dy) {
     if (pxiLay.sel < 0) return;
     const layout = pxiLay.layouts[pxiModule];
-    const r = $('layFrame').getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width * 1080;
-    const py = (e.clientY - r.top) / r.height * 1440 - CARD_MID * layout.scale;
-    const x = pxiLay.grid.x.reduce((a,b) => Math.abs(b - px) < Math.abs(a - px) ? b : a);
-    const top = pxiLay.grid.y.reduce((a,b) => Math.abs(b - py) < Math.abs(a - py) ? b : a);
-    const other = layout.cards.findIndex((c,i) => i !== pxiLay.sel && Math.abs(c[0] - x) < 1 && Math.abs(c[1] - top) < 1);
-    if (other >= 0) layout.cards[other] = layout.cards[pxiLay.sel].slice();
-    layout.cards[pxiLay.sel] = [x, top];
-    haptic('success');
-    pxiLay.sel = -1;
+    const from = layout.cards[pxiLay.sel];
+    const to = gridStep(from, dx, dy);
+    if (!to) return;
+    const other = layout.cards.findIndex((c,i) => i !== pxiLay.sel && Math.abs(c[0] - to[0]) < 1 && Math.abs(c[1] - to[1]) < 1);
+    if (other >= 0) layout.cards[other] = from.slice();
+    layout.cards[pxiLay.sel] = to;
+    haptic('select');
     renderLayout();
   }
 
@@ -3674,7 +3699,12 @@
   }
 
   function initLayoutEditor() {
-    $('layFrame').addEventListener('click',placeOnGrid);
+    // Tocco sul campo vuoto: deseleziona.
+    $('layFrame').addEventListener('click',() => { if (pxiLay.sel >= 0) { pxiLay.sel = -1; renderLayout(); } });
+    document.querySelectorAll('.lay-pad button').forEach(b => {
+      const [dx, dy] = b.dataset.move.split(',').map(Number);
+      b.addEventListener('click',() => moveSelected(dx, dy));
+    });
     $('layMinus').addEventListener('click',() => stepScale(-1));
     $('layPlus').addEventListener('click',() => stepScale(1));
     $('layDone').addEventListener('click',closeLayoutEditor);
