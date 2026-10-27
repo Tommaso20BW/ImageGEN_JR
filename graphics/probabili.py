@@ -53,6 +53,20 @@ MODULE_SCALE = {'3-5-2': 0.91, '5-4-1': 0.9}
 GRID_X = [round(120 + 52.5 * i, 2) for i in range(-1, 18)]
 GRID_Y = [round(295.4 + i * (1228.16 - 295.4) / 22, 2) for i in range(24)]
 
+# Parte visibile della card rispetto a (centro x, alto etichetta), a misura piena:
+# lastre/etichetta ±117 in larghezza, dalla testa (-175,4) al fondo etichetta (+58,9).
+CARD_EXTENT = (-117.0, 117.0, -175.42, 58.9)
+CARD_MARGIN = 12          # la card resta sempre dentro la pagina, a questa distanza dal bordo
+
+
+def fit_card(cx, top, s=1.0):
+    """Posizione disegnata: se la card uscirebbe dalla pagina (colonne esterne, card
+    grandi) si sposta dentro quanto basta. La posizione salvata resta quella della griglia."""
+    left, right, up, down = (v * s for v in CARD_EXTENT)
+    cx = min(max(cx, CARD_MARGIN - left), DESIGN_W - CARD_MARGIN - right)
+    top = min(max(top, CARD_MARGIN - up), DESIGN_H - CARD_MARGIN - down)
+    return cx, top
+
 ROLES = {
     '4-2-3-1': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CDC', 'AS', 'COC', 'AD', 'ATT'],
     '4-3-3': ['POR', 'TS', 'DC', 'DC', 'TD', 'CC', 'CC', 'CC', 'AS', 'ATT', 'AD'],
@@ -149,6 +163,7 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
 
     cards, names = [], []
     for i, ((cx, top), player) in enumerate(zip(layout['cards'], players)):
+        cx, top = fit_card(cx, top, s)
         px, py, pw, ph = _rect((cx, top), meta['plates_rect'], s)
         hx, hy, hw, hh = _rect((cx, top), meta['head_rect'], s)
         lx, ly, lw, lh = _rect((cx, top), meta['label_rect'], s)
