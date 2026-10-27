@@ -41,18 +41,22 @@ MODULES = {
     '4-3-2-1': [[540.0, 1228.16], [124.26, 956.16], [401.5, 991.04], [678.75, 991.04], [955.74, 956.16], [225.0, 717.53], [540.0, 717.53], [855.0, 717.53], [300.0, 471.47], [780.0, 471.47], [540.0, 295.4]],
     '3-4-3': [[540.0, 1228.16], [225.0, 982.4], [540.0, 982.4], [851.77, 982.4], [123.53, 632.34], [384.53, 645.46], [695.47, 645.46], [956.47, 632.34], [200.0, 330.4], [540.0, 295.4], [880.0, 330.4]],
     '3-5-2': [[540.0, 1228.16], [225.0, 982.4], [540.0, 982.4], [851.77, 982.4], [123.53, 575.01], [340.0, 645.01], [540.0, 715.01], [740.0, 645.01], [956.47, 575.01], [306.01, 341.12], [773.99, 341.12]],
+    '3-5-1-1': [[540.0, 1228.16], [225.0, 982.4], [540.0, 982.4], [851.77, 982.4], [123.53, 622.14], [340.0, 692.14], [540.0, 762.14], [740.0, 692.14], [956.47, 622.14], [540.0, 503.88], [540.0, 279.61]],
     '5-4-1': [[540.0, 1228.16], [110.0, 930.0], [325.0, 982.4], [540.0, 982.4], [755.0, 982.4], [970.0, 930.0], [123.53, 595.57], [384.53, 643.73], [695.47, 643.73], [956.47, 595.57], [540.0, 341.12]],
 }
 # Carte rimpicciolite solo dove i giocatori non entrano a misura piena.
-MODULE_SCALE = {'3-5-2': 0.91, '5-4-1': 0.9}
+MODULE_SCALE = {'3-5-2': 0.91, '3-5-1-1': 0.91, '5-4-1': 0.9}
 
 # Griglia di "Modifica" nella Mini App: le card si spostano solo su questi punti
 # (centro x, alto dell'etichetta). 19 colonne (le 17 fra le fasce più una per lato,
-# a 67,5 e 1012,5), 24 righe (23 da attacco a portiere più una mezzo passo sotto il
-# portiere): passo dimezzato rispetto alla prima griglia 9x12, i cui punti restano tutti.
+# a 67,5 e 1012,5), 46 righe: 45 da attacco a portiere più una sotto il portiere,
+# tutte alla stessa distanza (quella che prima c'era solo fra il portiere e l'ultima
+# riga). Passo dimezzato rispetto alla griglia 19x24: i suoi punti restano tutti
+# (una riga su due).
 GRID_X = [round(120 + 52.5 * i, 2) for i in range(-1, 18)]
-GRID_Y = [round(295.4 + i * (1228.16 - 295.4) / 22, 2) for i in range(23)]
-GRID_Y.append(round(1228.16 + (1228.16 - 295.4) / 44, 2))   # mezzo passo sotto il portiere
+GRID_STEP_Y = (1228.16 - 295.4) / 44
+GRID_Y = [round(295.4 + i * GRID_STEP_Y, 2) for i in range(45)]
+GRID_Y.append(round(1228.16 + GRID_STEP_Y, 2))   # un passo sotto il portiere
 
 # Parte visibile della card rispetto a (centro x, alto etichetta), a misura piena:
 # lastre/etichetta ±117 in larghezza, dalla testa (-175,4) al fondo etichetta (+58,9).
@@ -137,6 +141,7 @@ ROLES = {
     '4-1-2-1-2': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CC', 'CC', 'COC', 'ATT', 'ATT'],
     '3-4-2-1': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CC', 'ED', 'TRQ', 'TRQ', 'ATT'],
     '3-4-1-2': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CC', 'ED', 'TRQ', 'ATT', 'ATT'],
+    '3-5-1-1': ['POR', 'DC', 'DC', 'DC', 'ES', 'CC', 'CDC', 'CC', 'ED', 'TRQ', 'ATT'],
     '4-3-1-2': ['POR', 'TS', 'DC', 'DC', 'TD', 'CC', 'CC', 'CC', 'TRQ', 'ATT', 'ATT'],
     '4-2-2-2': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CDC', 'AS', 'AD', 'ATT', 'ATT'],
     '4-3-2-1': ['POR', 'TS', 'DC', 'DC', 'TD', 'CC', 'CC', 'CC', 'TRQ', 'TRQ', 'ATT'],
