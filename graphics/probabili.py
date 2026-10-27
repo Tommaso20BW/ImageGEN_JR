@@ -67,6 +67,38 @@ def fit_card(cx, top, s=1.0):
     top = min(max(top, CARD_MARGIN - up), DESIGN_H - CARD_MARGIN - down)
     return cx, top
 
+
+LABEL_H = 58.9            # altezza della barra col nome (a misura piena)
+LABEL_GAP = 6             # spazio minimo fra due barre col nome affiancate
+
+
+def place_cards(cards, s=1.0):
+    """Posizioni disegnate di tutte le card: dentro la pagina e con le barre del nome
+    che non si toccano. Se due barre sono alla stessa altezza e a meno di LABEL_GAP,
+    le due card si allontanano in orizzontale (ognuna dalla sua parte) quanto basta.
+    Le foto sopra possono sovrapporsi un po': lì c'è spazio libero."""
+    width = (CARD_EXTENT[1] - CARD_EXTENT[0]) * s
+    height = LABEL_H * s
+    pos = [list(fit_card(x, top, s)) for x, top in cards]
+    for _ in range(40):
+        moved = False
+        for i in range(len(pos)):
+            for j in range(i + 1, len(pos)):
+                (xi, ti), (xj, tj) = pos[i], pos[j]
+                if abs(ti - tj) >= height + LABEL_GAP:
+                    continue                      # barre ad altezze diverse
+                need = width + LABEL_GAP - abs(xi - xj)
+                if need <= 0.01:
+                    continue
+                side = 1 if (xj, j) > (xi, i) else -1   # j a destra di i (a parità, l'ordine)
+                pos[i][0] -= side * need / 2
+                pos[j][0] += side * need / 2
+                moved = True
+        pos = [list(fit_card(x, top, s)) for x, top in pos]
+        if not moved:
+            break
+    return [tuple(p) for p in pos]
+
 ROLES = {
     '4-2-3-1': ['POR', 'TS', 'DC', 'DC', 'TD', 'CDC', 'CDC', 'AS', 'COC', 'AD', 'ATT'],
     '4-3-3': ['POR', 'TS', 'DC', 'DC', 'TD', 'CC', 'CC', 'CC', 'AS', 'ATT', 'AD'],
@@ -162,8 +194,7 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
     k = meta['head_rect'][2] * s / (HEAD_CROP[2] - HEAD_CROP[0])
 
     cards, names = [], []
-    for i, ((cx, top), player) in enumerate(zip(layout['cards'], players)):
-        cx, top = fit_card(cx, top, s)
+    for i, ((cx, top), player) in enumerate(zip(place_cards(layout['cards'], s), players)):
         px, py, pw, ph = _rect((cx, top), meta['plates_rect'], s)
         hx, hy, hw, hh = _rect((cx, top), meta['head_rect'], s)
         lx, ly, lw, lh = _rect((cx, top), meta['label_rect'], s)

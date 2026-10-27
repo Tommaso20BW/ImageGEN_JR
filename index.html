@@ -4014,6 +4014,31 @@
     Math.min(Math.max(x, CARD_MARGIN - CARD.left * s), 1080 - CARD_MARGIN - CARD.right * s),
     Math.min(Math.max(top, CARD_MARGIN - CARD.top * s), 1440 - CARD_MARGIN - CARD.bottom * s),
   ];
+  // Come place_cards in graphics/probabili.py: le barre del nome non si toccano
+  // (almeno 6 px); due card troppo vicine si allontanano in orizzontale.
+  const LABEL_H = 58.9, LABEL_GAP = 6;
+  function layPlace(cards, s) {
+    const width = (CARD.right - CARD.left) * s, height = LABEL_H * s;
+    let pos = cards.map(c => layFit(c, s));
+    for (let round = 0; round < 40; round++) {
+      let moved = false;
+      for (let i = 0; i < pos.length; i++) {
+        for (let j = i + 1; j < pos.length; j++) {
+          const [xi, ti] = pos[i], [xj, tj] = pos[j];
+          if (Math.abs(ti - tj) >= height + LABEL_GAP) continue;
+          const need = width + LABEL_GAP - Math.abs(xi - xj);
+          if (need <= 0.01) continue;
+          const side = (xj > xi || (xj === xi && j > i)) ? 1 : -1;
+          pos[i][0] -= side * need / 2;
+          pos[j][0] += side * need / 2;
+          moved = true;
+        }
+      }
+      pos = pos.map(p => layFit(p, s));
+      if (!moved) break;
+    }
+    return pos;
+  }
   // undo[modulo] = disposizioni prima di ogni modifica: Ripristina torna indietro di una.
   const pxiLay = {layouts:{}, defaults:{}, grid:null, min:.7, max:1.3, loaded:null, sel:-1, before:'', undo:{}};
   function layRemember() { (pxiLay.undo[pxiModule] = pxiLay.undo[pxiModule] || []).push(layCopy(pxiLay.layouts[pxiModule])); }
@@ -4082,8 +4107,9 @@
         box.appendChild(card);
       });
     }
+    const drawn = layPlace(layout.cards, s);
     [...box.children].forEach((card,i) => {
-      const [x, top] = layFit(layout.cards[i], s);
+      const [x, top] = drawn[i];
       card.style.left = `${(x + CARD.left * s) / 1080 * 100}%`;
       card.style.top = `${(top + CARD.top * s) / 1440 * 100}%`;
       card.style.width = `${(CARD.right - CARD.left) * s / 1080 * 100}%`;
