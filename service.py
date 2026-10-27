@@ -81,6 +81,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
     def _read_envelope(self):
         if self.headers.get('X-ImageGEN-Session', '') != self.service.session:
+            print(f'WARN IMAGEGEN: {self.path} respinta: sessione non valida', flush=True)
             self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
             return None
 
@@ -90,6 +91,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             length = 0
 
         if length <= 0 or length > 16384:
+            print(f'WARN IMAGEGEN: {self.path} respinta: lunghezza {length}', flush=True)
             self._json(413, {'ok': False, 'error': 'Richiesta non valida.'})
             return None
 
@@ -97,6 +99,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             raw = self.rfile.read(length)
             return json.loads(raw.decode('utf-8'))
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            print(f'WARN IMAGEGEN: {self.path} respinta: JSON non valido', flush=True)
             self._json(400, {'ok': False, 'error': 'JSON non valido.'})
             return None
 
@@ -264,6 +267,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
         except BusyError as exc:
             self._json(409, {'ok': False, 'error': str(exc)})
         except ValueError as exc:
+            print(f'WARN IMAGEGEN: {path} respinta: {exc}', flush=True)
             self._json(400, {'ok': False, 'error': str(exc)})
         except DeliveryUncertain:
             self._json(502, {'ok': False, 'error': 'Invio incerto: controlla se la foto è arrivata.'})
@@ -330,8 +334,25 @@ class Service:
             raise ValueError('Richiesta non valida.')
         module = str(envelope.get('module') or '')
         layout = layouts.clean(module, envelope.get('layout'))
+        print(f"INFO IMAGEGEN: posizioni {module} ricevute da Fatto | {round(layout['scale'] * 100)}%", flush=True)
         threading.Thread(target=self._save_layout, args=(module, layout), daemon=True).start()
         return layout
+
+    def _remember_layout(self, data):
+        """PROBABILE XI: posizioni dell'anteprima diverse da quelle salvate -> si salvano.
+
+        Non dipende solo da "Fatto" (richiesta separata che si può perdere): ogni
+        anteprima porta già le posizioni con cui è disegnata la grafica.
+        """
+        if data.get('kind') != 'pxi' or not data.get('layout'):
+            return
+        try:
+            import layouts
+            if data['layout'] != layouts.get(data['module']):
+                print(f"INFO IMAGEGEN: posizioni {data['module']} nuove dall'anteprima, le salvo", flush=True)
+                threading.Thread(target=self._save_layout, args=(data['module'], data['layout']), daemon=True).start()
+        except Exception as exc:
+            print(f'WARN IMAGEGEN: posizioni non controllate: {type(exc).__name__}: {exc}', flush=True)
 
     def _save_layout(self, module, layout):
         try:
@@ -442,6 +463,7 @@ class Service:
         started = time.time()
         try:
             request_state = self._parse_request(envelope)
+            self._remember_layout(request_state['data'])
             png, _ = self._render_and_cache(request_state)
             print(f"INFO IMAGEGEN: anteprima pronta | {request_state['data']['kind']} | {time.time() - started:.1f}s", flush=True)
             return png

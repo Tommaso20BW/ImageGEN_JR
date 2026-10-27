@@ -4138,10 +4138,12 @@
     const layout = pxiLay.layouts[pxiModule];
     if (JSON.stringify(layout) === pxiLay.before) return;
     // Salvataggio per sempre (repository) e nuova anteprima con le posizioni nuove.
+    // Anche l'anteprima porta le posizioni e il servizio le salva se sono nuove,
+    // quindi se questa richiesta si perde il salvataggio parte comunque.
     netFetch(`${directBase}/layout`,{
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
       body:JSON.stringify({v:1, action:'layout', session, module:pxiModule, layout})
-    }, 30000).catch(() => setPreviewError('Posizioni non salvate per sempre: valgono solo per ora.'));
+    }, 30000).catch(() => {});
     await previewGraphic();
   }
 
