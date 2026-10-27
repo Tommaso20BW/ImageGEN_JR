@@ -468,6 +468,7 @@
     .src-row .btn.loading{opacity:.55}
     .src-row .btn.on{box-shadow:inset 0 0 0 2px var(--cta)}
     #pxiSrcHint{margin:0 2px 10px}
+    #pxiSrcHint:empty{display:none}
     .module-chips .opt{min-height:38px;padding:0 13px;font-size:14px;width:auto;flex:0 0 auto;gap:0}
     .module-chips .opt .radio{display:none}
     /* Popup numero di maglia */
@@ -3164,8 +3165,7 @@
       pxiModuleManual = false;            // vale il modulo del sito
       readPxiText();
       all.forEach(b => b.classList.toggle('on', b === btn));
-      $('pxiSrcHint').textContent = [lineup.label, lineup.match, lineup.module,
-        lineup.updated ? `agg. ${lineup.updated.replace(' ', ' · ')}` : ''].filter(Boolean).join(' · ');
+      $('pxiSrcHint').textContent = '';     // il pulsante evidenziato basta: niente riepilogo
       if (lineup.updated) btn.querySelector('.src-upd').textContent = lineup.updated.replace(' ', ' · ');
       haptic('success');
     } catch (err) {
