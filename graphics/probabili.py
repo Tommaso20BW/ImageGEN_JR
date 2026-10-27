@@ -229,7 +229,7 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
     s = layout['scale']
     k = meta['head_rect'][2] * s / (HEAD_CROP[2] - HEAD_CROP[0])
 
-    cards, names = [], []
+    cards, labels, names = [], [], []   # lastre+teste sotto, blocchi coi nomi sempre sopra
     for i, ((cx, top), player) in enumerate(zip(place_cards(layout['cards'], s), players)):
         px, py, pw, ph = _rect((cx, top), meta['plates_rect'], s)
         hx, hy, hw, hh = _rect((cx, top), meta['head_rect'], s)
@@ -239,8 +239,8 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
             f'<div class="head" style="left:{hx}px;top:{hy}px;width:{hw}px;height:{hh}px">'
             f'<img src="{data_uri(head_photo(player, kit))}" style="left:{-HEAD_CROP[0] * k}px;'
             f'top:{-HEAD_CROP[1] * k}px;width:{1254 * k}px;height:{1254 * k}px"></div>'
-            f'<img class="abs" src="{label}" style="left:{lx}px;top:{ly}px;width:{lw}px;height:{lh}px">'
         )
+        labels.append(f'<img class="abs" src="{label}" style="left:{lx}px;top:{ly}px;width:{lw}px;height:{lh}px">')
         x, base = cx + text['cx'] * s, top + text['base'] * s
         t = (f'<text x="{x}" y="{base}" text-anchor="middle" font-family="{NAME_FONT}" font-weight="500" '
              f'font-size="{NAME_SIZE * s}" letter-spacing="{NAME_SPACING * s}" data-fit="{NAME_MAX_W * s}">'
@@ -270,7 +270,7 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#ff
 svg{{position:absolute;left:0;top:0}}
 </style></head><body>
 <img class="abs" src="{data_uri(canva / meta['bg'])}" style="left:0;top:0;width:{DESIGN_W}px;height:{DESIGN_H}px">
-{''.join(cards)}{logos}
+{''.join(cards)}{''.join(labels)}{logos}
 <svg width="{DESIGN_W}" height="{DESIGN_H}" viewBox="0 0 {DESIGN_W} {DESIGN_H}">{''.join(names)}</svg>
 <script>
 // Nomi lunghi: si stringono per restare dentro l'etichetta.

@@ -514,11 +514,16 @@
     .lay-frame{position:relative;flex:none;width:min(100%,calc((var(--app-h) - 290px) * .75));aspect-ratio:3/4;margin:0 auto;
       overflow:hidden;border-radius:12px;background:#ddd;box-shadow:var(--preview-shadow);touch-action:none}
     .lay-frame img,.lay-frame svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-    .lay-grid line{stroke:rgba(17,17,19,.16);stroke-width:1;vector-effect:non-scaling-stroke}
-    .lay-grid line.main{stroke:rgba(17,17,19,.3)}
-    .lay-grid circle{fill:rgba(17,17,19,.3)}
-    .lay-frame.picking .lay-grid line{stroke:rgba(17,17,19,.38)}
-    .lay-frame.picking .lay-grid circle{fill:rgba(17,17,19,.55)}
+    .lay-grid line{stroke:rgba(17,17,19,.09);stroke-width:1;vector-effect:non-scaling-stroke}
+    .lay-grid line.main{stroke:rgba(17,17,19,.2)}
+    .lay-grid line.fine{stroke:rgba(17,17,19,.05)}
+    .lay-grid circle{fill:rgba(17,17,19,.2)}
+    .lay-grid circle.fine{fill:transparent}
+    .lay-frame.picking .lay-grid line{stroke:rgba(17,17,19,.2)}
+    .lay-frame.picking .lay-grid line.main{stroke:rgba(17,17,19,.3)}
+    .lay-frame.picking .lay-grid line.fine{stroke:rgba(17,17,19,.12)}
+    .lay-frame.picking .lay-grid circle{fill:rgba(17,17,19,.45)}
+    .lay-frame.picking .lay-grid circle.fine{fill:rgba(17,17,19,.25)}
     .lay-card{position:absolute;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
       border-radius:8px;background:rgba(17,17,19,.58);border:1.5px solid rgba(214,181,127,.95);color:#fff;
       font-weight:800;text-align:center;overflow:hidden;cursor:pointer;
@@ -4159,11 +4164,11 @@
     const s = layout.scale;
     // Griglia sul centro delle card (cambia con la grandezza).
     const ys = pxiLay.grid.y.map(y => y + CARD_MID * s);
-    // Una linea su due più marcata (la griglia originale, da x=120 ogni 105), le altre più leggere.
+    // Una riga su due più marcata (la griglia originale), le righe nuove quasi invisibili.
     $('layGrid').innerHTML =
       pxiLay.grid.x.map(x => `<line class="${Math.abs(Math.round((x - 120) / 52.5)) % 2 ? '' : 'main'}" x1="${x}" y1="0" x2="${x}" y2="1440"/>`).join('') +
-      ys.map((y,i) => `<line class="${i % 2 ? '' : 'main'}" x1="0" y1="${y}" x2="1080" y2="${y}"/>`).join('') +
-      pxiLay.grid.x.map(x => ys.map(y => `<circle cx="${x}" cy="${y}" r="4"/>`).join('')).join('');
+      ys.map((y,i) => `<line class="${i % 2 ? 'fine' : 'main'}" x1="0" y1="${y}" x2="1080" y2="${y}"/>`).join('') +
+      pxiLay.grid.x.map(x => ys.map((y,i) => `<circle class="${i % 2 ? 'fine' : ''}" cx="${x}" cy="${y}" r="${i % 2 ? 3 : 4}"/>`).join('')).join('');
     const box = $('layCards');
     if (rebuild || box.children.length !== 11) {
       box.innerHTML = '';
