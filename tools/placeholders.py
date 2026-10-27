@@ -6,6 +6,7 @@ Una immagine 540x720 per grafica e maglia: canva/<nome>_<maglia>_placeholder.png
 
 Uso: python tools/placeholders.py ../LiveScore_Assets_JR/canva
 """
+import json
 import sys
 from pathlib import Path
 
