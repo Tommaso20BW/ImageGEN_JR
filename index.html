@@ -411,6 +411,28 @@
     .photo-frame{position:relative;width:100%;max-width:min(380px,calc((100dvh - 420px) * .75));min-width:220px;aspect-ratio:3/4;margin:0 auto;overflow:hidden;
       border-radius:var(--radius);background:var(--surface2);border:1.5px solid var(--line);touch-action:none;cursor:grab;user-select:none}
     .photo-frame.dragging{cursor:grabbing}
+    /* FOTO + JR Sfocata: foto caricate, scelta sfondo, editor con più foto */
+    .jr-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .jr-tile{position:relative;aspect-ratio:3/4;border:0;padding:0;border-radius:12px;overflow:hidden;background:var(--surface2);
+      outline:3px solid transparent;outline-offset:-3px;transition:outline-color .18s var(--ease-out)}
+    .jr-tile img{width:100%;height:100%;object-fit:cover;display:block}
+    .jr-tile .x{position:absolute;right:6px;top:6px;width:28px;height:28px;border:0;border-radius:50%;
+      background:rgba(0,0,0,.6);color:#fff;font-size:16px;font-weight:800;line-height:28px;cursor:pointer}
+    .jr-tile .n{position:absolute;left:6px;top:6px;min-width:22px;height:22px;border-radius:11px;padding:0 6px;
+      background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center}
+    .jr-tile.add{display:grid;place-items:center;color:var(--muted);font-size:34px;font-weight:300;cursor:pointer;
+      box-shadow:inset 0 0 0 1.5px var(--line)}
+    .jr-tile.selected{outline-color:var(--cta)}
+    .jr-tile.selected .n{background:var(--cta);color:var(--cta-ink)}
+    #jrbFrame{cursor:default;background:#111}
+    #jrbFrame .bg{position:absolute;max-width:none;pointer-events:none}
+    #jrbFrame .card{position:absolute;max-width:none;cursor:grab;touch-action:none;pointer-events:auto;-webkit-user-drag:none;
+      box-shadow:0 calc(6px * var(--k)) calc(44px * var(--k)) rgba(0,0,0,.62);outline:0 solid transparent;
+      transition:outline-color .15s}
+    #jrbFrame .card.sel{outline:2px solid var(--cta);outline-offset:2px}
+    #jrbFrame .overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3}
+    .jrb-tools{display:flex;align-items:center;justify-content:center;gap:8px;margin:12px auto 0}
+    .jrb-tools .lay-size{background:var(--surface2)}
     .pxi-slots{display:grid;gap:8px}
     /* Matchday: schede partita */
     .fx-list{display:grid;gap:8px}
@@ -991,6 +1013,48 @@
             <div id="pxiParsed" class="parsed"></div>
           </section>
 
+          <section class="screen" data-screen="jrstyle">
+            <div class="eyebrow">Foto + JR</div>
+            <h1>Stile</h1>
+            <p class="lead">Classica: la foto a tutta pagina. Sfocata: la foto più piccola con l’ombra, sopra la stessa foto sfocata. Puoi metterne fino a 3.</p>
+            <div id="jrStyleOpts" class="opts" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="jrphotos">
+            <div class="eyebrow">Foto + JR · Sfocata</div>
+            <h1>Foto</h1>
+            <p class="lead">Da 1 a 3 foto. Ognuna resta con le sue proporzioni.</p>
+            <div id="jrTiles" class="jr-tiles"></div>
+            <input id="jrFiles" type="file" accept="image/*" multiple hidden>
+            <div id="jrPhotosHint" class="hint"></div>
+          </section>
+
+          <section class="screen" data-screen="jrbg">
+            <div class="eyebrow">Foto + JR · Sfocata</div>
+            <h1>Sfondo</h1>
+            <p class="lead">Quale foto vuoi come sfondo sfocato?</p>
+            <div id="jrBgTiles" class="jr-tiles" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="jrblur">
+            <div class="eyebrow">Foto + JR · Sfocata</div>
+            <h1>Posizione</h1>
+            <p id="jrbHint" class="lead">Tocca una foto: trascinala per spostarla, due dita o − + per la grandezza.</p>
+            <div id="jrbFrame" class="photo-frame">
+              <img id="jrbBg" class="bg" alt="">
+              <div id="jrbCards"></div>
+              <img id="jrbOverlay" class="overlay" alt="">
+              <div class="guides" aria-hidden="true"><i class="v" style="left:25%"></i><i class="v mid" style="left:50%"></i><i class="v" style="left:75%"></i><i class="h" style="top:25%"></i><i class="h mid" style="top:50%"></i><i class="h" style="top:75%"></i></div>
+            </div>
+            <div class="jrb-tools">
+              <div class="lay-size" role="group" aria-label="Grandezza foto">
+                <button id="jrbMinus" type="button" aria-label="Foto più piccola">−</button>
+                <output id="jrbScale">—</output>
+                <button id="jrbPlus" type="button" aria-label="Foto più grande">+</button>
+              </div>
+            </div>
+          </section>
+
           <section class="screen" data-screen="jrcolor">
             <div class="eyebrow">Foto + JR</div>
             <h1>Colore del JR</h1>
@@ -1209,6 +1273,7 @@
   const SIDES = [['home','In casa'],['away','In trasferta']];
   const KITS = [['home','Home'],['away','Away'],['third','Third']];
   const JR_COLORS = [['black','Nero'],['white','Bianco'],['gold','Oro']];
+  const JR_STYLES = [['classic','Classica'],['blur','Sfocata']];
   const CAL_MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const CAL_MAX = 14;
   const PXI_MODULES = [["4-2-3-1", "4-2-3-1"], ["4-3-3", "4-3-3"], ["4-4-2", "4-4-2"], ["4-3-1-2", "4-3-1-2"], ["4-2-2-2", "4-2-2-2"], ["4-3-2-1", "4-3-2-1"], ["4-1-2-1-2", "4-1-2-1-2"], ["3-4-2-1", "3-4-2-1"], ["3-4-1-2", "3-4-1-2"], ["3-5-2", "3-5-2"], ["3-4-3", "3-4-3"], ["5-4-1", "5-4-1"]];
@@ -1226,7 +1291,7 @@
   const STEP_NAMES = {
     competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
     player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
-    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto'
+    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto', jrstyle:'Stile', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione'
   };
 
   const $ = id => document.getElementById(id);
@@ -1268,6 +1333,10 @@
   let kit = '';
   let kitAuto = false;   // kit messo in automatico (competizione UEFA, passo nascosto)
   let jrColor = '';      // FOTO + JR: colore del logo
+  // FOTO + JR Sfocata: foto caricate (max 3), sfondo e posizione di ognuna
+  // (x/y centro in frazione della pagina, w larghezza in frazione della pagina).
+  const JR_MAX = 3;
+  const jrb = {style:'', cards:[], bg:'', sel:-1, uploading:0};
   let pxiModule = '';    // PROBABILE XI: modulo
   let calMonth = 0;      // CALENDARIO: mese (1-12)
   const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
@@ -1460,7 +1529,9 @@
       const rest = {squad:['squad'], xi:['kit','lineup','photo'], md:['kit','match','photo'], pxi:['kit','xi11']}[kind];
       flow = pick([...base,...rest]);
     }
-    else if (kind === 'jr') flow = ['jrcolor','photo'];
+    else if (kind === 'jr') flow = jrb.style === 'blur'
+      ? ['jrstyle','jrphotos',...(jrb.cards.length > 1 ? ['jrbg'] : []),'jrcolor','jrblur']
+      : ['jrstyle','jrcolor','photo'];
     else if (kind === 'cal') flow = ['calmonth','calrows'];
     if (TAB_KINDS[tab]) flow = ['subkind',...flow];
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
@@ -1503,6 +1574,10 @@
       case 'photo': return photoState.id ? 'Caricata' : '';
       case 'phasephoto': return ppState.bg ? 'Caricata' : '';
       case 'jrcolor': return labelOf(JR_COLORS,jrColor);
+      case 'jrstyle': return labelOf(JR_STYLES,jrb.style);
+      case 'jrphotos': return jrb.cards.length ? `${jrb.cards.length} foto` : '';
+      case 'jrbg': { const n = jrb.cards.findIndex(c => c.id === jrb.bg); return n < 0 ? '' : `Foto ${n + 1}`; }
+      case 'jrblur': return jrb.cards.length ? 'Pronta' : '';
       case 'module': return pxiModule;
       case 'subkind': return labelOf(TAB_KINDS[tab] || [],kind);
       case 'mdpick': { const m = fixtureList.find(f => f.id === mdPick); return mdPick === 'manual' ? 'A mano' : (m ? fixtureLabel(m, true) : ''); }
@@ -1667,7 +1742,7 @@
       if (el !== screen) el.classList.remove('active');
     });
     if (screen) screen.classList.add('active');
-    const editing = screenName === 'photo' || screenName === 'phasephoto';
+    const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur';
     $('stage').classList.toggle('photo-mode', editing);
     if (editing) $('stage').scrollTop = 0;
     try {
@@ -1675,6 +1750,9 @@
     } catch (_) {}
     if (screenName === 'phasephoto') { $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Foto + JR'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
+    if (screenName === 'jrphotos') renderJrTiles();
+    if (screenName === 'jrbg') renderJrBg();
+    if (screenName === 'jrblur') { jrbAutoLayout(); requestAnimationFrame(() => { fitJrbFrame(); renderJrb(); }); }
     if (screenName === 'lineup') readXiText();
     if (screenName === 'mdpick') {
       $('mdPickEyebrow').textContent = ({squad:'Squad List', xi:'Starting XI', md:'Matchday', pxi:'Probabile XI',
@@ -1774,6 +1852,7 @@
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
     renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; });
     renderOptions('jrColorOpts',JR_COLORS,jrColor,v => { jrColor = v; });
+    renderOptions('jrStyleOpts',JR_STYLES,jrb.style,v => { jrb.style = v; buildFlow(); });
     renderOptions('moduleOpts',PXI_MODULES,pxiModule,v => { pxiModule = v; pxiModuleManual = true; readPxiText(); });
     $('subkindTitle').textContent = labelOf(TABS,tab);
     renderOptions('subkindOpts',TAB_KINDS[tab] || [],kind,v => {
@@ -2180,6 +2259,8 @@
     kit = '';
     kitAuto = false;
     jrColor = '';
+    jrb.cards.forEach(c => { try { URL.revokeObjectURL(c.url); } catch (_) {} });
+    Object.assign(jrb,{style:'', cards:[], bg:'', sel:-1, uploading:0});
     pxiModule = '';
     pxiPicks = Array(11).fill('');
     calMonth = 0;
@@ -2480,7 +2561,7 @@
   function validateCurrent() {
     const step = flow[flowIndex];
 
-    const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, subkind:kind, mdpick:mdPick};
+    const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, subkind:kind, mdpick:mdPick, jrstyle:jrb.style};
     if (step in choice && !choice[step]) { showError('Seleziona un’opzione per continuare.'); return false; }
 
     if (step === 'opponent') return resolveTeam();
@@ -2522,6 +2603,12 @@
       if (!/^([01]?\d|2[0-3])[:.][0-5]\d$/.test($('matchTime').value.trim())) { showError('Inserisci l’orario (es. 20:45).'); return false; }
       if (!$('matchDate').value) { showError('Scegli la data.'); return false; }
     }
+
+    if (step === 'jrphotos') {
+      if (jrb.uploading) { showError('Attendi il caricamento delle foto.'); return false; }
+      if (!jrb.cards.length) { showError('Carica almeno una foto.'); return false; }
+    }
+    if (step === 'jrbg' && !jrb.cards.some(c => c.id === jrb.bg)) { showError('Scegli la foto per lo sfondo.'); return false; }
 
     if (step === 'photo') {
       if (photoState.uploading) { showError('Attendi il caricamento della foto.'); return false; }
@@ -3191,6 +3278,224 @@
   }
 
 
+  /* ---------- FOTO + JR Sfocata (pagina 26 Canva) ---------- */
+  // Stesse misure di graphics/photo_jr.py: sfondo sfocato 28 px (pagina 1080) e
+  // ingrandito del 6%, foto nitide con ombra; il riquadro è la pagina in piccolo.
+  const JRB_BLUR = 28, JRB_ZOOM = 1.06, JRB_W = [.12, 1.4];
+
+  async function addJrPhotos(files) {
+    clearError();
+    if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+    const list = [...files].slice(0, JR_MAX - jrb.cards.length);
+    if (files.length > list.length) showError(`Massimo ${JR_MAX} foto.`);
+    for (const file of list) {
+      jrb.uploading++;
+      renderJrTiles();
+      try {
+        const {blob,w,h} = await preparePhoto(file);
+        const response = await netFetch(`${directBase}/upload`,{
+          method:'POST', headers:{'Content-Type':'image/jpeg','X-ImageGEN-Session':session}, body:blob
+        }, 60000);
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || !body.ok) throw new Error(body.error || 'Caricamento non riuscito.');
+        if (jrb.cards.length < JR_MAX && !jrb.cards.some(c => c.id === body.photo_id)) {
+          jrb.cards.push({id:body.photo_id, w0:w, h0:h, url:URL.createObjectURL(blob), x:.5, y:.5, w:0, base:0, placed:false});
+          haptic('success');
+        }
+      } catch (err) {
+        showError(err && err.message ? err.message : 'Caricamento non riuscito.');
+      } finally {
+        jrb.uploading--;
+      }
+    }
+    if (!jrb.cards.some(c => c.id === jrb.bg)) jrb.bg = jrb.cards.length === 1 ? jrb.cards[0].id : '';
+    jrb.cards.forEach(c => { c.placed = false; });   // nuova disposizione automatica
+    buildFlow();
+    renderJrTiles();
+    renderSteps();
+  }
+
+  function renderJrTiles() {
+    const box = $('jrTiles');
+    box.innerHTML = '';
+    jrb.cards.forEach((c,i) => {
+      const tile = document.createElement('div');
+      tile.className = 'jr-tile';
+      tile.innerHTML = `<img alt="Foto ${i + 1}"><span class="n">${i + 1}</span><button class="x" type="button" aria-label="Togli foto ${i + 1}">×</button>`;
+      tile.querySelector('img').src = c.url;
+      tile.querySelector('.x').addEventListener('click',() => {
+        haptic('select');
+        try { URL.revokeObjectURL(c.url); } catch (_) {}
+        jrb.cards.splice(i,1);
+        if (jrb.bg === c.id) jrb.bg = jrb.cards.length === 1 ? jrb.cards[0].id : '';
+        jrb.cards.forEach(card => { card.placed = false; });
+        buildFlow(); renderJrTiles(); renderSteps();
+      });
+      box.appendChild(tile);
+    });
+    if (jrb.cards.length + jrb.uploading < JR_MAX) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'jr-tile add';
+      add.setAttribute('aria-label','Aggiungi foto');
+      add.textContent = '+';
+      add.addEventListener('click',() => $('jrFiles').click());
+      box.appendChild(add);
+    }
+    $('jrPhotosHint').textContent = jrb.uploading ? 'Caricamento…' : `${jrb.cards.length} / ${JR_MAX} foto`;
+  }
+
+  function renderJrBg() {
+    const box = $('jrBgTiles');
+    box.innerHTML = '';
+    jrb.cards.forEach((c,i) => {
+      const tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'jr-tile' + (c.id === jrb.bg ? ' selected' : '');
+      tile.setAttribute('role','radio');
+      tile.setAttribute('aria-checked',c.id === jrb.bg ? 'true' : 'false');
+      tile.innerHTML = `<img alt="Foto ${i + 1}"><span class="n">${i + 1}</span>`;
+      tile.querySelector('img').src = c.url;
+      tile.addEventListener('click',() => { haptic('select'); jrb.bg = c.id; renderJrBg(); renderSteps(); });
+      box.appendChild(tile);
+    });
+  }
+
+  // Disposizione automatica: 1 foto grande al centro (come Canva), 2 affiancate, 3 a cascata.
+  function jrbAutoLayout() {
+    if (jrb.cards.every(c => c.placed)) return;
+    const n = jrb.cards.length;
+    const spots = n === 1 ? [[.5,.5]] : n === 2 ? [[.28,.5],[.72,.5]] : [[.31,.29],[.5,.5],[.69,.71]];
+    const box = n === 1 ? [927,1160] : n === 2 ? [470,900] : [560,700];
+    jrb.cards.forEach((c,i) => {
+      const w = Math.min(box[0] / 1080, box[1] / 1440 * c.w0 / c.h0);
+      Object.assign(c,{x:spots[i][0], y:spots[i][1], w, base:w, placed:true});
+    });
+    jrb.sel = -1;
+  }
+
+  // Riquadro grande quanto lo spazio libero (come l'editor foto): calcolato solo
+  // all'apertura e quando cambia la finestra, non a ogni tocco.
+  function fitJrbFrame() {
+    const frame = $('jrbFrame');
+    if (!frame.offsetParent) return;
+    const free = $('stage').getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 90;
+    frame.style.maxWidth = 'none';
+    frame.style.width = `${Math.floor(Math.max(200, Math.min(frame.parentElement.clientWidth, free * .75)))}px`;
+  }
+
+  function renderJrb() {
+    const frame = $('jrbFrame');
+    if (!frame.offsetParent) return;
+    const k = frame.clientWidth / 1080;
+    frame.style.setProperty('--k', k);
+    const bg = jrb.cards.find(c => c.id === jrb.bg) || jrb.cards[0];
+    const img = $('jrbBg');
+    if (bg) {
+      const cover = Math.max(1080 / bg.w0, 1440 / bg.h0) * JRB_ZOOM;
+      const bw = bg.w0 * cover, bh = bg.h0 * cover;
+      if (img.getAttribute('src') !== bg.url) img.src = bg.url;
+      Object.assign(img.style,{left:`${(1080 - bw) / 2 * k}px`, top:`${(1440 - bh) / 2 * k}px`,
+        width:`${bw * k}px`, height:`${bh * k}px`, filter:`blur(${JRB_BLUR * k}px)`});
+    }
+    const box = $('jrbCards');
+    if (box.children.length !== jrb.cards.length || [...box.children].some((el,i) => el.dataset.id !== jrb.cards[i].id)) {
+      box.innerHTML = '';
+      jrb.cards.forEach(c => {
+        const el = document.createElement('img');
+        el.className = 'card';
+        el.alt = '';
+        el.draggable = false;
+        el.dataset.id = c.id;
+        el.src = c.url;
+        box.appendChild(el);
+      });
+    }
+    [...box.children].forEach((el,i) => {
+      const c = jrb.cards[i];
+      const w = c.w * 1080, h = w * c.h0 / c.w0;
+      Object.assign(el.style,{left:`${(c.x * 1080 - w / 2) * k}px`, top:`${(c.y * 1440 - h / 2) * k}px`,
+        width:`${w * k}px`, height:`${h * k}px`});
+      el.classList.toggle('sel', i === jrb.sel);
+    });
+    const ov = $('jrbOverlay');
+    const url = directBase && session
+      ? `${directBase}/overlay?session=${encodeURIComponent(session)}&name=jr&kit=${encodeURIComponent(jrColor || 'white')}` : '';
+    if (url && ov.getAttribute('src') !== url) ov.src = url;
+    const sel = jrb.cards[jrb.sel];
+    $('jrbScale').textContent = sel ? `${Math.round(sel.w / sel.base * 100)}%` : '—';
+    $('jrbMinus').disabled = !sel || sel.w <= JRB_W[0] + 1e-6;
+    $('jrbPlus').disabled = !sel || sel.w >= JRB_W[1] - 1e-6;
+    $('jrbHint').textContent = sel
+      ? 'Trascina per spostarla; due dita o − + per la grandezza.'
+      : 'Tocca una foto: trascinala per spostarla, due dita o − + per la grandezza.';
+  }
+
+  function jrbScale(factor) {
+    const c = jrb.cards[jrb.sel];
+    if (!c) return;
+    c.w = Math.min(JRB_W[1], Math.max(JRB_W[0], c.w * factor));
+    renderJrb();
+  }
+
+  function initJrBlur() {
+    $('jrFiles').addEventListener('change',e => { addJrPhotos(e.target.files || []); e.target.value = ''; });
+    $('jrbMinus').addEventListener('click',() => { haptic('select'); jrbScale(1 / 1.05); });
+    $('jrbPlus').addEventListener('click',() => { haptic('select'); jrbScale(1.05); });
+    const frame = $('jrbFrame');
+    const pointers = new Map();
+    let last = null;
+    const snap = () => {
+      const pts = [...pointers.values()];
+      if (pts.length === 1) return {x:pts[0].x, y:pts[0].y, d:0};
+      const [a,b] = pts;
+      return {x:(a.x + b.x) / 2, y:(a.y + b.y) / 2, d:Math.hypot(a.x - b.x, a.y - b.y)};
+    };
+    frame.addEventListener('pointerdown',e => {
+      const el = e.target.closest('.card');
+      if (!pointers.size) {
+        if (el) {
+          // La foto toccata va in primo piano e diventa quella selezionata.
+          const i = jrb.cards.findIndex(c => c.id === el.dataset.id);
+          if (i >= 0) { const [c] = jrb.cards.splice(i,1); jrb.cards.push(c); jrb.sel = jrb.cards.length - 1; haptic('select'); }
+        } else if (jrb.sel >= 0) {
+          jrb.sel = -1;
+        }
+        renderJrb();
+      }
+      if (jrb.sel < 0) return;
+      frame.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId,{x:e.clientX, y:e.clientY});
+      last = snap();
+    });
+    frame.addEventListener('pointermove',e => {
+      if (!pointers.has(e.pointerId) || !last) return;
+      pointers.set(e.pointerId,{x:e.clientX, y:e.clientY});
+      const now = snap();
+      const c = jrb.cards[jrb.sel];
+      if (c) {
+        c.x += (now.x - last.x) / frame.clientWidth;
+        c.y += (now.y - last.y) / frame.clientHeight;
+        c.x = Math.min(1.5, Math.max(-.5, c.x));
+        c.y = Math.min(1.5, Math.max(-.5, c.y));
+        if (now.d && last.d) c.w = Math.min(JRB_W[1], Math.max(JRB_W[0], c.w * now.d / last.d));
+      }
+      last = now;
+      renderJrb();
+    });
+    const end = e => { pointers.delete(e.pointerId); last = pointers.size ? snap() : null; };
+    frame.addEventListener('pointerup',end);
+    frame.addEventListener('pointercancel',end);
+    frame.addEventListener('wheel',e => {
+      if (jrb.sel < 0) return;
+      e.preventDefault();
+      jrbScale(Math.exp(-e.deltaY * 0.0015));
+    },{passive:false});
+    frame.addEventListener('touchmove',e => e.preventDefault(),{passive:false});
+    window.addEventListener('resize',() => { if ($('jrbFrame').offsetParent) { fitJrbFrame(); renderJrb(); } });
+  }
+
+
   /* ---------- HALF / END OF 90' / FULL TIME: sfondo + persona ---------- */
   // Stessa pagina dei livelli del bot (1086x1448) e stessi calcoli di
   // livescore/graphics/phase_layers.py (box): l'anteprima coincide con la grafica.
@@ -3477,6 +3782,14 @@
       return {v:1, action:'render', session, data:{
         kind:'cal', month:calMonth, year:Number($('calYear').value),
         matches:calRows.map(r => ({day:Number(r.day), side:r.side, opponent:{name:r.team}}))
+      }};
+    }
+    if (kind === 'jr' && jrb.style === 'blur') {
+      if (!jrb.cards.length) throw new Error('Carica almeno una foto.');
+      return {v:1, action:'render', session, data:{
+        kind:'jr', style:'blur', color:jrColor,
+        background_id:jrb.bg || jrb.cards[0].id,
+        cards:jrb.cards.map(c => ({photo_id:c.id, x:+c.x.toFixed(5), y:+c.y.toFixed(5), w:+c.w.toFixed(5)}))
       }};
     }
     if (kind === 'jr') {
@@ -3991,6 +4304,7 @@
   $('statClear').addEventListener('click',() => { clearStats(); clearError(); renderSteps(); });
   $('squadText').addEventListener('input',() => { updateSquadSummary(); clearError(); renderSteps(); });
   initPhotoEditor();
+  initJrBlur();
   initPhaseEditor();
   $('previewEdit').addEventListener('click',() => {
     if (kind === 'pxi') { openLayoutEditor(); return; }

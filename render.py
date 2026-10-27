@@ -192,6 +192,17 @@ class Renderer:
         if kind == 'jr':
             from graphics import photo_jr
 
+            if data.get('style') == 'blur':
+                def photo(photo_id):
+                    raw = self.photos.get(photo_id)
+                    if not raw:
+                        raise ValueError('Foto non trovata: ricaricala nella Mini App.')
+                    return raw
+                return photo_jr.render(
+                    color=data['color'], style='blur', ghost=ghost,
+                    background=None if ghost else photo(data['background_id']),
+                    cards=[] if ghost else [(photo(c['photo_id']), c) for c in data['cards']],
+                )
             return photo_jr.render(color=data['color'], photo=None if ghost else self._photo(data),
                                    frame=data['frame'], ghost=ghost)
 

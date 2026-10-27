@@ -9,6 +9,7 @@ from graphics.squad_list import BACKGROUNDS as SQUAD_COMPETITIONS, parse_squad
 from graphics.starting_xi import PLAYERS as PLAYERS_IN_XI, parse_lineup
 from graphics.matchday import parse_info
 from graphics.photo_jr import COLORS as JR_COLORS
+from graphics import photo_jr
 from graphics.probabili import MODULES as PXI_MODULES
 from graphics.calendar import parse_matches
 
@@ -184,14 +185,28 @@ def _build_state(envelope, catalog, now, expected_session):
         color = str(incoming.get('color') or '')
         if color not in JR_COLORS:
             raise ValueError('Scegli il colore del JR.')
+        style = str(incoming.get('style') or 'classic')
+        if style not in photo_jr.STYLES:
+            raise ValueError('Stile non valido.')
+        if style == 'blur':
+            # Sfocata (pagina 26 Canva): 1-3 foto con posizione e larghezza, una è lo sfondo.
+            cards = incoming.get('cards')
+            if not isinstance(cards, list) or not 1 <= len(cards) <= photo_jr.MAX_CARDS:
+                raise ValueError(f'Carica da 1 a {photo_jr.MAX_CARDS} foto.')
+            cards = [{'photo_id': _photo_id(c.get('photo_id') if isinstance(c, dict) else None),
+                      **photo_jr.clean_card(c)} for c in cards]
+            background = _photo_id(incoming.get('background_id'))
+            if background not in {c['photo_id'] for c in cards}:
+                raise ValueError('Scegli la foto per lo sfondo.')
+            jr_data = {'kind': 'jr', 'style': 'blur', 'color': color,
+                       'background_id': background, 'cards': cards}
+        else:
+            jr_data = {'kind': 'jr', 'style': 'classic', 'color': color,
+                       'photo_id': _photo_id(incoming.get('photo_id')),
+                       'frame': _frame(incoming.get('frame'))}
         return {
             'id': uuid.uuid4().hex[:10],
-            'data': {
-                'kind': 'jr',
-                'color': color,
-                'photo_id': _photo_id(incoming.get('photo_id')),
-                'frame': _frame(incoming.get('frame')),
-            },
+            'data': jr_data,
             'status': 'ready',
             'updated': now,
             'source': 'webapp-direct',
