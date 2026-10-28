@@ -6,8 +6,9 @@ Tre stili:
   po' scurita; sopra, fino a 4 foto nitide con le loro proporzioni, angoli arrotondati e
   un'ombra morbida, ognuna spostata e ingrandita dall'utente;
 - collage: da 2 a 9 foto in un layout a riquadri (come i collage di Canva). I riquadri li
-  sceglie la Mini App (layout automatici) e arrivano qui già pronti: ogni foto riempie il
-  suo riquadro (ritaglio al centro, un po' verso l'alto per non tagliare i volti).
+  sceglie la Mini App (layout automatici) e arrivano qui già pronti: fondo bianco con linee
+  sottili, ogni foto riempie il suo riquadro (ritaglio al centro, un po' verso l'alto per non
+  tagliare i volti).
 
 Il logo ha posizione e misura del design Canva; il colore lo sceglie l'utente.
 """
@@ -30,11 +31,10 @@ BLUR_ZOOM = 1.1                # la sfocatura più forte sfuma i bordi: sfondo p
 BLUR_FILTER = f'blur({BLUR_PX}px) brightness(.78) saturate(1.12)'   # un po' scuro: le foto nitide risaltano
 CARD_SHADOW = '0 8px 48px rgba(0,0,0,.62)'
 CARD_RADIUS = 14
-# Collage: bordo minimo della pagina (il vero bordo è collage_top(), sotto il logo JR, uguale sui 4 lati)
-# e spazio fra i riquadri (pixel pagina 1080x1440).
-COLLAGE_MARGIN, COLLAGE_GAP, COLLAGE_RADIUS = 40, 16, 14
+# Collage (come i collage di Instagram/Canva): fondo bianco, bordo e linee sottili, angoli vivi. Il logo JR
+# sta sopra la foto in alto a destra, senza fascia riservata. Misure in pixel pagina 1080x1440.
+COLLAGE_MARGIN, COLLAGE_GAP = 10, 5
 COLLAGE_FOCUS_Y = 38           # ritaglio verticale in % (sotto 50: tiene la parte alta, dove stanno i volti)
-COLLAGE_LOGO_GAP = 34          # spazio fra il logo JR (in alto) e i riquadri
 COLLAGE_MIN = 0.06             # lato minimo di un riquadro, in frazione della pagina
 CARD_W = (0.12, 1.4)          # larghezza foto: da 12% a 140% della pagina
 
@@ -42,31 +42,6 @@ CARD_W = (0.12, 1.4)          # larghezza foto: da 12% a 140% della pagina
 @lru_cache(maxsize=1)
 def _meta():
     return json.loads((asset_dir() / 'canva' / 'jr.json').read_text(encoding='utf-8'))
-
-
-@lru_cache(maxsize=1)
-def logo_bottom():
-    """Dove finisce in basso il logo JR (pixel pagina 1080x1440), misurato sul livello Canva."""
-    from PIL import Image
-    bottom = 0.0
-    for color in COLORS:
-        name = _meta().get(color, {}).get('overlay')
-        if not name:
-            continue
-        with Image.open(asset_dir() / 'canva' / name) as image:
-            box = image.convert('RGBA').getchannel('A').point(lambda a: 255 if a > 20 else 0).getbbox()
-            if box:
-                bottom = max(bottom, box[3] * DESIGN_H / image.height)
-    return bottom
-
-
-def collage_top():
-    """Bordo del collage, uguale su tutti i lati: quanto serve per il logo JR in alto (come nelle altre pagine)."""
-    try:
-        bottom = logo_bottom()
-    except Exception:                      # livello mancante: spazio abbondante per il logo
-        bottom = 170.0
-    return round(max(float(COLLAGE_MARGIN), bottom + COLLAGE_LOGO_GAP), 1)
 
 
 def _uri(raw):
@@ -123,9 +98,9 @@ def _collage(cells):
         html.append(f'<div class="cell" style="left:{c["x"] * DESIGN_W}px;top:{c["y"] * DESIGN_H}px;'
                     f'width:{c["w"] * DESIGN_W}px;height:{c["h"] * DESIGN_H}px">'
                     f'<img src="{_uri(raw)}"></div>')
-    css = (f'.cell{{position:absolute;overflow:hidden;border-radius:{COLLAGE_RADIUS}px;background:#222}}'
+    css = ('.cell{position:absolute;overflow:hidden;background:#ddd}'
            f'.cell img{{left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:50% {COLLAGE_FOCUS_Y}%}}')
-    return ''.join(html), '#111', css
+    return ''.join(html), '#fff', css
 
 
 def _classic(photo, frame):
