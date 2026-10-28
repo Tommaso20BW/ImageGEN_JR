@@ -463,6 +463,10 @@
     .fx-team{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .fx-when{font-size:14px;font-weight:700}
     .fx-info{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fx-logos{display:flex;gap:6px;flex:none}
+    .fx-card .fx-logos .fx-logo,.fx-card .fx-logos .fx-logo img{width:34px;height:34px}
+    .fx-link{display:flex;gap:8px;align-items:center;margin-top:4px}
+    .fx-link .field-input{flex:1;min-width:0}
     .fx-other{min-height:52px;justify-content:center;font-weight:750;color:var(--muted)}
     .xi-rows{display:grid;gap:8px}
     /* Liste incollate: elenco letto (numero + cognome) */
@@ -1182,7 +1186,7 @@
           <section class="screen" data-screen="squad">
             <div class="eyebrow">Squad List</div>
             <h1>Convocati</h1>
-            <p class="lead">Incolla l’elenco, un giocatore per riga. I numeri vengono tolti e i nomi messi in ordine alfabetico su due colonne.</p>
+            <p class="lead">Un giocatore per riga: se hai scelto la partita dal sito Juventus i convocati sono già qui e puoi correggerli. I numeri vengono tolti e i nomi messi in ordine alfabetico su due colonne.</p>
             <textarea id="squadText" class="field-input" maxlength="1500" autocapitalize="words" spellcheck="false" placeholder="1 Buffon&#10;3 Chiellini&#10;10 Del Piero&#10;…"></textarea>
             <div id="squadSummary" class="hint">0 giocatori</div>
           </section>
@@ -1667,7 +1671,16 @@
       case 'jrlayout': return jrb.tpls ? `Layout ${jrb.tpl + 1}` : '';
       case 'module': return pxiModule;
       case 'subkind': return labelOf(TAB_KINDS[tab] || [],kind);
-      case 'mdpick': { const m = fixtureList.find(f => f.id === mdPick); return mdPick === 'manual' ? 'A mano' : (m ? fixtureLabel(m, true) : ''); }
+      case 'mdpick': {
+        if (mdPick.startsWith('site:')) {
+          const s = squadSite.find(x => `site:${x.id}` === mdPick);
+          if (!s) return '';
+          const [,mo,d] = s.date.split('-').map(Number);
+          return `${d} ${MONTHS_SHORT[mo - 1]} · ${displayTeamName(s.opponent)}`;
+        }
+        const m = fixtureList.find(f => f.id === mdPick);
+        return mdPick === 'manual' ? 'A mano' : (m ? fixtureLabel(m, true) : '');
+      }
       case 'calmonth': return calMonth ? `${CAL_MONTHS[calMonth - 1]} ${$('calYear').value}` : '';
       case 'calrows': { const n = calRows.length; return n ? `${n} partit${n === 1 ? 'a' : 'e'}` : ''; }
       case 'xi11': { const n = pxiPicks.filter(Boolean).length; return n ? `${pxiModule || '?'} · ${n} / 11` : ''; }
@@ -1850,7 +1863,10 @@
         : PREMATCH.includes(kind)
           ? 'Dal calendario della Juventus: competizione, campo e avversario si compilano da soli.'
           : 'Partita di oggi o già giocata: competizione, campo e avversario si compilano da soli.';
-      loadMdFixtures();
+      if (kind === 'squad') {
+        $('mdPickLead').textContent = 'Dai convocati pubblicati su juventus.com (prima squadra), dal più recente: partita e giocatori si compilano da soli.';
+        loadSquadSite();
+      } else loadMdFixtures();
     }
     if (screenName === 'calrows') fillCalendarFromFixtures();
     if (screenName === 'calrows') { if (!calRows.length) calRows.push({day:'', team:'', side:'home'}); renderCalRows(); }
@@ -2952,6 +2968,103 @@
     other.textContent = 'Altra partita o dati inventati (a mano)';
     other.addEventListener('click',() => { haptic('select'); pickMdFixture('manual'); });
     box.appendChild(other);
+  }
+
+  /* ---------- Squad List: convocati letti da juventus.com ---------- */
+  // Il servizio legge gli articoli "I convocati" della prima squadra (GET /convocati);
+  // un tocco compila partita (competizione, campo, avversario) e giocatori.
+  let squadSite = [];
+  let squadSiteAt = 0;
+
+  function findTeamByName(name) {
+    const q = norm(name);
+    if (!q) return null;
+    return teams.find(t => namesFor(t).some(n => norm(n) === q))
+      || teams.find(t => namesFor(t).some(n => { const v = norm(n); return v.startsWith(`${q} `) || q.startsWith(`${v} `); }))
+      || null;
+  }
+
+  function siteDateLabel(iso) {
+    const [y,mo,d] = String(iso || '').split('-').map(Number);
+    return y ? `${WEEKDAYS[new Date(y, mo - 1, d).getDay()]} ${d} ${MONTHS_SHORT[mo - 1]}` : '';
+  }
+
+  function siteCard(m) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fx-card' + (mdPick === `site:${m.id}` ? ' selected' : '');
+    const juve = findTeamByName('Juventus') || {name:'Juventus'};
+    const opp = findTeamByName(m.opponent);
+    b.innerHTML = `<span class="fx-logos"><span class="logo fx-logo"></span><span class="logo fx-logo"></span></span>
+      <span class="fx-main"><span class="fx-team"></span><span class="fx-when"></span><span class="fx-info"></span></span>`;
+    const [logoHome, logoAway] = b.querySelectorAll('.fx-logo');
+    fillLogo(logoHome, m.side === 'home' ? juve : (opp || {name:m.home}));
+    fillLogo(logoAway, m.side === 'home' ? (opp || {name:m.away}) : juve);
+    b.querySelector('.fx-team').textContent = `${displayTeamName(m.home)} – ${displayTeamName(m.away)}`;
+    b.querySelector('.fx-when').textContent = siteDateLabel(m.date);
+    let info = `${COMP_SHORT[m.competition] || m.competition_label || 'Competizione'} · ${m.players.length} convocati`;
+    if (!opp) { b.disabled = true; info += ' · squadra non nel catalogo'; }
+    else if (!competitionOptions().some(([v]) => v === m.competition)) { b.disabled = true; info += ' · competizione non prevista'; }
+    b.querySelector('.fx-info').textContent = info;
+    b.addEventListener('click',() => { haptic('select'); pickSquadSite(m); });
+    return b;
+  }
+
+  function renderSquadSite() {
+    const box = $('mdPickOpts');
+    box.innerHTML = '';
+    squadSite.forEach(m => box.appendChild(siteCard(m)));
+    const row = document.createElement('div');
+    row.className = 'fx-link';
+    row.innerHTML = '<input class="field-input" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="Oppure incolla il link dell’articolo">'
+      + '<button type="button" class="btn ghost">Carica</button>';
+    const input = row.querySelector('input');
+    const go = () => { const v = input.value.trim(); if (v) loadSquadSite(v); };
+    row.querySelector('button').addEventListener('click', go);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    box.appendChild(row);
+    const other = document.createElement('button');
+    other.type = 'button';
+    other.className = 'fx-card fx-other' + (mdPick === 'manual' ? ' selected' : '');
+    other.textContent = 'Altra partita o dati inventati (a mano)';
+    other.addEventListener('click',() => { haptic('select'); pickMdFixture('manual'); });
+    box.appendChild(other);
+  }
+
+  async function loadSquadSite(link) {
+    const hint = $('mdPickHint');
+    if (!link && squadSite.length && Date.now() - squadSiteAt < 120000) { hint.textContent = ''; renderSquadSite(); return; }
+    if (!directBase || !session) { hint.textContent = 'Sessione vecchia. Riavvia ImageGen dal workflow.'; renderSquadSite(); return; }
+    hint.textContent = link ? 'Leggo l’articolo…' : 'Cerco i convocati su juventus.com…';
+    if (!link) $('mdPickOpts').innerHTML = '';
+    try {
+      const url = `${directBase}/convocati?session=${encodeURIComponent(session)}` + (link ? `&url=${encodeURIComponent(link)}` : '');
+      const response = await netFetch(url, {method:'GET'}, 60000);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) throw new Error(body.error || 'Convocati non disponibili.');
+      if (link) {
+        squadSite = [...body.items, ...squadSite.filter(x => !body.items.some(n => n.id === x.id))]
+          .sort((a, b) => String(b.published).localeCompare(String(a.published)));
+      } else { squadSite = body.items; squadSiteAt = Date.now(); }
+      hint.textContent = '';
+    } catch (err) {
+      hint.textContent = `${err && err.message ? err.message : 'Convocati non disponibili.'} Incolla il link dell’articolo o scegli “Altra partita”.`;
+    }
+    if (kind === 'squad' && flow[flowIndex] === 'mdpick') renderSquadSite();
+  }
+
+  function pickSquadSite(m) {
+    mdPick = `site:${m.id}`;
+    kitFromMatch = false;
+    competition = m.competition;
+    side = m.side;
+    selectedTeam = findTeamByName(m.opponent);
+    $('opponentSearch').value = selectedTeam ? displayTeamName(selectedTeam.name) : '';
+    $('squadText').value = m.players.join('\n');
+    updateSquadSummary();
+    buildFlow();
+    renderSteps();
+    setTimeout(() => nextField(), 120);
   }
 
   // Un tocco: competizione, campo, avversario, stadio, data e ora.

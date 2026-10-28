@@ -175,6 +175,21 @@ class _DirectHandler(BaseHTTPRequestHandler):
             except (KeyError, ValueError, OSError):
                 self._json(404, {'ok': False, 'error': 'Sfondo non trovato.'})
             return
+        if parts.path.rstrip('/') == '/convocati':
+            # SQUAD LIST: convocati della prima squadra letti da juventus.com (dal più recente).
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            import juventus_convocati
+            try:
+                items = juventus_convocati.fetch(query.get('url', ''))
+                print(f'INFO IMAGEGEN: convocati dal sito: {len(items)}', flush=True)
+                self._json(200, {'ok': True, 'items': items})
+            except ValueError as exc:
+                print(f'WARN IMAGEGEN: convocati non letti: {exc}', flush=True)
+                self._json(400, {'ok': False, 'error': str(exc)})
+            return
         if parts.path.rstrip('/') == '/probabili_info':
             # Giorno e ora dell'ultimo aggiornamento di ogni sito, per i pulsanti.
             query = dict(parse_qsl(parts.query))
