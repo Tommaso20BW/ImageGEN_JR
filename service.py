@@ -24,7 +24,7 @@ from graphics.common import overlay_preview
 from graphics.starting_xi import MAX_PHOTO_BYTES, check_photo
 
 
-SESSION_DURATION_SECONDS = 600
+SESSION_DURATION_SECONDS = 30 * 60
 # Ultimo minuto: un tocco nella Mini App allunga la sessione di 5 minuti, ogni volta.
 EXTEND_WHEN_LEFT_SECONDS = 60
 EXTEND_BY_SECONDS = 300
