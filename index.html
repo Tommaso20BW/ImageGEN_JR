@@ -4420,6 +4420,7 @@
         const response = await netFetch(`${directBase}/cutout_state?${q}&start=1`, {}, 10000, 1);
         const body = await response.json().catch(() => ({}));
         if (response.ok && body.ok) { lastOk = performance.now(); state = body.state; if (state === 'error') throw new Error(body.error || 'Scontorno non riuscito.'); }
+        else if (response.status === 404) break;     // servizio senza /cutout_state (bot vecchio): lo scontorno si scarica direttamente
         else if (!TUNNEL_HICCUP.has(response.status)) throw new Error(body.error || 'Scontorno non riuscito.');
       } catch (err) {
         if (err && err.message && !/fetch|network|load failed|abort|connessione/i.test(err.message)) throw err;
