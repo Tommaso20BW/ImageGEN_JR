@@ -598,6 +598,10 @@
        cornice su 1086x1448); dentro, la pagina dei livelli 1086x1448 ridotta a 972x1296. */
     .pp-window{position:absolute;left:6.998%;top:5.249%;width:86.004%;height:89.503%;overflow:hidden}
     .pp-page{position:absolute;left:-2.034%;top:0;width:104.069%;height:100%}
+    /* La persona puo' uscire dal riquadro solo in alto, sopra la cornice: stessa pagina, ma la
+       finestra parte dal bordo della grafica (5,249% in piu') invece che dal riquadro. */
+    .pp-window2{position:absolute;left:6.998%;top:0;width:86.004%;height:94.752%;overflow:hidden}
+    .pp-page2{position:absolute;left:-2.034%;top:5.5396%;width:104.069%;height:94.4604%}
     /* Modalita' live (dal LiveScore): solo foto della fase e conferma */
     /* Restano al loro posto (righe e colonne della griglia invariate), solo invisibili */
     body.live #closeWorkflowButton{visibility:hidden}
@@ -1163,6 +1167,8 @@
             <div id="ppFrame" class="photo-frame">
               <div class="pp-window"><div class="pp-page">
                 <img id="ppBg" alt="" hidden>
+              </div></div>
+              <div class="pp-window2"><div class="pp-page2">
                 <img id="ppPerson" alt="" hidden>
               </div></div>
               <img id="ppOverlay" class="overlay ghost" alt="" hidden>
