@@ -1975,6 +1975,7 @@
       // Scelta del tipo: riparte da zero e passa subito al primo passaggio.
       kind = v;
       resetAllData();
+      if (kind === 'squad') prefetchSquadSite();
       buildFlow();
       flowIndex = 0;
       setTimeout(() => nextField(),120);
@@ -2473,6 +2474,7 @@
     previewMode = false;
     kind = value;
     resetAllData();
+    if (kind === 'squad') prefetchSquadSite();
     buildFlow();
     flowIndex = 0;
     refreshSearchSummaries();
@@ -2944,24 +2946,38 @@
   }
 
   // Due elenchi: prossime partite (pre-gara) e partite di oggi/già giocate (dalla più recente).
-  const fixtureCache = {};
-  async function loadMdFixtures() {
-    const hint = $('mdPickHint');
-    const mode = PREMATCH.includes(kind) ? 'next' : 'past';
-    if (!fixtureCache[mode] || !fixtureCache[mode].length) {
-      hint.textContent = 'Carico le partite…';
-      $('mdPickOpts').innerHTML = '';
+  const fixtureCache = {}, fixtureAt = {}, fixtureJobs = {};
+  const FIXTURE_TTL = 300000;     // 5 minuti: poi si riscarica in silenzio
+  const fixtureMode = () => PREMATCH.includes(kind) ? 'next' : 'past';
+
+  // Un solo caricamento alla volta per elenco; se fallisce restano le partite già scaricate.
+  function getFixtures(mode, force=false) {
+    const fresh = fixtureCache[mode] && fixtureCache[mode].length && Date.now() - (fixtureAt[mode] || 0) < FIXTURE_TTL;
+    if (fresh && !force) return Promise.resolve(fixtureCache[mode]);
+    if (fixtureJobs[mode]) return fixtureJobs[mode];
+    fixtureJobs[mode] = (async () => {
       const today = new Date();
       const day = n => isoDay(new Date(today.getTime() + n * 86400000));
       try {
         const rows = (mode === 'next' ? await fetchFixtures(day(0), day(60)) : await fetchFixtures(day(-30), day(0)))
           .filter(m => COMP_SHORT[m.competition]);
-        fixtureCache[mode] = mode === 'next' ? rows : rows.reverse();
-      } catch (_) { fixtureCache[mode] = []; }
-      if (mode !== (PREMATCH.includes(kind) ? 'next' : 'past')) return;     // nel frattempo è cambiata grafica
-    }
-    fixtureList = fixtureCache[mode];
-    hint.textContent = fixtureList.length ? '' : 'Calendario non disponibile: usa “Altra partita”.';
+        if (rows.length) { fixtureCache[mode] = mode === 'next' ? rows : rows.reverse(); fixtureAt[mode] = Date.now(); }
+      } catch (_) {}
+      fixtureJobs[mode] = null;
+      return fixtureCache[mode] || [];
+    })();
+    return fixtureJobs[mode];
+  }
+
+  // All'apertura: partite in arrivo e già giocate partono in background.
+  function prefetchFixtures() {
+    if (LIVE || !directBase || !session) return;
+    getFixtures('next'); getFixtures('past');
+  }
+
+  function renderMdFixtures(mode) {
+    fixtureList = fixtureCache[mode] || [];
+    $('mdPickHint').textContent = fixtureList.length ? '' : 'Calendario non disponibile: usa “Altra partita”.';
     const box = $('mdPickOpts');
     box.innerHTML = '';
     fixtureList.slice(0,10).forEach(m => box.appendChild(fixtureCard(m)));
@@ -2971,6 +2987,19 @@
     other.textContent = 'Altra partita o dati inventati (a mano)';
     other.addEventListener('click',() => { haptic('select'); pickMdFixture('manual'); });
     box.appendChild(other);
+  }
+
+  async function loadMdFixtures() {
+    const mode = fixtureMode();
+    const stale = fixtureCache[mode] && fixtureCache[mode].length;
+    if (!stale) {
+      $('mdPickHint').textContent = 'Carico le partite…';
+      $('mdPickOpts').innerHTML = '';
+    } else renderMdFixtures(mode);       // subito quelle già pronte
+    const before = fixtureCache[mode];
+    await getFixtures(mode);
+    if (mode !== fixtureMode() || flow[flowIndex] !== 'mdpick') return;     // nel frattempo è cambiato altro
+    if (!stale || fixtureCache[mode] !== before) renderMdFixtures(mode);
   }
 
   /* ---------- Squad List: convocati letti da juventus.com ---------- */
@@ -3031,21 +3060,36 @@
     box.appendChild(other);
   }
 
+  // Lettura dei convocati da juventus.com (o da un link incollato). Lancia se non riesce.
+  async function fetchSquadSite(link) {
+    const url = `${directBase}/convocati?session=${encodeURIComponent(session)}` + (link ? `&url=${encodeURIComponent(link)}` : '');
+    const response = await netFetch(url, {method:'GET'}, 60000);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.ok) throw new Error(body.error || 'Convocati non disponibili.');
+    if (link) {
+      squadSite = [...body.items, ...squadSite.filter(x => !body.items.some(n => n.id === x.id))]
+        .sort((a, b) => String(b.published).localeCompare(String(a.published)));
+    } else { squadSite = body.items; squadSiteAt = Date.now(); }
+  }
+
+  const squadSiteFresh = () => squadSite.length && Date.now() - squadSiteAt < 120000;
+  let squadSiteJob = null;
+
+  // Appena si tocca "Squad List": i convocati si cercano mentre si apre la schermata.
+  function prefetchSquadSite() {
+    if (LIVE || !directBase || !session || squadSiteFresh() || squadSiteJob) return;
+    squadSiteJob = fetchSquadSite('').catch(() => {}).finally(() => { squadSiteJob = null; });
+  }
+
   async function loadSquadSite(link) {
     const hint = $('mdPickHint');
-    if (!link && squadSite.length && Date.now() - squadSiteAt < 120000) { hint.textContent = ''; renderSquadSite(); return; }
+    if (!link && squadSiteFresh()) { hint.textContent = ''; renderSquadSite(); return; }
     if (!directBase || !session) { hint.textContent = 'Sessione vecchia. Riavvia ImageGen dal workflow.'; renderSquadSite(); return; }
     hint.textContent = link ? 'Leggo l’articolo…' : 'Cerco i convocati su juventus.com…';
     if (!link) $('mdPickOpts').innerHTML = '';
     try {
-      const url = `${directBase}/convocati?session=${encodeURIComponent(session)}` + (link ? `&url=${encodeURIComponent(link)}` : '');
-      const response = await netFetch(url, {method:'GET'}, 60000);
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.ok) throw new Error(body.error || 'Convocati non disponibili.');
-      if (link) {
-        squadSite = [...body.items, ...squadSite.filter(x => !body.items.some(n => n.id === x.id))]
-          .sort((a, b) => String(b.published).localeCompare(String(a.published)));
-      } else { squadSite = body.items; squadSiteAt = Date.now(); }
+      if (!link && squadSiteJob) { await squadSiteJob; if (!squadSiteFresh()) await fetchSquadSite(''); }
+      else await fetchSquadSite(link);
       hint.textContent = '';
     } catch (err) {
       hint.textContent = `${err && err.message ? err.message : 'Convocati non disponibili.'} Incolla il link dell’articolo o scegli “Altra partita”.`;
@@ -5298,6 +5342,7 @@
     restoreCatalogCache();
     refreshSearchSummaries();
     loadCatalogs();
+    prefetchFixtures();
   }
 
   buildStatRows();
