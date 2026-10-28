@@ -4,6 +4,8 @@ from urllib.parse import urlparse
 
 import requests
 
+import step_summary
+
 
 # Session message: bold title + italic line, both with custom emoji (offsets in UTF-16 units).
 SESSION_TITLE = "🎨 ImageGEN · JR"
@@ -61,6 +63,9 @@ class Telegram:
                 files=files,
                 timeout=timeout,
             )
+
+            step_summary.record(method, data, has_image=bool(files),
+                                ok=response.status_code == 200)
 
             if response.status_code >= 500 and method in {
                 'sendPhoto',
