@@ -2170,7 +2170,7 @@
     full:'Avvio la generazione…',
     stats:'Preparo la tabella delle statistiche.'
   };
-  const DEFAULT_MS = {goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, pxi:9000, cal:5000, half:6000, end_of_90:6000, full:6000, submit:2500};
+  const DEFAULT_MS = {ppcut:5000, goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, pxi:9000, cal:5000, half:6000, end_of_90:6000, full:6000, submit:2500};
   const MIN_FAST_MS = 3000;
   const DURATIONS_KEY = 'imagegen-jr-durations';
   const SLOW_SUB = 'Ci sta mettendo più del solito: attendi ancora qualche secondo.';
@@ -2280,7 +2280,7 @@
     b.finishing = true;
     cancelAnimationFrame(b.raf);
     clearInterval(b.poll);
-    const fast = b.kind !== 'submit' && !PHOTO_PHASES.has(b.kind);
+    const fast = b.kind !== 'submit' && b.kind !== 'ppcut' && !PHOTO_PHASES.has(b.kind);
     const duration = Math.max(350,fast ? MIN_FAST_MS - elapsed : 0);
     const from = b.shown;
     const t0 = now;
@@ -4231,22 +4231,20 @@
   }
 
   // Persona scontornata dal servizio (o il PNG trasparente caricato, così com'è).
+  // Non mostra nulla da sola: chi la chiama decide quando far comparire la foto.
   async function ppLoadCutout(person) {
-    $('ppSummary').textContent = 'Scontorno la persona…';
     try {
       const response = await netFetch(`${directBase}/cutout?session=${encodeURIComponent(session)}&id=${person.id}`,{}, 90000);
       if (!response.ok) throw new Error('Scontorno non riuscito.');
       const url = URL.createObjectURL(await response.blob());
-      if (ppState.person !== person) { ppRevoke(url); return; }
+      if (ppState.person !== person) { ppRevoke(url); return false; }
       ppRevoke(person.url);
       person.url = url;
       $('ppPerson').src = url;
-      $('ppPerson').hidden = false;
-      layoutPhase();
+      return true;
     } catch (err) {
       if (ppState.person === person) showError(err && err.message ? err.message : 'Scontorno non riuscito.');
-    } finally {
-      if (ppState.person === person) $('ppSummary').textContent = '';
+      return false;
     }
   }
 
@@ -4258,17 +4256,20 @@
     if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
     ppState.uploading = true;
     $('ppSummary').textContent = 'Caricamento foto…';
+    // Con una persona da scontornare la foto compare solo a scontorno finito,
+    // dietro la schermata di caricamento "Generazione".
+    const needsCutout = pick !== 'bg' || !ppState.bg;
     try {
       const {blob, w, h, type} = await preparePhoto(file, pick === 'person');
       const id = await ppSend(blob, type);
       const item = {id, w, h, url:URL.createObjectURL(blob), x:0, y:0, zoom:1};
+      let person = null, ok = true;
       if (pick === 'person') {
         if (ppState.person) ppRevoke(ppState.person.url);
-        ppState.person = {...item, url:'', x:0, y:0, zoom:1, follow:false};
+        person = ppState.person = {...item, url:'', x:0, y:0, zoom:1, follow:false};
         ppRevoke(item.url);
         ppState.mode = 'person';
         $('ppPerson').hidden = true;
-        ppLoadCutout(ppState.person);
       } else if (pick === 'bg' && ppState.bg) {
         // La persona resta quella di prima, ferma dov'era: cambia solo lo stadio dietro.
         ppRevoke(ppState.bg.url);
@@ -4280,14 +4281,22 @@
         if (ppState.person) ppRevoke(ppState.person.url);
         ppRevoke(ppState.cleanUrl); ppState.cleanUrl = ''; ppState.cleanFor = '';
         ppState.bg = item;
-        ppState.person = {id, w, h, url:'', x:0, y:0, zoom:1, follow:false};
+        person = ppState.person = {id, w, h, url:'', x:0, y:0, zoom:1, follow:false};
         ppState.mode = 'both';
         $('ppPerson').hidden = true;
-        ppLoadCutout(ppState.person);
+        $('ppBg').hidden = true;
+      }
+      if (person) {
+        $('ppSummary').textContent = '';
+        showBusy('Generazione…', 'Scontorno la persona…', 'ppcut');
+        ok = await ppLoadCutout(person);
+        if (ppState.person !== person) return; // foto cambiata o svuotata nel frattempo
+        if (ok) await finishBusy();
       }
       $('ppBg').dataset.clean = '';
       $('ppBg').src = ppState.bg.url;
       $('ppBg').hidden = false;
+      if (person && ok) $('ppPerson').hidden = false;
       $('ppEmpty').hidden = true;
       if ($('ppSummary').textContent === 'Caricamento foto…') $('ppSummary').textContent = '';
       layoutPhase();
@@ -4296,6 +4305,7 @@
       $('ppSummary').textContent = '';
       showError(err && err.message ? err.message : 'Caricamento non riuscito.');
     } finally {
+      if (needsCutout) hideBusy();
       ppState.uploading = false;
       renderSteps();
     }
