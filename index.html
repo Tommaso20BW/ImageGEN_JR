@@ -424,13 +424,29 @@
       box-shadow:inset 0 0 0 1.5px var(--line)}
     .jr-tile.selected{outline-color:var(--cta)}
     .jr-tile.selected .n{background:var(--cta);color:var(--cta-ink)}
+    .jr-pick{width:100%;min-height:56px;margin-top:6px;font-size:17px}
+    .jr-pick:disabled{opacity:.55}
     #jrbFrame{cursor:default;background:#111}
     #jrbFrame .bg{position:absolute;max-width:none;pointer-events:none}
     #jrbFrame .card{position:absolute;max-width:none;cursor:grab;touch-action:none;pointer-events:auto;-webkit-user-drag:none;
-      box-shadow:0 calc(6px * var(--k)) calc(44px * var(--k)) rgba(0,0,0,.62);outline:0 solid transparent;
+      border-radius:calc(14px * var(--k));box-shadow:0 calc(8px * var(--k)) calc(48px * var(--k)) rgba(0,0,0,.62);outline:0 solid transparent;
       transition:outline-color .15s}
     #jrbFrame .card.sel{outline:2px solid var(--cta);outline-offset:2px}
     #jrbFrame .overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3}
+    /* Collage: anteprima grande (tocca due riquadri per scambiarli) e layout in miniatura */
+    .col-big{position:relative;width:min(100%,300px);aspect-ratio:3/4;margin:6px auto 0;border-radius:12px;overflow:hidden;background:#111;
+      box-shadow:var(--preview-shadow, 0 6px 24px rgba(0,0,0,.25))}
+    .col-cell{position:absolute;overflow:hidden;background:#333;border-radius:calc(14px * var(--k,.28));cursor:pointer;
+      outline:0 solid transparent;outline-offset:-2px}
+    .col-cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:50% 38%;pointer-events:none;display:block}
+    .col-cell.sel{outline:3px solid var(--cta);z-index:2}
+    .col-big .overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3}
+    .col-hint{text-align:center;margin:8px 0 14px}
+    .col-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .col-th{position:relative;aspect-ratio:3/4;padding:0;border:0;border-radius:10px;overflow:hidden;background:#111;
+      outline:3px solid transparent;outline-offset:-3px;transition:outline-color .18s var(--ease-out);cursor:pointer}
+    .col-th.on{outline-color:var(--cta)}
+    .col-th .col-cell{border-radius:3px;cursor:inherit}
     .jrb-tools{display:flex;align-items:center;justify-content:center;gap:8px;margin:12px auto 0}
     .jrb-tools .lay-size{background:var(--surface2)}
     .pxi-slots{display:grid;gap:8px}
@@ -1064,30 +1080,30 @@
           </section>
 
           <section class="screen" data-screen="jrstyle">
-            <div class="eyebrow">Foto + JR</div>
+            <div class="eyebrow">Post</div>
             <h1>Stile</h1>
-            <p class="lead">Classica: la foto a tutta pagina. Sfocata: la foto più piccola con l’ombra, sopra la stessa foto sfocata. Puoi metterne fino a 3.</p>
+            <p class="lead">Classica: una foto a tutta pagina. Sfocata: da 1 a 4 foto con l’ombra sopra una foto sfocata. Collage: da 2 a 9 foto in un layout a riquadri.</p>
             <div id="jrStyleOpts" class="opts" role="radiogroup"></div>
           </section>
 
           <section class="screen" data-screen="jrphotos">
-            <div class="eyebrow">Foto + JR · Sfocata</div>
+            <div id="jrPhotosEyebrow" class="eyebrow">Post</div>
             <h1>Foto</h1>
-            <p class="lead">Da 1 a 3 foto. Ognuna resta con le sue proporzioni.</p>
-            <div id="jrTiles" class="jr-tiles"></div>
+            <p id="jrPhotosLead" class="lead"></p>
+            <button id="jrPick" class="btn primary jr-pick" type="button">Scegli le foto</button>
             <input id="jrFiles" type="file" accept="image/*" multiple hidden>
-            <div id="jrPhotosHint" class="hint"></div>
+            <div id="jrPhotosHint" class="hint" style="text-align:center;margin-top:10px"></div>
           </section>
 
           <section class="screen" data-screen="jrbg">
-            <div class="eyebrow">Foto + JR · Sfocata</div>
+            <div class="eyebrow">Post · Sfocata</div>
             <h1>Sfondo</h1>
             <p class="lead">Quale foto vuoi come sfondo sfocato?</p>
             <div id="jrBgTiles" class="jr-tiles" role="radiogroup"></div>
           </section>
 
           <section class="screen" data-screen="jrblur">
-            <div class="eyebrow">Foto + JR · Sfocata</div>
+            <div class="eyebrow">Post · Sfocata</div>
             <h1>Posizione</h1>
             <p id="jrbHint" class="lead">Tocca una foto: trascinala per spostarla, due dita o − + per la grandezza.</p>
             <div id="jrbFrame" class="photo-frame">
@@ -1105,8 +1121,16 @@
             </div>
           </section>
 
+          <section class="screen" data-screen="jrlayout">
+            <div class="eyebrow">Post · Collage</div>
+            <h1>Layout</h1>
+            <div id="colBig" class="col-big"></div>
+            <p id="colHint" class="hint col-hint">Tocca due riquadri per scambiare le foto.</p>
+            <div id="colGrid" class="col-grid" role="radiogroup" aria-label="Layout"></div>
+          </section>
+
           <section class="screen" data-screen="jrcolor">
-            <div class="eyebrow">Foto + JR</div>
+            <div class="eyebrow">Post</div>
             <h1>Colore del JR</h1>
             <p class="lead">Il logo JR va in alto a destra, come nel design Canva. Scegli il colore che si legge meglio sulla tua foto.</p>
             <div id="jrColorOpts" class="opts" role="radiogroup"></div>
@@ -1302,7 +1326,7 @@
   const TAB_KINDS = {
     goal:[['goal','Gol'],['saved','Parata']],
     pre:[['md','Matchday'],['pxi','Probabile XI'],['squad','Squad List'],['xi','Starting XI']],
-    extra:[['cal','Calendario'],['jr','Foto + JR']]
+    extra:[['cal','Calendario'],['jr','Post']]
   };
   const COMPETITIONS_UEFA = [
     ['uefa.champions','Champions League'],['uefa.europa','Europa League'],
@@ -1325,7 +1349,7 @@
   const SIDES = [['home','In casa'],['away','In trasferta']];
   const KITS = [['home','Home'],['away','Away'],['third','Third']];
   const JR_COLORS = [['black','Nero'],['white','Bianco'],['gold','Oro']];
-  const JR_STYLES = [['classic','Classica'],['blur','Sfocata']];
+  const JR_STYLES = [['classic','Classica'],['blur','Sfocata'],['collage','Collage']];
   const CAL_MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const CAL_MAX = 14;
   let PXI_MODULES = [["4-2-3-1", "4-2-3-1"], ["4-3-3", "4-3-3"], ["4-4-2", "4-4-2"], ["4-3-1-2", "4-3-1-2"], ["4-2-2-2", "4-2-2-2"], ["4-3-2-1", "4-3-2-1"], ["4-1-2-1-2", "4-1-2-1-2"], ["3-4-2-1", "3-4-2-1"], ["3-4-1-2", "3-4-1-2"], ["3-5-2", "3-5-2"], ["3-5-1-1", "3-5-1-1"], ["3-4-3", "3-4-3"], ["5-4-1", "5-4-1"]];
@@ -1343,7 +1367,7 @@
   const STEP_NAMES = {
     competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
     player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
-    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto', jrstyle:'Stile', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione'
+    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto', jrstyle:'Stile', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout'
   };
 
   const $ = id => document.getElementById(id);
@@ -1388,8 +1412,10 @@
   let jrColor = '';      // FOTO + JR: colore del logo
   // FOTO + JR Sfocata: foto caricate (max 3), sfondo e posizione di ognuna
   // (x/y centro in frazione della pagina, w larghezza in frazione della pagina).
-  const JR_MAX = 3;
-  const jrb = {style:'', cards:[], bg:'', sel:-1, uploading:0};
+  const JR_LIMITS = {blur:4, collage:9};      // foto massime per stile
+  const jrLimit = () => JR_LIMITS[jrb.style] || 1;
+  const jrMin = () => jrb.style === 'collage' ? 2 : 1;
+  const jrb = {style:'', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, tpls:null};
   let pxiModule = '';    // PROBABILE XI: modulo
   let calMonth = 0;      // CALENDARIO: mese (1-12)
   const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
@@ -1584,6 +1610,7 @@
     }
     else if (kind === 'jr') flow = jrb.style === 'blur'
       ? ['jrstyle','jrphotos',...(jrb.cards.length > 1 ? ['jrbg'] : []),'jrcolor','jrblur']
+      : jrb.style === 'collage' ? ['jrstyle','jrphotos','jrcolor','jrlayout']
       : ['jrstyle','jrcolor','photo'];
     else if (kind === 'cal') flow = ['calmonth','calrows'];
     if (TAB_KINDS[tab]) flow = ['subkind',...flow];
@@ -1631,6 +1658,7 @@
       case 'jrphotos': return jrb.cards.length ? `${jrb.cards.length} foto` : '';
       case 'jrbg': { const n = jrb.cards.findIndex(c => c.id === jrb.bg); return n < 0 ? '' : `Foto ${n + 1}`; }
       case 'jrblur': return jrb.cards.length ? 'Pronta' : '';
+      case 'jrlayout': return jrb.tpls ? `Layout ${jrb.tpl + 1}` : '';
       case 'module': return pxiModule;
       case 'subkind': return labelOf(TAB_KINDS[tab] || [],kind);
       case 'mdpick': { const m = fixtureList.find(f => f.id === mdPick); return mdPick === 'manual' ? 'A mano' : (m ? fixtureLabel(m, true) : ''); }
@@ -1802,8 +1830,10 @@
       if (tg && tg.disableVerticalSwipes) editing ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
     } catch (_) {}
     if (screenName === 'phasephoto') { $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
-    if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Foto + JR'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
-    if (screenName === 'jrphotos') renderJrTiles();
+    if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Post'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
+    if (screenName === 'jrphotos') renderJrPicker();
+    if (screenName === 'jrphotos') loadColTop();
+    if (screenName === 'jrlayout') loadColTop().then(() => { if ($('colBig').offsetParent) renderJrLayout(true); });
     if (screenName === 'jrbg') renderJrBg();
     if (screenName === 'jrblur') { jrbAutoLayout(); requestAnimationFrame(() => { fitJrbFrame(); renderJrb(); }); }
     if (screenName === 'lineup') readXiText();
@@ -1905,7 +1935,16 @@
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
     renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; });
     renderOptions('jrColorOpts',JR_COLORS,jrColor,v => { jrColor = v; });
-    renderOptions('jrStyleOpts',JR_STYLES,jrb.style,v => { jrb.style = v; buildFlow(); });
+    renderOptions('jrStyleOpts',JR_STYLES,jrb.style,v => {
+      jrb.style = v;
+      if (jrb.cards.length > jrLimit()) {          // meno posti nel nuovo stile: restano le prime foto
+        jrb.cards.slice(jrLimit()).forEach(c => { try { URL.revokeObjectURL(c.url); if (c.small) URL.revokeObjectURL(c.small); } catch (_) {} });
+        jrb.cards = jrb.cards.slice(0,jrLimit());
+        if (!jrb.cards.some(c => c.id === jrb.bg)) jrb.bg = jrb.cards.length === 1 ? jrb.cards[0].id : '';
+      }
+      jrb.tpls = null; jrb.order = null; jrb.tpl = 0; jrb.swap = -1;
+      buildFlow();
+    });
     renderModuleButton();
     $('subkindTitle').textContent = labelOf(TABS,tab);
     renderOptions('subkindOpts',TAB_KINDS[tab] || [],kind,v => {
@@ -2350,7 +2389,7 @@
     kitAuto = false;
     jrColor = '';
     jrb.cards.forEach(c => { try { URL.revokeObjectURL(c.url); } catch (_) {} });
-    Object.assign(jrb,{style:'', cards:[], bg:'', sel:-1, uploading:0});
+    Object.assign(jrb,{style:'', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, tpls:null});
     pxiModule = '';
     pxiPicks = Array(11).fill('');
     calMonth = 0;
@@ -2698,7 +2737,8 @@
 
     if (step === 'jrphotos') {
       if (jrb.uploading) { showError('Attendi il caricamento delle foto.'); return false; }
-      if (!jrb.cards.length) { showError('Carica almeno una foto.'); return false; }
+      if (jrb.cards.length < jrMin()) { showError(jrMin() > 1 ? `Scegli almeno ${jrMin()} foto.` : 'Scegli almeno una foto.'); return false; }
+      if (jrb.cards.length > jrLimit()) { showError(`Per questo stile al massimo ${jrLimit()} foto: scegli di nuovo.`); return false; }
     }
     if (step === 'jrbg' && !jrb.cards.some(c => c.id === jrb.bg)) { showError('Scegli la foto per lo sfondo.'); return false; }
 
@@ -3567,68 +3607,81 @@
   /* ---------- FOTO + JR Sfocata (pagina 26 Canva) ---------- */
   // Stesse misure di graphics/photo_jr.py: sfondo sfocato 28 px (pagina 1080) e
   // ingrandito del 6%, foto nitide con ombra; il riquadro è la pagina in piccolo.
-  const JRB_BLUR = 28, JRB_ZOOM = 1.06, JRB_W = [.12, 1.4];
+  const JRB_BLUR = 36, JRB_ZOOM = 1.1, JRB_W = [.12, 1.4], JRB_FILTER = k => `blur(${JRB_BLUR * k}px) brightness(.78) saturate(1.12)`;
 
+  // Miniatura leggera (per anteprima e miniature del collage): le foto vere restano da 2048 px.
+  async function jrSmall(blob, side = 360) {
+    try {
+      const bmp = await createImageBitmap(blob);
+      const k = Math.min(1, side / Math.max(bmp.width, bmp.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round(bmp.width * k)); cv.height = Math.max(1, Math.round(bmp.height * k));
+      cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+      if (bmp.close) bmp.close();
+      const small = await new Promise(resolve => cv.toBlob(resolve, 'image/jpeg', .8));
+      return small ? URL.createObjectURL(small) : '';
+    } catch (_) { return ''; }
+  }
+
+  function jrRelease() {
+    jrb.cards.forEach(c => { try { URL.revokeObjectURL(c.url); if (c.small) URL.revokeObjectURL(c.small); } catch (_) {} });
+  }
+
+  // Un solo selettore: la nuova scelta sostituisce la precedente. Nessuna anteprima.
   async function addJrPhotos(files) {
     clearError();
     if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
-    const list = [...files].slice(0, JR_MAX - jrb.cards.length);
-    if (files.length > list.length) showError(`Massimo ${JR_MAX} foto.`);
-    for (const file of list) {
-      jrb.uploading++;
-      renderJrTiles();
-      try {
-        const {blob,w,h} = await preparePhoto(file);
-        const response = await netFetch(`${directBase}/upload`,{
-          method:'POST', headers:{'Content-Type':'image/jpeg','X-ImageGEN-Session':session}, body:blob
-        }, 60000);
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok || !body.ok) throw new Error(body.error || 'Caricamento non riuscito.');
-        if (jrb.cards.length < JR_MAX && !jrb.cards.some(c => c.id === body.photo_id)) {
-          jrb.cards.push({id:body.photo_id, w0:w, h0:h, url:URL.createObjectURL(blob), x:.5, y:.5, w:0, base:0, placed:false});
-          haptic('success');
+    const all = [...files];
+    if (!all.length) return;
+    const limit = jrLimit();
+    const list = all.slice(0, limit);
+    if (all.length > limit) showError(`Massimo ${limit} foto: ho preso le prime ${limit}.`);
+    jrRelease();
+    jrb.cards = []; jrb.bg = ''; jrb.sel = -1; jrb.order = null; jrb.tpls = null; jrb.tpl = 0; jrb.swap = -1;
+    jrb.uploading = list.length;
+    renderJrPicker();
+    const done = new Array(list.length).fill(null);
+    let next = 0;
+    const worker = async () => {
+      while (next < list.length) {
+        const i = next++;
+        try {
+          const {blob,w,h} = await preparePhoto(list[i]);
+          const response = await netFetch(`${directBase}/upload`,{
+            method:'POST', headers:{'Content-Type':'image/jpeg','X-ImageGEN-Session':session}, body:blob
+          }, 60000);
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok || !body.ok) throw new Error(body.error || 'Caricamento non riuscito.');
+          done[i] = {id:body.photo_id, w0:w, h0:h, url:URL.createObjectURL(blob), small:await jrSmall(blob), x:.5, y:.5, w:0, base:0, placed:false};
+        } catch (err) {
+          showError(err && err.message ? err.message : 'Caricamento non riuscito.');
+        } finally {
+          jrb.uploading--;
+          renderJrPicker();
         }
-      } catch (err) {
-        showError(err && err.message ? err.message : 'Caricamento non riuscito.');
-      } finally {
-        jrb.uploading--;
       }
-    }
-    if (!jrb.cards.some(c => c.id === jrb.bg)) jrb.bg = jrb.cards.length === 1 ? jrb.cards[0].id : '';
-    jrb.cards.forEach(c => { c.placed = false; });   // nuova disposizione automatica
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    const seen = new Set();
+    jrb.cards = done.filter(c => c && !seen.has(c.id) && seen.add(c.id));     // stesso ordine di scelta, senza doppioni
+    if (jrb.cards.length) haptic('success');
+    jrb.bg = jrb.cards.length === 1 ? jrb.cards[0].id : '';
     buildFlow();
-    renderJrTiles();
+    renderJrPicker();
     renderSteps();
   }
 
-  function renderJrTiles() {
-    const box = $('jrTiles');
-    box.innerHTML = '';
-    jrb.cards.forEach((c,i) => {
-      const tile = document.createElement('div');
-      tile.className = 'jr-tile';
-      tile.innerHTML = `<img alt="Foto ${i + 1}"><span class="n">${i + 1}</span><button class="x" type="button" aria-label="Togli foto ${i + 1}">×</button>`;
-      tile.querySelector('img').src = c.url;
-      tile.querySelector('.x').addEventListener('click',() => {
-        haptic('select');
-        try { URL.revokeObjectURL(c.url); } catch (_) {}
-        jrb.cards.splice(i,1);
-        if (jrb.bg === c.id) jrb.bg = jrb.cards.length === 1 ? jrb.cards[0].id : '';
-        jrb.cards.forEach(card => { card.placed = false; });
-        buildFlow(); renderJrTiles(); renderSteps();
-      });
-      box.appendChild(tile);
-    });
-    if (jrb.cards.length + jrb.uploading < JR_MAX) {
-      const add = document.createElement('button');
-      add.type = 'button';
-      add.className = 'jr-tile add';
-      add.setAttribute('aria-label','Aggiungi foto');
-      add.textContent = '+';
-      add.addEventListener('click',() => $('jrFiles').click());
-      box.appendChild(add);
-    }
-    $('jrPhotosHint').textContent = jrb.uploading ? 'Caricamento…' : `${jrb.cards.length} / ${JR_MAX} foto`;
+  function renderJrPicker() {
+    const style = jrb.style;
+    $('jrPhotosEyebrow').textContent = `Post · ${labelOf(JR_STYLES,style) || ''}`;
+    $('jrPhotosLead').textContent = style === 'collage'
+      ? `Scegli da ${jrMin()} a ${jrLimit()} foto in una volta sola. Il layout lo scegli dopo.`
+      : `Scegli da 1 a ${jrLimit()} foto in una volta sola.`;
+    const n = jrb.cards.length;
+    $('jrPick').disabled = jrb.uploading > 0;
+    $('jrPick').textContent = jrb.uploading ? 'Caricamento…' : n ? 'Cambia le foto' : 'Scegli le foto';
+    $('jrPhotosHint').textContent = jrb.uploading ? `${jrb.uploading} ancora da caricare…`
+      : n ? `${n} foto pronte` : '';
   }
 
   function renderJrBg() {
@@ -3647,15 +3700,20 @@
     });
   }
 
-  // Disposizione automatica: 1 foto grande al centro (come Canva), 2 affiancate, 3 a cascata.
+  // Disposizione automatica: 1 foto grande al centro; da 2 a 4 sfalsate e sovrapposte in parte.
+  // box = ingombro massimo di una foto in pixel pagina; la foto ci sta dentro con le sue proporzioni.
   function jrbAutoLayout() {
     if (jrb.cards.every(c => c.placed)) return;
-    const n = jrb.cards.length;
-    const spots = n === 1 ? [[.5,.5]] : n === 2 ? [[.28,.5],[.72,.5]] : [[.31,.29],[.5,.5],[.69,.71]];
-    const box = n === 1 ? [927,1160] : n === 2 ? [470,900] : [560,700];
+    const n = Math.min(4, jrb.cards.length);
+    const L = [null,
+      {box:[940,1200], at:[[.5,.5]]},
+      {box:[660,820],  at:[[.36,.35],[.64,.65]]},
+      {box:[540,600],  at:[[.3,.25],[.7,.5],[.3,.75]]},
+      {box:[480,520],  at:[[.28,.24],[.72,.34],[.28,.64],[.72,.76]]}][n];
     jrb.cards.forEach((c,i) => {
-      const w = Math.min(box[0] / 1080, box[1] / 1440 * c.w0 / c.h0);
-      Object.assign(c,{x:spots[i][0], y:spots[i][1], w, base:w, placed:true});
+      const [x,y] = L.at[Math.min(i, L.at.length - 1)];
+      const w = Math.min(L.box[0], L.box[1] * c.w0 / c.h0) / 1080;
+      Object.assign(c,{x, y, w, base:w, placed:true});
     });
     jrb.sel = -1;
   }
@@ -3682,7 +3740,7 @@
       const bw = bg.w0 * cover, bh = bg.h0 * cover;
       if (img.getAttribute('src') !== bg.url) img.src = bg.url;
       Object.assign(img.style,{left:`${(1080 - bw) / 2 * k}px`, top:`${(1440 - bh) / 2 * k}px`,
-        width:`${bw * k}px`, height:`${bh * k}px`, filter:`blur(${JRB_BLUR * k}px)`});
+        width:`${bw * k}px`, height:`${bh * k}px`, filter:JRB_FILTER(k)});
     }
     const box = $('jrbCards');
     if (box.children.length !== jrb.cards.length || [...box.children].some((el,i) => el.dataset.id !== jrb.cards[i].id)) {
@@ -3725,6 +3783,7 @@
   }
 
   function initJrBlur() {
+    $('jrPick').addEventListener('click',() => { if (!jrb.uploading) $('jrFiles').click(); });
     $('jrFiles').addEventListener('change',e => { addJrPhotos(e.target.files || []); e.target.value = ''; });
     $('jrbMinus').addEventListener('click',() => { haptic('select'); jrbScale(1 / 1.05); });
     $('jrbPlus').addEventListener('click',() => { haptic('select'); jrbScale(1.05); });
@@ -3785,6 +3844,208 @@
     },{passive:false});
     frame.addEventListener('touchmove',e => e.preventDefault(),{passive:false});
     window.addEventListener('resize',() => { if ($('jrbFrame').offsetParent) { fitJrbFrame(); renderJrb(); } });
+  }
+
+
+  /* ---------- FOTO + JR Collage: layout automatici a riquadri (stile Canva) ---------- */
+  // Pagina 1080x1440, bordo 40, spazio fra i riquadri 16: stesse misure di graphics/photo_jr.py.
+  // I layout si ricavano da alberi di divisioni (colonne/righe) con un generatore a caso ma
+  // con seme fisso: ogni numero di foto dà sempre gli stessi layout. I peggiori (riquadri
+  // troppo stretti o troppo piccoli) si scartano, poi si ordinano dal più equilibrato.
+  const COL_W = 1080, COL_H = 1440, COL_M = 40, COL_G = 16, COL_MAX_TPL = 15;
+  // Bordo uguale su tutti e quattro i lati, largo quanto serve al logo JR in alto: lo misura il servizio
+  // sul livello Canva (se non risponde, valore abbondante).
+  let colTop = 190, colTopKnown = false;
+  function loadColTop() {
+    if (colTopKnown || !directBase || !session) return Promise.resolve();
+    return netFetch(`${directBase}/jrinfo?session=${encodeURIComponent(session)}`,{},15000)
+      .then(r => r.json())
+      .then(b => {
+        if (b && b.ok && Number.isFinite(b.top)) {
+          colTopKnown = true;
+          if (b.top !== colTop) { colTop = b.top; jrb.tpls = null; jrb.order = null; }
+        }
+      })
+      .catch(() => {});
+  }
+
+  function colRng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // nodo = {n, dir:'v'|'h', w:[pesi], kids:[nodi]} oppure {n:1}. 'v' = colonne affiancate, 'h' = righe.
+  function colTree(n, rng) {
+    if (n === 1) return {n:1};
+    const k = n >= 3 && rng() < .35 ? 3 : 2;
+    const parts = Array(k).fill(1);
+    for (let r = n - k; r > 0; r--) parts[Math.floor(rng() * k)]++;
+    const w = parts.slice();
+    if (rng() < .4) w[Math.floor(rng() * k)] *= 1.6;           // un riquadro "protagonista" più grande
+    return {n, dir:rng() < .5 ? 'v' : 'h', w, kids:parts.map(q => colTree(q, rng))};
+  }
+
+  // Righe (o colonne) con lo stesso numero di foto, o quasi: griglie regolari.
+  function colRows(parts, dir) {
+    return {n:parts.reduce((a,b) => a + b, 0), dir, w:parts.map(() => 1),
+            kids:parts.map(q => q === 1 ? {n:1} : {n:q, dir:dir === 'h' ? 'v' : 'h', w:Array(q).fill(1), kids:Array.from({length:q},() => ({n:1}))})};
+  }
+
+  function colPlace(node, r, out) {
+    if (!node.kids) { out.push(r); return; }
+    const k = node.kids.length, horiz = node.dir === 'v';
+    const total = (horiz ? r.w : r.h) - COL_G * (k - 1), sum = node.w.reduce((a,b) => a + b, 0);
+    let pos = horiz ? r.x : r.y;
+    node.kids.forEach((kid,i) => {
+      const size = total * node.w[i] / sum;
+      colPlace(kid, horiz ? {x:pos, y:r.y, w:size, h:r.h} : {x:r.x, y:pos, w:r.w, h:size}, out);
+      pos += size + COL_G;
+    });
+  }
+
+  function colScore(cells) {
+    let pen = 0, amin = Infinity, amax = 0;
+    for (const c of cells) {
+      if (c.w < 150 || c.h < 150) return Infinity;
+      pen += Math.max(0, Math.abs(Math.log(c.w / c.h / .9)) - .7) * 3;        // proporzioni estreme
+      amin = Math.min(amin, c.w * c.h); amax = Math.max(amax, c.w * c.h);
+    }
+    if (amax / amin > 5) return Infinity;
+    return pen + Math.log(amax / amin) * .4;
+  }
+
+  function colTemplates(n) {
+    const rect = {x:colTop, y:colTop, w:COL_W - 2 * colTop, h:COL_H - 2 * colTop};   // bordo uguale su tutti i lati
+    const trees = [];
+    // griglie regolari: righe (e colonne) il più possibile uguali
+    for (let rows = 2; rows <= Math.min(4, n); rows++) {
+      const base = Math.floor(n / rows), extra = n % rows, parts = Array(rows).fill(base);
+      for (let i = 0; i < extra; i++) parts[i]++;
+      if (Math.max(...parts) > 4) continue;
+      const variants = new Set([parts.join(','), [...parts].reverse().join(',')]);
+      variants.forEach(v => { const q = v.split(',').map(Number); trees.push(colRows(q,'h'), colRows(q,'v')); });
+    }
+    if (n === 2) trees.push(colRows([1,1],'h'), colRows([1,1],'v'));
+    const rng = colRng(1000 + n);
+    for (let i = 0; i < 500; i++) trees.push(colTree(n, rng));
+    const seen = new Set(), found = [];
+    for (const t of trees) {
+      const px = []; colPlace(t, rect, px);
+      if (px.length !== n) continue;
+      const sc = colScore(px);
+      if (!isFinite(sc)) continue;
+      const sig = px.map(c => [c.x,c.y,c.w,c.h].map(Math.round).join(':')).sort().join('|');
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      found.push({sc, px});
+    }
+    found.sort((a,b) => a.sc - b.sc);
+    return found.slice(0, COL_MAX_TPL).map((f,i) => ({
+      id:i, px:f.px,
+      cells:f.px.map(c => ({x:c.x / COL_W, y:c.y / COL_H, w:c.w / COL_W, h:c.h / COL_H}))
+    }));
+  }
+
+  // Foto -> riquadro: ogni foto va dove si ritaglia meno (si guardano le proporzioni).
+  // A parità, resta l'ordine di scelta.
+  function colAssign(px, cards) {
+    const n = px.length, INF = 1e9;
+    const cost = px.map((c,i) => cards.map((p,j) => Math.abs(Math.log((c.w / c.h) / (p.w0 / p.h0))) + .03 * Math.abs(i - j)));
+    const dp = new Array(1 << n).fill(INF), from = new Array(1 << n).fill(-1);
+    dp[0] = 0;
+    for (let mask = 0; mask < (1 << n); mask++) {
+      if (dp[mask] >= INF) continue;
+      let i = 0; for (let m = mask; m; m &= m - 1) i++;
+      if (i >= n) continue;
+      for (let j = 0; j < n; j++) {
+        if (mask >> j & 1) continue;
+        const nm = mask | (1 << j), v = dp[mask] + cost[i][j];
+        if (v < dp[nm]) { dp[nm] = v; from[nm] = j; }
+      }
+    }
+    const order = new Array(n);
+    let mask = (1 << n) - 1;
+    for (let i = n - 1; i >= 0; i--) { const j = from[mask]; order[i] = j; mask ^= 1 << j; }
+    return order;                                    // order[riquadro] = indice della foto
+  }
+
+  function jrTemplates() {
+    if (!jrb.tpls || jrb.tpls.n !== jrb.cards.length) {
+      jrb.tpls = {n:jrb.cards.length, list:jrb.cards.length >= 2 ? colTemplates(jrb.cards.length) : []};
+      jrb.tpl = 0; jrb.order = null; jrb.swap = -1;
+    }
+    return jrb.tpls.list;
+  }
+
+  function jrOrder() {
+    const t = jrTemplates()[jrb.tpl];
+    if (!t) return [];
+    if (!jrb.order) jrb.order = colAssign(t.px, jrb.cards);
+    return jrb.order;
+  }
+
+  function jrCollageCells() {
+    const t = jrTemplates()[jrb.tpl];
+    if (!t) return [];
+    const order = jrOrder();
+    return t.cells.map((c,i) => ({photo_id:jrb.cards[order[i]].id, x:+c.x.toFixed(5), y:+c.y.toFixed(5), w:+c.w.toFixed(5), h:+c.h.toFixed(5)}));
+  }
+
+  function colCellsHtml(t, order, sel) {
+    return t.cells.map((c,i) => `<div class="col-cell${i === sel ? ' sel' : ''}" data-i="${i}" style="left:${c.x * 100}%;top:${c.y * 100}%;width:${c.w * 100}%;height:${c.h * 100}%"><img alt="" src="${jrb.cards[order[i]].small || jrb.cards[order[i]].url}"></div>`).join('');
+  }
+
+  function renderJrLayout(reset = false) {
+    const list = jrTemplates();
+    const big = $('colBig'), grid = $('colGrid');
+    if (reset) { jrb.swap = -1; }
+    if (!list.length) { big.innerHTML = ''; grid.innerHTML = ''; return; }
+    const t = list[jrb.tpl], order = jrOrder();
+    const url = directBase && session
+      ? `${directBase}/overlay?session=${encodeURIComponent(session)}&name=jr&kit=${encodeURIComponent(jrColor || 'white')}` : '';
+    big.style.setProperty('--k', (big.clientWidth || 300) / COL_W);
+    big.innerHTML = colCellsHtml(t, order, jrb.swap) + (url ? `<img class="overlay" alt="" src="${url}">` : '');
+    $('colHint').textContent = jrb.swap >= 0 ? 'Ora tocca il riquadro con cui scambiarla.' : 'Tocca due riquadri per scambiare le foto.';
+    // miniature: stesso layout, con le foto sistemate al meglio per ognuno
+    grid.innerHTML = '';
+    list.forEach((tp,i) => {
+      const ord = i === jrb.tpl ? order : colAssign(tp.px, jrb.cards);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'col-th' + (i === jrb.tpl ? ' on' : '');
+      b.setAttribute('role','radio'); b.setAttribute('aria-checked', i === jrb.tpl ? 'true' : 'false');
+      b.setAttribute('aria-label', `Layout ${i + 1}`);
+      b.style.setProperty('--k', .1);
+      b.innerHTML = colCellsHtml(tp, ord, -1);
+      b.addEventListener('click',() => {
+        if (i === jrb.tpl) return;
+        haptic('select');
+        jrb.tpl = i; jrb.order = null; jrb.swap = -1;
+        renderJrLayout(); renderSteps();
+      });
+      grid.appendChild(b);
+    });
+  }
+
+  function initJrCollage() {
+    $('colBig').addEventListener('click',e => {
+      const cell = e.target.closest('.col-cell');
+      if (!cell) { if (jrb.swap >= 0) { jrb.swap = -1; renderJrLayout(); } return; }
+      const i = Number(cell.dataset.i);
+      haptic('select');
+      if (jrb.swap < 0) jrb.swap = i;
+      else {
+        if (jrb.swap !== i) { const o = jrOrder().slice(); [o[jrb.swap], o[i]] = [o[i], o[jrb.swap]]; jrb.order = o; }
+        jrb.swap = -1;
+      }
+      renderJrLayout();
+    });
+    window.addEventListener('resize',() => { if ($('colBig').offsetParent) renderJrLayout(); });
   }
 
 
@@ -4084,6 +4345,11 @@
         kind:'cal', month:calMonth, year:Number($('calYear').value),
         matches:calRows.map(r => ({day:Number(r.day), side:r.side, opponent:{name:r.team}}))
       }};
+    }
+    if (kind === 'jr' && jrb.style === 'collage') {
+      const cells = jrCollageCells();
+      if (cells.length < 2) throw new Error('Scegli almeno 2 foto.');
+      return {v:1, action:'render', session, data:{kind:'jr', style:'collage', color:jrColor, cells}};
     }
     if (kind === 'jr' && jrb.style === 'blur') {
       if (!jrb.cards.length) throw new Error('Carica almeno una foto.');
@@ -4699,6 +4965,7 @@
   $('squadText').addEventListener('input',() => { updateSquadSummary(); clearError(); renderSteps(); });
   initPhotoEditor();
   initJrBlur();
+  initJrCollage();
   initPhaseEditor();
   $('previewEdit').addEventListener('click',() => {
     if (kind === 'pxi') { openLayoutEditor(); return; }
