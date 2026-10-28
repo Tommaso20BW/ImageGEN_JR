@@ -152,6 +152,16 @@ class _DirectHandler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self._json(404, {'ok': False, 'error': str(exc)})
             return
+        if parts.path.rstrip('/') == '/clean':
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            try:
+                self._png(self.service.renderer.clean_background(query.get('id', '')), 'image/jpeg')
+            except ValueError as exc:
+                self._json(404, {'ok': False, 'error': str(exc)})
+            return
         if parts.path.rstrip('/') in ('/layouts', '/pxibg'):
             query = dict(parse_qsl(parts.query))
             if query.get('session', '') != self.service.session:

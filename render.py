@@ -164,6 +164,15 @@ class Renderer:
                     self.cutouts.pop(next(iter(self.cutouts)))
             return self.cutouts[photo_id]
 
+    def clean_background(self, photo_id):
+        """Sfondo senza la persona ricostruito (JPEG), per l'editor."""
+        from livescore.graphics import phase_layers
+
+        raw = self.photos.get(photo_id)
+        if not raw:
+            raise ValueError('Foto non trovata: ricaricala nella Mini App.')
+        return phase_layers.clean_background_jpeg(raw, self.cutout(photo_id))
+
     def _photo(self, data):
         photo = self.photos.get(data.get('photo_id'))
         if not photo:
@@ -258,8 +267,10 @@ class Renderer:
                 return phase_layers.ghost(draw)
 
             note('cutout')
-            person = self.cutout(data.get('person_id') or data['photo_id'])
-            note('compose')
+            person_id = data.get('person_id')
+            same_photo = not person_id or person_id == data['photo_id']
+            person = self.cutout(person_id or data['photo_id'])
+            note('erase' if same_photo and phase_layers.moved(data.get('person_frame')) else 'compose')
             with tempfile.TemporaryDirectory(prefix='jr_manual_') as cache:
                 layers = phase_layers.build_layers(
                     Path(cache),
@@ -267,6 +278,7 @@ class Renderer:
                     person=person,
                     background_frame=data['frame'],
                     person_frame=data.get('person_frame'),
+                    remove_person=same_photo,
                 )
                 return draw(layers)
 

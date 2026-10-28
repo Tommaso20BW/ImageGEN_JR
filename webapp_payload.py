@@ -249,7 +249,8 @@ def _build_state(envelope, catalog, now, expected_session):
             # Sfondo (foto) + persona: scontornata dalla foto stessa (person_id
             # assente) o caricata a parte; person_frame assente = segue lo sfondo.
             data['photo_id'] = _photo_id(incoming.get('photo_id'))
-            data['frame'] = _frame(incoming.get('frame'))
+            # Sfondo sempre fermo e a pagina piena: la posizione dal client non conta.
+            data['frame'] = {'x': 0.0, 'y': 0.0, 'zoom': 1.0}
             person_id = incoming.get('person_id')
             data['person_id'] = _photo_id(person_id) if person_id else None
             person_frame = incoming.get('person_frame')

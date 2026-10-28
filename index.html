@@ -1159,7 +1159,7 @@
               <h1>Foto</h1>
               <button id="ppPick" class="btn ghost" type="button">Scegli foto</button>
             </div>
-            <p class="lead">Trascina per spostare, due dita per lo zoom.</p>
+            <p class="lead">Trascina per spostare la persona, due dita per lo zoom. Lo sfondo resta fermo.</p>
             <div id="ppFrame" class="photo-frame">
               <div class="pp-window"><div class="pp-page">
                 <img id="ppBg" alt="" hidden>
@@ -2148,9 +2148,10 @@
   /* ---------- Caricamento ---------- */
   // HALF/END/FULL TIME: avanzamento reale letto da GET /progress (passi di render.py).
   // Altre grafiche: avanzamento stimato sulla durata delle generazioni precedenti, minimo 3 s.
-  const STAGE_RANGE = {idle:[0,4], render:[2,10], cutout:[10,60], compose:[60,96]};
+  const STAGE_RANGE = {idle:[0,4], render:[2,10], cutout:[10,55], erase:[55,85], compose:[60,96]};
   const STAGE_SUB = {
     cutout:'Scontorno la persona…',
+    erase:'Cancello la persona dallo sfondo…',
     compose:'Compongo la grafica…'
   };
   const BUSY_SUB = {
@@ -4038,14 +4039,15 @@
   // livescore/graphics/phase_layers.py (box): l'anteprima coincide con la grafica.
   // persona.follow = scontornata dallo sfondo e ferma su di esso (combacia esattamente).
   const PP_W = 1086, PP_H = 1448;
-  const ppState = {bg:null, person:null, mode:'both', uploading:false, ghostKey:'', pick:'photo'};
+  const ppState = {bg:null, person:null, mode:'both', uploading:false, ghostKey:'', pick:'photo', cleanUrl:'', cleanFor:'', cleaning:false};
 
   function ppRevoke(url) { if (url) { try { URL.revokeObjectURL(url); } catch (_) {} } }
 
   function clearPhase() {
     if (ppState.bg) ppRevoke(ppState.bg.url);
     if (ppState.person) ppRevoke(ppState.person.url);
-    Object.assign(ppState,{bg:null, person:null, mode:'both', uploading:false});
+    ppState.cleanUrl = ppRevoke(ppState.cleanUrl) || '';
+    Object.assign(ppState,{bg:null, person:null, mode:'both', uploading:false, cleaning:false, cleanFor:''});
     ['ppBg','ppPerson'].forEach(id => { $(id).hidden = true; $(id).removeAttribute('src'); });
     $('ppEmpty').hidden = false;
     $('ppSummary').textContent = '';
@@ -4087,22 +4089,65 @@
     }
     const {bg, person} = ppState;
     if (!bg) return;
-    ppPlace($('ppBg'), ppNormalize(bg, true));
-    if (person && person.w) ppPlace($('ppPerson'), person.follow ? ppBox(person, bg, true) : ppNormalize(person, false));
+    // Sfondo sempre fermo e a pagina piena. Se la persona e' stata cancellata, l'immagine
+    // del server e' gia' la pagina intera (1086x1448).
+    bg.x = 0; bg.y = 0; bg.zoom = 1;
+    ppPlace($('ppBg'), ppState.cleanFor === bg.id && $('ppBg').dataset.clean === '1'
+      ? {left:0, top:0, w:PP_W, h:PP_H} : ppBox(bg, bg, true));
+    if (person && person.w) ppPlace($('ppPerson'), ppNormalize(person, false));
+    ppSyncClean();
   }
 
-  // La persona smette di seguire lo sfondo: parte dalla stessa identica posizione.
-  function ppDetach() {
+  // Persona della stessa foto spostata: lo sfondo mostra la versione senza di lei
+  // (ricostruita dal servizio, una volta sola per foto); tornata al suo posto, l'originale.
+  function ppMoved(person) {
+    return !!person && (Math.abs(person.x) > .0005 || Math.abs(person.y) > .0005 || Math.abs(person.zoom - 1) > .0005);
+  }
+
+  async function ppSyncClean() {
     const {bg, person} = ppState;
-    if (person && person.follow) Object.assign(person,{x:bg.x, y:bg.y, zoom:bg.zoom, follow:false});
+    const img = $('ppBg');
+    if (!bg || !person || person.id !== bg.id) {
+      if (img.dataset.clean === '1') { img.dataset.clean = ''; img.src = bg ? bg.url : ''; }
+      return;
+    }
+    const want = ppMoved(person);
+    if (!want) {
+      if (img.dataset.clean === '1') { img.dataset.clean = ''; img.src = bg.url; layoutPhase(); }
+      return;
+    }
+    if (img.dataset.clean === '1' && ppState.cleanFor === bg.id) return;
+    if (ppState.cleaning) return;
+    if (ppState.cleanUrl && ppState.cleanFor === bg.id) {
+      img.dataset.clean = '1'; img.src = ppState.cleanUrl; layoutPhase();
+      return;
+    }
+    ppState.cleaning = true;
+    const id = bg.id;
+    $('ppSummary').textContent = 'Cancello la persona dallo sfondo…';
+    try {
+      const response = await netFetch(`${directBase}/clean?session=${encodeURIComponent(session)}&id=${id}`,{}, 120000);
+      if (!response.ok) throw new Error('Cancellazione dallo sfondo non riuscita.');
+      const url = URL.createObjectURL(await response.blob());
+      if (!ppState.bg || ppState.bg.id !== id) { ppRevoke(url); return; }
+      ppRevoke(ppState.cleanUrl);
+      ppState.cleanUrl = url;
+      ppState.cleanFor = id;
+    } catch (err) {
+      showError(err && err.message ? err.message : 'Cancellazione dallo sfondo non riuscita.');
+    } finally {
+      ppState.cleaning = false;
+      if ($('ppSummary').textContent === 'Cancello la persona dallo sfondo…') $('ppSummary').textContent = '';
+    }
+    if (ppState.bg && ppState.bg.id === id && ppMoved(ppState.person)) {
+      img.dataset.clean = '1'; img.src = ppState.cleanUrl; layoutPhase();
+    }
   }
 
+  // Si muove solo la persona: lo sfondo non e' mai un bersaglio.
   function ppTargets() {
-    const {bg, person, mode} = ppState;
-    if (!bg) return [];
-    if (mode === 'both') return person && !person.follow ? [bg, person] : [bg];
-    ppDetach();
-    return mode === 'bg' ? [bg] : (person ? [person] : []);
+    const {bg, person} = ppState;
+    return bg && person ? [person] : [];
   }
 
   function phasePhotoData(ghost) {
@@ -4111,9 +4156,9 @@
       if (!ghost) throw new Error('Scegli una foto.');
       return {photo_id:'0'.repeat(16), frame:{x:0, y:0, zoom:1}};
     }
-    const out = {photo_id:bg.id, frame:{x:bg.x, y:bg.y, zoom:bg.zoom}};
+    const out = {photo_id:bg.id, frame:{x:0, y:0, zoom:1}};
     if (person && person.id !== bg.id) out.person_id = person.id;
-    if (person && !person.follow) out.person_frame = {x:person.x, y:person.y, zoom:person.zoom};
+    if (person) out.person_frame = {x:person.x, y:person.y, zoom:person.zoom};
     return out;
   }
 
@@ -4183,26 +4228,28 @@
       const item = {id, w, h, url:URL.createObjectURL(blob), x:0, y:0, zoom:1};
       if (pick === 'person') {
         if (ppState.person) ppRevoke(ppState.person.url);
-        ppState.person = {...item, url:'', follow:false};
+        ppState.person = {...item, url:'', x:0, y:0, zoom:1, follow:false};
         ppRevoke(item.url);
         ppState.mode = 'person';
         $('ppPerson').hidden = true;
         ppLoadCutout(ppState.person);
       } else if (pick === 'bg' && ppState.bg) {
         // La persona resta quella di prima, ferma dov'era: cambia solo lo stadio dietro.
-        ppDetach();
         ppRevoke(ppState.bg.url);
+        ppRevoke(ppState.cleanUrl); ppState.cleanUrl = ''; ppState.cleanFor = '';
         ppState.bg = item;
         ppState.mode = 'bg';
       } else {
         if (ppState.bg) ppRevoke(ppState.bg.url);
         if (ppState.person) ppRevoke(ppState.person.url);
+        ppRevoke(ppState.cleanUrl); ppState.cleanUrl = ''; ppState.cleanFor = '';
         ppState.bg = item;
-        ppState.person = {id, w, h, url:'', x:0, y:0, zoom:1, follow:true};
+        ppState.person = {id, w, h, url:'', x:0, y:0, zoom:1, follow:false};
         ppState.mode = 'both';
         $('ppPerson').hidden = true;
         ppLoadCutout(ppState.person);
       }
+      $('ppBg').dataset.clean = '';
       $('ppBg').src = ppState.bg.url;
       $('ppBg').hidden = false;
       $('ppEmpty').hidden = true;
@@ -4779,8 +4826,8 @@
       const state = body.state;
       if (state && state.bg && !ppState.bg) {
         const q = `session=${encodeURIComponent(session)}`;
-        ppState.bg = {...state.bg, url:`${directBase}/photo?${q}&id=${state.bg.id}`};
-        ppState.person = {...state.person, url:`${directBase}/cutout?${q}&id=${state.person.id}`};
+        ppState.bg = {...state.bg, x:0, y:0, zoom:1, url:`${directBase}/photo?${q}&id=${state.bg.id}`};
+        ppState.person = {...state.person, follow:false, url:`${directBase}/cutout?${q}&id=${state.person.id}`};
         ppState.mode = 'both';
         $('ppBg').src = ppState.bg.url; $('ppBg').hidden = false;
         $('ppPerson').src = ppState.person.url; $('ppPerson').hidden = false;
