@@ -188,7 +188,7 @@ def _build_state(envelope, catalog, now, expected_session):
         if style not in photo_jr.STYLES:
             raise ValueError('Stile non valido.')
         if style == 'blur':
-            # Sfocata (pagina 26 Canva): 1-3 foto con posizione e larghezza, una è lo sfondo.
+            # Sfocata (pagina 26 Canva): 1-4 foto con posizione e larghezza, una è lo sfondo.
             cards = incoming.get('cards')
             if not isinstance(cards, list) or not 1 <= len(cards) <= photo_jr.MAX_CARDS:
                 raise ValueError(f'Carica da 1 a {photo_jr.MAX_CARDS} foto.')
@@ -199,6 +199,10 @@ def _build_state(envelope, catalog, now, expected_session):
                 raise ValueError('Scegli la foto per lo sfondo.')
             jr_data = {'kind': 'jr', 'style': 'blur', 'color': color,
                        'background_id': background, 'cards': cards}
+        elif style == 'collage':
+            # Collage: da 2 a 9 riquadri già calcolati dalla Mini App, ognuno con la sua foto.
+            jr_data = {'kind': 'jr', 'style': 'collage', 'color': color,
+                       'cells': photo_jr.clean_cells(incoming.get('cells'), _photo_id)}
         else:
             jr_data = {'kind': 'jr', 'style': 'classic', 'color': color,
                        'photo_id': _photo_id(incoming.get('photo_id')),
