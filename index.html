@@ -465,9 +465,6 @@
     .fx-info{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .fx-logos{display:flex;gap:6px;flex:none}
     .fx-card .fx-logos .fx-logo,.fx-card .fx-logos .fx-logo img{width:34px;height:34px}
-    .fx-link{display:flex;gap:8px;align-items:center;margin-top:4px}
-    .fx-link .field-input{flex:1;min-width:0;min-height:48px;padding:0 12px;font-size:15px;font-weight:600;text-overflow:ellipsis}
-    .fx-link .btn{flex:none}
     .fx-other{min-height:52px;justify-content:center;font-weight:750;color:var(--muted)}
     .xi-rows{display:grid;gap:8px}
     /* Liste incollate: elenco letto (numero + cognome) */
@@ -501,6 +498,10 @@
     .mod-ov{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;background:rgba(0,0,0,.4)}
     .mod-ov.open{display:flex}
     .mod-sh{width:100%;max-width:560px;margin:0 auto;max-height:82vh;overflow:auto;background:var(--bg);border-radius:18px 18px 0 0;padding:10px 12px calc(20px + env(safe-area-inset-bottom,0px))}
+    .lnk-row{display:flex;gap:8px;align-items:center}
+    .lnk-row .field-input{flex:1;min-width:0;min-height:48px;padding:0 12px;font-size:15px;font-weight:600;text-overflow:ellipsis}
+    .lnk-row .btn{flex:none}
+    .lnk-err{min-height:18px;margin-top:10px;color:#d33;font-size:13px;font-weight:600}
     .mod-bar{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px}
     .mod-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
     .mod-top button{border:0;background:none;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;padding:4px 2px}
@@ -1029,7 +1030,10 @@
 
           <section class="screen" data-screen="mdpick">
             <div id="mdPickEyebrow" class="eyebrow">Matchday</div>
-            <h1>Scegli la partita</h1>
+            <div class="photo-head">
+              <h1>Scegli la partita</h1>
+              <button id="squadLinkBtn" class="btn ghost" type="button" hidden>Link</button>
+            </div>
             <p id="mdPickLead" class="lead">Dal calendario della Juventus: competizione, campo e avversario si compilano da soli.</p>
             <div id="mdPickOpts" class="fx-list" role="list"></div>
             <div id="mdPickHint" class="hint"></div>
@@ -1273,6 +1277,15 @@
   </div>
 </div>
 <div id="modOv" class="mod-ov"><div id="modSh" class="mod-sh"></div></div>
+<div id="lnkOv" class="mod-ov"><div id="lnkSh" class="mod-sh">
+  <div class="mod-bar"></div>
+  <div class="mod-top"><b>Link convocati</b><button type="button" id="lnkClose">Chiudi</button></div>
+  <div class="lnk-row">
+    <input id="lnkIn" class="field-input" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="Incolla il link dell’articolo">
+    <button type="button" id="lnkGo" class="btn primary">Genera</button>
+  </div>
+  <div id="lnkErr" class="lnk-err" role="alert"></div>
+</div></div>
 <script>
 (() => {
   const tg = window.Telegram && window.Telegram.WebApp;
@@ -1866,6 +1879,7 @@
         : PREMATCH.includes(kind)
           ? 'Dal calendario della Juventus: competizione, campo e avversario si compilano da soli.'
           : 'Partita di oggi o già giocata: competizione, campo e avversario si compilano da soli.';
+      $('squadLinkBtn').hidden = kind !== 'squad';
       if (kind === 'squad') {
         $('mdPickLead').textContent = 'Dai convocati pubblicati su juventus.com (prima squadra), dal più recente: partita e giocatori si compilano da soli.';
         loadSquadSite();
@@ -3043,15 +3057,6 @@
     const box = $('mdPickOpts');
     box.innerHTML = '';
     squadSite.forEach(m => box.appendChild(siteCard(m)));
-    const row = document.createElement('div');
-    row.className = 'fx-link';
-    row.innerHTML = '<input class="field-input" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="Incolla link articolo">'
-      + '<button type="button" class="btn ghost">Carica</button>';
-    const input = row.querySelector('input');
-    const go = () => { const v = input.value.trim(); if (v) loadSquadSite(v); };
-    row.querySelector('button').addEventListener('click', go);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
-    box.appendChild(row);
     const other = document.createElement('button');
     other.type = 'button';
     other.className = 'fx-card fx-other' + (mdPick === 'manual' ? ' selected' : '');
@@ -3070,6 +3075,7 @@
       squadSite = [...body.items, ...squadSite.filter(x => !body.items.some(n => n.id === x.id))]
         .sort((a, b) => String(b.published).localeCompare(String(a.published)));
     } else { squadSite = body.items; squadSiteAt = Date.now(); }
+    return body.items;
   }
 
   const squadSiteFresh = () => squadSite.length && Date.now() - squadSiteAt < 120000;
@@ -3092,9 +3098,46 @@
       else await fetchSquadSite(link);
       hint.textContent = '';
     } catch (err) {
-      hint.textContent = `${err && err.message ? err.message : 'Convocati non disponibili.'} Incolla il link dell’articolo o scegli “Altra partita”.`;
+      hint.textContent = `${err && err.message ? err.message : 'Convocati non disponibili.'} Usa “Link” in alto per incollare l’articolo o scegli “Altra partita”.`;
     }
     if (kind === 'squad' && flow[flowIndex] === 'mdpick') renderSquadSite();
+  }
+
+  /* Link manuale: pannello dal basso, incolli l'URL e parte subito la grafica. */
+  const SQUAD_URL_OK = /^https:\/\/www\.juventus\.com\/(?:it|en)\/news\/articoli\/[\w\-./%]+$/;
+  let lnkBusy = false;
+  function openLinkSheet() {
+    haptic('select');
+    $('lnkErr').textContent = '';
+    $('lnkIn').value = '';
+    $('lnkOv').classList.add('open');
+    setTimeout(() => $('lnkIn').focus(), 80);
+  }
+  const closeLinkSheet = () => $('lnkOv').classList.remove('open');
+
+  async function submitLink() {
+    if (lnkBusy) return;
+    const err = $('lnkErr'), btn = $('lnkGo');
+    const link = $('lnkIn').value.trim();
+    err.textContent = '';
+    const fail = msg => { err.textContent = msg; haptic('error'); };
+    if (!link) return fail('Incolla il link dell’articolo.');
+    if (!SQUAD_URL_OK.test(link)) return fail('Link non valido: serve un articolo dei convocati su juventus.com.');
+    if (!directBase || !session) return fail('Sessione vecchia. Riavvia ImageGen dal workflow.');
+    lnkBusy = true; btn.disabled = true; btn.textContent = 'Leggo…';
+    try {
+      const items = await fetchSquadSite(link);
+      const m = items && items[0];
+      if (!m) throw new Error('Articolo non valido: servono i convocati della prima squadra.');
+      if (!findTeamByName(m.opponent)) throw new Error('Squadra avversaria non presente nel catalogo.');
+      if (!competitionOptions().some(([v]) => v === m.competition)) throw new Error('Competizione non prevista per la Squad List.');
+      closeLinkSheet();
+      pickSquadSite(m);          // compila tutto e passa dritto all'anteprima
+    } catch (e) {
+      fail(e && e.message ? e.message : 'Link non valido.');
+    } finally {
+      lnkBusy = false; btn.disabled = false; btn.textContent = 'Genera';
+    }
   }
 
   function pickSquadSite(m) {
@@ -5264,6 +5307,12 @@
   initJrBlur();
   initJrCollage();
   initPhaseEditor();
+  $('squadLinkBtn').addEventListener('click',openLinkSheet);
+  $('lnkClose').addEventListener('click',closeLinkSheet);
+  $('lnkGo').addEventListener('click',submitLink);
+  $('lnkIn').addEventListener('keydown',e => { if (e.key === 'Enter') { e.preventDefault(); submitLink(); } });
+  $('lnkIn').addEventListener('input',() => { $('lnkErr').textContent = ''; });
+  $('lnkOv').addEventListener('click',e => { if (e.target.id === 'lnkOv') closeLinkSheet(); });
   $('previewEdit').addEventListener('click',() => {
     if (kind === 'pxi') { openLayoutEditor(); return; }
     flowIndex = Math.max(0, flow.indexOf('calrows')); closePreview();
