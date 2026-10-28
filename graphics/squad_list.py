@@ -34,6 +34,13 @@ OPACITY = 0.85  # testi e loghi su Canva hanno trasparenza 85%
 LOGO_X = (453.3, 532.0)
 
 MAX_PLAYERS = 30
+# Area utile della lista, misurata sul render: dal punto piu' basso del titolo (coda della "q",
+# baseline + ~24px) all'inizio visibile dei loghi (il file logo ha ~5.5px di margine interno).
+# Le maiuscole occupano solo parte della riga: partono a CAP_TOP e sono alte CAP_H (in frazione
+# dell'altezza riga), quindi si centra l'inchiostro del testo, non il box delle righe.
+TITLE_BOTTOM, LOGOS_TOP = 349.0, 1216.0
+CAP_TOP, CAP_H = 0.0786, 0.607
+MIN_GAP = 27.0  # spazio minimo sopra/sotto: quello del design a 12 righe
 
 
 def parse_squad(text):
@@ -63,7 +70,16 @@ def build_html(*, players, competition, home_name, home_id, away_name, away_id, 
         raise ValueError('Squad List disponibile per Serie A, Coppa Italia, Champions, Europa e Conference League.')
     assets = asset_dir()
     left, right = columns(players)
-    top = CENTER_Y - len(left) * ROW_H / 2
+    n = max(len(left), 1)
+    window = LOGOS_TOP - TITLE_BOTTOM
+    # Altezza riga: 70 (design) finche' c'e' spazio, poi si restringe per tenere MIN_GAP sopra e sotto.
+    row_h = min(ROW_H, (window - 2 * MIN_GAP) / (n - 1 + CAP_H))
+    scale = row_h / ROW_H
+    font_size = FONT_SIZE * scale
+    letter_spacing = LETTER_SPACING * scale
+    ink_h = (n - 1 + CAP_H) * row_h
+    ink_top = TITLE_BOTTOM + (window - ink_h) / 2  # stesso spazio sopra (q) e sotto (loghi)
+    top = ink_top - CAP_TOP * row_h
 
     def column(names, x, align):
         rows = ''.join(f'<p>{esc(n)}</p>' for n in names)
@@ -78,8 +94,8 @@ def build_html(*, players, competition, home_name, home_id, away_name, away_id, 
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 {BASE_CSS}
 {font_face('Bebas Neue', 'BebasNeue2014-Regular.ttf')}
-.col{{width:{COL_W}px;font-family:'Bebas Neue';font-size:{FONT_SIZE}px;
-letter-spacing:{LETTER_SPACING}px;line-height:{ROW_H}px;color:#fff;text-transform:uppercase;white-space:nowrap;opacity:{OPACITY}}}
+.col{{width:{COL_W}px;font-family:'Bebas Neue';font-size:{font_size}px;
+letter-spacing:{letter_spacing}px;line-height:{row_h}px;color:#fff;text-transform:uppercase;white-space:nowrap;opacity:{OPACITY}}}
 .logo{{opacity:{OPACITY}}}
 @font-face{{font-family:'Allogist';font-style:italic;src:url({data_uri(assets / 'fonts' / 'AllogistItalic.ttf')})}}
 svg{{position:absolute;left:0;top:0}}
