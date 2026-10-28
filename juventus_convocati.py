@@ -35,7 +35,7 @@ MAX_CANDIDATES = 24     # articoli letti per volta
 MAX_ITEMS = 10          # partite mostrate
 MIN_PLAYERS = 11
 LIST_CACHE_SECONDS = 120
-ARTICLE_CACHE_SECONDS = 3600
+ARTICLE_CACHE_SECONDS = 300
 URL_OK = re.compile(r'^https://www\.juventus\.com/(?:it|en)/news/articoli/[\w\-./%]+$')
 
 # Competizione del sito -> codice usato da ImageGEN (vedi graphics/squad_list.py).
@@ -113,23 +113,44 @@ def _teams(headline):
     return None
 
 
+MONTHS = ('gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto',
+          'settembre', 'ottobre', 'novembre', 'dicembre', 'january', 'february', 'march', 'april',
+          'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december')
+ROW = re.compile(r'(\d{1,2})\s+([^\W\d_][^\n]{0,40})')
+
+
+def _row(text):
+    """\"3 Bremer\" -> (3, \"3 Bremer\"); None per date, orari e righe che non sono giocatori."""
+    text = ' '.join(str(text).split())
+    match = ROW.fullmatch(text)
+    if not match or int(match.group(1)) == 0:
+        return None
+    name = match.group(2)
+    if name.lower().split()[0] in MONTHS or ':' in name or '|' in name:
+        return None
+    return int(match.group(1)), text
+
+
 def _players(page, article):
-    """Righe \"3 Bremer\": prima dai paragrafi del corpo, poi dall'articleBody del JSON-LD."""
-    rows = []
-    for fragment in re.findall(r'<p[^>]*>(.*?)</p>', page, re.S | re.I):
-        text = _clean(fragment)
-        if re.fullmatch(r'\d{1,2}\s+\S.{0,40}', text):
-            rows.append(text)
-    if len(rows) < MIN_PLAYERS:
-        rows = [line.strip() for line in str(article.get('articleBody', '')).splitlines()
-                if re.fullmatch(r'\d{1,2}\s+\S.{0,40}', line.strip())]
-    seen, out = set(), []
-    for row in rows:
-        key = row.lower()
-        if key not in seen:
-            seen.add(key)
-            out.append(row)
-    return out
+    """Righe \"3 Bremer\" lette in più modi e unite per numero di maglia (un numero = un giocatore):
+    articleBody del JSON-LD, paragrafi, <li>, e testo del corpo con i tag trasformati in a capo."""
+    sources = [str(article.get('articleBody', '')).splitlines()]
+    sources.append([_clean(f) for f in re.findall(r'<(?:p|li|h[1-6])[^>]*>(.*?)</(?:p|li|h[1-6])>', page, re.S | re.I)])
+    body = re.search(r'<article.*?</article>', page, re.S | re.I)
+    flat = re.sub(r'<(?:br|/p|/li|/div|/h\d)[^>]*>', '\n', body.group(0) if body else page, flags=re.I)
+    sources.append([_clean(line) for line in flat.split('\n')])
+    found = {}
+    counts = []
+    for lines in sources:
+        n = 0
+        for line in lines:
+            parsed = _row(line)
+            if parsed:
+                n += 1
+                found.setdefault(parsed[0], parsed[1])
+        counts.append(n)
+    print(f'INFO IMAGEGEN: convocati letti per metodo {counts} -> {len(found)}', flush=True)
+    return [found[k] for k in sorted(found)]
 
 
 def _rome_day(iso):
