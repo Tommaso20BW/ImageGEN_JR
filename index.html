@@ -434,19 +434,19 @@
     #jrbFrame .card.sel{outline:2px solid var(--cta);outline-offset:2px}
     #jrbFrame .overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3}
     /* Collage: anteprima grande (tocca due riquadri per scambiarli) e layout in miniatura */
-    .col-big{position:relative;width:min(100%,300px);aspect-ratio:3/4;margin:6px auto 0;border-radius:12px;overflow:hidden;background:#111;
+    .col-big{position:relative;width:min(100%,300px);aspect-ratio:3/4;margin:6px auto 0;border-radius:12px;overflow:hidden;background:#fff;
       box-shadow:var(--preview-shadow, 0 6px 24px rgba(0,0,0,.25))}
-    .col-cell{position:absolute;overflow:hidden;background:#333;border-radius:calc(14px * var(--k,.28));cursor:pointer;
+    .col-cell{position:absolute;overflow:hidden;background:#ddd;cursor:pointer;
       outline:0 solid transparent;outline-offset:-2px}
     .col-cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:50% 38%;pointer-events:none;display:block}
     .col-cell.sel{outline:3px solid var(--cta);z-index:2}
     .col-big .overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3}
     .col-hint{text-align:center;margin:8px 0 14px}
     .col-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-    .col-th{position:relative;aspect-ratio:3/4;padding:0;border:0;border-radius:10px;overflow:hidden;background:#111;
+    .col-th{position:relative;aspect-ratio:3/4;padding:0;border:0;border-radius:10px;overflow:hidden;background:#fff;box-shadow:inset 0 0 0 1px var(--line);
       outline:3px solid transparent;outline-offset:-3px;transition:outline-color .18s var(--ease-out);cursor:pointer}
     .col-th.on{outline-color:var(--cta)}
-    .col-th .col-cell{border-radius:3px;cursor:inherit}
+    .col-th .col-cell{cursor:inherit}
     .jrb-tools{display:flex;align-items:center;justify-content:center;gap:8px;margin:12px auto 0}
     .jrb-tools .lay-size{background:var(--surface2)}
     .pxi-slots{display:grid;gap:8px}
@@ -1832,8 +1832,7 @@
     if (screenName === 'phasephoto') { $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Post'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
     if (screenName === 'jrphotos') renderJrPicker();
-    if (screenName === 'jrphotos') loadColTop();
-    if (screenName === 'jrlayout') loadColTop().then(() => { if ($('colBig').offsetParent) renderJrLayout(true); });
+    if (screenName === 'jrlayout') renderJrLayout(true);
     if (screenName === 'jrbg') renderJrBg();
     if (screenName === 'jrblur') { jrbAutoLayout(); requestAnimationFrame(() => { fitJrbFrame(); renderJrb(); }); }
     if (screenName === 'lineup') readXiText();
@@ -3848,27 +3847,12 @@
 
 
   /* ---------- FOTO + JR Collage: layout automatici a riquadri (stile Canva) ---------- */
-  // Pagina 1080x1440, bordo 40, spazio fra i riquadri 16: stesse misure di graphics/photo_jr.py.
+  // Pagina 1080x1440, fondo bianco, bordo 10 e linee di 5 px (come il collage di esempio):
+  // stesse misure di graphics/photo_jr.py. Il logo JR sta sopra la foto in alto a destra.
   // I layout si ricavano da alberi di divisioni (colonne/righe) con un generatore a caso ma
   // con seme fisso: ogni numero di foto dà sempre gli stessi layout. I peggiori (riquadri
   // troppo stretti o troppo piccoli) si scartano, poi si ordinano dal più equilibrato.
-  const COL_W = 1080, COL_H = 1440, COL_M = 40, COL_G = 16, COL_MAX_TPL = 15;
-  // Bordo uguale su tutti e quattro i lati, largo quanto serve al logo JR in alto: lo misura il servizio
-  // sul livello Canva (se non risponde, valore abbondante).
-  let colTop = 190, colTopKnown = false;
-  function loadColTop() {
-    if (colTopKnown || !directBase || !session) return Promise.resolve();
-    return netFetch(`${directBase}/jrinfo?session=${encodeURIComponent(session)}`,{},15000)
-      .then(r => r.json())
-      .then(b => {
-        if (b && b.ok && Number.isFinite(b.top)) {
-          colTopKnown = true;
-          if (b.top !== colTop) { colTop = b.top; jrb.tpls = null; jrb.order = null; }
-        }
-      })
-      .catch(() => {});
-  }
-
+  const COL_W = 1080, COL_H = 1440, COL_M = 10, COL_G = 5, COL_MAX_TPL = 15;
   function colRng(seed) {
     let a = seed >>> 0;
     return () => {
@@ -3911,7 +3895,7 @@
   function colScore(cells) {
     let pen = 0, amin = Infinity, amax = 0;
     for (const c of cells) {
-      if (c.w < 150 || c.h < 150) return Infinity;
+      if (c.w < 190 || c.h < 190) return Infinity;
       pen += Math.max(0, Math.abs(Math.log(c.w / c.h / .9)) - .7) * 3;        // proporzioni estreme
       amin = Math.min(amin, c.w * c.h); amax = Math.max(amax, c.w * c.h);
     }
@@ -3920,7 +3904,7 @@
   }
 
   function colTemplates(n) {
-    const rect = {x:colTop, y:colTop, w:COL_W - 2 * colTop, h:COL_H - 2 * colTop};   // bordo uguale su tutti i lati
+    const rect = {x:COL_M, y:COL_M, w:COL_W - 2 * COL_M, h:COL_H - 2 * COL_M};     // bordo uguale su tutti i lati
     const trees = [];
     // griglie regolari: righe (e colonne) il più possibile uguali
     for (let rows = 2; rows <= Math.min(4, n); rows++) {

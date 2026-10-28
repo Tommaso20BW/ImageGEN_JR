@@ -132,14 +132,6 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 return
             self._json(200, {'ok': True, 'kit': self.service.kit(query.get('event', ''), query.get('league', ''))})
             return
-        if parts.path.rstrip('/') == '/jrinfo':
-            query = dict(parse_qsl(parts.query))
-            if query.get('session', '') != self.service.session:
-                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
-                return
-            from graphics import photo_jr
-            self._json(200, {'ok': True, 'top': photo_jr.collage_top()})   # inizio dei riquadri del collage
-            return
         if parts.path.rstrip('/') == '/overlay':
             query = dict(parse_qsl(parts.query))
             if query.get('session', '') != self.service.session:
