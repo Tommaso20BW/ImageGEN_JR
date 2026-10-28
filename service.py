@@ -31,7 +31,7 @@ EXTEND_BY_SECONDS = 300
 # Il job GitHub si ferma a 40 minuti (timeout-minutes in imagegen.yml): margine per
 # avvio e pulizia, la sessione non va oltre 35 minuti in tutto.
 SESSION_MAX_SECONDS = 35 * 60
-MAX_PHOTOS = 8
+MAX_PHOTOS = 24               # il collage ne usa fino a 9, più quelle dell'altra grafica
 # Campi che spostano o cambiano solo le foto: non cambiano la sagoma dell'editor.
 PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame')
 LOCK_WAIT_SECONDS = 75        # un nuovo tentativo aspetta la richiesta ancora in corso
@@ -131,6 +131,14 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
                 return
             self._json(200, {'ok': True, 'kit': self.service.kit(query.get('event', ''), query.get('league', ''))})
+            return
+        if parts.path.rstrip('/') == '/jrinfo':
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            from graphics import photo_jr
+            self._json(200, {'ok': True, 'top': photo_jr.collage_top()})   # inizio dei riquadri del collage
             return
         if parts.path.rstrip('/') == '/overlay':
             query = dict(parse_qsl(parts.query))
