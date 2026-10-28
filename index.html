@@ -466,7 +466,8 @@
     .fx-logos{display:flex;gap:6px;flex:none}
     .fx-card .fx-logos .fx-logo,.fx-card .fx-logos .fx-logo img{width:34px;height:34px}
     .fx-link{display:flex;gap:8px;align-items:center;margin-top:4px}
-    .fx-link .field-input{flex:1;min-width:0}
+    .fx-link .field-input{flex:1;min-width:0;min-height:48px;padding:0 12px;font-size:15px;font-weight:600;text-overflow:ellipsis}
+    .fx-link .btn{flex:none}
     .fx-other{min-height:52px;justify-content:center;font-weight:750;color:var(--muted)}
     .xi-rows{display:grid;gap:8px}
     /* Liste incollate: elenco letto (numero + cognome) */
@@ -1617,6 +1618,8 @@
     else if (PREMATCH.includes(kind)) {
       const rest = {squad:['squad'], xi:['kit','lineup','photo'], md:['kit','match','photo'], pxi:['kit','xi11']}[kind];
       flow = pick([...base,...rest]);
+      // Squad List da una partita dei convocati: giocatori già compilati, si va dritti all'anteprima.
+      if (kind === 'squad' && String(mdPick).startsWith('site:')) flow = ['mdpick'];
     }
     else if (kind === 'jr') flow = jrb.style === 'blur'
       ? ['jrstyle','jrphotos',...(jrb.cards.length > 1 ? ['jrbg'] : []),'jrcolor','jrblur']
@@ -2186,7 +2189,7 @@
     full:'Avvio la generazione…',
     stats:'Preparo la tabella delle statistiche.'
   };
-  const DEFAULT_MS = {ppcut:5000, goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, pxi:9000, cal:5000, half:6000, end_of_90:6000, full:6000, submit:2500};
+  const DEFAULT_MS = {ppcut:12000, goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, pxi:9000, cal:5000, half:6000, end_of_90:6000, full:6000, submit:2500};
   const MIN_FAST_MS = 3000;
   const DURATIONS_KEY = 'imagegen-jr-durations';
   const SLOW_SUB = 'Ci sta mettendo più del solito: attendi ancora qualche secondo.';
@@ -2993,13 +2996,10 @@
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'fx-card' + (mdPick === `site:${m.id}` ? ' selected' : '');
-    const juve = findTeamByName('Juventus') || {name:'Juventus'};
     const opp = findTeamByName(m.opponent);
-    b.innerHTML = `<span class="fx-logos"><span class="logo fx-logo"></span><span class="logo fx-logo"></span></span>
+    b.innerHTML = `<span class="logo fx-logo"></span>
       <span class="fx-main"><span class="fx-team"></span><span class="fx-when"></span><span class="fx-info"></span></span>`;
-    const [logoHome, logoAway] = b.querySelectorAll('.fx-logo');
-    fillLogo(logoHome, m.side === 'home' ? juve : (opp || {name:m.home}));
-    fillLogo(logoAway, m.side === 'home' ? (opp || {name:m.away}) : juve);
+    fillLogo(b.querySelector('.fx-logo'), opp || {name:m.side === 'home' ? m.away : m.home});
     b.querySelector('.fx-team').textContent = `${displayTeamName(m.home)} – ${displayTeamName(m.away)}`;
     b.querySelector('.fx-when').textContent = siteDateLabel(m.date);
     let info = `${COMP_SHORT[m.competition] || m.competition_label || 'Competizione'} · ${m.players.length} convocati`;
@@ -3016,7 +3016,7 @@
     squadSite.forEach(m => box.appendChild(siteCard(m)));
     const row = document.createElement('div');
     row.className = 'fx-link';
-    row.innerHTML = '<input class="field-input" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="Oppure incolla il link dell’articolo">'
+    row.innerHTML = '<input class="field-input" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="Incolla link articolo">'
       + '<button type="button" class="btn ghost">Carica</button>';
     const input = row.querySelector('input');
     const go = () => { const v = input.value.trim(); if (v) loadSquadSite(v); };
@@ -4223,6 +4223,22 @@
     return !!person && (Math.abs(person.x) > .0005 || Math.abs(person.y) > .0005 || Math.abs(person.zoom - 1) > .0005);
   }
 
+  // Sfondo senza la persona, ricostruito dal servizio (una volta sola per foto).
+  // true = pronto in ppState.cleanUrl, false = non riuscito o foto cambiata.
+  async function ppFetchClean(id) {
+    if (ppState.cleanUrl && ppState.cleanFor === id) return true;
+    try {
+      const response = await netFetch(`${directBase}/clean?session=${encodeURIComponent(session)}&id=${id}`,{}, 120000);
+      if (!response.ok) return false;
+      const url = URL.createObjectURL(await response.blob());
+      if (!ppState.bg || ppState.bg.id !== id) { ppRevoke(url); return false; }
+      ppRevoke(ppState.cleanUrl);
+      ppState.cleanUrl = url;
+      ppState.cleanFor = id;
+      return true;
+    } catch (_) { return false; }
+  }
+
   async function ppSyncClean() {
     const {bg, person} = ppState;
     const img = $('ppBg');
@@ -4435,6 +4451,15 @@
           throw err;
         }
         if (!cut) return;     // foto cambiata o svuotata nel frattempo
+        // Sfondo ripulito già adesso, dietro la schermata di caricamento: spostando la persona
+        // la foto è subito a posto. Se non riesce resta la pulizia al primo spostamento.
+        if (ppState.bg && ppState.bg.id === person.id) {
+          if (busy === myBusy) $('busySub').textContent = 'Pulisco lo sfondo dietro la persona…';
+          ppState.cleaning = true;
+          await ppFetchClean(person.id);
+          ppState.cleaning = false;
+          if (ppState.person !== person) return;
+        }
       }
       $('ppBg').dataset.clean = '';
       $('ppBg').src = ppState.bg.url;
