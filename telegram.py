@@ -7,7 +7,7 @@ import requests
 
 # Session message: bold title + italic line, both with custom emoji (offsets in UTF-16 units).
 SESSION_TITLE = "🎨 ImageGEN · JR"
-SESSION_LINE = "Sessione attiva per almeno 10min."
+SESSION_LINE = "Sessione attiva per almeno 30min."
 SESSION_TEXT = f"{SESSION_TITLE}\n\n⏳ {SESSION_LINE}"
 
 
