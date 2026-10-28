@@ -142,6 +142,14 @@ class _DirectHandler(BaseHTTPRequestHandler):
             except (KeyError, ValueError, OSError):
                 self._json(404, {'ok': False, 'error': 'Modello non trovato.'})
             return
+        if parts.path.rstrip('/') == '/cutout_state':
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            self._json(200, {'ok': True, **self.service.cutout_state(
+                query.get('id', ''), start=query.get('start', '') == '1')})
+            return
         if parts.path.rstrip('/') == '/cutout':
             query = dict(parse_qsl(parts.query))
             if query.get('session', '') != self.service.session:
@@ -360,6 +368,9 @@ class Service:
         self.photos = {}
         self.overlays = {}
         self.preview_cutouts = {}
+        # Scontorni in corso/finiti (id foto -> stato), per chiedere lo stato con richieste brevi.
+        self.cutout_jobs = {}
+        self.cutout_jobs_lock = threading.Lock()
         self.preview_jpeg_cache = {}
         self.ghost_cache = {}
         self.recent_sends = {}
@@ -459,6 +470,37 @@ class Service:
                 small.save(out, format='JPEG', quality=85)
             self.overlays[key] = out.getvalue()
         return self.overlays[key]
+
+    def cutout_state(self, photo_id, start=False):
+        """Stato dello scontorno: 'running', 'ready' o 'error'.
+
+        Lo scontorno è un lavoro in background: la Mini App chiede lo stato con richieste
+        brevi e scarica il PNG solo a lavoro finito. Una sola richiesta lunga attraverso il
+        tunnel cade spesso mentre il processore è occupato dal modello.
+        """
+        with self.cutout_jobs_lock:
+            job = self.cutout_jobs.get(photo_id)
+            if job is None and photo_id in self.preview_cutouts:
+                return {'state': 'ready', 'error': ''}
+            if (job is None or job['state'] == 'error') and start:
+                job = {'state': 'running', 'error': ''}
+                self.cutout_jobs[photo_id] = job
+                while len(self.cutout_jobs) > MAX_PHOTOS:
+                    self.cutout_jobs.pop(next(iter(self.cutout_jobs)))
+                threading.Thread(target=self._cutout_job, args=(photo_id, job), daemon=True).start()
+            if job is None:
+                return {'state': 'error', 'error': 'Scontorno non avviato.'}
+            return {'state': job['state'], 'error': job['error']}
+
+    def _cutout_job(self, photo_id, job):
+        _lower_priority()
+        try:
+            self.cutout_preview(photo_id)
+            job['state'] = 'ready'
+        except Exception as exc:  # noqa: BLE001 - l'errore va alla Mini App, non al server
+            job['error'] = str(exc) if isinstance(exc, ValueError) else 'Scontorno non riuscito.'
+            job['state'] = 'error'
+            print(f'WARN IMAGEGEN: scontorno non riuscito: {type(exc).__name__}: {exc}', flush=True)
 
     def cutout_preview(self, photo_id):
         """Persona scontornata, ridotta per l'editor (l'invio usa quella piena)."""
@@ -849,8 +891,19 @@ def _warm_up_renderer():
         print(f'WARN IMAGEGEN: browser grafiche non avviato: {type(exc).__name__}: {exc}', flush=True)
 
 
+def _lower_priority():
+    """Il modello di scontorno occupa tutto il processore e il tunnel Cloudflare, che gira nello
+    stesso computer, resta indietro: la Mini App vede \"connessione instabile\". Con priorità più
+    bassa per i thread del modello il tunnel passa sempre per primo."""
+    try:
+        os.setpriority(os.PRIO_PROCESS, 0, 5)
+    except (AttributeError, OSError):
+        pass
+
+
 def _warm_up_cutout():
     """Modello di scontorno caricato subito: la prima foto HALF/END/FULL TIME non aspetta."""
+    _lower_priority()
     try:
         from livescore.graphics import phase_layers
         from PIL import Image

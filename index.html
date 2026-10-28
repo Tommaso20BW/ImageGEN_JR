@@ -4344,21 +4344,40 @@
   }
 
   // Persona scontornata dal servizio (o il PNG trasparente caricato, così com'è).
-  // Non mostra nulla da sola: chi la chiama decide quando far comparire la foto.
+  // Lo scontorno gira sul servizio: se ne chiede lo stato con richieste brevi (una sola richiesta
+  // lunga attraverso il tunnel cade) e il PNG si scarica solo a scontorno finito.
+  // Non mostra nulla da sola. true = pronta, false = nel frattempo la foto è cambiata,
+  // eccezione = scontorno non riuscito.
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
   async function ppLoadCutout(person) {
-    try {
-      const response = await netFetch(`${directBase}/cutout?session=${encodeURIComponent(session)}&id=${person.id}`,{}, 90000);
-      if (!response.ok) throw new Error('Scontorno non riuscito.');
-      const url = URL.createObjectURL(await response.blob());
-      if (ppState.person !== person) { ppRevoke(url); return false; }
-      ppRevoke(person.url);
-      person.url = url;
-      $('ppPerson').src = url;
-      return true;
-    } catch (err) {
-      if (ppState.person === person) showError(err && err.message ? err.message : 'Scontorno non riuscito.');
-      return false;
+    const q = `session=${encodeURIComponent(session)}&id=${person.id}`;
+    const t0 = performance.now();
+    let lastOk = t0;
+    for (;;) {
+      if (ppState.person !== person) return false;
+      let state = '';
+      try {
+        const response = await netFetch(`${directBase}/cutout_state?${q}&start=1`, {}, 10000, 1);
+        const body = await response.json().catch(() => ({}));
+        if (response.ok && body.ok) { lastOk = performance.now(); state = body.state; if (state === 'error') throw new Error(body.error || 'Scontorno non riuscito.'); }
+        else if (!TUNNEL_HICCUP.has(response.status)) throw new Error(body.error || 'Scontorno non riuscito.');
+      } catch (err) {
+        if (err && err.message && !/fetch|network|load failed|abort|connessione/i.test(err.message)) throw err;
+      }
+      if (state === 'ready') break;
+      const now = performance.now();
+      if (now - lastOk > 120000) throw new Error('ImageGEN non risponde da oltre 2 minuti. Riprova.');
+      if (now - t0 > 600000) throw new Error('Lo scontorno sta impiegando troppo. Riprova.');
+      await sleep(1200);
     }
+    const response = await netFetch(`${directBase}/cutout?${q}`, {}, 60000, 5, true);
+    if (!response.ok) throw new Error('Scontorno non riuscito.');
+    const url = URL.createObjectURL(await response.blob());
+    if (ppState.person !== person) { ppRevoke(url); return false; }
+    ppRevoke(person.url);
+    person.url = url;
+    $('ppPerson').src = url;
+    return true;
   }
 
   // pick: 'photo' = foto nuova (sfondo + persona scontornata da lei),
@@ -4368,15 +4387,19 @@
     clearError();
     if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
     ppState.uploading = true;
-    $('ppSummary').textContent = 'Caricamento foto…';
-    // Con una persona da scontornare la foto compare solo a scontorno finito,
-    // dietro la schermata di caricamento "Generazione".
+    // Con una persona da scontornare la foto compare solo a scontorno finito: fino ad allora
+    // resta la schermata di caricamento, che si chiude quando la persona è davvero pronta.
     const needsCutout = pick !== 'bg' || !ppState.bg;
+    let myBusy = null;
+    if (needsCutout) {
+      showBusy('Scontorno la persona…', 'Carico la foto…', 'ppcut');
+      myBusy = busy;
+    } else $('ppSummary').textContent = 'Caricamento foto…';
     try {
       const {blob, w, h, type} = await preparePhoto(file, pick === 'person');
       const id = await ppSend(blob, type);
       const item = {id, w, h, url:URL.createObjectURL(blob), x:0, y:0, zoom:1};
-      let person = null, ok = true;
+      let person = null;
       if (pick === 'person') {
         if (ppState.person) ppRevoke(ppState.person.url);
         person = ppState.person = {...item, url:'', x:0, y:0, zoom:1, follow:false};
@@ -4400,16 +4423,30 @@
         $('ppBg').hidden = true;
       }
       if (person) {
-        $('ppSummary').textContent = '';
-        showBusy('Generazione…', 'Scontorno la persona…', 'ppcut');
-        ok = await ppLoadCutout(person);
-        if (ppState.person !== person) return; // foto cambiata o svuotata nel frattempo
-        if (ok) await finishBusy();
+        if (busy === myBusy) $('busySub').textContent = 'Separo la persona dallo sfondo: ci vogliono alcuni secondi.';
+        let cut = false;
+        try { cut = await ppLoadCutout(person); }
+        catch (err) {
+          // Senza persona scontornata non si mostra mezza foto: si torna a com'era.
+          if (ppState.person === person) {
+            if (pick === 'person') { ppState.person = null; $('ppPerson').hidden = true; }
+            else clearPhase();
+          }
+          throw err;
+        }
+        if (!cut) return;     // foto cambiata o svuotata nel frattempo
       }
       $('ppBg').dataset.clean = '';
       $('ppBg').src = ppState.bg.url;
+      // Immagini già decodificate prima di mostrarle: niente comparsa a pezzi.
+      if (person) await Promise.all(['ppBg','ppPerson'].map(el => { const img = $(el); return img.decode ? img.decode().catch(() => {}) : null; }));
+      layoutPhase();
+      if (person) {
+        await finishBusy();
+        if (ppState.person !== person) return;
+        $('ppPerson').hidden = false;
+      }
       $('ppBg').hidden = false;
-      if (person && ok) $('ppPerson').hidden = false;
       $('ppEmpty').hidden = true;
       if ($('ppSummary').textContent === 'Caricamento foto…') $('ppSummary').textContent = '';
       layoutPhase();
@@ -4418,7 +4455,7 @@
       $('ppSummary').textContent = '';
       showError(err && err.message ? err.message : 'Caricamento non riuscito.');
     } finally {
-      if (needsCutout) hideBusy();
+      if (myBusy && busy === myBusy) hideBusy();
       ppState.uploading = false;
       renderSteps();
     }
@@ -4624,7 +4661,7 @@
   // invio (niente doppioni su Telegram) e riusa l'anteprima già pronta.
   // retryAbort: anche l'attesa scaduta si riprova (anteprima e invio).
   const TUNNEL_HICCUP = new Set([502,503,504,520,521,522,523,524,530]);
-  async function netFetch(url, options, timeoutMs=90000, tries=3, retryAbort=false) {
+  async function netFetch(url, options, timeoutMs=90000, tries=5, retryAbort=false) {
     let lastAbort = null;
     for (let attempt = 1; attempt <= tries; attempt++) {
       const controller = new AbortController();
@@ -4641,7 +4678,7 @@
           if (!retryAbort || attempt >= tries) throw error;
           lastAbort = error;
         }
-        if (attempt < tries) await new Promise(resolve => setTimeout(resolve, 700 * attempt));
+        if (attempt < tries) await new Promise(resolve => setTimeout(resolve, Math.min(3000, 700 * attempt)));
       } finally { clearTimeout(timer); }
     }
     if (lastAbort) throw lastAbort;
