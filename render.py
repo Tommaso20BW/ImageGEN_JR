@@ -141,7 +141,9 @@ class Renderer:
         self.photos = {}
         # Persone scontornate (id foto -> PNG), riusate da anteprima e invio.
         self.cutouts = {}
-        self.cutout_lock = threading.Lock()
+        self.cutout_lock = threading.RLock()
+        # Foto del MATCHDAY con la scia (id foto -> JPEG).
+        self.trails = {}
 
     def cutout(self, photo_id):
         """Persona scontornata da una foto caricata (PNG, calcolata una volta sola)."""
@@ -172,6 +174,28 @@ class Renderer:
         if not raw:
             raise ValueError('Foto non trovata: ricaricala nella Mini App.')
         return phase_layers.clean_background_jpeg(raw, self.cutout(photo_id))
+
+    def _matchday_photo(self, data):
+        """Foto del MATCHDAY con l'effetto movimento (scia a sinistra dal bordo della
+        persona scontornata). Se lo scontorno non riesce, esce la foto normale."""
+        photo = self._photo(data)
+        if data.get('trail') is False:
+            return photo
+        key = data['photo_id']
+        with self.cutout_lock:
+            cached = self.trails.get(key)
+        if cached is None:
+            from graphics import motion_trail
+            try:
+                cached = motion_trail.apply(photo, self.cutout(key))
+            except Exception as exc:  # noqa: BLE001 - meglio la foto senza scia che nessuna grafica
+                print(f'WARN IMAGEGEN: effetto movimento non riuscito: {type(exc).__name__}: {exc}', flush=True)
+                return photo
+            with self.cutout_lock:
+                self.trails[key] = cached
+                while len(self.trails) > 6:
+                    self.trails.pop(next(iter(self.trails)))
+        return cached
 
     def _photo(self, data):
         photo = self.photos.get(data.get('photo_id'))
@@ -319,7 +343,7 @@ class Renderer:
             return matchday.render(
                 **teams(data),
                 kit=data['kit'],
-                photo=None if ghost else self._photo(data),
+                photo=None if ghost else self._matchday_photo(data),
                 ghost=ghost,
                 frame=data['frame'],
                 info=data['info'],

@@ -279,6 +279,8 @@ def _build_state(envelope, catalog, now, expected_session):
         data['photo_id'] = _photo_id(incoming.get('photo_id'))
         data['frame'] = _frame(incoming.get('frame'))
         data['info'] = parse_info(incoming.get('stadium'), incoming.get('time'), incoming.get('date'))
+        # Effetto movimento: acceso di default, "trail": false lo spegne.
+        data['trail'] = incoming.get('trail') is not False
 
     elif kind == 'pxi':
         module = str(incoming.get('module') or '')
