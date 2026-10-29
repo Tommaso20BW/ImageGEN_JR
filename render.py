@@ -293,6 +293,8 @@ class Renderer:
                 import inspect
                 from graphics import backdrop
                 if 'text_shadow' not in inspect.signature(p.phase).parameters:
+                    print('WARN IMAGEGEN: portrait.phase() del motore LiveScore_JR NON accetta '
+                          '`text_shadow`: ombra calcolata ma NON applicata', flush=True)
                     return
                 decision = backdrop.shadow_for(kind, self._photo(data), data['frame'])
                 phase_args['text_shadow'] = decision
