@@ -1986,13 +1986,13 @@
     renderModuleButton();
     $('subkindTitle').textContent = labelOf(TABS,tab);
     renderOptions('subkindOpts',TAB_KINDS[tab] || [],kind,v => {
-      // Scelta del tipo: riparte da zero e passa subito al primo passaggio.
+      // Scelta del tipo: riparte da zero; si va avanti solo con il pulsante Avanti.
       kind = v;
       resetAllData();
       if (kind === 'squad') prefetchSquadSite();
       buildFlow();
       flowIndex = 0;
-      setTimeout(() => nextField(),120);
+      renderFlow();
     });
     renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); autoCalendar(); });
     renderOptions('poseOpts',POSES,pose,v => pose = v);
@@ -3151,7 +3151,7 @@
     updateSquadSummary();
     buildFlow();
     renderSteps();
-    setTimeout(() => nextField(), 120);
+    renderFlow();
   }
 
   // Un tocco: competizione, campo, avversario, stadio, data e ora.
@@ -3187,7 +3187,7 @@
     }
     buildFlow();
     renderSteps();
-    setTimeout(() => nextField(), 120);
+    renderFlow();
   }
 
   // Calendario: tocco sul mese -> partite del mese e anteprima subito.
@@ -3198,12 +3198,9 @@
     $('calYear').value = String(now.getFullYear() + (calMonth < now.getMonth() ? 1 : 0));
     calRows = [];
     await fillCalendarFromFixtures();
+    // Niente salto automatico alle partite né all'anteprima: si prosegue con Avanti.
     buildFlow();
-    flowIndex = Math.max(0, flow.indexOf('calrows'));
     renderFlow();
-    const complete = calRows.length && calRows.every(r => r.day && r.team);
-    if (complete) previewGraphic();
-    else if (calRows.length) showError('Alcune partite non hanno la squadra: completale qui.');
   }
 
   // Calendario: scelto il mese, le partite si compilano da sole (modificabili).
