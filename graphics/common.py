@@ -6,6 +6,7 @@ il render le porta a 1920x2560 come le altre grafiche HD.
 import base64
 import html
 import json
+import math
 import mimetypes
 import os
 import unicodedata
@@ -76,6 +77,20 @@ def team_logo(name, team_id=''):
     raise FileNotFoundError(f'Logo non trovato per {name!r}')
 
 
+def _crop_png(png, width, height):
+    """PNG tagliato a width x height (in alto a sinistra); invariato se ha già quella misura."""
+    import io
+
+    from PIL import Image
+
+    with Image.open(io.BytesIO(png)) as image:
+        if image.size == (width, height):
+            return png
+        out = io.BytesIO()
+        image.crop((0, 0, width, height)).save(out, format='PNG')
+        return out.getvalue()
+
+
 class _Renderer:
     """Un solo Chrome sempre acceso, in un thread dedicato (Playwright non si può
     usare da thread diversi): ogni grafica apre solo una pagina nuova.
@@ -92,23 +107,29 @@ class _Renderer:
         from playwright.sync_api import sync_playwright
         playwright = browser = None
         while True:
-            markup, ghost, done = self.jobs.get()
+            markup, ghost, page, done = self.jobs.get()
             try:
                 if browser is None or not browser.is_connected():
                     if playwright is None:
                         playwright = sync_playwright().start()
                     chrome = os.environ.get('IMAGEGEN_CHROME') or None
                     browser = playwright.chromium.launch(executable_path=chrome)
-                page = browser.new_page(
-                    viewport={'width': DESIGN_W, 'height': DESIGN_H},
+                page_w, page_h = page
+                tab = browser.new_page(
+                    viewport={'width': page_w, 'height': math.ceil(page_h) + 1},
                     device_scale_factor=0.5 if ghost else OUT_W / DESIGN_W,
                 )
                 try:
-                    page.set_content(markup, wait_until='load')
-                    page.evaluate('() => document.fonts.ready')
-                    done['png'] = page.screenshot(type='png', omit_background=ghost)
+                    tab.set_content(markup, wait_until='load')
+                    tab.evaluate('() => document.fonts.ready')
+                    # Pagine non 3:4 (es. 16:9 = 1080x607,5): si scatta una riga in più e si taglia
+                    # alla misura esatta (1920x1080), perché Chrome arrotonda l'altezza per difetto.
+                    png = tab.screenshot(type='png', omit_background=ghost,
+                                         clip={'x': 0, 'y': 0, 'width': page_w, 'height': math.ceil(page_h) + 1})
+                    scale = 0.5 if ghost else OUT_W / DESIGN_W
+                    done['png'] = _crop_png(png, round(page_w * scale), round(page_h * scale))
                 finally:
-                    page.close()
+                    tab.close()
             except Exception as exc:          # il prossimo render riparte con un browser nuovo
                 done['error'] = exc
                 try:
@@ -120,10 +141,10 @@ class _Renderer:
             finally:
                 done['event'].set()
 
-    def render(self, markup, ghost):
+    def render(self, markup, ghost, page):
         import threading
         done = {'event': threading.Event()}
-        self.jobs.put((markup, ghost, done))
+        self.jobs.put((markup, ghost, page, done))
         if not done['event'].wait(120):
             raise TimeoutError('Render della grafica troppo lento.')
         if 'error' in done:
@@ -134,15 +155,18 @@ class _Renderer:
 _RENDERER = None
 
 
-def render_html(markup, ghost=False):
+def render_html(markup, ghost=False, page=None):
     """Render della pagina 1080x1440 in PNG 1920x2560.
+
+    page = (larghezza, altezza) in pixel design per formati diversi dal 3:4: la
+    larghezza resta 1080 (uscita 1920 px), l'altezza segue il formato.
 
     ghost=True: versione leggera (540x720) con sfondo trasparente, per l'editor foto.
     """
     global _RENDERER
     if _RENDERER is None:
         _RENDERER = _Renderer()
-    return _RENDERER.render(markup, ghost)
+    return _RENDERER.render(markup, ghost, page or (DESIGN_W, DESIGN_H))
 
 
 def warm_up():
@@ -150,13 +174,13 @@ def warm_up():
     render_html('<!doctype html><html><body></body></html>', ghost=True)
 
 
-def photo_layer(photo, frame):
+def photo_layer(photo, frame, page=None):
     """(<img> della foto, colore di fondo pagina). Senza foto: niente <img> e fondo
     trasparente, per la versione "fantasma" mostrata sopra la foto nell'editor."""
     if photo is None:
         return '', 'transparent'
     from graphics.starting_xi import check_photo, photo_box
-    left, top, width, height = photo_box(check_photo(photo), frame)
+    left, top, width, height = photo_box(check_photo(photo), frame, page)
     mime = 'image/png' if photo.startswith(b'\x89PNG') else 'image/jpeg'
     uri = f'data:{mime};base64,' + base64.b64encode(photo).decode('ascii')
     return (f'<img src="{uri}" style="position:absolute;left:{left}px;top:{top}px;'

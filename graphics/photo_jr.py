@@ -1,7 +1,7 @@
 """FOTO + JR: foto caricate dall'utente con il solo logo JR (compleanni, MOTM...).
 
 Tre stili:
-- classic: la foto a tutta pagina (design Canva delle pagine 6/11/16);
+- classic: la foto a tutta pagina (design Canva delle pagine 6/11/16), in vari formati (3:4, 1:1, 16:9...);
 - blur: come la pagina 26 Canva. Sfondo = una delle foto, a tutta pagina, sfocata e un
   po' scurita; sopra, fino a 4 foto nitide con le loro proporzioni, angoli arrotondati e
   un'ombra morbida, ognuna spostata e ingrandita dall'utente;
@@ -17,10 +17,25 @@ import json
 import math
 from functools import lru_cache
 
-from graphics.common import photo_layer, DESIGN_H, DESIGN_W, asset_dir, data_uri, render_html
+from graphics.common import photo_layer, DESIGN_H, DESIGN_W, OUT_W, asset_dir, data_uri, render_html
 from graphics.starting_xi import check_photo
 
 COLORS = ('black', 'white', 'gold')
+# Formati della Classica (larghezza:altezza). La pagina resta larga 1080 px design (uscita 1920 px):
+# cambia solo l'altezza. Il logo JR sta sempre in alto a destra, alla stessa distanza dal bordo alto e
+# destro e con la stessa misura che ha nel 3:4: l'overlay Canva (1080x1440) è ancorato in alto a sinistra
+# di una pagina sempre larga 1080, quindi il logo non si sposta e non si ridimensiona.
+RATIOS = {'3:4': (3, 4), '4:5': (4, 5), '1:1': (1, 1), '4:3': (4, 3), '3:2': (3, 2), '16:9': (16, 9), '9:16': (9, 16)}
+DEFAULT_RATIO = '3:4'
+
+
+def page_size(ratio=DEFAULT_RATIO):
+    """Pagina in pixel design (1080 x altezza); l'uscita è 1920 x round(1920 * h / w), es. 16:9 -> 1920x1080."""
+    if ratio not in RATIOS:
+        raise ValueError('Formato non valido.')
+    rw, rh = RATIOS[ratio]
+    out_h = round(OUT_W * rh / rw)
+    return DESIGN_W, out_h * DESIGN_W / OUT_W
 STYLES = ('classic', 'blur', 'collage')
 MAX_CARDS = 4                  # foto nitide nello stile Sfocata
 MAX_COLLAGE = 9                # foto nel collage
@@ -103,8 +118,8 @@ def _collage(cells):
     return ''.join(html), '#fff', css
 
 
-def _classic(photo, frame):
-    photo_html, page_bg = photo_layer(photo, frame)
+def _classic(photo, frame, page):
+    photo_html, page_bg = photo_layer(photo, frame, page)
     return photo_html, page_bg, ''
 
 
@@ -126,7 +141,11 @@ def _blur(background, cards):
     return ''.join(html), '#111', f'.card{{box-shadow:{CARD_SHADOW};border-radius:{CARD_RADIUS}px}}'
 
 
-def build_html(*, color, photo=None, frame=None, style='classic', background=None, cards=(), cells=(), **_):
+def build_html(*, color, photo=None, frame=None, style='classic', background=None, cards=(), cells=(),
+               ratio=DEFAULT_RATIO, **_):
+    if style != 'classic':
+        ratio = DEFAULT_RATIO          # Sfocata e Collage restano 3:4
+    page = page_size(ratio)
     if color not in COLORS:
         raise ValueError('Colore JR non valido.')
     if style not in STYLES:
@@ -136,11 +155,11 @@ def build_html(*, color, photo=None, frame=None, style='classic', background=Non
     elif style == 'blur':
         body, page_bg, css = _blur(background, cards)
     else:
-        body, page_bg, css = _classic(photo, frame)
+        body, page_bg, css = _classic(photo, frame, page)
     overlay = data_uri(asset_dir() / 'canva' / _meta()[color]['overlay'])
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 *{{margin:0;padding:0}}
-html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{page_bg}}}
+html,body{{width:{page[0]}px;height:{page[1]}px;overflow:hidden;background:{page_bg}}}
 img{{position:absolute}}
 {css}
 </style></head><body>
@@ -154,4 +173,5 @@ def render(ghost=False, **kwargs):
         kwargs['photo'] = None
         kwargs['background'] = None
         kwargs['cells'] = ()
-    return render_html(build_html(**kwargs), ghost=ghost)
+    page = page_size(kwargs.get('ratio', DEFAULT_RATIO) if kwargs.get('style', 'classic') == 'classic' else DEFAULT_RATIO)
+    return render_html(build_html(**kwargs), ghost=ghost, page=page)

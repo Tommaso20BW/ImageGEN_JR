@@ -242,7 +242,7 @@ class Renderer:
                     cards=[] if ghost else [(photo(c['photo_id']), c) for c in data['cards']],
                 )
             return photo_jr.render(color=data['color'], photo=None if ghost else self._photo(data),
-                                   frame=data['frame'], ghost=ghost)
+                                   frame=data['frame'], ratio=data.get('ratio', photo_jr.DEFAULT_RATIO), ghost=ghost)
 
         common = {
             **teams(data),

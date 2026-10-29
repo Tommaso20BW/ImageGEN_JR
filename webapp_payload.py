@@ -204,7 +204,10 @@ def _build_state(envelope, catalog, now, expected_session):
             jr_data = {'kind': 'jr', 'style': 'collage', 'color': color,
                        'cells': photo_jr.clean_cells(incoming.get('cells'), _photo_id)}
         else:
-            jr_data = {'kind': 'jr', 'style': 'classic', 'color': color,
+            ratio = str(incoming.get('ratio') or photo_jr.DEFAULT_RATIO)
+            if ratio not in photo_jr.RATIOS:
+                raise ValueError('Formato non valido.')
+            jr_data = {'kind': 'jr', 'style': 'classic', 'color': color, 'ratio': ratio,
                        'photo_id': _photo_id(incoming.get('photo_id')),
                        'frame': _frame(incoming.get('frame'))}
         return {

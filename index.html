@@ -1142,6 +1142,13 @@
             <div id="colGrid" class="col-grid" role="radiogroup" aria-label="Layout"></div>
           </section>
 
+          <section class="screen" data-screen="jrratio">
+            <div class="eyebrow">Post · Classica</div>
+            <h1>Formato</h1>
+            <p class="lead">Scegli il formato della foto. Il logo JR resta sempre in alto a destra, alla stessa distanza dai bordi e della stessa misura del 3:4.</p>
+            <div id="jrRatioOpts" class="opts" role="radiogroup"></div>
+          </section>
+
           <section class="screen" data-screen="jrcolor">
             <div class="eyebrow">Post</div>
             <h1>Colore del JR</h1>
@@ -1374,6 +1381,10 @@
   const KITS = [['home','Home'],['away','Away'],['third','Third']];
   const JR_COLORS = [['black','Nero'],['white','Bianco'],['gold','Oro']];
   const JR_STYLES = [['classic','Classica'],['blur','Sfocata'],['collage','Collage']];
+  // Formati della Classica: larghezza fissa 1080, cambia l'altezza (come graphics/photo_jr.py RATIOS).
+  // Il logo JR resta in alto a destra, alla stessa distanza dai bordi e della stessa misura del 3:4.
+  const JR_RATIOS = [['3:4','3:4 · verticale'],['4:5','4:5 · feed Instagram'],['1:1','1:1 · quadrato'],['9:16','9:16 · storia'],['16:9','16:9 · orizzontale'],['4:3','4:3'],['3:2','3:2']];
+  const ratioDims = r => { const [w,h] = String(r).split(':').map(Number); return [1080, 1080 * h / w]; };
   const CAL_MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const CAL_MAX = 14;
   let PXI_MODULES = [["4-2-3-1", "4-2-3-1"], ["4-3-3", "4-3-3"], ["4-4-2", "4-4-2"], ["4-3-1-2", "4-3-1-2"], ["4-2-2-2", "4-2-2-2"], ["4-3-2-1", "4-3-2-1"], ["4-1-2-1-2", "4-1-2-1-2"], ["3-4-2-1", "3-4-2-1"], ["3-4-1-2", "3-4-1-2"], ["3-5-2", "3-5-2"], ["3-5-1-1", "3-5-1-1"], ["3-4-3", "3-4-3"], ["5-4-1", "5-4-1"]];
@@ -1391,7 +1402,7 @@
   const STEP_NAMES = {
     competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
     player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
-    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto', jrstyle:'Stile', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout'
+    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout'
   };
 
   const $ = id => document.getElementById(id);
@@ -1439,7 +1450,7 @@
   const JR_LIMITS = {blur:4, collage:9};      // foto massime per stile
   const jrLimit = () => JR_LIMITS[jrb.style] || 1;
   const jrMin = () => jrb.style === 'collage' ? 2 : 1;
-  const jrb = {style:'', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, tpls:null};
+  const jrb = {style:'', ratio:'3:4', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, tpls:null};
   let pxiModule = '';    // PROBABILE XI: modulo
   let calMonth = 0;      // CALENDARIO: mese (1-12)
   const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
@@ -1637,7 +1648,7 @@
     else if (kind === 'jr') flow = jrb.style === 'blur'
       ? ['jrstyle','jrphotos',...(jrb.cards.length > 1 ? ['jrbg'] : []),'jrcolor','jrblur']
       : jrb.style === 'collage' ? ['jrstyle','jrphotos','jrcolor','jrlayout']
-      : ['jrstyle','jrcolor','photo'];
+      : ['jrstyle','jrratio','jrcolor','photo'];
     else if (kind === 'cal') flow = ['calmonth','calrows'];
     if (TAB_KINDS[tab]) flow = ['subkind',...flow];
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
@@ -1681,6 +1692,7 @@
       case 'phasephoto': return ppState.bg ? 'Caricata' : '';
       case 'jrcolor': return labelOf(JR_COLORS,jrColor);
       case 'jrstyle': return labelOf(JR_STYLES,jrb.style);
+      case 'jrratio': return jrb.ratio;
       case 'jrphotos': return jrb.cards.length ? `${jrb.cards.length} foto` : '';
       case 'jrbg': { const n = jrb.cards.findIndex(c => c.id === jrb.bg); return n < 0 ? '' : `Foto ${n + 1}`; }
       case 'jrblur': return jrb.cards.length ? 'Pronta' : '';
@@ -1973,6 +1985,7 @@
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
     renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; });
     renderOptions('jrColorOpts',JR_COLORS,jrColor,v => { jrColor = v; });
+    renderOptions('jrRatioOpts',JR_RATIOS,jrb.ratio,v => { jrb.ratio = v; photoState.x = 0; photoState.y = 0; });
     renderOptions('jrStyleOpts',JR_STYLES,jrb.style,v => {
       jrb.style = v;
       if (jrb.cards.length > jrLimit()) {          // meno posti nel nuovo stile: restano le prime foto
@@ -3628,11 +3641,18 @@
 
   // Riquadro foto grande quanto lo spazio libero sotto il titolo: niente scorrimento,
   // così trascinando la foto la pagina resta ferma.
+  // Pagina della foto: 1080x1440 (3:4); solo la Classica del Post può avere un altro formato.
+  function photoDims() {
+    return kind === 'jr' && jrb.style === 'classic' ? ratioDims(jrb.ratio) : [DESIGN_W, DESIGN_H];
+  }
+
   function fitPhotoFrame() {
     const frame = $('photoFrame'), stage = $('stage');
     if (!frame.offsetParent) return;
     const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 34;
-    const width = Math.max(200, Math.min(frame.parentElement.clientWidth, free * 0.75));
+    const [pw, ph] = photoDims();
+    frame.style.aspectRatio = `${pw} / ${ph}`;
+    const width = Math.max(200, Math.min(frame.parentElement.clientWidth, free * pw / ph));
     frame.style.maxWidth = 'none';
     frame.style.width = `${Math.floor(width)}px`;
   }
@@ -3640,17 +3660,18 @@
   function layoutPhoto() {
     fitPhotoFrame();
     if (!photoState.w) return;
+    const [PW, PH] = photoDims();
     const frameW = $('photoFrame').clientWidth || 1;
-    const k = frameW / DESIGN_W;
-    const cover = Math.max(DESIGN_W / photoState.w, DESIGN_H / photoState.h);
+    const k = frameW / PW;
+    const cover = Math.max(PW / photoState.w, PH / photoState.h);
     photoState.zoom = Math.min(4, Math.max(1, photoState.zoom));
     const w = photoState.w * cover * photoState.zoom, h = photoState.h * cover * photoState.zoom;
-    let left = (DESIGN_W - w) / 2 + photoState.x * DESIGN_W;
-    let top = (DESIGN_H - h) / 2 + photoState.y * DESIGN_H;
-    left = Math.min(0, Math.max(DESIGN_W - w, left));
-    top = Math.min(0, Math.max(DESIGN_H - h, top));
-    photoState.x = (left - (DESIGN_W - w) / 2) / DESIGN_W;
-    photoState.y = (top - (DESIGN_H - h) / 2) / DESIGN_H;
+    let left = (PW - w) / 2 + photoState.x * PW;
+    let top = (PH - h) / 2 + photoState.y * PH;
+    left = Math.min(0, Math.max(PW - w, left));
+    top = Math.min(0, Math.max(PH - h, top));
+    photoState.x = (left - (PW - w) / 2) / PW;
+    photoState.y = (top - (PH - h) / 2) / PH;
     const img = $('photoImg');
     img.style.left = `${left * k}px`; img.style.top = `${top * k}px`;
     img.style.width = `${w * k}px`; img.style.height = `${h * k}px`;
@@ -3666,6 +3687,9 @@
     const url = `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${name}&kit=${encodeURIComponent(variant)}`;
     if (overlay.getAttribute('src') !== url) overlay.src = url;
     overlay.classList.add('ghost');
+    // La sagoma è sempre 3:4, larga come la pagina e ancorata in alto: in un altro formato viene
+    // tagliata (o lascia vuoto sotto) e il logo resta in alto a destra senza deformarsi.
+    overlay.style.height = kind === 'jr' ? 'auto' : '';
   }
 
   // Riduce la foto a max 2560 px (lato lungo) in JPEG: qualità piena per la grafica,
@@ -4699,7 +4723,7 @@
     if (kind === 'jr') {
       if (!photoId) throw new Error('Scegli una foto.');
       return {v:1, action:'render', session, data:{
-        kind:'jr', color:jrColor, photo_id:photoId,
+        kind:'jr', color:jrColor, photo_id:photoId, ratio:jrb.ratio,
         frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}
       }};
     }

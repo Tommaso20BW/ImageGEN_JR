@@ -85,21 +85,23 @@ def check_photo(raw):
         raise ValueError('Foto non valida: usa JPG o PNG.') from None
 
 
-def photo_box(size, frame):
+def photo_box(size, frame, page=None):
     """Posizione della foto in pixel del design.
 
     frame = {'x', 'y', 'zoom'} dalla Mini App: x/y spostamento del centro
     (in frazione della pagina), zoom >= 1 rispetto a "riempi la pagina".
+    page = (larghezza, altezza) della pagina in pixel design; default 1080x1440.
     """
     w, h = size
-    cover = max(DESIGN_W / w, DESIGN_H / h)
+    page_w, page_h = page or (DESIGN_W, DESIGN_H)
+    cover = max(page_w / w, page_h / h)
     zoom = min(max(float(frame.get('zoom', 1)), 1), 6)
     width, height = w * cover * zoom, h * cover * zoom
-    left = (DESIGN_W - width) / 2 + float(frame.get('x', 0)) * DESIGN_W
-    top = (DESIGN_H - height) / 2 + float(frame.get('y', 0)) * DESIGN_H
+    left = (page_w - width) / 2 + float(frame.get('x', 0)) * page_w
+    top = (page_h - height) / 2 + float(frame.get('y', 0)) * page_h
     # Mai bordi vuoti: la foto copre sempre tutta la pagina.
-    left = min(0, max(DESIGN_W - width, left))
-    top = min(0, max(DESIGN_H - height, top))
+    left = min(0, max(page_w - width, left))
+    top = min(0, max(page_h - height, top))
     return left, top, width, height
 
 
