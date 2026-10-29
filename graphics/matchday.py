@@ -11,7 +11,7 @@ from datetime import date
 from functools import lru_cache
 
 from constants import COMPETITIONS
-from graphics.common import canva_layers, photo_layer, DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html, team_logo
+from graphics.common import canva_layers, logo_fill, photo_layer, DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html, team_logo
 from graphics.starting_xi import KITS, check_photo, photo_box
 
 # Misure dal PDF Canva (pixel 1080x1440).
@@ -80,7 +80,7 @@ def build_html(*, kit, photo, frame, info, competition, home_name, home_id, away
     texts = ''.join(_info_text(slot, values[slot], meta['info'][slot]) for slot in SLOTS)
     texts += ''.join(_info_text(slot, '|', meta['info'][slot]) for slot in SEPARATORS)
     logos = ''.join(
-        f'<div class="logo" style="left:{x}px;top:{y}px;background:{meta["logo_color"]};'
+        f'<div class="logo" style="left:{x}px;top:{y}px;background:{logo_fill(meta, kit)};'
         f'--m:url({data_uri(team_logo(name, team_id))})"></div>'
         for (x, y), (name, team_id) in zip(LOGO_BOXES, ((home_name, home_id), (away_name, away_id)))
     )

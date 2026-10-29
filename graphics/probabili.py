@@ -9,7 +9,7 @@ import unicodedata
 from functools import lru_cache
 from pathlib import Path
 
-from graphics.common import DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html, team_logo
+from graphics.common import logo_fill, DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html, team_logo
 
 KITS = ('home', 'away', 'third')
 # Foto della testa per maglia: (suffisso giocatori, maglia portiere).
@@ -214,7 +214,7 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
             names.append(t.replace('<text ', f'<text fill="{text["color"]}" ', 1))
 
     logos = ''.join(
-        f'<div class="logo" style="left:{x}px;top:{y}px;width:{size}px;height:{size}px;background:{meta["logo_color"]};'
+        f'<div class="logo" style="left:{x}px;top:{y}px;width:{size}px;height:{size}px;background:{logo_fill(meta, kit, text.get('texture'))};'
         f'--m:url({data_uri(team_logo(name, team_id))})"></div>'
         for (x, y, size), (name, team_id) in zip(meta['logos'], ((home_name, home_id), (away_name, away_id)))
     )

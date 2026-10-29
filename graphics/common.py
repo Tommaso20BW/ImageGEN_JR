@@ -163,6 +163,21 @@ def photo_layer(photo, frame):
             f'width:{width}px;height:{height}px">'), '#fff'
 
 
+# Maglie con le scritte sfumate: il logo prende la stessa texture delle scritte
+# (lastra già in canva/, usata dai numeri della Starting XI).
+LOGO_TEXTURES = {'third': 'starting_xi_third_number_01.png'}
+
+
+def logo_fill(meta, kit, texture=None):
+    """Riempimento CSS dei loghi sotto la maschera: la sfumatura delle scritte
+    (texture indicata, `meta['logo_texture']` o quella della maglia) oppure, per le
+    maglie a tinta unita, `logo_color`."""
+    file = texture or meta.get('logo_texture') or LOGO_TEXTURES.get(kit)
+    if file:
+        return f'url({data_uri(asset_dir() / "canva" / file)}) center/100% 100% no-repeat'
+    return meta['logo_color']
+
+
 BASE_CSS = (
     '*{margin:0;padding:0;box-sizing:border-box}'
     f'html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#000}}'

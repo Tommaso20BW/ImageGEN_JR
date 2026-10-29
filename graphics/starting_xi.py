@@ -11,7 +11,7 @@ from functools import lru_cache
 
 from PIL import Image
 
-from graphics.common import canva_layers, photo_layer
+from graphics.common import canva_layers, photo_layer, logo_fill
 from graphics.common import (
     DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, font_face, render_html, team_logo,
 )
@@ -137,7 +137,7 @@ def build_html(*, kit, lineup, photo, frame, home_name, home_id, away_name, away
         f'font-family="Bebas Neue" font-size="{NAME_SIZE}" letter-spacing="{NAME_SPACING}"',
     )
     logos = ''.join(
-        f'<div class="logo" style="left:{x}px;top:{y}px;background:{meta["logo_color"]};'
+        f'<div class="logo" style="left:{x}px;top:{y}px;background:{logo_fill(meta, kit)};'
         f'--m:url({data_uri(team_logo(name, team_id))})"></div>'
         for (x, y), (name, team_id) in zip(LOGO_BOXES, ((home_name, home_id), (away_name, away_id)))
     )
