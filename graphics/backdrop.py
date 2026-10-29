@@ -18,13 +18,14 @@ from PIL import Image
 
 from graphics.common import DESIGN_H, DESIGN_W
 
-# Zone della scritta in frazione della pagina (x, y, larghezza, altezza).
-# DA VERIFICARE sul design: sono i riquadri dove stanno le scritte nel motore
-# grafico (livescore.graphics.portrait.phase).
+# Zone della scritta in frazione della pagina (x, y, larghezza, altezza), misurate sulla
+# grafica FULL TIME. Solo il titolo (in alto, ~7-18% dell'altezza): il risultato in basso
+# sta gia' sulla sfumatura scura della grafica e ha la sua ombra.
+_PHASE_REGIONS = [(0.07, 0.06, 0.86, 0.13)]
 TEXT_REGIONS = {
-    'half': [(0.05, 0.62, 0.90, 0.22)],
-    'end_of_90': [(0.05, 0.62, 0.90, 0.22)],
-    'full': [(0.05, 0.62, 0.90, 0.22)],
+    'half': _PHASE_REGIONS,
+    'end_of_90': _PHASE_REGIONS,
+    'full': _PHASE_REGIONS,
 }
 
 CONTRAST_OK = 4.5      # da qui in su la scritta si legge bene: niente ombra
