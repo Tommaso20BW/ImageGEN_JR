@@ -142,7 +142,7 @@ class Renderer:
         # Persone scontornate (id foto -> PNG), riusate da anteprima e invio.
         self.cutouts = {}
         self.cutout_lock = threading.RLock()
-        # Foto del MATCHDAY con la scia (id foto -> JPEG).
+        # Foto del MATCHDAY e della STARTING XI con la scia (id foto -> JPEG).
         self.trails = {}
 
     def cutout(self, photo_id):
@@ -175,8 +175,8 @@ class Renderer:
             raise ValueError('Foto non trovata: ricaricala nella Mini App.')
         return phase_layers.clean_background_jpeg(raw, self.cutout(photo_id))
 
-    def _matchday_photo(self, data):
-        """Foto del MATCHDAY con l'effetto movimento (scia a sinistra dal bordo della
+    def _trail_photo(self, data):
+        """Foto del MATCHDAY e della STARTING XI con l'effetto movimento (scia a sinistra dal bordo della
         persona scontornata). Se lo scontorno non riesce, esce la foto normale."""
         photo = self._photo(data)
         if data.get('trail') is False:
@@ -332,7 +332,7 @@ class Renderer:
                 **teams(data),
                 kit=data['kit'],
                 lineup=lineup,
-                photo=None if ghost else self._photo(data),
+                photo=None if ghost else self._trail_photo(data),
                 ghost=ghost,
                 frame=data['frame'],
             )
@@ -343,7 +343,7 @@ class Renderer:
             return matchday.render(
                 **teams(data),
                 kit=data['kit'],
-                photo=None if ghost else self._matchday_photo(data),
+                photo=None if ghost else self._trail_photo(data),
                 ghost=ghost,
                 frame=data['frame'],
                 info=data['info'],

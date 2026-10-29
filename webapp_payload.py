@@ -274,6 +274,8 @@ def _build_state(envelope, catalog, now, expected_session):
         data['lineup'] = lineup
         data['photo_id'] = _photo_id(incoming.get('photo_id'))
         data['frame'] = _frame(incoming.get('frame'))
+        # Effetto movimento: acceso di default, "trail": false lo spegne.
+        data['trail'] = incoming.get('trail') is not False
 
     elif kind == 'md':
         data['photo_id'] = _photo_id(incoming.get('photo_id'))
