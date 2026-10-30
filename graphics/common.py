@@ -107,7 +107,7 @@ class _Renderer:
         from playwright.sync_api import sync_playwright
         playwright = browser = None
         while True:
-            markup, ghost, page, done = self.jobs.get()
+            markup, ghost, page, out_w, done = self.jobs.get()
             try:
                 if browser is None or not browser.is_connected():
                     if playwright is None:
@@ -117,16 +117,18 @@ class _Renderer:
                 page_w, page_h = page
                 tab = browser.new_page(
                     viewport={'width': page_w, 'height': math.ceil(page_h) + 1},
-                    device_scale_factor=0.5 if ghost else OUT_W / DESIGN_W,
+                    device_scale_factor=0.5 if ghost else out_w / page_w,
                 )
                 try:
                     tab.set_content(markup, wait_until='load')
-                    tab.evaluate('() => document.fonts.ready')
+                    # Le grafiche che calcolano il layout con uno script (STORIE IG) mettono in
+                    # window.__ready la promessa da aspettare; per le altre è undefined.
+                    tab.evaluate('() => document.fonts.ready.then(() => window.__ready)')
                     # Pagine non 3:4 (es. 16:9 = 1080x607,5): si scatta una riga in più e si taglia
                     # alla misura esatta (1920x1080), perché Chrome arrotonda l'altezza per difetto.
                     png = tab.screenshot(type='png', omit_background=ghost,
                                          clip={'x': 0, 'y': 0, 'width': page_w, 'height': math.ceil(page_h) + 1})
-                    scale = 0.5 if ghost else OUT_W / DESIGN_W
+                    scale = 0.5 if ghost else out_w / page_w
                     done['png'] = _crop_png(png, round(page_w * scale), round(page_h * scale))
                 finally:
                     tab.close()
@@ -141,10 +143,10 @@ class _Renderer:
             finally:
                 done['event'].set()
 
-    def render(self, markup, ghost, page):
+    def render(self, markup, ghost, page, out_w=OUT_W):
         import threading
         done = {'event': threading.Event()}
-        self.jobs.put((markup, ghost, page, done))
+        self.jobs.put((markup, ghost, page, out_w, done))
         if not done['event'].wait(120):
             raise TimeoutError('Render della grafica troppo lento.')
         if 'error' in done:
@@ -155,18 +157,20 @@ class _Renderer:
 _RENDERER = None
 
 
-def render_html(markup, ghost=False, page=None):
+def render_html(markup, ghost=False, page=None, out_w=OUT_W):
     """Render della pagina 1080x1440 in PNG 1920x2560.
 
     page = (larghezza, altezza) in pixel design per formati diversi dal 3:4: la
     larghezza resta 1080 (uscita 1920 px), l'altezza segue il formato.
+
+    out_w = larghezza dell'uscita in pixel (default 1920); l'altezza segue la pagina.
 
     ghost=True: versione leggera (540x720) con sfondo trasparente, per l'editor foto.
     """
     global _RENDERER
     if _RENDERER is None:
         _RENDERER = _Renderer()
-    return _RENDERER.render(markup, ghost, page or (DESIGN_W, DESIGN_H))
+    return _RENDERER.render(markup, ghost, page or (DESIGN_W, DESIGN_H), out_w)
 
 
 def warm_up():

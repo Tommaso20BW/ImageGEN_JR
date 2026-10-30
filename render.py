@@ -222,6 +222,12 @@ class Renderer:
 
             return calendar.render(month=data['month'], matches=data['matches'])
 
+        if kind == 'igbn':
+            from graphics import ig_story
+
+            return ig_story.render(text=data.get('text', ''),
+                                   photo=self._photo(data) if data.get('photo_id') else None)
+
         if kind == 'jr':
             from graphics import photo_jr
 

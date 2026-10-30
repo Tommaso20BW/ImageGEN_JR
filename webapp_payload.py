@@ -8,7 +8,7 @@ from constants import COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
 from graphics.squad_list import BACKGROUNDS as SQUAD_COMPETITIONS, parse_squad
 from graphics.starting_xi import PLAYERS as PLAYERS_IN_XI, parse_lineup
 from graphics.matchday import parse_info
-from graphics import photo_jr
+from graphics import ig_story, photo_jr
 from graphics.calendar import parse_matches
 
 VALID_KINDS = {value for _, value in KINDS}
@@ -173,6 +173,23 @@ def _build_state(envelope, catalog, now, expected_session):
         return {
             'id': uuid.uuid4().hex[:10],
             'data': {'kind': 'cal', 'month': month, 'year': year, 'matches': matches},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
+    # STORIE IG - Breaking News: niente partita, solo testo e/o foto (almeno uno dei due).
+    if kind == 'igbn':
+        text = ig_story.clean_text(incoming.get('text'))
+        photo_id = incoming.get('photo_id')
+        if not text and not photo_id:
+            raise ValueError('Scrivi un testo o scegli una foto.')
+        data = {'kind': 'igbn', 'text': text}
+        if photo_id:
+            data['photo_id'] = _photo_id(photo_id)
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': data,
             'status': 'ready',
             'updated': now,
             'source': 'webapp-direct',

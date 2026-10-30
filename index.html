@@ -411,6 +411,12 @@
     .photo-frame{position:relative;width:100%;max-width:min(380px,calc((100dvh - 420px) * .75));min-width:220px;aspect-ratio:3/4;margin:0 auto;overflow:hidden;
       border-radius:var(--radius);background:var(--surface2);border:1.5px solid var(--line);touch-action:none;cursor:grab;user-select:none}
     .photo-frame.dragging{cursor:grabbing}
+    /* STORIE IG: testo + foto facoltativa */
+    .ig-photo{display:flex;align-items:center;gap:14px;margin-top:14px}
+    .ig-thumb{flex:0 0 auto;width:64px;height:86px;border-radius:12px;background:var(--surface2) center/cover no-repeat;
+      box-shadow:inset 0 0 0 1.5px var(--line)}
+    .ig-photo .btn{min-height:42px;padding:0 16px}
+    .ig-count{display:flex;justify-content:space-between;gap:12px}
     /* FOTO + JR Sfocata: foto caricate, scelta sfondo, editor con più foto */
     .jr-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
     .jr-tile{position:relative;aspect-ratio:3/4;border:0;padding:0;border-radius:12px;overflow:hidden;background:var(--surface2);
@@ -1140,6 +1146,21 @@
             </div>
           </section>
 
+          <section class="screen" data-screen="igcontent">
+            <div class="eyebrow">Storie IG · Breaking News</div>
+            <h1>Contenuto</h1>
+            <p class="lead">Scrivi il testo, aggiungi una foto, oppure entrambi: testo sopra e foto sotto. Misure e altezze le calcola ImageGEN tra la scritta e il logo.</p>
+            <textarea id="igText" class="field-input" maxlength="500" style="min-height:170px" spellcheck="true"
+              placeholder="Testo (facoltativo se scegli una foto)"></textarea>
+            <div class="hint ig-count"><span id="igHint"></span><span id="igCount">0 / 500</span></div>
+            <div class="ig-photo">
+              <div id="igThumb" class="ig-thumb" hidden></div>
+              <button id="igPick" class="btn ghost" type="button">Scegli foto</button>
+              <button id="igClear" class="btn ghost" type="button" hidden>Rimuovi</button>
+            </div>
+            <input id="igFile" type="file" accept="image/*" hidden>
+          </section>
+
           <section class="screen" data-screen="calmonth">
             <div class="eyebrow">Calendario</div>
             <h1>Mese</h1>
@@ -1464,10 +1485,11 @@
   ];
 
   // Schede in alto. Quelle con più tipi chiedono il tipo come primo passaggio.
-  const TABS = [['goal','GOAL'],['match','EVENT'],['stats','STATS'],['pre','PRE-GARA'],['extra','ALTRO']];
+  const TABS = [['goal','GOAL'],['match','EVENT'],['stats','STATS'],['pre','PRE-GARA'],['ig','STORIE IG'],['extra','ALTRO']];
   const TAB_KINDS = {
     goal:[['goal','Gol'],['saved','Parata']],
     pre:[['md','Matchday'],['pxi','Probabile XI'],['squad','Squad List'],['xi','Starting XI']],
+    ig:[['igbn','Breaking News']],
     extra:[['cal','Calendario'],['jr','Post']]
   };
   const COMPETITIONS_UEFA = [
@@ -1513,7 +1535,7 @@
   const STEP_NAMES = {
     competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
     player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
-    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout'
+    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto'
   };
 
   const $ = id => document.getElementById(id);
@@ -1761,6 +1783,7 @@
       : jrb.style === 'collage' ? ['jrstyle','jrphotos','jrcolor','jrlayout']
       : ['jrstyle','jrratio','jrcolor','photo'];
     else if (kind === 'cal') flow = ['calmonth','calrows'];
+    else if (kind === 'igbn') flow = ['igcontent'];
     if (TAB_KINDS[tab]) flow = ['subkind',...flow];
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
   }
@@ -1819,6 +1842,10 @@
         }
         const m = fixtureList.find(f => f.id === mdPick);
         return mdPick === 'manual' ? 'A mano' : (m ? fixtureLabel(m, true) : '');
+      }
+      case 'igcontent': {
+        const t = $('igText').value.trim().length;
+        return [t ? 'Testo' : '', igb.id ? 'Foto' : ''].filter(Boolean).join(' + ');
       }
       case 'calmonth': return calMonth ? `${CAL_MONTHS[calMonth - 1]} ${$('calYear').value}` : '';
       case 'calrows': { const n = calRows.length; return n ? `${n} partit${n === 1 ? 'a' : 'e'}` : ''; }
@@ -2328,7 +2355,7 @@
     full:'Avvio la generazione…',
     stats:'Preparo la tabella delle statistiche.'
   };
-  const DEFAULT_MS = {ppcut:12000, goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, pxi:9000, cal:5000, half:6000, end_of_90:6000, full:6000, submit:2500};
+  const DEFAULT_MS = {ppcut:12000, goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, igbn:4000, pxi:9000, cal:5000, half:6000, end_of_90:6000, full:6000, submit:2500};
   const MIN_FAST_MS = 3000;
   const DURATIONS_KEY = 'imagegen-jr-durations';
   const SLOW_SUB = 'Ci sta mettendo più del solito: attendi ancora qualche secondo.';
@@ -2577,6 +2604,9 @@
     updateLineupSummary();
     clearPhoto();
     clearPhase();
+    igClearPhoto();
+    $('igText').value = '';
+    igRefresh();
     $('calYear').value = String(new Date().getFullYear());
     $('matchTime').value = '20:45';
     $('matchDate').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,10);
@@ -2917,6 +2947,11 @@
     if (step === 'phasephoto') {
       if (ppState.uploading) { showError('Attendi il caricamento della foto.'); return false; }
       if (!ppState.bg) { showError('Scegli una foto.'); return false; }
+    }
+
+    if (step === 'igcontent') {
+      if (igb.uploading) { showError('Attendi il caricamento della foto.'); return false; }
+      if (!$('igText').value.trim() && !igb.id) { showError('Scrivi un testo o scegli una foto.'); return false; }
     }
 
     if (step === 'calmonth') {
@@ -3742,6 +3777,44 @@
   const DESIGN_W = 1080, DESIGN_H = 1440;
   const OVERLAY_NAMES = {xi:'starting_xi', md:'matchday', jr:'jr'};
   const photoState = {id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, uploading:false};
+  // STORIE IG: foto facoltativa sotto il testo (nessun editor: il servizio la adatta da solo).
+  const igb = {id:'', url:'', uploading:false};
+  function igRefresh() {
+    $('igThumb').hidden = !igb.url;
+    $('igThumb').style.backgroundImage = igb.url ? `url("${igb.url}")` : '';
+    $('igClear').hidden = !igb.id;
+    $('igPick').textContent = igb.id ? 'Cambia foto' : 'Scegli foto';
+    const n = $('igText').value.length;
+    $('igCount').textContent = `${n} / 500`;
+    $('igHint').textContent = igb.uploading ? 'Caricamento foto…' : '';
+    renderSteps();
+  }
+  function igClearPhoto() {
+    if (igb.url) { try { URL.revokeObjectURL(igb.url); } catch (_) {} }
+    igb.id = ''; igb.url = ''; igb.uploading = false;
+    igRefresh();
+  }
+  async function uploadIgPhoto(file) {
+    if (!file) return;
+    clearError();
+    if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+    igb.uploading = true; igRefresh();
+    try {
+      const {blob} = await preparePhoto(file);
+      const response = await netFetch(`${directBase}/upload`,{
+        method:'POST', headers:{'Content-Type':'image/jpeg','X-ImageGEN-Session':session}, body:blob
+      }, 60000);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) throw new Error(body.error || 'Caricamento non riuscito.');
+      if (igb.url) { try { URL.revokeObjectURL(igb.url); } catch (_) {} }
+      igb.id = body.photo_id; igb.url = URL.createObjectURL(blob);
+      haptic('success');
+    } catch (err) {
+      showError(err && err.message ? err.message : 'Caricamento non riuscito.');
+    } finally {
+      igb.uploading = false; igRefresh();
+    }
+  }
 
   function clearPhoto() {
     if (photoState.url) { try { URL.revokeObjectURL(photoState.url); } catch (_) {} }
@@ -5391,6 +5464,11 @@
       return {v:1, action:'render', session, data:{slot:LIVE_SLOT, kind:LIVE_PHASE, ...phasePhotoData(ghost)}};
     }
     const photoId = photoState.id || (ghost ? '0'.repeat(16) : '');
+    if (kind === 'igbn') {
+      const text = $('igText').value.trim();
+      if (!text && !igb.id) throw new Error('Scrivi un testo o scegli una foto.');
+      return {v:1, action:'render', session, data:{kind:'igbn', text, ...(igb.id ? {photo_id:igb.id} : {})}};
+    }
     if (kind === 'cal') {
       return {v:1, action:'render', session, data:{
         kind:'cal', month:calMonth, year:Number($('calYear').value),
@@ -6030,6 +6108,10 @@
     flowIndex = Math.max(0, flow.indexOf('calrows')); closePreview();
   });
   initLayoutEditor();
+  $('igText').addEventListener('input',() => { clearError(); igRefresh(); });
+  $('igPick').addEventListener('click',() => $('igFile').click());
+  $('igClear').addEventListener('click',igClearPhoto);
+  $('igFile').addEventListener('change',e => { uploadIgPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
   $('calAdd').addEventListener('click',() => { if (calRows.length < CAL_MAX) { calRows.push({day:'', team:'', side:'home'}); renderCalRows(); renderSteps(); } });
 
   $('minuteQuick').addEventListener('click',event => {

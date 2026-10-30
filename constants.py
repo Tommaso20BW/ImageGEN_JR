@@ -17,6 +17,7 @@ KINDS = [
     ('STARTING XI', 'xi'),
     ('CALENDARIO', 'cal'),
     ('FOTO + JR', 'jr'),
+    ('STORIE IG - BREAKING NEWS', 'igbn'),
 ]
 
 COMPETITIONS = [
