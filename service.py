@@ -138,7 +138,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
                 return
             try:
-                self._png(self.service.overlay(query.get('name', ''), query.get('kit', '')))
+                self._png(self.service.overlay(query.get('name', ''), query.get('kit', ''), query.get('hires') == '1'))
             except (KeyError, ValueError, OSError):
                 self._json(404, {'ok': False, 'error': 'Modello non trovato.'})
             return
@@ -515,10 +515,10 @@ class Service:
                 self.preview_cutouts.pop(next(iter(self.preview_cutouts)))
         return self.preview_cutouts[photo_id]
 
-    def overlay(self, name, kit):
-        key = (name, kit)
+    def overlay(self, name, kit, full=False):
+        key = (name, kit, full)
         if key not in self.overlays:
-            self.overlays[key] = overlay_preview(name, kit)
+            self.overlays[key] = overlay_preview(name, kit, full=full)
         return self.overlays[key]
 
     def _set_stage(self, stage):

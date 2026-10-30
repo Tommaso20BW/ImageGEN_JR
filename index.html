@@ -4347,21 +4347,22 @@
   }
 
   /* --- logo ricolorato nell'anteprima --- */
-  const jrLogo = {raw:{}, box:null, full:new Map(), crop:new Map()};
-  const jrOverlayUrl = name => `${directBase}/overlay?session=${encodeURIComponent(session)}&name=jr&kit=${encodeURIComponent(name)}`;
+  const jrLogo = {raw:{}, box:null, full:new Map(), crop:new Map()};   // raw: sagome 540x720 (editor); raw['hi:'+nome]: originali a piena risoluzione (anteprime colore)
+  const jrOverlayUrl = (name, hires) => `${directBase}/overlay?session=${encodeURIComponent(session)}&name=jr&kit=${encodeURIComponent(name)}${hires ? '&hires=1' : ''}`;
 
-  function jrRaw(name) {                 // sagoma del servizio come ImageBitmap (una volta sola)
+  function jrRaw(name, hires) {          // sagoma del servizio come ImageBitmap (una volta sola); hires = livello originale
     if (!directBase || !session) return Promise.resolve(null);
-    if (!jrLogo.raw[name]) {
-      jrLogo.raw[name] = (async () => {
+    const id = hires ? 'hi:' + name : name;
+    if (!jrLogo.raw[id]) {
+      jrLogo.raw[id] = (async () => {
         try {
-          const response = await netFetch(jrOverlayUrl(name),{},20000,2);
+          const response = await netFetch(jrOverlayUrl(name,hires),{},hires ? 40000 : 20000,2);
           if (!response.ok) throw new Error('overlay');
           return await createImageBitmap(await response.blob());
-        } catch (_) { delete jrLogo.raw[name]; return null; }
+        } catch (_) { delete jrLogo.raw[id]; return null; }
       })();
     }
-    return jrLogo.raw[name];
+    return jrLogo.raw[id];
   }
 
   function jrAlphaBox(bmp) {             // rettangolo che contiene il logo
@@ -4389,11 +4390,12 @@
     const cache = crop ? jrLogo.crop : jrLogo.full;
     const key = JSON.stringify(jrcIsRaster(color) ? color : jrcSpecOf(color));
     if (cache.has(key)) return cache.get(key);
-    const black = await jrRaw('black');
-    const src = jrcIsRaster(color) ? await jrRaw(color) : black;
+    const black = await jrRaw('black',crop);
+    const src = jrcIsRaster(color) ? await jrRaw(color,crop) : black;
     if (!black || !src) return '';
-    const box = jrLogo.box || (jrLogo.box = jrAlphaBox(black));
-    const pad = crop ? 6 : 0, sc = crop ? 3 : 1;
+    const bk = crop ? 'crop' : 'full';          // il riquadro dipende dalla risoluzione della sagoma
+    const box = jrLogo[bk + 'Box'] || (jrLogo[bk + 'Box'] = jrAlphaBox(black));
+    const pad = crop ? 12 : 0, sc = 1;          // anteprima: sagoma originale, nessun ingrandimento
     const x0 = crop ? Math.max(0, box.x - pad) : 0, y0 = crop ? Math.max(0, box.y - pad) : 0;
     const x1 = crop ? Math.min(src.width, box.x + box.w + pad) : src.width, y1 = crop ? Math.min(src.height, box.y + box.h + pad) : src.height;
     const cv = document.createElement('canvas');
