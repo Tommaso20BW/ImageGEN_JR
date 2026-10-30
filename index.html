@@ -494,69 +494,62 @@
     .col-lay .mod-btn{margin-top:0;padding:6px 12px;gap:12px}
     .col-lay .mod-btn svg{width:34px}.col-lay .mod-btn b{font-size:17px}
     .col-hint{margin:8px 0 10px;min-height:18px;font-size:12.5px}
-    /* Colore del logo JR: campioni, esadecimale, sfumature */
-    .jrc-prev{position:sticky;top:calc(-1 * var(--pad-top));z-index:4;margin:0 0 12px;padding:var(--pad-top) 0 8px;background:var(--bg)}
-    .jrc-tile{position:relative;height:84px;border-radius:14px;overflow:hidden;display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--line);
-      background:linear-gradient(100deg,#141416 0 50%,#f1efe9 50% 100%)}
-    .jrc-tile img{height:58px;width:auto;max-width:70%;object-fit:contain;display:block}
-    .jrc-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:12px 6px;justify-items:center}
-    .jrc-sw{display:block;border:0;background:none;padding:2px;cursor:pointer}
-    .jrc-sw i{width:34px;height:34px;border-radius:50%;display:block;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4);transition:transform .18s var(--spring),box-shadow .18s var(--ease-out)}
-    .jrc-sw:active i{transform:scale(.9)}
-    .jrc-sw.on i{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
-    .jrc-sw.custom i{background:conic-gradient(from 0deg,#ff3b3b,#ffd60a,#2bd96b,#27c4ff,#6b4dff,#ff3dc8,#ff3b3b);display:grid;place-items:center;color:#fff;font-size:20px;font-weight:300;text-shadow:0 1px 3px rgba(0,0,0,.45)}
-    .jrc-name{margin:10px 2px 0;text-align:center;font-size:13px;font-weight:750;color:var(--muted);min-height:18px}
-    .jrc-h{margin:16px 2px 8px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-    .jrc-saved{display:flex;flex-wrap:wrap;gap:12px}
-    .jrc-saved .s{position:relative;width:30px;height:30px;border:0;padding:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4);cursor:pointer}
-    .jrc-saved .s b{position:absolute;right:-5px;top:-5px;width:18px;height:18px;border-radius:50%;background:var(--text);color:var(--bg);font-size:12px;line-height:18px;text-align:center;font-weight:800}
-    .jrc-panel{margin-top:16px;padding:12px;border-radius:18px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-    .jrc-panel[hidden],.jrc-panel [hidden]{display:none}
-    .jrc-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:3px;border-radius:999px;background:var(--surface2)}
-    .jrc-seg button{height:36px;border:0;border-radius:999px;background:transparent;font-weight:750;font-size:13px;color:var(--muted);transition:background-color .15s,color .15s}
+    /* Colore del logo JR: carosello + foglio "Personalizza" (Colore e Luce) */
+    .jrc-tile{position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line);transition:background .2s}
+    .jrc-tile img{position:absolute;left:20%;top:16%;width:60%;height:68%;object-fit:contain;display:block}
+    .jrc-bg-photo{background:radial-gradient(120% 90% at 30% 20%,#5b6b86,#232a3a 55%,#0d0f15)}
+    .jrc-bg-dark{background:#141416}.jrc-bg-light{background:#f1efe9}
+    .jrc-pv .jrc-tile{aspect-ratio:4/3;border-radius:22px}
+    .jrc-bgs{display:flex;gap:6px;justify-content:center;margin:10px 0 0}
+    .jrc-bgs button{border:0;height:32px;padding:0 14px;border-radius:999px;background:var(--surface2);color:var(--text);font:inherit;font-weight:800;font-size:12.5px;cursor:pointer}
+    .jrc-bgs button.on{background:var(--accent);color:var(--accent-ink)}
+    .jrc-car{position:relative;display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x mandatory;padding:18px calc(50% - 30px);margin:0 calc(-1 * var(--pad-x,16px));scrollbar-width:none}
+    .jrc-car::-webkit-scrollbar{display:none}
+    .jrc-sw{border:0;background:none;padding:0;flex:none;scroll-snap-align:center;cursor:pointer}
+    .jrc-sw i{display:block;width:50px;height:50px;margin:5px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4);transform:scale(.8);opacity:.7;transition:transform .2s var(--ease-out),opacity .2s,box-shadow .2s}
+    .jrc-sw.on i{transform:scale(1.25);opacity:1;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
+    .jrc-big{margin:0;text-align:center;font-size:22px;font-weight:800;min-height:30px}
+    .jrc-sub{margin:2px 0 0;text-align:center;color:var(--muted);font-size:13px}
+    .jrc-cu{display:flex;align-items:center;gap:10px;margin:14px auto 0;border:0;background:var(--surface2);color:var(--text);height:44px;padding:0 18px 0 8px;border-radius:999px;font:inherit;font-weight:800;font-size:14px;cursor:pointer}
+    .jrc-cu i{width:30px;height:30px;border-radius:50%;background:conic-gradient(#ff3b3b,#ffd60a,#2bd96b,#27c4ff,#6b4dff,#ff3dc8,#ff3b3b);box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
+    /* foglio dal basso */
+    .jrc-ov{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;background:rgba(0,0,0,0);visibility:hidden;transition:background .25s,visibility 0s .3s}
+    .jrc-ov.open{background:rgba(0,0,0,.4);visibility:visible;transition:background .25s}
+    .jrc-sh{width:100%;max-width:560px;margin:0 auto;max-height:88vh;overflow:auto;overscroll-behavior:contain;background:var(--bg);border-radius:20px 20px 0 0;
+      padding:10px 14px calc(20px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .32s var(--ease-out);box-shadow:0 -8px 30px rgba(0,0,0,.18)}
+    .jrc-ov.open .jrc-sh{transform:none}.jrc-sh.drag{transition:none}
+    .jrc-grab{padding:2px 0 10px;touch-action:none;cursor:grab}.jrc-grab>i{display:block;width:38px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
+    .jrc-top{display:flex;justify-content:space-between;align-items:center}
+    .jrc-top b{font-size:19px;letter-spacing:-.01em}
+    .jrc-top button{border:0;background:var(--accent);color:var(--accent-ink);height:34px;padding:0 16px;border-radius:999px;font:inherit;font-weight:800;font-size:13px;cursor:pointer}
+    .jrc-sprev{display:flex;align-items:center;gap:12px;margin:12px 0 4px;padding:8px 14px 8px 8px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
+    .jrc-sprev .jrc-tile{width:76px;height:52px;border-radius:11px;flex:none}
+    .jrc-sprev b{display:block;font-size:15px}.jrc-sprev small{color:var(--muted);font-size:12px;font-weight:600;font-family:ui-monospace,Menlo,monospace}
+    .jrc-seg{display:grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:999px;background:var(--surface2);margin:12px 0}
+    .jrc-seg button{height:36px;border:0;border-radius:999px;background:none;font:inherit;font-weight:800;font-size:13px;color:var(--muted);cursor:pointer;transition:background-color .15s,color .15s}
     .jrc-seg button.on{background:var(--accent);color:var(--accent-ink)}
-    .jrc-grad{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
-    .jrc-bar-wrap{padding:0 13px}
-    .jrc-bar{position:relative;height:36px;border-radius:10px;touch-action:none;cursor:copy;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
-    .jrc-stop{position:absolute;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;padding:0;border-radius:50%;border:3px solid #fff;touch-action:none;cursor:grab;
-      box-shadow:0 0 0 1px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);transition:transform .15s var(--ease-out)}
-    .jrc-stop.on{transform:scale(1.2);box-shadow:0 0 0 2px var(--text),0 2px 8px rgba(0,0,0,.4);z-index:2}
-    .jrc-tip{margin:-4px 2px 0;font-size:12px;color:var(--muted)}
-    .jrc-row{display:flex;align-items:center;gap:10px}
-    .jrc-row label{flex:none;min-width:54px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-    .jrc-row input[type=range]{flex:1;min-width:0;height:34px;margin:0;accent-color:var(--text)}
-    .jrc-row output{width:46px;text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
-    .jrc-dirs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
-    .jrc-dirs button{height:36px;border:0;border-radius:10px;background:var(--surface2);color:var(--text);font-size:16px;font-weight:800;cursor:pointer}
-    .jrc-dirs button.on{background:var(--accent);color:var(--accent-ink)}
-    .jrc-mini{height:38px;padding:0 14px;border:0;border-radius:12px;background:var(--surface2);color:var(--text);font-weight:750;font-size:13px;cursor:pointer;white-space:nowrap}
-    .jrc-mini:active:not(:disabled){background:var(--line)}
-    .jrc-mini:disabled{opacity:.35}
-    .jrc-acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .jrc-picker{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-    .jrc-sv{position:relative;height:112px;border-radius:12px;touch-action:none;cursor:crosshair;box-shadow:inset 0 0 0 1px rgba(128,128,128,.3)}
-    .jrc-sv::before,.jrc-sv::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none}
-    .jrc-sv::before{background:linear-gradient(to right,#fff,rgba(255,255,255,0))}
-    .jrc-sv::after{background:linear-gradient(to top,#000,rgba(0,0,0,0))}
-    .jrc-hue{position:relative;height:24px;margin:0 12px;border-radius:12px;touch-action:none;cursor:pointer;
-      background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);box-shadow:0 0 0 1px rgba(128,128,128,.3)}
-    .jrc-hue .jrc-knob{top:50%}
-    .jrc-knob{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;border:3px solid #fff;pointer-events:none;z-index:3;
-      box-shadow:0 0 0 1px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.4)}
+    .jrc-ends{display:flex;gap:8px;margin-bottom:2px}.jrc-ends[hidden]{display:none}
+    .jrc-end{flex:1;display:flex;align-items:center;gap:10px;height:46px;padding:0 14px 0 8px;border:0;border-radius:14px;background:var(--surface2);color:var(--text);font:inherit;font-weight:800;font-size:14px;cursor:pointer;box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .15s}
+    .jrc-end i{width:30px;height:30px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
+    .jrc-end.on{box-shadow:inset 0 0 0 2px var(--text)}
+    .jrc-mini{width:46px;height:46px;border:0;border-radius:14px;background:var(--surface2);color:var(--text);font-size:18px;font-weight:800;cursor:pointer}
+    .jrc-lab{margin:16px 2px 8px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+    .jrc-sl{position:relative;height:30px;margin:0 13px;border-radius:15px;touch-action:none;cursor:pointer;box-shadow:0 0 0 1px rgba(128,128,128,.3)}
+    .jrc-hue{background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+    .jrc-knob{position:absolute;top:50%;width:32px;height:32px;margin:-16px 0 0 -16px;border-radius:50%;border:3px solid #fff;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.4)}
+    .jrc-hexrow{display:flex;gap:10px;align-items:center;margin-top:18px}
+    .jrc-chip{width:44px;height:44px;border-radius:12px;flex:none;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
+    .jrc-hex{flex:1;min-width:0;display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;background:var(--surface2);box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .15s}
+    .jrc-hex:focus-within{box-shadow:inset 0 0 0 2px var(--text)}
+    .jrc-hex.bad{box-shadow:inset 0 0 0 2px var(--danger)}
+    .jrc-hex span{color:var(--muted);font-weight:800;margin-right:3px}
+    .jrc-hex input{flex:1;min-width:0;height:100%;padding:0;border:0;background:transparent;outline:0;color:var(--text);text-transform:uppercase;letter-spacing:.06em;font:700 17px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     /* cursori coerenti ovunque (zoom collage, angolo sfumatura) */
     .col-zoom input[type=range],.jrc-row input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
     .col-zoom input[type=range]::-webkit-slider-runnable-track,.jrc-row input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--line)}
     .col-zoom input[type=range]::-webkit-slider-thumb,.jrc-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-9px;border-radius:50%;background:var(--text);border:3px solid var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.35)}
     .col-zoom input[type=range]::-moz-range-track,.jrc-row input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--line)}
     .col-zoom input[type=range]::-moz-range-thumb,.jrc-row input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--text);border:3px solid var(--bg)}
-    .jrc-hexrow{display:flex;gap:10px;align-items:center}
-    .jrc-chip{width:44px;height:44px;border-radius:12px;flex:none;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
-    .jrc-hex{flex:1;min-width:0;display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;background:var(--surface2);box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .15s}
-    .jrc-hex:focus-within{box-shadow:inset 0 0 0 2px var(--text)}
-    .jrc-hex.bad{box-shadow:inset 0 0 0 2px var(--danger)}
-    .jrc-hex span{color:var(--muted);font-weight:800;margin-right:3px}
-    .jrc-hex input{flex:1;min-width:0;height:100%;padding:0;border:0;background:transparent;outline:0;text-transform:uppercase;letter-spacing:.06em;
-      font:700 17px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     .jrb-tools{display:flex;align-items:center;justify-content:center;gap:8px;margin:12px auto 0}
     .jrb-tools .lay-size{background:var(--surface2)}
     .pxi-slots{display:grid;gap:8px}
@@ -1278,36 +1271,12 @@
           <section class="screen" data-screen="jrcolor">
             <div class="eyebrow">Post</div>
             <h1>Colore del JR</h1>
-            <div id="jrcPrev" class="jrc-prev" aria-hidden="true"><div class="jrc-tile"></div></div>
-            <div id="jrcGrid" class="jrc-grid" role="radiogroup" aria-label="Colore del JR"></div>
-            <p id="jrcName" class="jrc-name"></p>
-            <div id="jrcSavedBox" hidden>
-              <div class="jrc-h">I miei colori</div>
-              <div id="jrcSaved" class="jrc-saved"></div>
-            </div>
-            <div id="jrcPanel" class="jrc-panel" hidden>
-              <div class="jrc-seg" role="group" aria-label="Tipo di colore">
-                <button id="jrcSolid" type="button">Tinta unita</button>
-                <button id="jrcGradBtn" type="button">Sfumatura</button>
-              </div>
-              <div id="jrcGradBox" class="jrc-grad" hidden>
-                <div class="jrc-bar-wrap"><div id="jrcBar" class="jrc-bar" aria-label="Sfumatura"></div></div>
-                <div class="jrc-row"><label for="jrcAngle">Angolo</label><input id="jrcAngle" type="range" min="0" max="360" step="1"><output id="jrcAngleOut">135°</output></div>
-                <div class="jrc-acts">
-                  <button id="jrcRev" class="jrc-mini" type="button">Inverti</button>
-                  <button id="jrcDel" class="jrc-mini" type="button">Elimina colore</button>
-                </div>
-              </div>
-              <div class="jrc-picker">
-                <div id="jrcSV" class="jrc-sv"><i class="jrc-knob"></i></div>
-                <div id="jrcHue" class="jrc-hue"><i class="jrc-knob"></i></div>
-              </div>
-              <div class="jrc-hexrow">
-                <div id="jrcChip" class="jrc-chip"></div>
-                <label id="jrcHexBox" class="jrc-hex"><span>#</span><input id="jrcHex" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="FF3366" aria-label="Colore esadecimale"></label>
-                <button id="jrcSave" class="jrc-mini" type="button">Salva</button>
-              </div>
-            </div>
+            <div id="jrcPrev" class="jrc-pv" aria-hidden="true"><div class="jrc-tile jrc-bg-photo"></div></div>
+            <div id="jrcBgs" class="jrc-bgs"><button type="button" data-bg="photo" class="on">Foto</button><button type="button" data-bg="dark">Scuro</button><button type="button" data-bg="light">Chiaro</button></div>
+            <div id="jrcCar" class="jrc-car" role="radiogroup" aria-label="Colore del JR"></div>
+            <p id="jrcName" class="jrc-big"></p>
+            <p class="jrc-sub">Scorri per scegliere</p>
+            <button id="jrcCu" class="jrc-cu" type="button"><i></i><span id="jrcCuT">Personalizza</span></button>
           </section>
 
           <section class="screen" data-screen="photo">
@@ -1438,6 +1407,15 @@
   </div>
 </div>
 <div id="modOv" class="mod-ov"><div id="modSh" class="mod-sh"></div></div>
+<div id="jrcOv" class="jrc-ov"><div id="jrcSh" class="jrc-sh" role="dialog" aria-modal="true" aria-label="Personalizza colore">
+  <div id="jrcGrab" class="jrc-grab"><i></i><div class="jrc-top"><b>Personalizza</b><button id="jrcDone" type="button">Fine</button></div></div>
+  <div class="jrc-sprev"><div class="jrc-tile jrc-bg-photo"></div><div><b id="jrcSName"></b><small id="jrcSHex"></small></div></div>
+  <div class="jrc-seg"><button id="jrcSolid" type="button">Tinta unita</button><button id="jrcGradBtn" type="button">Sfumatura</button></div>
+  <div id="jrcEnds" class="jrc-ends" hidden><button class="jrc-end" type="button" data-e="0"><i></i>Inizio</button><button class="jrc-end" type="button" data-e="1"><i></i>Fine</button><button id="jrcRev" class="jrc-mini" type="button" aria-label="Inverti">⇄</button></div>
+  <div class="jrc-lab">Colore</div><div id="jrcHue" class="jrc-sl jrc-hue"><i class="jrc-knob"></i></div>
+  <div class="jrc-lab">Luce</div><div id="jrcLum" class="jrc-sl"><i class="jrc-knob"></i></div>
+  <div class="jrc-hexrow"><div id="jrcChip" class="jrc-chip"></div><label id="jrcHexBox" class="jrc-hex"><span>#</span><input id="jrcHex" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="FF3366" aria-label="Colore esadecimale"></label></div>
+</div></div>
 <div id="lnkOv" class="mod-ov"><div id="lnkSh" class="mod-sh">
   <div class="mod-bar"></div>
   <div class="mod-top"><b>Link convocati</b><button type="button" id="lnkClose">Chiudi</button></div>
@@ -2636,7 +2614,7 @@
     jrColor = '';
     jrb.cards.forEach(c => { try { URL.revokeObjectURL(c.url); } catch (_) {} });
     Object.assign(jrb,{style:'', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null});
-    jrc.open = false; jrc.key = '';
+    jrc.key = ''; jrc.centered = ''; jrcCloseSheet();
     pxiModule = '';
     pxiPicks = Array(11).fill('');
     calMonth = 0;
@@ -4329,12 +4307,7 @@
     JRC_SOLID('green','Verde','#16c172'), JRC_SOLID('teal','Turchese','#00c2c7'), JRC_SOLID('sky','Azzurro','#2aa8ff'),
     JRC_SOLID('blue','Blu','#2457ff'), JRC_SOLID('violet','Viola','#8b3dff'), JRC_SOLID('pink','Rosa','#ff3d9a')
   ];
-  const JRC_MAX_STOPS = 6, JRC_SAVE_MAX = 12, JRC_STORE = 'imagegen_jr_colors';
-  const jrc = {
-    open:false, mode:'solid', hex:'#ff3366', angle:135,
-    stops:[{c:'#ff3366',p:0},{c:'#ffcc33',p:100}], stop:null, hsv:[345,.8,1], saved:[], key:'', gridKey:'', token:0, touched:false
-  };
-  jrc.stop = jrc.stops[0];
+  const jrc = {mode:'solid', c:['#ff3366','#ffcc33'], a:135, sel:0, h:345, t:.5, key:'', token:0, centered:''};
 
   const jrcClamp = (v,a=0,b=1) => Math.min(b, Math.max(a, v));
   // "#abc", "abc", "AABBCC" -> "#aabbcc"; altrimenti ''
@@ -4466,83 +4439,45 @@
     jrLogoUrl(color,false).then(url => { if (url && img.dataset.jrk === key) img.src = url; });
   }
 
-  /* --- schermata colore --- */
-  function jrcStore() {
-    try { localStorage.setItem(JRC_STORE, JSON.stringify(jrc.saved)); } catch (_) {}
+  /* --- schermata colore: carosello + foglio "Personalizza" (cursori Colore e Luce) --- */
+  let jrcBg = 'photo';
+  const jrcHsvHex = (h,sat,v) => jrcToHex(jrcHsvToRgb(h,sat,v));
+  const jrcLumHex = (h,t) => t < .5 ? jrcHsvHex(h,1,t * 2) : jrcHsvHex(h,(1 - t) * 2,1);   // Luce: nero -> colore -> bianco
+  function jrcFromHex(hex) {
+    const [h,sat,v] = jrcRgbToHsv(...jrcRgb(hex));
+    if (sat && v) jrc.h = h;
+    jrc.t = v < .999 ? v / 2 : .5 + (1 - sat) / 2;
   }
-  function jrcLoadStore() {
-    try {
-      const list = JSON.parse(localStorage.getItem(JRC_STORE) || '[]');
-      if (Array.isArray(list)) jrc.saved = list.filter(s => s && (s.type === 'solid' ? jrcHexNorm(s.hex) : s.type === 'gradient' && Array.isArray(s.stops) && s.stops.length >= 2 && s.stops.every(t => jrcHexNorm(t.c)))).slice(0,JRC_SAVE_MAX);
-    } catch (_) {}
-  }
-
-  const jrcTarget = () => jrc.mode === 'solid' ? jrc.hex : jrc.stop.c;
-  function jrcSetTarget(hex) { if (jrc.mode === 'solid') jrc.hex = hex; else { jrc.stop.c = hex; jrc.touched = true; } }
-  function jrcLoadHsv() {
-    const [r,g,b] = jrcRgb(jrcTarget());
-    const next = jrcRgbToHsv(r,g,b);
-    if (!next[1] || !next[2]) next[0] = jrc.hsv[0];        // grigi e nero: il colore di base resta dov'era
-    jrc.hsv = next;
-  }
-  function jrcSpec() {
-    return jrc.mode === 'solid' ? {type:'solid', hex:jrc.hex}
-      : {type:'gradient', angle:Math.round(jrc.angle), stops:jrcSorted(jrc.stops)};
-  }
-  function jrcColorAt(p) {                 // colore della sfumatura in un punto
-    const s = jrcSorted(jrc.stops);
-    if (p <= s[0].p) return s[0].c;
-    if (p >= s[s.length - 1].p) return s[s.length - 1].c;
-    for (let i = 1; i < s.length; i++) if (p <= s[i].p) {
-      const t = (p - s[i - 1].p) / Math.max(.0001, s[i].p - s[i - 1].p), a = jrcRgb(s[i - 1].c), b = jrcRgb(s[i].c);
-      return jrcToHex(a.map((v,k) => v + (b[k] - v) * t));
-    }
-    return s[0].c;
-  }
+  const jrcSpec = () => jrc.mode === 'solid' ? {type:'solid', hex:jrc.c[0]}
+    : {type:'gradient', angle:jrc.a, stops:[{c:jrc.c[0],p:0},{c:jrc.c[1],p:100}]};
 
   let jrcRaf = 0;
   function jrcChanged() {                  // un ritocco al colore personalizzato: applica e ridisegna
     jrColor = jrcSpec();
-    jrcPaint();
+    jrcPaint(); jrcRenderCar();
     if (!jrcRaf) jrcRaf = requestAnimationFrame(() => { jrcRaf = 0; jrcPreview(); renderSteps(); });
   }
 
-  function jrcPaint() {
-    const sv = $('jrcSV'), hue = $('jrcHue'), [h,s,v] = jrc.hsv;
-    sv.style.background = `hsl(${h},100%,50%)`;
-    sv.firstElementChild.style.cssText = `left:${s * 100}%;top:${(1 - v) * 100}%`;
-    hue.firstElementChild.style.left = `${h / 360 * 100}%`;
-    const hex = jrcTarget();
-    $('jrcChip').style.background = hex;
-    sv.firstElementChild.style.background = hex;
-    hue.firstElementChild.style.background = `hsl(${h},100%,50%)`;
-    if (document.activeElement !== $('jrcHex')) { $('jrcHex').value = hex.slice(1).toUpperCase(); $('jrcHexBox').classList.remove('bad'); }
-    const grad = jrc.mode === 'gradient';
+  function jrcPaint() {                    // aggiorna il foglio Personalizza
+    const cur = jrc.c[jrc.sel], grad = jrc.mode === 'gradient', custom = jrcIsCustom(jrColor);
+    $('jrcHue').firstElementChild.style.cssText = `left:${jrc.h / 360 * 100}%;background:hsl(${jrc.h},100%,50%)`;
+    $('jrcLum').style.background = `linear-gradient(90deg,#000,hsl(${jrc.h},100%,50%),#fff)`;
+    $('jrcLum').firstElementChild.style.cssText = `left:${jrc.t * 100}%;background:${cur}`;
+    $('jrcChip').style.background = cur;
+    if (document.activeElement !== $('jrcHex')) { $('jrcHex').value = cur.slice(1).toUpperCase(); $('jrcHexBox').classList.remove('bad'); }
     $('jrcSolid').classList.toggle('on',!grad); $('jrcGradBtn').classList.toggle('on',grad);
-    $('jrcGradBox').hidden = !grad;
-    if (grad) {
-      const bar = $('jrcBar');
-      bar.style.background = jrcCss({type:'gradient', stops:jrc.stops}, 90);
-      if (bar.children.length !== jrc.stops.length) {
-        bar.innerHTML = jrc.stops.map((_,i) => `<button type="button" class="jrc-stop" data-i="${i}" aria-label="Colore ${i + 1}"></button>`).join('');
-      }
-      [...bar.children].forEach((el,i) => {
-        const st = jrc.stops[i];
-        el.style.left = `${st.p}%`; el.style.background = st.c;
-        el.classList.toggle('on',st === jrc.stop);
-      });
-      $('jrcAngle').value = Math.round(jrc.angle);
-      $('jrcAngleOut').textContent = `${Math.round(jrc.angle)}°`;
-      $('jrcDel').disabled = jrc.stops.length <= 2;
-    }
-    const spec = JSON.stringify(jrcSpec());
-    const saved = jrc.saved.some(s => JSON.stringify(s) === spec);
-    $('jrcSave').disabled = saved;
-    $('jrcSave').textContent = saved ? 'Salvato' : 'Salva';
+    $('jrcEnds').hidden = !grad;
+    document.querySelectorAll('.jrc-end').forEach(b => {
+      const i = Number(b.dataset.e);
+      b.classList.toggle('on',i === jrc.sel);
+      b.firstElementChild.style.background = jrc.c[i];
+    });
+    $('jrcSName').textContent = custom || !jrColor ? 'Personalizzato' : jrColorLabel();
+    $('jrcSHex').textContent = custom && jrColor.type === 'solid' ? jrColor.hex.toUpperCase() : '';
   }
 
   async function jrcPreview() {
-    const tiles = [...$('jrcPrev').children];
+    const tiles = [...document.querySelectorAll('.jrc-tile')];
     const mine = ++jrc.token;
     let url = '';
     if (jrColor) { try { url = await jrLogoUrl(jrColor,true); } catch (_) { url = ''; } }
@@ -4555,124 +4490,138 @@
     });
   }
 
-  function jrcRenderGrid() {
-    const grid = $('jrcGrid');
-    const custom = jrcIsCustom(jrColor);
-    const cur = jrcIsRaster(jrColor) ? jrColor : jrColor && jrColor.id || '';
-    if (grid.dataset.built !== '1') {
-      grid.dataset.built = '1';
-      grid.innerHTML = '';
+  const jrcCur = () => jrcIsRaster(jrColor) ? jrColor : jrColor && jrColor.id || '';
+
+  function jrcRenderCar() {
+    const car = $('jrcCar'), cur = jrcCur(), custom = jrcIsCustom(jrColor);
+    if (car.dataset.built !== '1') {
+      car.dataset.built = '1';
+      car.innerHTML = '';
       JRC_PRESETS.forEach(p => {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'jrc-sw'; b.dataset.id = p.id;
-        b.setAttribute('role','radio');
+        b.setAttribute('role','radio'); b.setAttribute('aria-label',p.label); b.title = p.label;
         b.innerHTML = '<i></i>';
-        b.firstChild.style.background = p.css || jrcCss(p.spec || p.seed, 135);
-        b.setAttribute('aria-label',p.label); b.title = p.label;
-        b.addEventListener('click',() => jrcPick(p));
-        grid.appendChild(b);
+        b.firstChild.style.background = p.css || jrcCss(p.spec || p.seed,135);
+        b.addEventListener('click',() => { jrcPick(p); jrc.centered = p.id; jrcCenterCar(true); });
+        car.appendChild(b);
       });
-      const c = document.createElement('button');
-      c.type = 'button'; c.className = 'jrc-sw custom'; c.dataset.id = 'custom';
-      c.setAttribute('role','radio');
-      c.innerHTML = '<i>+</i>'; c.setAttribute('aria-label','Colore personalizzato'); c.title = 'Personalizzato';
-      c.addEventListener('click',jrcOpenCustom);
-      grid.appendChild(c);
     }
-    $('jrcName').textContent = jrc.open || custom ? 'Personalizzato' : cur ? (JRC_PRESETS.find(p => p.id === cur) || {label:''}).label : 'Scegli un colore';
-    [...grid.children].forEach(b => {
-      const on = b.dataset.id === 'custom' ? (custom || (jrc.open && !jrColor)) : b.dataset.id === cur && !jrc.open;
-      b.classList.toggle('on',Boolean(on));
+    $('jrcName').textContent = custom ? 'Personalizzato' : cur ? (JRC_PRESETS.find(p => p.id === cur) || {label:''}).label : 'Scegli un colore';
+    $('jrcCuT').textContent = custom ? 'Modifica personalizzato' : 'Personalizza';
+    [...car.children].forEach(b => {
+      const on = b.dataset.id === cur;
+      b.classList.toggle('on',on);
       b.setAttribute('aria-checked',on ? 'true' : 'false');
     });
   }
 
-  function jrcRenderSaved() {
-    const box = $('jrcSaved');
-    $('jrcSavedBox').hidden = !jrc.saved.length;
-    box.innerHTML = '';
-    jrc.saved.forEach((spec,i) => {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 's';
-      b.setAttribute('aria-label','Colore salvato');
-      b.style.background = jrcCss(spec);
-      const x = document.createElement('b');
-      x.textContent = '×'; x.setAttribute('aria-label','Elimina');
-      x.addEventListener('click',e => { e.stopPropagation(); jrc.saved.splice(i,1); jrcStore(); jrcRenderSaved(); jrcPaint(); });
-      b.appendChild(x);
-      b.addEventListener('click',() => { haptic('select'); jrcLoadSpec(spec); jrc.open = true; jrcChanged(); renderJrColor(); });
-      box.appendChild(b);
-    });
+  function jrcCenterCar(smooth) {          // porta il colore scelto al centro del carosello
+    const car = $('jrcCar'), on = car.querySelector('.jrc-sw.on');
+    if (!on || !car.offsetParent) return false;
+    car.scrollTo({left:on.offsetLeft - (car.clientWidth - on.offsetWidth) / 2, behavior:smooth ? 'smooth' : 'auto'});
+    return true;
   }
 
-  function jrcLoadSpec(spec) {              // porta nell'editor un colore (preset, salvato...)
-    if (spec.type === 'solid') { jrc.mode = 'solid'; jrc.hex = spec.hex; }
-    else {
-      jrc.mode = 'gradient'; jrc.angle = spec.angle;
-      jrc.stops = spec.stops.map(s => ({c:s.c, p:s.p})); jrc.stop = jrc.stops[0]; jrc.touched = true;
-    }
-    jrcLoadHsv();
-  }
-
-  function jrcPick(p) {                      // un colore pronto
+  function jrcPick(p) {                    // un colore pronto
+    if (jrcCur() === p.id && !jrcIsCustom(jrColor)) return;
     haptic('select');
-    jrc.open = false;
     jrColor = p.raster ? p.id : {id:p.id, ...p.spec};
     renderJrColor(); renderSteps();
   }
 
-  function jrcOpenCustom() {                 // "Tuo": si parte dal colore scelto, per ritoccarlo
-    haptic('select');
-    if (!jrcIsCustom(jrColor)) {
-      if (jrcIsRaster(jrColor)) jrcLoadSpec(JRC_PRESETS.find(p => p.id === jrColor).seed);
-      else if (jrColor) jrcLoadSpec(jrcSpecOf(jrColor));
-    }
-    jrc.open = true;
-    jrcChanged();
-    renderJrColor();
-    requestAnimationFrame(() => { try { $('jrcPanel').scrollIntoView({block:'nearest', behavior:'smooth'}); } catch (_) {} });
-  }
-
   function renderJrColor() {
-    jrcRenderGrid();
-    const open = jrc.open && (!jrColor || jrcIsCustom(jrColor));
-    if (!open && jrc.open) jrc.open = false;
-    $('jrcPanel').hidden = !open;
-    if (open) jrcPaint();
+    jrcRenderCar();
+    const cur = jrcCur();
+    if (cur && jrc.centered !== cur && jrcCenterCar(false)) jrc.centered = cur;
     const key = JSON.stringify(jrColor || '');
     if (key !== jrc.key) { jrc.key = key; jrcPreview(); }
   }
 
+  function jrcSetBg(bg) {
+    jrcBg = bg;
+    document.querySelectorAll('.jrc-tile').forEach(t => { t.classList.remove('jrc-bg-photo','jrc-bg-dark','jrc-bg-light'); t.classList.add(`jrc-bg-${bg}`); });
+    document.querySelectorAll('#jrcBgs button').forEach(b => b.classList.toggle('on',b.dataset.bg === bg));
+  }
+
+  function jrcOpenSheet() {                // si parte dal colore in uso: lo si ritocca, non si riparte da zero
+    haptic('select');
+    const spec = jrcIsRaster(jrColor) ? (JRC_PRESETS.find(p => p.id === jrColor) || {}).seed : jrColor ? jrcSpecOf(jrColor) : null;
+    if (spec) {
+      if (spec.type === 'solid') { jrc.mode = 'solid'; jrc.c[0] = spec.hex; }
+      else { const st = jrcSorted(spec.stops); jrc.mode = 'gradient'; jrc.a = spec.angle; jrc.c = [st[0].c, st[st.length - 1].c]; }
+      jrc.sel = 0;
+    }
+    jrcFromHex(jrc.c[jrc.sel]);
+    if (!jrColor) jrcChanged(); else jrcPaint();
+    $('jrcOv').classList.add('open');
+  }
+  function jrcCloseSheet() { $('jrcOv').classList.remove('open'); }
+
   function initJrColor() {
-    jrcLoadStore();
-    jrcLoadHsv();
-    jrcRenderSaved();
+    $('jrcCu').addEventListener('click',jrcOpenSheet);
+    $('jrcDone').addEventListener('click',jrcCloseSheet);
+    $('jrcOv').addEventListener('click',e => { if (e.target.id === 'jrcOv') jrcCloseSheet(); });
+    document.addEventListener('keydown',e => { if (e.key === 'Escape') jrcCloseSheet(); });
+    document.querySelectorAll('#jrcBgs button').forEach(b => b.addEventListener('click',() => jrcSetBg(b.dataset.bg)));
+
+    // carosello: il colore al centro è quello scelto
+    const car = $('jrcCar');
+    let tm = 0;
+    car.addEventListener('scroll',() => {
+      clearTimeout(tm);
+      tm = setTimeout(() => {
+        const c = car.getBoundingClientRect(), mid = c.left + c.width / 2;
+        let best = null, dist = 1e9;
+        [...car.children].forEach(b => { const r = b.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - mid); if (d < dist) { dist = d; best = b; } });
+        if (!best || dist > 30 || best.dataset.id === jrcCur()) return;
+        jrc.centered = best.dataset.id;
+        jrcPick(JRC_PRESETS.find(p => p.id === best.dataset.id));
+      },130);
+    });
+
+    // trascina l'intestazione del foglio verso il basso per chiuderlo
+    const sh = $('jrcSh');
+    let y0 = null;
+    sh.addEventListener('pointerdown',e => {
+      if (!e.target.closest('#jrcGrab') || e.target.closest('#jrcDone')) return;
+      y0 = e.clientY; sh.classList.add('drag'); sh.setPointerCapture(e.pointerId);
+    });
+    sh.addEventListener('pointermove',e => { if (y0 !== null) sh.style.transform = `translateY(${Math.max(0,e.clientY - y0)}px)`; });
+    const end = e => {
+      if (y0 === null) return;
+      const d = e.clientY - y0; y0 = null;
+      sh.classList.remove('drag'); sh.style.transform = '';
+      if (d > 90) jrcCloseSheet();
+    };
+    sh.addEventListener('pointerup',end); sh.addEventListener('pointercancel',end);
+
+    // cursori Colore e Luce
     const drag = (el, fn) => {
       el.addEventListener('pointerdown',e => {
-        if (e.target.closest('.jrc-stop')) return;
         e.preventDefault();
         el.setPointerCapture(e.pointerId);
         const r = el.getBoundingClientRect();
-        const move = ev => fn(jrcClamp((ev.clientX - r.left) / r.width), jrcClamp((ev.clientY - r.top) / r.height));
+        const move = ev => fn(jrcClamp((ev.clientX - r.left) / r.width));
         move(e);
         const up = () => { el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up); };
         el.addEventListener('pointermove',move); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
       });
     };
-    const setHsv = () => { jrcSetTarget(jrcToHex(jrcHsvToRgb(...jrc.hsv))); jrcChanged(); };
-    drag($('jrcSV'),(x,y) => { jrc.hsv[1] = x; jrc.hsv[2] = 1 - y; setHsv(); });
-    drag($('jrcHue'),x => { jrc.hsv[0] = x * 359.999; setHsv(); });
+    const setColor = () => { jrc.c[jrc.sel] = jrcLumHex(jrc.h,jrc.t); jrcChanged(); };
+    drag($('jrcHue'),x => { jrc.h = x * 359.999; setColor(); });
+    drag($('jrcLum'),x => { jrc.t = x; setColor(); });
 
     const hexIn = $('jrcHex');
     hexIn.addEventListener('input',() => {
       const raw = hexIn.value.trim().replace(/^#/,'');
-      if (/^[0-9a-fA-F]{6}$/.test(raw)) { $('jrcHexBox').classList.remove('bad'); jrcSetTarget(jrcHexNorm(raw)); jrcLoadHsv(); jrcChanged(); }
+      if (/^[0-9a-fA-F]{6}$/.test(raw)) { $('jrcHexBox').classList.remove('bad'); jrc.c[jrc.sel] = jrcHexNorm(raw); jrcFromHex(jrc.c[jrc.sel]); jrcChanged(); }
       else $('jrcHexBox').classList.toggle('bad',raw.length > 0 && !/^[0-9a-fA-F]{0,6}$/.test(raw) || raw.length >= 6);
     });
     const hexDone = () => {
       const hex = jrcHexNorm(hexIn.value);
-      if (hex) { jrcSetTarget(hex); jrcLoadHsv(); jrcChanged(); }
-      hexIn.value = jrcTarget().slice(1).toUpperCase();
+      if (hex) { jrc.c[jrc.sel] = hex; jrcFromHex(hex); jrcChanged(); }
+      hexIn.value = jrc.c[jrc.sel].slice(1).toUpperCase();
       $('jrcHexBox').classList.remove('bad');
       jrcPaint();
     };
@@ -4683,62 +4632,21 @@
     $('jrcSolid').addEventListener('click',() => {
       if (jrc.mode === 'solid') return;
       haptic('select');
-      jrc.hex = jrc.stop.c; jrc.mode = 'solid'; jrcLoadHsv(); jrcChanged();
+      jrc.mode = 'solid'; jrc.sel = 0; jrcFromHex(jrc.c[0]); jrcChanged();
     });
     $('jrcGradBtn').addEventListener('click',() => {
       if (jrc.mode === 'gradient') return;
       haptic('select');
-      if (!jrc.touched) { jrc.stops[0].c = jrc.hex; jrc.stops[1].c = jrcToHex(jrcHsvToRgb((jrc.hsv[0] + 40) % 360, jrcClamp(jrc.hsv[1],.35,1), 1)); }
-      jrc.mode = 'gradient'; jrc.stop = jrc.stops[0]; jrcLoadHsv(); jrcChanged();
+      const [h,sat] = jrcRgbToHsv(...jrcRgb(jrc.c[0]));     // seconda tinta: stesso colore, tono spostato
+      jrc.c[1] = jrcHsvHex((h + 40) % 360,jrcClamp(sat,.35,1),1);
+      jrc.mode = 'gradient'; jrc.sel = 0; jrcFromHex(jrc.c[0]); jrcChanged();
     });
-
-    // barra della sfumatura: tocca per aggiungere un colore, trascina i pallini
-    const bar = $('jrcBar');
-    let dragStop = null;
-    const posOf = e => { const r = bar.getBoundingClientRect(); return Math.round(jrcClamp((e.clientX - r.left) / r.width,0,1) * 100); };
-    bar.addEventListener('pointerdown',e => {
-      e.preventDefault();
-      const h = e.target.closest('.jrc-stop');
-      if (h) jrc.stop = jrc.stops[Number(h.dataset.i)];
-      else {
-        if (jrc.stops.length >= JRC_MAX_STOPS) { haptic('error'); return; }
-        const p = posOf(e);
-        jrc.stop = {c:jrcColorAt(p), p};
-        jrc.stops.push(jrc.stop);
-      }
-      jrc.touched = true;
-      dragStop = jrc.stop;
-      bar.setPointerCapture(e.pointerId);
-      haptic('select');
-      jrcLoadHsv(); jrcChanged();
-    });
-    bar.addEventListener('pointermove',e => { if (dragStop) { dragStop.p = posOf(e); jrcChanged(); } });
-    const dragEnd = () => { if (!dragStop) return; dragStop = null; jrc.stops.sort((a,b) => a.p - b.p); jrcChanged(); };
-    bar.addEventListener('pointerup',dragEnd);
-    bar.addEventListener('pointercancel',dragEnd);
-
-    $('jrcAngle').addEventListener('input',e => { jrc.angle = Number(e.target.value); jrcChanged(); });
+    document.querySelectorAll('.jrc-end').forEach(b => b.addEventListener('click',() => {
+      jrc.sel = Number(b.dataset.e); jrcFromHex(jrc.c[jrc.sel]); jrcPaint();
+    }));
     $('jrcRev').addEventListener('click',() => {
       haptic('select');
-      jrc.stops.forEach(s => { s.p = 100 - s.p; });
-      jrc.stops.sort((a,b) => a.p - b.p); jrc.touched = true; jrcChanged();
-    });
-    $('jrcDel').addEventListener('click',() => {
-      if (jrc.stops.length <= 2) return;
-      haptic('select');
-      const i = jrc.stops.indexOf(jrc.stop);
-      jrc.stops.splice(i,1);
-      jrc.stop = jrc.stops[Math.max(0,i - 1)];
-      $('jrcBar').innerHTML = '';
-      jrcLoadHsv(); jrcChanged();
-    });
-    $('jrcSave').addEventListener('click',() => {
-      const spec = jrcSpec(), key = JSON.stringify(spec);
-      if (jrc.saved.some(s => JSON.stringify(s) === key)) return;
-      haptic('success');
-      jrc.saved.unshift(spec);
-      jrc.saved = jrc.saved.slice(0,JRC_SAVE_MAX);
-      jrcStore(); jrcRenderSaved(); jrcPaint();
+      jrc.c.reverse(); jrcFromHex(jrc.c[jrc.sel]); jrcChanged();
     });
   }
 
