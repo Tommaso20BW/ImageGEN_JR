@@ -214,8 +214,8 @@ BASE_CSS = (
 )
 
 
-def overlay_preview(name, kit, width=540):
-    """Sagoma per l'editor foto: canva/<nome>_<maglia>_placeholder.png (fatta da
+def overlay_preview(name, kit, width=540, full=False):
+    """Sagoma per l'editor foto (full=True: livello originale a piena risoluzione): canva/<nome>_<maglia>_placeholder.png (fatta da
     tools/placeholders.py, già 540x720); se manca, il livello fisso Canva ridotto."""
     import io
 
@@ -224,10 +224,12 @@ def overlay_preview(name, kit, width=540):
     if not name.replace('_', '').isalnum() or not kit.isalnum():
         raise ValueError('Modello non valido.')
     ready = asset_dir() / 'canva' / f'{name}_{kit}_placeholder.png'
-    if ready.is_file():
+    if not full and ready.is_file():
         return ready.read_bytes()
 
     meta = json.loads((asset_dir() / 'canva' / f'{name}.json').read_text(encoding='utf-8'))
+    if full:      # piena qualità: il livello Canva originale, senza ridurlo
+        return (asset_dir() / 'canva' / meta[kit]['overlay']).read_bytes()
     with Image.open(asset_dir() / 'canva' / meta[kit]['overlay']) as image:
         small = image.resize((width, round(width * DESIGN_H / DESIGN_W)), Image.LANCZOS)
         out = io.BytesIO()
