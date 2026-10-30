@@ -8,7 +8,6 @@ from constants import COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
 from graphics.squad_list import BACKGROUNDS as SQUAD_COMPETITIONS, parse_squad
 from graphics.starting_xi import PLAYERS as PLAYERS_IN_XI, parse_lineup
 from graphics.matchday import parse_info
-from graphics.photo_jr import COLORS as JR_COLORS
 from graphics import photo_jr
 from graphics.calendar import parse_matches
 
@@ -181,9 +180,10 @@ def _build_state(envelope, catalog, now, expected_session):
 
     # FOTO + JR: niente partita, solo foto e colore del logo.
     if kind == 'jr':
-        color = str(incoming.get('color') or '')
-        if color not in JR_COLORS:
-            raise ValueError('Scegli il colore del JR.')
+        try:
+            color = photo_jr.clean_color(incoming.get('color'))      # PNG pronto, hex o sfumatura
+        except ValueError:
+            raise ValueError('Scegli il colore del JR.') from None
         style = str(incoming.get('style') or 'classic')
         if style not in photo_jr.STYLES:
             raise ValueError('Stile non valido.')

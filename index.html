@@ -438,15 +438,92 @@
       box-shadow:var(--preview-shadow, 0 6px 24px rgba(0,0,0,.25))}
     .col-cell{position:absolute;overflow:hidden;background:#ddd;cursor:pointer;
       outline:0 solid transparent;outline-offset:-2px}
-    .col-cell img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:50% 38%;pointer-events:none;display:block}
+    .col-cell img{position:absolute;max-width:none;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none}
     .col-cell.sel{outline:3px solid var(--cta);z-index:2}
     .col-big .overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3}
     .col-hint{text-align:center;margin:8px 0 14px}
-    .col-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
     .col-th{position:relative;aspect-ratio:3/4;padding:0;border:0;border-radius:10px;overflow:hidden;background:#fff;box-shadow:inset 0 0 0 1px var(--line);
       outline:3px solid transparent;outline-offset:-3px;transition:outline-color .18s var(--ease-out);cursor:pointer}
     .col-th.on{outline-color:var(--cta)}
     .col-th .col-cell{cursor:inherit}
+    /* Collage: spostare e ingrandire la foto dentro il riquadro */
+    .col-cell{touch-action:pan-y}
+    .col-cell.sel{touch-action:none;cursor:grab}
+    .col-cell.sel:active{cursor:grabbing}
+    .col-tools{display:flex;align-items:center;gap:8px;width:min(100%,300px);margin:0 auto 16px;height:44px;transition:opacity .2s}
+    .col-tools.off{opacity:.35}
+    .col-tools input{flex:1;min-width:0;height:36px;margin:0}
+    .col-ic{flex:none;width:44px;height:44px;border:0;border-radius:50%;background:var(--surface2);color:var(--text);font-size:20px;font-weight:700;line-height:1;cursor:pointer}
+    .col-ic:active:not(:disabled){background:var(--line)}
+    .col-ic.on{background:var(--cta);color:var(--cta-ink)}
+    .col-ic:disabled{cursor:default}
+    .col-hint{font-size:12.5px}
+    .col-grid{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity;scrollbar-width:none}
+    .col-grid::-webkit-scrollbar{display:none}
+    .col-grid .col-th{flex:0 0 62px;scroll-snap-align:start}
+    /* Colore del logo JR: campioni, esadecimale, sfumature */
+    .jrc-prev{position:sticky;top:calc(-1 * var(--pad-top));z-index:4;margin:0 0 12px;padding:var(--pad-top) 0 8px;background:var(--bg)}
+    .jrc-tile{position:relative;height:84px;border-radius:14px;overflow:hidden;display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--line);
+      background:linear-gradient(100deg,#141416 0 50%,#f1efe9 50% 100%)}
+    .jrc-tile img{height:58px;width:auto;max-width:70%;object-fit:contain;display:block}
+    .jrc-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:12px 6px;justify-items:center}
+    .jrc-sw{display:block;border:0;background:none;padding:2px;cursor:pointer}
+    .jrc-sw i{width:34px;height:34px;border-radius:50%;display:block;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4);transition:transform .18s var(--spring),box-shadow .18s var(--ease-out)}
+    .jrc-sw:active i{transform:scale(.9)}
+    .jrc-sw.on i{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
+    .jrc-sw.custom i{background:conic-gradient(from 0deg,#ff3b3b,#ffd60a,#2bd96b,#27c4ff,#6b4dff,#ff3dc8,#ff3b3b);display:grid;place-items:center;color:#fff;font-size:20px;font-weight:300;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+    .jrc-name{margin:10px 2px 0;text-align:center;font-size:13px;font-weight:750;color:var(--muted);min-height:18px}
+    .jrc-h{margin:16px 2px 8px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+    .jrc-saved{display:flex;flex-wrap:wrap;gap:12px}
+    .jrc-saved .s{position:relative;width:30px;height:30px;border:0;padding:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4);cursor:pointer}
+    .jrc-saved .s b{position:absolute;right:-5px;top:-5px;width:18px;height:18px;border-radius:50%;background:var(--text);color:var(--bg);font-size:12px;line-height:18px;text-align:center;font-weight:800}
+    .jrc-panel{margin-top:16px;padding:12px;border-radius:18px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+    .jrc-panel[hidden],.jrc-panel [hidden]{display:none}
+    .jrc-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:3px;border-radius:999px;background:var(--surface2)}
+    .jrc-seg button{height:36px;border:0;border-radius:999px;background:transparent;font-weight:750;font-size:13px;color:var(--muted);transition:background-color .15s,color .15s}
+    .jrc-seg button.on{background:var(--accent);color:var(--accent-ink)}
+    .jrc-grad{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+    .jrc-bar-wrap{padding:0 13px}
+    .jrc-bar{position:relative;height:36px;border-radius:10px;touch-action:none;cursor:copy;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
+    .jrc-stop{position:absolute;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;padding:0;border-radius:50%;border:3px solid #fff;touch-action:none;cursor:grab;
+      box-shadow:0 0 0 1px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);transition:transform .15s var(--ease-out)}
+    .jrc-stop.on{transform:scale(1.2);box-shadow:0 0 0 2px var(--text),0 2px 8px rgba(0,0,0,.4);z-index:2}
+    .jrc-tip{margin:-4px 2px 0;font-size:12px;color:var(--muted)}
+    .jrc-row{display:flex;align-items:center;gap:10px}
+    .jrc-row label{flex:none;min-width:54px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+    .jrc-row input[type=range]{flex:1;min-width:0;height:34px;margin:0;accent-color:var(--text)}
+    .jrc-row output{width:46px;text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+    .jrc-dirs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+    .jrc-dirs button{height:36px;border:0;border-radius:10px;background:var(--surface2);color:var(--text);font-size:16px;font-weight:800;cursor:pointer}
+    .jrc-dirs button.on{background:var(--accent);color:var(--accent-ink)}
+    .jrc-mini{height:38px;padding:0 14px;border:0;border-radius:12px;background:var(--surface2);color:var(--text);font-weight:750;font-size:13px;cursor:pointer;white-space:nowrap}
+    .jrc-mini:active:not(:disabled){background:var(--line)}
+    .jrc-mini:disabled{opacity:.35}
+    .jrc-acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .jrc-picker{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+    .jrc-sv{position:relative;height:112px;border-radius:12px;touch-action:none;cursor:crosshair;box-shadow:inset 0 0 0 1px rgba(128,128,128,.3)}
+    .jrc-sv::before,.jrc-sv::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none}
+    .jrc-sv::before{background:linear-gradient(to right,#fff,rgba(255,255,255,0))}
+    .jrc-sv::after{background:linear-gradient(to top,#000,rgba(0,0,0,0))}
+    .jrc-hue{position:relative;height:24px;margin:0 12px;border-radius:12px;touch-action:none;cursor:pointer;
+      background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);box-shadow:0 0 0 1px rgba(128,128,128,.3)}
+    .jrc-hue .jrc-knob{top:50%}
+    .jrc-knob{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;border:3px solid #fff;pointer-events:none;z-index:3;
+      box-shadow:0 0 0 1px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.4)}
+    /* cursori coerenti ovunque (zoom collage, angolo sfumatura) */
+    .col-tools input[type=range],.jrc-row input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+    .col-tools input[type=range]::-webkit-slider-runnable-track,.jrc-row input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--line)}
+    .col-tools input[type=range]::-webkit-slider-thumb,.jrc-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-9px;border-radius:50%;background:var(--text);border:3px solid var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+    .col-tools input[type=range]::-moz-range-track,.jrc-row input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--line)}
+    .col-tools input[type=range]::-moz-range-thumb,.jrc-row input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--text);border:3px solid var(--bg)}
+    .jrc-hexrow{display:flex;gap:10px;align-items:center}
+    .jrc-chip{width:44px;height:44px;border-radius:12px;flex:none;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
+    .jrc-hex{flex:1;min-width:0;display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;background:var(--surface2);box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .15s}
+    .jrc-hex:focus-within{box-shadow:inset 0 0 0 2px var(--text)}
+    .jrc-hex.bad{box-shadow:inset 0 0 0 2px var(--danger)}
+    .jrc-hex span{color:var(--muted);font-weight:800;margin-right:3px}
+    .jrc-hex input{flex:1;min-width:0;height:100%;padding:0;border:0;background:transparent;outline:0;text-transform:uppercase;letter-spacing:.06em;
+      font:700 17px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     .jrb-tools{display:flex;align-items:center;justify-content:center;gap:8px;margin:12px auto 0}
     .jrb-tools .lay-size{background:var(--surface2)}
     .pxi-slots{display:grid;gap:8px}
@@ -1138,7 +1215,12 @@
             <div class="eyebrow">Post · Collage</div>
             <h1>Layout</h1>
             <div id="colBig" class="col-big"></div>
-            <p id="colHint" class="hint col-hint">Tocca due riquadri per scambiare le foto.</p>
+            <p id="colHint" class="hint col-hint">Tocca un riquadro per spostare e ingrandire la foto.</p>
+            <div class="col-tools" id="colTools">
+              <input id="colZoom" type="range" min="100" max="600" step="1" value="100" aria-label="Zoom foto" disabled>
+              <button id="colSwap" class="col-ic" type="button" aria-label="Scambia con un altro riquadro" title="Scambia" disabled>⇄</button>
+              <button id="colReset" class="col-ic" type="button" aria-label="Reimposta foto" title="Reimposta" disabled>↺</button>
+            </div>
             <div id="colGrid" class="col-grid" role="radiogroup" aria-label="Layout"></div>
           </section>
 
@@ -1152,8 +1234,36 @@
           <section class="screen" data-screen="jrcolor">
             <div class="eyebrow">Post</div>
             <h1>Colore del JR</h1>
-            <p class="lead">Il logo JR va in alto a destra, come nel design Canva. Scegli il colore che si legge meglio sulla tua foto.</p>
-            <div id="jrColorOpts" class="opts" role="radiogroup"></div>
+            <div id="jrcPrev" class="jrc-prev" aria-hidden="true"><div class="jrc-tile"></div></div>
+            <div id="jrcGrid" class="jrc-grid" role="radiogroup" aria-label="Colore del JR"></div>
+            <p id="jrcName" class="jrc-name"></p>
+            <div id="jrcSavedBox" hidden>
+              <div class="jrc-h">I miei colori</div>
+              <div id="jrcSaved" class="jrc-saved"></div>
+            </div>
+            <div id="jrcPanel" class="jrc-panel" hidden>
+              <div class="jrc-seg" role="group" aria-label="Tipo di colore">
+                <button id="jrcSolid" type="button">Tinta unita</button>
+                <button id="jrcGradBtn" type="button">Sfumatura</button>
+              </div>
+              <div id="jrcGradBox" class="jrc-grad" hidden>
+                <div class="jrc-bar-wrap"><div id="jrcBar" class="jrc-bar" aria-label="Sfumatura"></div></div>
+                <div class="jrc-row"><label for="jrcAngle">Angolo</label><input id="jrcAngle" type="range" min="0" max="360" step="1"><output id="jrcAngleOut">135°</output></div>
+                <div class="jrc-acts">
+                  <button id="jrcRev" class="jrc-mini" type="button">Inverti</button>
+                  <button id="jrcDel" class="jrc-mini" type="button">Elimina colore</button>
+                </div>
+              </div>
+              <div class="jrc-picker">
+                <div id="jrcSV" class="jrc-sv"><i class="jrc-knob"></i></div>
+                <div id="jrcHue" class="jrc-hue"><i class="jrc-knob"></i></div>
+              </div>
+              <div class="jrc-hexrow">
+                <div id="jrcChip" class="jrc-chip"></div>
+                <label id="jrcHexBox" class="jrc-hex"><span>#</span><input id="jrcHex" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="FF3366" aria-label="Colore esadecimale"></label>
+                <button id="jrcSave" class="jrc-mini" type="button">Salva</button>
+              </div>
+            </div>
           </section>
 
           <section class="screen" data-screen="photo">
@@ -1450,7 +1560,7 @@
   const JR_LIMITS = {blur:4, collage:9};      // foto massime per stile
   const jrLimit = () => JR_LIMITS[jrb.style] || 1;
   const jrMin = () => jrb.style === 'collage' ? 2 : 1;
-  const jrb = {style:'', ratio:'3:4', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, tpls:null};
+  const jrb = {style:'', ratio:'3:4', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null};
   let pxiModule = '';    // PROBABILE XI: modulo
   let calMonth = 0;      // CALENDARIO: mese (1-12)
   const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
@@ -1690,7 +1800,7 @@
       }
       case 'photo': return photoState.id ? 'Caricata' : '';
       case 'phasephoto': return ppState.bg ? 'Caricata' : '';
-      case 'jrcolor': return labelOf(JR_COLORS,jrColor);
+      case 'jrcolor': return jrColorLabel();
       case 'jrstyle': return labelOf(JR_STYLES,jrb.style);
       case 'jrratio': return jrb.ratio;
       case 'jrphotos': return jrb.cards.length ? `${jrb.cards.length} foto` : '';
@@ -1874,7 +1984,7 @@
     $('stage').classList.toggle('photo-mode', editing);
     if (editing) $('stage').scrollTop = 0;
     try {
-      if (tg && tg.disableVerticalSwipes) editing ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
+      if (tg && tg.disableVerticalSwipes) (editing || screenName === 'jrlayout') ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
     } catch (_) {}
     if (screenName === 'phasephoto') { $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Post'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
@@ -1984,7 +2094,7 @@
     });
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
     renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; });
-    renderOptions('jrColorOpts',JR_COLORS,jrColor,v => { jrColor = v; });
+    renderJrColor();
     renderOptions('jrRatioOpts',JR_RATIOS,jrb.ratio,v => { jrb.ratio = v; photoState.x = 0; photoState.y = 0; });
     renderOptions('jrStyleOpts',JR_STYLES,jrb.style,v => {
       jrb.style = v;
@@ -1993,7 +2103,7 @@
         jrb.cards = jrb.cards.slice(0,jrLimit());
         if (!jrb.cards.some(c => c.id === jrb.bg)) jrb.bg = jrb.cards.length === 1 ? jrb.cards[0].id : '';
       }
-      jrb.tpls = null; jrb.order = null; jrb.tpl = 0; jrb.swap = -1;
+      jrb.tpls = null; jrb.order = null; jrb.tpl = 0; jrb.swap = -1; jrb.csel = -1;
       buildFlow();
     });
     renderModuleButton();
@@ -2442,7 +2552,8 @@
     kitAuto = false;
     jrColor = '';
     jrb.cards.forEach(c => { try { URL.revokeObjectURL(c.url); } catch (_) {} });
-    Object.assign(jrb,{style:'', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, tpls:null});
+    Object.assign(jrb,{style:'', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null});
+    jrc.open = false; jrc.key = '';
     pxiModule = '';
     pxiPicks = Array(11).fill('');
     calMonth = 0;
@@ -2794,6 +2905,7 @@
       if (jrb.cards.length < jrMin()) { showError(jrMin() > 1 ? `Scegli almeno ${jrMin()} foto.` : 'Scegli almeno una foto.'); return false; }
       if (jrb.cards.length > jrLimit()) { showError(`Per questo stile al massimo ${jrLimit()} foto: scegli di nuovo.`); return false; }
     }
+    if (step === 'jrcolor' && $('jrcHexBox').classList.contains('bad')) { showError('Il colore non è valido: servono 6 cifre esadecimali, per esempio #FF3366.'); return false; }
     if (step === 'jrbg' && !jrb.cards.some(c => c.id === jrb.bg)) { showError('Scegli la foto per lo sfondo.'); return false; }
 
     if (step === 'photo') {
@@ -3682,10 +3794,12 @@
   function updatePhotoOverlay() {
     const overlay = $('photoOverlay');
     if (!directBase || !session) return;
-    const name = kind === 'jr' ? 'jr' : kind === 'md' ? 'matchday' : 'starting_xi';
-    const variant = kind === 'jr' ? (jrColor || 'black') : (kit || 'home');
-    const url = `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${name}&kit=${encodeURIComponent(variant)}`;
-    if (overlay.getAttribute('src') !== url) overlay.src = url;
+    if (kind === 'jr') jrLogoSrc(overlay,'black');
+    else {
+      const name = kind === 'md' ? 'matchday' : 'starting_xi';
+      const url = `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${name}&kit=${encodeURIComponent(kit || 'home')}`;
+      if (overlay.getAttribute('src') !== url) overlay.src = url;
+    }
     overlay.classList.add('ghost');
     // La sagoma è sempre 3:4, larga come la pagina e ancorata in alto: in un altro formato viene
     // tagliata (o lascia vuoto sotto) e il logo resta in alto a destra senza deformarsi.
@@ -3864,7 +3978,7 @@
     const list = all.slice(0, limit);
     if (all.length > limit) showError(`Massimo ${limit} foto: ho preso le prime ${limit}.`);
     jrRelease();
-    jrb.cards = []; jrb.bg = ''; jrb.sel = -1; jrb.order = null; jrb.tpls = null; jrb.tpl = 0; jrb.swap = -1;
+    jrb.cards = []; jrb.bg = ''; jrb.sel = -1; jrb.order = null; jrb.tpls = null; jrb.tpl = 0; jrb.swap = -1; jrb.csel = -1;
     jrb.uploading = list.length;
     renderJrPicker();
     const done = new Array(list.length).fill(null);
@@ -3989,10 +4103,7 @@
         width:`${w * k}px`, height:`${h * k}px`});
       el.classList.toggle('sel', i === jrb.sel);
     });
-    const ov = $('jrbOverlay');
-    const url = directBase && session
-      ? `${directBase}/overlay?session=${encodeURIComponent(session)}&name=jr&kit=${encodeURIComponent(jrColor || 'white')}` : '';
-    if (url && ov.getAttribute('src') !== url) ov.src = url;
+    jrLogoSrc($('jrbOverlay'),'white');
     const sel = jrb.cards[jrb.sel];
     $('jrbScale').textContent = sel ? `${Math.round(sel.w / sel.base * 100)}%` : '—';
     $('jrbMinus').disabled = !sel || sel.w <= JRB_W[0] + 1e-6;
@@ -4073,6 +4184,434 @@
     window.addEventListener('resize',() => { if ($('jrbFrame').offsetParent) { fitJrbFrame(); renderJrb(); } });
   }
 
+
+  /* ---------- FOTO + JR: colore del logo (pronti, esadecimale, sfumature) ----------
+     Nero, bianco e oro sono i PNG Canva del servizio. Tutto il resto ricolora la stessa sagoma:
+     il servizio con una maschera (graphics/photo_jr.py), qui nell'anteprima con un canvas. */
+  const JRC_SOLID = (id,label,hex) => ({id, label, spec:{type:'solid', hex}});
+  const JRC_GOLD = {type:'gradient', angle:135, stops:[{c:'#f9e79a',p:0},{c:'#d7a92f',p:50},{c:'#9a7016',p:100}]};
+  const JRC_PRESETS = [
+    {id:'black', label:'Nero', raster:true, css:'#111113', seed:{type:'solid', hex:'#111113'}},
+    {id:'white', label:'Bianco', raster:true, css:'#ffffff', seed:{type:'solid', hex:'#ffffff'}},
+    {id:'gold', label:'Oro', raster:true, seed:JRC_GOLD},
+    {id:'silver', label:'Argento', spec:{type:'gradient', angle:135, stops:[{c:'#f4f6f8',p:0},{c:'#a9b0b9',p:35},{c:'#ffffff',p:55},{c:'#7f8791',p:100}]}},
+    {id:'bronze', label:'Bronzo', spec:{type:'gradient', angle:135, stops:[{c:'#f0c49a',p:0},{c:'#c97b30',p:38},{c:'#e9a468',p:58},{c:'#7e4219',p:100}]}},
+    JRC_SOLID('red','Rosso','#e11d2e'), JRC_SOLID('orange','Arancio','#ff7a00'), JRC_SOLID('yellow','Giallo','#ffd60a'),
+    JRC_SOLID('green','Verde','#16c172'), JRC_SOLID('teal','Turchese','#00c2c7'), JRC_SOLID('sky','Azzurro','#2aa8ff'),
+    JRC_SOLID('blue','Blu','#2457ff'), JRC_SOLID('violet','Viola','#8b3dff'), JRC_SOLID('pink','Rosa','#ff3d9a')
+  ];
+  const JRC_MAX_STOPS = 6, JRC_SAVE_MAX = 12, JRC_STORE = 'imagegen_jr_colors';
+  const jrc = {
+    open:false, mode:'solid', hex:'#ff3366', angle:135,
+    stops:[{c:'#ff3366',p:0},{c:'#ffcc33',p:100}], stop:null, hsv:[345,.8,1], saved:[], key:'', gridKey:'', token:0, touched:false
+  };
+  jrc.stop = jrc.stops[0];
+
+  const jrcClamp = (v,a=0,b=1) => Math.min(b, Math.max(a, v));
+  // "#abc", "abc", "AABBCC" -> "#aabbcc"; altrimenti ''
+  function jrcHexNorm(raw) {
+    let v = String(raw || '').trim().replace(/^#/,'').toLowerCase();
+    if (/^[0-9a-f]{3}$/.test(v)) v = v.split('').map(c => c + c).join('');
+    return /^[0-9a-f]{6}$/.test(v) ? `#${v}` : '';
+  }
+  const jrcRgb = hex => [1,3,5].map(i => parseInt(hex.slice(i,i + 2),16));
+  const jrcToHex = rgb => '#' + rgb.map(v => Math.round(jrcClamp(v,0,255)).toString(16).padStart(2,'0')).join('');
+  function jrcHsvToRgb(h,s,v) {
+    const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return [f(5) * 255, f(3) * 255, f(1) * 255];
+  }
+  function jrcRgbToHsv(r,g,b) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r,g,b), d = mx - Math.min(r,g,b);
+    let h = 0;
+    if (d) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [h * 60, mx ? d / mx : 0, mx];
+  }
+  const jrcSorted = stops => stops.map(s => ({c:s.c, p:s.p})).sort((a,b) => a.p - b.p);
+  function jrcCss(spec, angle) {
+    if (spec.type === 'solid') return spec.hex;
+    const list = jrcSorted(spec.stops).map(s => `${s.c} ${s.p}%`).join(',');
+    return `linear-gradient(${angle == null ? spec.angle : angle}deg,${list})`;
+  }
+  const jrcIsRaster = c => typeof c === 'string' && c !== '';
+  const jrcIsCustom = c => c && typeof c === 'object' && !c.id;
+  const jrcSpecOf = c => c && typeof c === 'object' ? {type:c.type, hex:c.hex, angle:c.angle, stops:c.stops} : null;
+
+  function jrColorLabel() {
+    if (!jrColor) return '';
+    if (jrcIsRaster(jrColor)) return labelOf(JR_COLORS,jrColor);
+    if (jrColor.id) return (JRC_PRESETS.find(p => p.id === jrColor.id) || {label:jrColor.id}).label;
+    return jrColor.type === 'solid' ? jrColor.hex.toUpperCase() : 'Sfumatura';
+  }
+
+  /* --- logo ricolorato nell'anteprima --- */
+  const jrLogo = {raw:{}, box:null, full:new Map(), crop:new Map()};
+  const jrOverlayUrl = name => `${directBase}/overlay?session=${encodeURIComponent(session)}&name=jr&kit=${encodeURIComponent(name)}`;
+
+  function jrRaw(name) {                 // sagoma del servizio come ImageBitmap (una volta sola)
+    if (!directBase || !session) return Promise.resolve(null);
+    if (!jrLogo.raw[name]) {
+      jrLogo.raw[name] = (async () => {
+        try {
+          const response = await netFetch(jrOverlayUrl(name),{},20000,2);
+          if (!response.ok) throw new Error('overlay');
+          return await createImageBitmap(await response.blob());
+        } catch (_) { delete jrLogo.raw[name]; return null; }
+      })();
+    }
+    return jrLogo.raw[name];
+  }
+
+  function jrAlphaBox(bmp) {             // rettangolo che contiene il logo
+    const cv = document.createElement('canvas');
+    cv.width = bmp.width; cv.height = bmp.height;
+    const cx = cv.getContext('2d',{willReadFrequently:true});
+    cx.drawImage(bmp,0,0);
+    const d = cx.getImageData(0,0,cv.width,cv.height).data;
+    let x0 = cv.width, y0 = cv.height, x1 = -1, y1 = -1;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+      if (d[(y * cv.width + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    return x1 < 0 ? {x:0, y:0, w:cv.width, h:cv.height} : {x:x0, y:y0, w:x1 - x0 + 1, h:y1 - y0 + 1};
+  }
+
+  // Come il linear-gradient CSS: l'angolo 0 va verso l'alto, 90 verso destra.
+  function jrGradLine(angle, x, y, w, h) {
+    const a = angle * Math.PI / 180, sx = Math.sin(a), sy = -Math.cos(a);
+    const len = Math.abs(w * sx) + Math.abs(h * sy), cx = x + w / 2, cy = y + h / 2;
+    return [cx - sx * len / 2, cy - sy * len / 2, cx + sx * len / 2, cy + sy * len / 2];
+  }
+
+  // PNG (blob URL) del logo nel colore scelto. crop: solo il logo (per le anteprime); altrimenti tutta la pagina.
+  async function jrLogoUrl(color, crop) {
+    const cache = crop ? jrLogo.crop : jrLogo.full;
+    const key = JSON.stringify(jrcIsRaster(color) ? color : jrcSpecOf(color));
+    if (cache.has(key)) return cache.get(key);
+    const black = await jrRaw('black');
+    const src = jrcIsRaster(color) ? await jrRaw(color) : black;
+    if (!black || !src) return '';
+    const box = jrLogo.box || (jrLogo.box = jrAlphaBox(black));
+    const pad = crop ? 6 : 0, sc = crop ? 3 : 1;
+    const x0 = crop ? Math.max(0, box.x - pad) : 0, y0 = crop ? Math.max(0, box.y - pad) : 0;
+    const x1 = crop ? Math.min(src.width, box.x + box.w + pad) : src.width, y1 = crop ? Math.min(src.height, box.y + box.h + pad) : src.height;
+    const cv = document.createElement('canvas');
+    cv.width = Math.round((x1 - x0) * sc); cv.height = Math.round((y1 - y0) * sc);
+    const cx = cv.getContext('2d');
+    cx.scale(sc,sc);
+    cx.drawImage(src,-x0,-y0);
+    if (!jrcIsRaster(color)) {
+      cx.globalCompositeOperation = 'source-in';
+      if (color.type === 'solid') cx.fillStyle = color.hex;
+      else {
+        const [ax,ay,bx,by] = jrGradLine(color.angle, box.x - x0, box.y - y0, box.w, box.h);
+        const g = cx.createLinearGradient(ax,ay,bx,by);
+        jrcSorted(color.stops).forEach(s => g.addColorStop(s.p / 100, s.c));
+        cx.fillStyle = g;
+      }
+      cx.fillRect(0,0,x1 - x0,y1 - y0);
+    }
+    const blob = await new Promise(resolve => cv.toBlob(resolve,'image/png'));
+    if (!blob) return '';
+    const url = URL.createObjectURL(blob);
+    cache.set(key,url);
+    while (cache.size > (crop ? 24 : 10)) {        // le più vecchie si buttano
+      const [oldKey,oldUrl] = cache.entries().next().value;
+      cache.delete(oldKey);
+      try { URL.revokeObjectURL(oldUrl); } catch (_) {}
+    }
+    return url;
+  }
+
+  // Mette sul <img> il logo nel colore scelto (anteprime dell'editor).
+  function jrLogoSrc(img, fallback = 'white') {
+    if (!img || !directBase || !session) return;
+    const color = jrColor || fallback;
+    if (jrcIsRaster(color)) {
+      img.dataset.jrk = '';
+      const url = jrOverlayUrl(color);
+      if (img.getAttribute('src') !== url) img.src = url;
+      return;
+    }
+    const key = JSON.stringify(jrcSpecOf(color));
+    img.dataset.jrk = key;
+    jrLogoUrl(color,false).then(url => { if (url && img.dataset.jrk === key) img.src = url; });
+  }
+
+  /* --- schermata colore --- */
+  function jrcStore() {
+    try { localStorage.setItem(JRC_STORE, JSON.stringify(jrc.saved)); } catch (_) {}
+  }
+  function jrcLoadStore() {
+    try {
+      const list = JSON.parse(localStorage.getItem(JRC_STORE) || '[]');
+      if (Array.isArray(list)) jrc.saved = list.filter(s => s && (s.type === 'solid' ? jrcHexNorm(s.hex) : s.type === 'gradient' && Array.isArray(s.stops) && s.stops.length >= 2 && s.stops.every(t => jrcHexNorm(t.c)))).slice(0,JRC_SAVE_MAX);
+    } catch (_) {}
+  }
+
+  const jrcTarget = () => jrc.mode === 'solid' ? jrc.hex : jrc.stop.c;
+  function jrcSetTarget(hex) { if (jrc.mode === 'solid') jrc.hex = hex; else { jrc.stop.c = hex; jrc.touched = true; } }
+  function jrcLoadHsv() {
+    const [r,g,b] = jrcRgb(jrcTarget());
+    const next = jrcRgbToHsv(r,g,b);
+    if (!next[1] || !next[2]) next[0] = jrc.hsv[0];        // grigi e nero: il colore di base resta dov'era
+    jrc.hsv = next;
+  }
+  function jrcSpec() {
+    return jrc.mode === 'solid' ? {type:'solid', hex:jrc.hex}
+      : {type:'gradient', angle:Math.round(jrc.angle), stops:jrcSorted(jrc.stops)};
+  }
+  function jrcColorAt(p) {                 // colore della sfumatura in un punto
+    const s = jrcSorted(jrc.stops);
+    if (p <= s[0].p) return s[0].c;
+    if (p >= s[s.length - 1].p) return s[s.length - 1].c;
+    for (let i = 1; i < s.length; i++) if (p <= s[i].p) {
+      const t = (p - s[i - 1].p) / Math.max(.0001, s[i].p - s[i - 1].p), a = jrcRgb(s[i - 1].c), b = jrcRgb(s[i].c);
+      return jrcToHex(a.map((v,k) => v + (b[k] - v) * t));
+    }
+    return s[0].c;
+  }
+
+  let jrcRaf = 0;
+  function jrcChanged() {                  // un ritocco al colore personalizzato: applica e ridisegna
+    jrColor = jrcSpec();
+    jrcPaint();
+    if (!jrcRaf) jrcRaf = requestAnimationFrame(() => { jrcRaf = 0; jrcPreview(); renderSteps(); });
+  }
+
+  function jrcPaint() {
+    const sv = $('jrcSV'), hue = $('jrcHue'), [h,s,v] = jrc.hsv;
+    sv.style.background = `hsl(${h},100%,50%)`;
+    sv.firstElementChild.style.cssText = `left:${s * 100}%;top:${(1 - v) * 100}%`;
+    hue.firstElementChild.style.left = `${h / 360 * 100}%`;
+    const hex = jrcTarget();
+    $('jrcChip').style.background = hex;
+    sv.firstElementChild.style.background = hex;
+    hue.firstElementChild.style.background = `hsl(${h},100%,50%)`;
+    if (document.activeElement !== $('jrcHex')) { $('jrcHex').value = hex.slice(1).toUpperCase(); $('jrcHexBox').classList.remove('bad'); }
+    const grad = jrc.mode === 'gradient';
+    $('jrcSolid').classList.toggle('on',!grad); $('jrcGradBtn').classList.toggle('on',grad);
+    $('jrcGradBox').hidden = !grad;
+    if (grad) {
+      const bar = $('jrcBar');
+      bar.style.background = jrcCss({type:'gradient', stops:jrc.stops}, 90);
+      if (bar.children.length !== jrc.stops.length) {
+        bar.innerHTML = jrc.stops.map((_,i) => `<button type="button" class="jrc-stop" data-i="${i}" aria-label="Colore ${i + 1}"></button>`).join('');
+      }
+      [...bar.children].forEach((el,i) => {
+        const st = jrc.stops[i];
+        el.style.left = `${st.p}%`; el.style.background = st.c;
+        el.classList.toggle('on',st === jrc.stop);
+      });
+      $('jrcAngle').value = Math.round(jrc.angle);
+      $('jrcAngleOut').textContent = `${Math.round(jrc.angle)}°`;
+      $('jrcDel').disabled = jrc.stops.length <= 2;
+    }
+    const spec = JSON.stringify(jrcSpec());
+    const saved = jrc.saved.some(s => JSON.stringify(s) === spec);
+    $('jrcSave').disabled = saved;
+    $('jrcSave').textContent = saved ? 'Salvato' : 'Salva';
+  }
+
+  async function jrcPreview() {
+    const tiles = [...$('jrcPrev').children];
+    const mine = ++jrc.token;
+    let url = '';
+    if (jrColor) { try { url = await jrLogoUrl(jrColor,true); } catch (_) { url = ''; } }
+    if (mine !== jrc.token) return;
+    tiles.forEach(tile => {
+      let img = tile.querySelector('img');
+      if (!url) { if (img) img.remove(); return; }
+      if (!img) { img = document.createElement('img'); img.alt = ''; tile.prepend(img); }
+      img.src = url;
+    });
+  }
+
+  function jrcRenderGrid() {
+    const grid = $('jrcGrid');
+    const custom = jrcIsCustom(jrColor);
+    const cur = jrcIsRaster(jrColor) ? jrColor : jrColor && jrColor.id || '';
+    if (grid.dataset.built !== '1') {
+      grid.dataset.built = '1';
+      grid.innerHTML = '';
+      JRC_PRESETS.forEach(p => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'jrc-sw'; b.dataset.id = p.id;
+        b.setAttribute('role','radio');
+        b.innerHTML = '<i></i>';
+        b.firstChild.style.background = p.css || jrcCss(p.spec || p.seed, 135);
+        b.setAttribute('aria-label',p.label); b.title = p.label;
+        b.addEventListener('click',() => jrcPick(p));
+        grid.appendChild(b);
+      });
+      const c = document.createElement('button');
+      c.type = 'button'; c.className = 'jrc-sw custom'; c.dataset.id = 'custom';
+      c.setAttribute('role','radio');
+      c.innerHTML = '<i>+</i>'; c.setAttribute('aria-label','Colore personalizzato'); c.title = 'Personalizzato';
+      c.addEventListener('click',jrcOpenCustom);
+      grid.appendChild(c);
+    }
+    $('jrcName').textContent = jrc.open || custom ? 'Personalizzato' : cur ? (JRC_PRESETS.find(p => p.id === cur) || {label:''}).label : 'Scegli un colore';
+    [...grid.children].forEach(b => {
+      const on = b.dataset.id === 'custom' ? (custom || (jrc.open && !jrColor)) : b.dataset.id === cur && !jrc.open;
+      b.classList.toggle('on',Boolean(on));
+      b.setAttribute('aria-checked',on ? 'true' : 'false');
+    });
+  }
+
+  function jrcRenderSaved() {
+    const box = $('jrcSaved');
+    $('jrcSavedBox').hidden = !jrc.saved.length;
+    box.innerHTML = '';
+    jrc.saved.forEach((spec,i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 's';
+      b.setAttribute('aria-label','Colore salvato');
+      b.style.background = jrcCss(spec);
+      const x = document.createElement('b');
+      x.textContent = '×'; x.setAttribute('aria-label','Elimina');
+      x.addEventListener('click',e => { e.stopPropagation(); jrc.saved.splice(i,1); jrcStore(); jrcRenderSaved(); jrcPaint(); });
+      b.appendChild(x);
+      b.addEventListener('click',() => { haptic('select'); jrcLoadSpec(spec); jrc.open = true; jrcChanged(); renderJrColor(); });
+      box.appendChild(b);
+    });
+  }
+
+  function jrcLoadSpec(spec) {              // porta nell'editor un colore (preset, salvato...)
+    if (spec.type === 'solid') { jrc.mode = 'solid'; jrc.hex = spec.hex; }
+    else {
+      jrc.mode = 'gradient'; jrc.angle = spec.angle;
+      jrc.stops = spec.stops.map(s => ({c:s.c, p:s.p})); jrc.stop = jrc.stops[0]; jrc.touched = true;
+    }
+    jrcLoadHsv();
+  }
+
+  function jrcPick(p) {                      // un colore pronto
+    haptic('select');
+    jrc.open = false;
+    jrColor = p.raster ? p.id : {id:p.id, ...p.spec};
+    renderJrColor(); renderSteps();
+  }
+
+  function jrcOpenCustom() {                 // "Tuo": si parte dal colore scelto, per ritoccarlo
+    haptic('select');
+    if (!jrcIsCustom(jrColor)) {
+      if (jrcIsRaster(jrColor)) jrcLoadSpec(JRC_PRESETS.find(p => p.id === jrColor).seed);
+      else if (jrColor) jrcLoadSpec(jrcSpecOf(jrColor));
+    }
+    jrc.open = true;
+    jrcChanged();
+    renderJrColor();
+    requestAnimationFrame(() => { try { $('jrcPanel').scrollIntoView({block:'nearest', behavior:'smooth'}); } catch (_) {} });
+  }
+
+  function renderJrColor() {
+    jrcRenderGrid();
+    const open = jrc.open && (!jrColor || jrcIsCustom(jrColor));
+    if (!open && jrc.open) jrc.open = false;
+    $('jrcPanel').hidden = !open;
+    if (open) jrcPaint();
+    const key = JSON.stringify(jrColor || '');
+    if (key !== jrc.key) { jrc.key = key; jrcPreview(); }
+  }
+
+  function initJrColor() {
+    jrcLoadStore();
+    jrcLoadHsv();
+    jrcRenderSaved();
+    const drag = (el, fn) => {
+      el.addEventListener('pointerdown',e => {
+        if (e.target.closest('.jrc-stop')) return;
+        e.preventDefault();
+        el.setPointerCapture(e.pointerId);
+        const r = el.getBoundingClientRect();
+        const move = ev => fn(jrcClamp((ev.clientX - r.left) / r.width), jrcClamp((ev.clientY - r.top) / r.height));
+        move(e);
+        const up = () => { el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up); };
+        el.addEventListener('pointermove',move); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
+      });
+    };
+    const setHsv = () => { jrcSetTarget(jrcToHex(jrcHsvToRgb(...jrc.hsv))); jrcChanged(); };
+    drag($('jrcSV'),(x,y) => { jrc.hsv[1] = x; jrc.hsv[2] = 1 - y; setHsv(); });
+    drag($('jrcHue'),x => { jrc.hsv[0] = x * 359.999; setHsv(); });
+
+    const hexIn = $('jrcHex');
+    hexIn.addEventListener('input',() => {
+      const raw = hexIn.value.trim().replace(/^#/,'');
+      if (/^[0-9a-fA-F]{6}$/.test(raw)) { $('jrcHexBox').classList.remove('bad'); jrcSetTarget(jrcHexNorm(raw)); jrcLoadHsv(); jrcChanged(); }
+      else $('jrcHexBox').classList.toggle('bad',raw.length > 0 && !/^[0-9a-fA-F]{0,6}$/.test(raw) || raw.length >= 6);
+    });
+    const hexDone = () => {
+      const hex = jrcHexNorm(hexIn.value);
+      if (hex) { jrcSetTarget(hex); jrcLoadHsv(); jrcChanged(); }
+      hexIn.value = jrcTarget().slice(1).toUpperCase();
+      $('jrcHexBox').classList.remove('bad');
+      jrcPaint();
+    };
+    hexIn.addEventListener('blur',hexDone);
+    hexIn.addEventListener('keydown',e => { if (e.key === 'Enter') { e.preventDefault(); hexIn.blur(); } });
+    hexIn.addEventListener('paste',() => setTimeout(() => hexIn.dispatchEvent(new Event('input')),0));
+
+    $('jrcSolid').addEventListener('click',() => {
+      if (jrc.mode === 'solid') return;
+      haptic('select');
+      jrc.hex = jrc.stop.c; jrc.mode = 'solid'; jrcLoadHsv(); jrcChanged();
+    });
+    $('jrcGradBtn').addEventListener('click',() => {
+      if (jrc.mode === 'gradient') return;
+      haptic('select');
+      if (!jrc.touched) { jrc.stops[0].c = jrc.hex; jrc.stops[1].c = jrcToHex(jrcHsvToRgb((jrc.hsv[0] + 40) % 360, jrcClamp(jrc.hsv[1],.35,1), 1)); }
+      jrc.mode = 'gradient'; jrc.stop = jrc.stops[0]; jrcLoadHsv(); jrcChanged();
+    });
+
+    // barra della sfumatura: tocca per aggiungere un colore, trascina i pallini
+    const bar = $('jrcBar');
+    let dragStop = null;
+    const posOf = e => { const r = bar.getBoundingClientRect(); return Math.round(jrcClamp((e.clientX - r.left) / r.width,0,1) * 100); };
+    bar.addEventListener('pointerdown',e => {
+      e.preventDefault();
+      const h = e.target.closest('.jrc-stop');
+      if (h) jrc.stop = jrc.stops[Number(h.dataset.i)];
+      else {
+        if (jrc.stops.length >= JRC_MAX_STOPS) { haptic('error'); return; }
+        const p = posOf(e);
+        jrc.stop = {c:jrcColorAt(p), p};
+        jrc.stops.push(jrc.stop);
+      }
+      jrc.touched = true;
+      dragStop = jrc.stop;
+      bar.setPointerCapture(e.pointerId);
+      haptic('select');
+      jrcLoadHsv(); jrcChanged();
+    });
+    bar.addEventListener('pointermove',e => { if (dragStop) { dragStop.p = posOf(e); jrcChanged(); } });
+    const dragEnd = () => { if (!dragStop) return; dragStop = null; jrc.stops.sort((a,b) => a.p - b.p); jrcChanged(); };
+    bar.addEventListener('pointerup',dragEnd);
+    bar.addEventListener('pointercancel',dragEnd);
+
+    $('jrcAngle').addEventListener('input',e => { jrc.angle = Number(e.target.value); jrcChanged(); });
+    $('jrcRev').addEventListener('click',() => {
+      haptic('select');
+      jrc.stops.forEach(s => { s.p = 100 - s.p; });
+      jrc.stops.sort((a,b) => a.p - b.p); jrc.touched = true; jrcChanged();
+    });
+    $('jrcDel').addEventListener('click',() => {
+      if (jrc.stops.length <= 2) return;
+      haptic('select');
+      const i = jrc.stops.indexOf(jrc.stop);
+      jrc.stops.splice(i,1);
+      jrc.stop = jrc.stops[Math.max(0,i - 1)];
+      $('jrcBar').innerHTML = '';
+      jrcLoadHsv(); jrcChanged();
+    });
+    $('jrcSave').addEventListener('click',() => {
+      const spec = jrcSpec(), key = JSON.stringify(spec);
+      if (jrc.saved.some(s => JSON.stringify(s) === key)) return;
+      haptic('success');
+      jrc.saved.unshift(spec);
+      jrc.saved = jrc.saved.slice(0,JRC_SAVE_MAX);
+      jrcStore(); jrcRenderSaved(); jrcPaint();
+    });
+  }
 
   /* ---------- FOTO + JR Collage: layout automatici a riquadri (stile Canva) ---------- */
   // Pagina 1080x1440, fondo bianco, bordo 10 e linee di 5 px (come il collage di esempio):
@@ -4189,7 +4728,7 @@
   function jrTemplates() {
     if (!jrb.tpls || jrb.tpls.n !== jrb.cards.length) {
       jrb.tpls = {n:jrb.cards.length, list:jrb.cards.length >= 2 ? colTemplates(jrb.cards.length) : []};
-      jrb.tpl = 0; jrb.order = null; jrb.swap = -1;
+      jrb.tpl = 0; jrb.order = null; jrb.swap = -1; jrb.csel = -1;
     }
     return jrb.tpls.list;
   }
@@ -4201,29 +4740,89 @@
     return jrb.order;
   }
 
+  // Ritaglio della foto nel riquadro: zoom (1 = riempie il riquadro) e posizione cpx/cpy (0 = allineata a
+  // sinistra/in alto, 1 = a destra/in basso). Sta sulla foto, quindi la segue se la si scambia o si cambia layout.
+  const COL_ZOOM = [1, 6], COL_DEF = [.5, .38];
+  function colCrop(card) {
+    if (card.cz == null) { card.cpx = COL_DEF[0]; card.cpy = COL_DEF[1]; card.cz = 1; }
+    return card;
+  }
+  // Foto dentro il riquadro, in % del riquadro (stessi calcoli di photo_jr.collage_crop).
+  function colImgBox(card, cell) {
+    colCrop(card);
+    const k = (card.w0 / card.h0) / ((cell.w * COL_W) / (cell.h * COL_H));
+    const w = 100 * card.cz * Math.max(1, k), h = 100 * card.cz * Math.max(1, 1 / k);
+    return {l:(100 - w) * card.cpx, t:(100 - h) * card.cpy, w, h};
+  }
+  function colImgStyle(card, cell) {
+    const b = colImgBox(card, cell);
+    return `left:${b.l.toFixed(3)}%;top:${b.t.toFixed(3)}%;width:${b.w.toFixed(3)}%;height:${b.h.toFixed(3)}%`;
+  }
+
   function jrCollageCells() {
     const t = jrTemplates()[jrb.tpl];
     if (!t) return [];
     const order = jrOrder();
-    return t.cells.map((c,i) => ({photo_id:jrb.cards[order[i]].id, x:+c.x.toFixed(5), y:+c.y.toFixed(5), w:+c.w.toFixed(5), h:+c.h.toFixed(5)}));
+    return t.cells.map((c,i) => {
+      const card = colCrop(jrb.cards[order[i]]);
+      return {photo_id:card.id, x:+c.x.toFixed(5), y:+c.y.toFixed(5), w:+c.w.toFixed(5), h:+c.h.toFixed(5),
+        px:+card.cpx.toFixed(5), py:+card.cpy.toFixed(5), z:+card.cz.toFixed(4)};
+    });
   }
 
   function colCellsHtml(t, order, sel) {
-    return t.cells.map((c,i) => `<div class="col-cell${i === sel ? ' sel' : ''}" data-i="${i}" style="left:${c.x * 100}%;top:${c.y * 100}%;width:${c.w * 100}%;height:${c.h * 100}%"><img alt="" src="${jrb.cards[order[i]].small || jrb.cards[order[i]].url}"></div>`).join('');
+    return t.cells.map((c,i) => {
+      const card = jrb.cards[order[i]];
+      return `<div class="col-cell${i === sel ? ' sel' : ''}" data-i="${i}" style="left:${c.x * 100}%;top:${c.y * 100}%;width:${c.w * 100}%;height:${c.h * 100}%"><img alt="" draggable="false" src="${card.small || card.url}" style="${colImgStyle(card,c)}"></div>`;
+    }).join('');
   }
 
-  function renderJrLayout(reset = false) {
-    const list = jrTemplates();
-    const big = $('colBig'), grid = $('colGrid');
-    if (reset) { jrb.swap = -1; }
-    if (!list.length) { big.innerHTML = ''; grid.innerHTML = ''; return; }
-    const t = list[jrb.tpl], order = jrOrder();
-    const url = directBase && session
-      ? `${directBase}/overlay?session=${encodeURIComponent(session)}&name=jr&kit=${encodeURIComponent(jrColor || 'white')}` : '';
-    big.style.setProperty('--k', (big.clientWidth || 300) / COL_W);
-    big.innerHTML = colCellsHtml(t, order, jrb.swap) + (url ? `<img class="overlay" alt="" src="${url}">` : '');
-    $('colHint').textContent = jrb.swap >= 0 ? 'Ora tocca il riquadro con cui scambiarla.' : 'Tocca due riquadri per scambiare le foto.';
-    // miniature: stesso layout, con le foto sistemate al meglio per ognuno
+  function colSelIdx() {
+    const t = jrTemplates()[jrb.tpl];
+    return t && Number.isInteger(jrb.csel) && jrb.csel >= 0 && jrb.csel < t.cells.length ? jrb.csel : -1;
+  }
+  const colCellAt = i => jrTemplates()[jrb.tpl].cells[i];
+  const colCardAt = i => jrb.cards[jrOrder()[i]];
+
+  function colPaint(i) {
+    const img = $('colBig').querySelector(`.col-cell[data-i="${i}"] img`);
+    if (img) img.style.cssText = colImgStyle(colCardAt(i), colCellAt(i));
+  }
+
+  // Zoom tenendo ferma la parte di foto sotto il punto (ax, ay) del riquadro (0-1): il centro, il pizzico, il mouse.
+  function colZoomTo(i, z, ax = .5, ay = .5) {
+    const card = colCrop(colCardAt(i)), cell = colCellAt(i);
+    const b0 = colImgBox(card, cell);
+    const u = (ax * 100 - b0.l) / b0.w, v = (ay * 100 - b0.t) / b0.h;
+    card.cz = Math.min(COL_ZOOM[1], Math.max(COL_ZOOM[0], z));
+    const b1 = colImgBox(card, cell);
+    if (b1.w - 100 > 1e-6) card.cpx = jrcClamp((ax * 100 - u * b1.w) / (100 - b1.w));
+    if (b1.h - 100 > 1e-6) card.cpy = jrcClamp((ay * 100 - v * b1.h) / (100 - b1.h));
+    colPaint(i);
+  }
+
+  function colPan(i, dx, dy, rect) {
+    const card = colCrop(colCardAt(i)), b = colImgBox(card, colCellAt(i));
+    if (b.w - 100 > 1e-6) card.cpx = jrcClamp((b.l + dx / rect.width * 100) / (100 - b.w));
+    if (b.h - 100 > 1e-6) card.cpy = jrcClamp((b.t + dy / rect.height * 100) / (100 - b.h));
+    colPaint(i);
+  }
+
+  function colUpdateUi() {
+    const i = colSelIdx(), swap = jrb.swap >= 0;
+    $('colBig').querySelectorAll('.col-cell').forEach(el => el.classList.toggle('sel',Number(el.dataset.i) === i));
+    const card = i >= 0 ? colCrop(colCardAt(i)) : null;
+    $('colZoom').disabled = $('colReset').disabled = $('colSwap').disabled = !card;
+    $('colTools').classList.toggle('off',!card);
+    if (card) $('colZoom').value = Math.round(card.cz * 100);
+    $('colSwap').classList.toggle('on',swap);
+    $('colHint').textContent = swap ? 'Tocca il riquadro con cui scambiarla.'
+      : card ? 'Trascina la foto per spostarla, pizzica per ingrandirla.'
+      : 'Tocca una foto per spostarla e ingrandirla.';
+  }
+
+  function renderColGrid() {
+    const list = jrTemplates(), grid = $('colGrid'), order = jrOrder();
     grid.innerHTML = '';
     list.forEach((tp,i) => {
       const ord = i === jrb.tpl ? order : colAssign(tp.px, jrb.cards);
@@ -4237,25 +4836,116 @@
       b.addEventListener('click',() => {
         if (i === jrb.tpl) return;
         haptic('select');
-        jrb.tpl = i; jrb.order = null; jrb.swap = -1;
+        jrb.tpl = i; jrb.order = null; jrb.swap = -1; jrb.csel = -1;
         renderJrLayout(); renderSteps();
       });
       grid.appendChild(b);
     });
   }
 
+  function renderJrLayout(reset = false) {
+    const list = jrTemplates();
+    const big = $('colBig'), grid = $('colGrid');
+    if (reset) { jrb.swap = -1; jrb.csel = -1; }
+    if (!list.length) { big.innerHTML = ''; grid.innerHTML = ''; colUpdateUi(); return; }
+    const t = list[jrb.tpl], order = jrOrder();
+    big.style.setProperty('--k', (big.clientWidth || 300) / COL_W);
+    big.innerHTML = colCellsHtml(t, order, colSelIdx()) + '<img class="overlay" alt="">';
+    jrLogoSrc(big.querySelector('.overlay'),'white');
+    colUpdateUi();
+    renderColGrid();
+  }
+
   function initJrCollage() {
-    $('colBig').addEventListener('click',e => {
-      const cell = e.target.closest('.col-cell');
-      if (!cell) { if (jrb.swap >= 0) { jrb.swap = -1; renderJrLayout(); } return; }
-      const i = Number(cell.dataset.i);
-      haptic('select');
-      if (jrb.swap < 0) jrb.swap = i;
-      else {
-        if (jrb.swap !== i) { const o = jrOrder().slice(); [o[jrb.swap], o[i]] = [o[i], o[jrb.swap]]; jrb.order = o; }
-        jrb.swap = -1;
+    const big = $('colBig');
+    const ptrs = new Map();
+    let g = null, wheelTimer = 0;
+    const snap = () => {
+      const pts = [...ptrs.values()];
+      if (pts.length === 1) return {x:pts[0].x, y:pts[0].y, d:0};
+      const [a,b] = pts;
+      return {x:(a.x + b.x) / 2, y:(a.y + b.y) / 2, d:Math.hypot(a.x - b.x, a.y - b.y)};
+    };
+    const select = i => { if (colSelIdx() !== i) { haptic('select'); jrb.csel = i; colUpdateUi(); } };
+
+    // Tocca un riquadro per sceglierlo; poi trascina per spostare la foto, pizzica (o rotella) per lo zoom.
+    big.addEventListener('pointerdown',e => {
+      const el = e.target.closest('.col-cell');
+      if (!ptrs.size) {
+        if (!el) { g = null; if (jrb.csel >= 0 || jrb.swap >= 0) { jrb.csel = -1; jrb.swap = -1; colUpdateUi(); } return; }
+        const i = Number(el.dataset.i);
+        g = {i, el, swapTap:jrb.swap >= 0, x0:e.clientX, y0:e.clientY, dirty:false};
+        if (!g.swapTap) select(i);
       }
-      renderJrLayout();
+      if (!g) return;
+      ptrs.set(e.pointerId,{x:e.clientX, y:e.clientY});
+      if (!g.swapTap) { try { big.setPointerCapture(e.pointerId); } catch (_) {} }
+      g.last = snap();
+    });
+    big.addEventListener('pointermove',e => {
+      if (!g || g.swapTap || !ptrs.has(e.pointerId)) return;
+      ptrs.set(e.pointerId,{x:e.clientX, y:e.clientY});
+      const now = snap(), rect = g.el.getBoundingClientRect();
+      colPan(g.i, now.x - g.last.x, now.y - g.last.y, rect);
+      if (now.d && g.last.d) {
+        colZoomTo(g.i, colCardAt(g.i).cz * now.d / g.last.d, (now.x - rect.left) / rect.width, (now.y - rect.top) / rect.height);
+      }
+      g.last = now; g.dirty = true;
+      colUpdateUi();
+    });
+    const end = e => {
+      if (!ptrs.delete(e.pointerId) || !g) return;
+      if (g.swapTap) {
+        // Scambio: un tocco su un altro riquadro porta lì la foto scelta.
+        if (e.type === 'pointerup' && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < 10) {
+          const a = jrb.swap, b = g.i;
+          if (a !== b) { const o = jrOrder().slice(); [o[a], o[b]] = [o[b], o[a]]; jrb.order = o; haptic('success'); }
+          jrb.swap = -1; jrb.csel = b;
+          g = null;
+          renderJrLayout();
+        } else if (!ptrs.size) g = null;
+        return;
+      }
+      if (ptrs.size) { g.last = snap(); return; }
+      if (g.dirty) renderColGrid();
+      g = null;
+    };
+    big.addEventListener('pointerup',end);
+    big.addEventListener('pointercancel',end);
+    big.addEventListener('wheel',e => {
+      const el = e.target.closest('.col-cell');
+      if (!el) return;
+      e.preventDefault();
+      const i = Number(el.dataset.i), r = el.getBoundingClientRect();
+      select(i);
+      colZoomTo(i, colCardAt(i).cz * Math.exp(-e.deltaY * .0015), (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+      colUpdateUi();
+      clearTimeout(wheelTimer); wheelTimer = setTimeout(renderColGrid,250);
+    },{passive:false});
+    // Doppio tocco: ingrandisce sul punto toccato, o rimette la foto com'era.
+    big.addEventListener('dblclick',e => {
+      const el = e.target.closest('.col-cell');
+      if (!el || jrb.swap >= 0) return;
+      const i = Number(el.dataset.i), r = el.getBoundingClientRect(), card = colCrop(colCardAt(i));
+      select(i);
+      if (card.cz > 1.05) { card.cz = 1; card.cpx = COL_DEF[0]; card.cpy = COL_DEF[1]; colPaint(i); }
+      else colZoomTo(i, 2.2, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+      colUpdateUi(); renderColGrid();
+    });
+
+    const sel = fn => () => { const i = colSelIdx(); if (i >= 0) fn(i,colCrop(colCardAt(i))); };
+    $('colZoom').addEventListener('input',e => { const i = colSelIdx(); if (i < 0) return; colZoomTo(i,Number(e.target.value) / 100); colUpdateUi(); });
+    $('colZoom').addEventListener('change',renderColGrid);
+    $('colReset').addEventListener('click',sel((i,c) => {
+      haptic('select'); c.cz = 1; c.cpx = COL_DEF[0]; c.cpy = COL_DEF[1];
+      colPaint(i); colUpdateUi(); renderColGrid();
+    }));
+    $('colSwap').addEventListener('click',() => {
+      const i = colSelIdx();
+      if (i < 0) return;
+      haptic('select');
+      jrb.swap = jrb.swap >= 0 ? -1 : i;
+      colUpdateUi();
     });
     window.addEventListener('resize',() => { if ($('colBig').offsetParent) renderJrLayout(); });
   }
@@ -5326,6 +6016,7 @@
   $('squadText').addEventListener('input',() => { updateSquadSummary(); clearError(); renderSteps(); });
   initPhotoEditor();
   initJrBlur();
+  initJrColor();
   initJrCollage();
   initPhaseEditor();
   $('squadLinkBtn').addEventListener('click',openLinkSheet);
