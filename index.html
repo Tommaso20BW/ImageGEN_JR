@@ -337,6 +337,28 @@
     @media(min-width:700px){
       .opts.grid{grid-template-columns:1fr 1fr}
     }
+    /* Scelta del tipo di grafica: schede con icona e descrizione, a due colonne. */
+    .opts.sk{grid-template-columns:1fr 1fr;gap:12px}
+    .opts.sk .opt{
+      position:relative;flex-direction:column;align-items:flex-start;justify-content:flex-start;
+      gap:14px;min-height:132px;padding:16px;
+    }
+    .opts.sk .opt:last-child:nth-child(odd){grid-column:1/-1;min-height:96px}
+    .opts.sk .opt .radio{display:none}
+    .sk-ico{
+      width:44px;height:44px;border-radius:13px;flex:none;display:grid;place-items:center;
+      background:var(--surface2);color:var(--muted);
+      transition:background-color .15s ease,color .15s ease,transform .18s var(--spring);
+    }
+    .sk-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .opt.selected .sk-ico{background:var(--accent);color:var(--accent-ink)}
+    .sk-txt{display:grid;gap:3px;min-width:0}
+    .sk-desc{font-size:12.5px;font-weight:600;color:var(--muted);line-height:1.35}
+    .opts.sk .opt::after{
+      content:"";position:absolute;top:14px;right:14px;width:10px;height:10px;border-radius:50%;
+      background:var(--accent);transform:scale(0);transition:transform .2s var(--ease-exit);
+    }
+    .opts.sk .opt.selected::after{transform:scale(1);transition:transform .18s var(--spring) .04s}
 
     /* Search */
     .search{
@@ -1485,12 +1507,23 @@
   ];
 
   // Schede in alto. Quelle con più tipi chiedono il tipo come primo passaggio.
-  const TABS = [['goal','GOAL'],['match','EVENT'],['stats','STATS'],['pre','PRE-GARA'],['ig','STORIE IG'],['extra','ALTRO']];
+  const TABS = [['goal','GOAL'],['match','EVENT'],['stats','STATS'],['pre','PRE-GARA'],['extra','ALTRO']];
   const TAB_KINDS = {
     goal:[['goal','Gol'],['saved','Parata']],
     pre:[['md','Matchday'],['pxi','Probabile XI'],['squad','Squad List'],['xi','Starting XI']],
-    ig:[['igbn','Breaking News']],
-    extra:[['cal','Calendario'],['jr','Post']]
+    extra:[['cal','Calendario'],['jr','Post'],['igbn','Storia IG']]
+  };
+  // Icona (tracciato SVG 24x24) e riga di descrizione di ogni tipo, per la schermata "Che grafica?".
+  const SUBKIND_META = {
+    goal:['<circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/>','Grafica del gol'],
+    saved:['<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>','Grafica della parata'],
+    md:['<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>','Presentazione della partita'],
+    pxi:['<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><circle cx="12" cy="12" r="3"/>','Formazione probabile'],
+    squad:['<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>','Lista dei convocati'],
+    xi:['<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M17 4.5a3.5 3.5 0 010 7M21.5 20c0-2.8-1.7-5-4-5.8"/>','Formazione ufficiale'],
+    cal:['<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>','Le partite del mese'],
+    jr:['<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="1.8"/><path d="M21 16l-5-5-9 10"/>','Foto con il logo JR'],
+    igbn:['<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>','Breaking News, formato storia']
   };
   const COMPETITIONS_UEFA = [
     ['uefa.champions','Champions League'],['uefa.europa','Europa League'],
@@ -2071,6 +2104,27 @@
   }
 
   /* ---------- Option groups ---------- */
+  // Trasforma le opzioni del tipo in schede: icona, titolo e descrizione (vedi SUBKIND_META).
+  function decorateSubkind() {
+    const box = $('subkindOpts');
+    box.classList.add('sk');
+    box.querySelectorAll('.opt').forEach(b => {
+      const m = SUBKIND_META[b.dataset.v];
+      if (!m || b.querySelector('.sk-ico')) return;
+      const ico = document.createElement('span');
+      ico.className = 'sk-ico';
+      ico.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + m[0] + '</svg>';
+      const label = b.querySelector('.opt-label');
+      const txt = document.createElement('span');
+      txt.className = 'sk-txt';
+      const desc = document.createElement('span');
+      desc.className = 'sk-desc';
+      desc.textContent = m[1];
+      label.replaceWith(txt);
+      txt.append(label,desc);
+      b.insertBefore(ico,b.firstChild);
+    });
+  }
   // Ricostruisce i bottoni solo se cambiano le opzioni; altrimenti sposta la selezione
   // sugli elementi esistenti, così il passaggio radio→radio è animato.
   function renderOptions(id, options, value, onSelect) {
@@ -2145,6 +2199,7 @@
       flowIndex = 0;
       renderFlow();
     });
+    decorateSubkind();
     renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); autoCalendar(); });
     renderOptions('poseOpts',POSES,pose,v => pose = v);
     renderOptions('momentOpts',MOMENTS,moment,v => moment = v);

@@ -3,11 +3,14 @@
 Lo sfondo (asset privati: canva/ig_breaking_news_bg.jpg) ha già in alto la scritta BREAKING NEWS e in basso
 il logo JR: tra i due resta una zona libera dove si mette il contenuto scelto nella Mini App:
 
-- solo testo:   il testo più grande possibile che sta nella zona, centrato;
+- solo testo:   il testo centrato nella zona; la grandezza dipende da quanto è lungo (poco testo =
+                font medio, non gigante) e si riduce solo se non sta nella zona;
 - solo foto:    la foto più grande possibile che sta nella zona (proporzioni intatte), centrata;
 - testo + foto: testo sopra e foto sotto. Il testo parte grande e si rimpicciolisce finché alla
                 foto resta almeno metà della zona (o l'altezza che ha a tutta larghezza, se minore);
                 la foto occupa lo spazio rimasto. Il gruppo è centrato nella zona.
+
+Dal testo vengono tolti in automatico gli emoji e la firma "👉 @Juventus_Reborn".
 
 Il calcolo delle altezze lo fa Chrome (testo e a-capo reali) con uno script nella pagina: il
 renderer aspetta `window.__ready` prima di scattare (vedi graphics/common.py).
@@ -36,23 +39,50 @@ GAP_TOP = 60          # tra la scritta e il contenuto (pixel design)
 GAP_BOTTOM = 60       # tra il contenuto e il logo
 GAP_MIDDLE = 44       # tra testo e foto
 IMG_MIN_SHARE = 0.5   # alla foto va almeno questa parte della zona (con testo + foto)
-FS_WITH_PHOTO = (88, 36)   # (massimo, minimo) del testo quando c'è anche la foto
-FS_SOLO = (140, 30)        # (massimo, minimo) del testo da solo
-LINE_HEIGHT = 1.22
+FS_MIN = 30                # il testo non scende mai sotto questa grandezza (pixel design)
+# Grandezza massima in base ai caratteri: (fino a N caratteri, massimo). Poco testo = font medio,
+# non gigante; il testo si rimpicciolisce da qui solo se non sta nella zona.
+FS_SOLO_STEPS = ((25, 84), (60, 76), (120, 66), (220, 56), (10**9, 48))
+FS_PHOTO_STEPS = ((40, 58), (90, 52), (160, 46), (10**9, 40))
+# Interlinea in base alla grandezza finale: (da N pixel in su, interlinea)
+LINE_HEIGHTS = ((70, 1.2), (50, 1.26), (0, 1.32))
 TEXT_COLOR = '#1a1612'
 PHOTO_RADIUS = 22
 MAX_TEXT = 500
 FONT_FILE = 'Poppins-Medium.ttf'
 
 
+# Firma da togliere (con l'eventuale manina davanti) e emoji: pittogrammi, simboli, bandiere, ZWJ,
+# selettori di variante e tasti. Lettere accentate, punteggiatura e simboli come € restano.
+_SIGNATURE = re.compile('[\U0001F446-\U0001F450\u261D\u261C\u261E]?\uFE0F?\\s*@Juventus_Reborn\\b', re.I)
+_EMOJI = re.compile('[\U0001F000-\U0001FAFF\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF'
+                    '\u203C\u2049\u2122\u2139\u2194-\u21AA\u24C2\u25AA-\u25FE\u3030\u303D\u3297\u3299'
+                    '\u200D\u20E3\uFE0E\uFE0F\U000E0020-\U000E007F]')
+
+
+def strip_emoji(text):
+    """Toglie la firma "👉 @Juventus_Reborn" e tutti gli emoji."""
+    return _EMOJI.sub('', _SIGNATURE.sub('', text))
+
+
 def clean_text(value):
-    """Testo scelto nella Mini App: a-capo mantenuti, righe vuote di fila ridotte a una."""
-    text = str(value or '').replace('\r\n', '\n').replace('\r', '\n')
+    """Testo scelto nella Mini App: niente emoji né firma, a-capo mantenuti, righe vuote di fila
+    ridotte a una."""
+    text = strip_emoji(str(value or '').replace('\r\n', '\n').replace('\r', '\n'))
     lines = [' '.join(line.split()) for line in text.split('\n')]
     text = re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()
     if len(text) > MAX_TEXT:
         raise ValueError(f'Testo troppo lungo (massimo {MAX_TEXT} caratteri).')
     return text
+
+
+def font_max(text, with_photo):
+    """Grandezza massima del testo in base a quanti caratteri ha."""
+    n = len(text.replace('\n', ''))
+    for limit, size in (FS_PHOTO_STEPS if with_photo else FS_SOLO_STEPS):
+        if n <= limit:
+            return size
+    return FS_MIN
 
 
 def background_map():
@@ -89,7 +119,8 @@ window.__ready = (async () => {
   try { await document.fonts.load('500 80px Poppins'); } catch (e) {}
   const text = document.getElementById('txt'), pic = document.getElementById('pic');
   const W = C.zone[2], H = C.zone[3];
-  const th = fs => { text.style.fontSize = fs + 'px'; return text.getBoundingClientRect().height; };
+  const lh = fs => { for (const [from, v] of C.lines) if (fs >= from) return v; return 1.3; };
+  const th = fs => { text.style.fontSize = fs + 'px'; text.style.lineHeight = lh(fs); return text.getBoundingClientRect().height; };
   const fit = (max, min, room) => { let fs = max; while (fs > min && th(fs) > room()) fs -= 1; th(fs); return fs; };
   let ph = 0, pw = 0;
   if (pic) {
@@ -97,7 +128,7 @@ window.__ready = (async () => {
     const ar = pic.naturalHeight / pic.naturalWidth;
     if (text) {
       const want = Math.min(W * ar, H * C.share);
-      fit(C.withPhoto[0], C.withPhoto[1], () => H - C.gap - want);
+      fit(C.max, C.min, () => H - C.gap - want);
       ph = Math.min(W * ar, H - text.getBoundingClientRect().height - C.gap);
     } else {
       ph = Math.min(W * ar, H);
@@ -105,7 +136,7 @@ window.__ready = (async () => {
     pw = ph / ar;
     pic.style.width = pw + 'px'; pic.style.height = ph + 'px';
   } else {
-    fit(C.solo[0], C.solo[1], () => H);
+    if (text) fit(C.max, C.min, () => H);
   }
   document.body.dataset.ready = '1';
 })();
@@ -120,7 +151,7 @@ def build_html(*, text='', photo=None):
         check_photo(photo)
     (bx, by, bw, bh), (zx, zy, zw, zh) = background_map()
     cfg = {'zone': [zx, zy, zw, zh], 'gap': GAP_MIDDLE, 'share': IMG_MIN_SHARE,
-           'withPhoto': FS_WITH_PHOTO, 'solo': FS_SOLO}
+           'max': font_max(text, photo is not None), 'min': FS_MIN, 'lines': [list(x) for x in LINE_HEIGHTS]}
     body = ''
     if text:
         body += f'<div id="txt">{esc(text)}</div>'
@@ -134,7 +165,7 @@ html,body{{width:{PAGE_W}px;height:{PAGE_H}px;overflow:hidden;background:#f3eee6
 #zone{{position:absolute;left:{zx}px;top:{zy}px;width:{zw}px;height:{zh}px;display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:{GAP_MIDDLE}px}}
 #txt{{width:100%;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;text-wrap:balance;
-  font-family:'Poppins',sans-serif;font-weight:500;line-height:{LINE_HEIGHT};letter-spacing:-0.01em;
+  font-family:'Poppins',sans-serif;font-weight:500;line-height:1.3;letter-spacing:-0.01em;padding:0 14px;
   color:{TEXT_COLOR};font-size:60px;flex:none}}
 #pic{{display:block;flex:none;border-radius:{PHOTO_RADIUS}px;box-shadow:0 14px 40px rgba(60,45,20,.22)}}
 </style></head><body>
