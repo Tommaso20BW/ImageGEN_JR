@@ -447,20 +447,25 @@
     .col-th.on{outline-color:var(--cta)}
     .col-th .col-cell{cursor:inherit}
     /* Collage: spostare e ingrandire la foto dentro il riquadro */
-    .col-cell{touch-action:pan-y}
-    .col-cell.sel{touch-action:none;cursor:grab}
+    .col-cell{touch-action:none}
+    .col-cell.sel{cursor:grab}
     .col-cell.sel:active{cursor:grabbing}
-    .col-tools{display:flex;align-items:center;gap:8px;width:min(100%,300px);margin:0 auto 16px;height:44px;transition:opacity .2s}
-    .col-tools.off{opacity:.35}
-    .col-tools input{flex:1;min-width:0;height:36px;margin:0}
-    .col-ic{flex:none;width:44px;height:44px;border:0;border-radius:50%;background:var(--surface2);color:var(--text);font-size:20px;font-weight:700;line-height:1;cursor:pointer}
-    .col-ic:active:not(:disabled){background:var(--line)}
-    .col-ic.on{background:var(--cta);color:var(--cta-ink)}
-    .col-ic:disabled{cursor:default}
-    .col-hint{font-size:12.5px}
-    .col-grid{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity;scrollbar-width:none}
-    .col-grid::-webkit-scrollbar{display:none}
-    .col-grid .col-th{flex:0 0 62px;scroll-snap-align:start}
+    .col-tools{display:grid;gap:10px;width:min(100%,360px);margin:0 auto 18px}
+    .col-zoom{display:flex;align-items:center;gap:4px;padding:4px;border-radius:999px;background:var(--surface2)}
+    .col-zoom button{width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--text);font-size:20px;font-weight:800;line-height:1;flex:none;cursor:pointer}
+    .col-zoom button:active:not(:disabled){background:var(--surface)}
+    .col-zoom button:disabled{opacity:.3}
+    .col-zoom input{flex:1;min-width:0;height:36px;margin:0;accent-color:var(--text)}
+    .col-zoom input:disabled{opacity:.35}
+    .col-zoom output{min-width:46px;text-align:center;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;padding-right:6px}
+    .col-acts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .col-acts .btn{min-height:44px}
+    .col-acts .btn.on{background:var(--cta);color:var(--cta-ink)}
+    .col-acts .btn:disabled{opacity:.4}
+
+    .col-lay .mod-btn{margin-top:0;padding:6px 12px;gap:12px}
+    .col-lay .mod-btn svg{width:34px}.col-lay .mod-btn b{font-size:17px}
+    .col-hint{margin:8px 0 10px;min-height:18px;font-size:12.5px}
     /* Colore del logo JR: campioni, esadecimale, sfumature */
     .jrc-prev{position:sticky;top:calc(-1 * var(--pad-top));z-index:4;margin:0 0 12px;padding:var(--pad-top) 0 8px;background:var(--bg)}
     .jrc-tile{position:relative;height:84px;border-radius:14px;overflow:hidden;display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--line);
@@ -511,11 +516,11 @@
     .jrc-knob{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;border:3px solid #fff;pointer-events:none;z-index:3;
       box-shadow:0 0 0 1px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.4)}
     /* cursori coerenti ovunque (zoom collage, angolo sfumatura) */
-    .col-tools input[type=range],.jrc-row input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
-    .col-tools input[type=range]::-webkit-slider-runnable-track,.jrc-row input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--line)}
-    .col-tools input[type=range]::-webkit-slider-thumb,.jrc-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-9px;border-radius:50%;background:var(--text);border:3px solid var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.35)}
-    .col-tools input[type=range]::-moz-range-track,.jrc-row input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--line)}
-    .col-tools input[type=range]::-moz-range-thumb,.jrc-row input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--text);border:3px solid var(--bg)}
+    .col-zoom input[type=range],.jrc-row input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+    .col-zoom input[type=range]::-webkit-slider-runnable-track,.jrc-row input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--line)}
+    .col-zoom input[type=range]::-webkit-slider-thumb,.jrc-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-9px;border-radius:50%;background:var(--text);border:3px solid var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+    .col-zoom input[type=range]::-moz-range-track,.jrc-row input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--line)}
+    .col-zoom input[type=range]::-moz-range-thumb,.jrc-row input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--text);border:3px solid var(--bg)}
     .jrc-hexrow{display:flex;gap:10px;align-items:center}
     .jrc-chip{width:44px;height:44px;border-radius:12px;flex:none;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
     .jrc-hex{flex:1;min-width:0;display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;background:var(--surface2);box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .15s}
@@ -571,6 +576,7 @@
     .mod-btn svg{width:56px;flex:none}.mod-btn b{display:block;font-size:22px;font-weight:800}
     .mod-btn small{display:block;color:var(--muted);font-size:12px;font-weight:600}.mod-btn i{margin-left:auto;font-style:normal;color:var(--muted)}
     .mod-btn svg,.mod-tile svg,.mod-new svg{border-radius:6px;background:rgba(127,127,127,.14)}
+    .mod-btn rect.lc{fill:var(--text)}.mod-tile rect.lc{fill:var(--muted)}.mod-tile.on rect.lc{fill:var(--text)}
     .mod-btn circle,.mod-new circle{fill:var(--text)}.mod-tile circle{fill:var(--muted)}.mod-tile.on circle{fill:var(--text)}
     .mod-ov{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;background:rgba(0,0,0,.4)}
     .mod-ov.open{display:flex}
@@ -1215,13 +1221,8 @@
             <div class="eyebrow">Post · Collage</div>
             <h1>Layout</h1>
             <div id="colBig" class="col-big"></div>
-            <p id="colHint" class="hint col-hint">Tocca un riquadro per spostare e ingrandire la foto.</p>
-            <div class="col-tools" id="colTools">
-              <input id="colZoom" type="range" min="100" max="600" step="1" value="100" aria-label="Zoom foto" disabled>
-              <button id="colSwap" class="col-ic" type="button" aria-label="Scambia con un altro riquadro" title="Scambia" disabled>⇄</button>
-              <button id="colReset" class="col-ic" type="button" aria-label="Reimposta foto" title="Reimposta" disabled>↺</button>
-            </div>
-            <div id="colGrid" class="col-grid" role="radiogroup" aria-label="Layout"></div>
+            <p id="colHint" class="hint col-hint">Tocca una foto per ritoccarla o scambiarla.</p>
+            <div id="colGrid" class="col-lay"></div>
           </section>
 
           <section class="screen" data-screen="jrratio">
@@ -1980,16 +1981,16 @@
       if (el !== screen) el.classList.remove('active');
     });
     if (screen) screen.classList.add('active');
-    const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur';
+    const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur' || screenName === 'jrlayout';
     $('stage').classList.toggle('photo-mode', editing);
     if (editing) $('stage').scrollTop = 0;
     try {
-      if (tg && tg.disableVerticalSwipes) (editing || screenName === 'jrlayout') ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
+      if (tg && tg.disableVerticalSwipes) editing ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
     } catch (_) {}
     if (screenName === 'phasephoto') { $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
     if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Post'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
     if (screenName === 'jrphotos') renderJrPicker();
-    if (screenName === 'jrlayout') renderJrLayout(true);
+    if (screenName === 'jrlayout') { renderJrLayout(true); requestAnimationFrame(() => { fitColBig(); renderJrLayout(); }); }
     if (screenName === 'jrbg') renderJrBg();
     if (screenName === 'jrblur') { jrbAutoLayout(); requestAnimationFrame(() => { fitJrbFrame(); renderJrb(); }); }
     if (screenName === 'lineup') readXiText();
@@ -4808,39 +4809,50 @@
     colPaint(i);
   }
 
-  function colUpdateUi() {
-    const i = colSelIdx(), swap = jrb.swap >= 0;
-    $('colBig').querySelectorAll('.col-cell').forEach(el => el.classList.toggle('sel',Number(el.dataset.i) === i));
-    const card = i >= 0 ? colCrop(colCardAt(i)) : null;
-    $('colZoom').disabled = $('colReset').disabled = $('colSwap').disabled = !card;
-    $('colTools').classList.toggle('off',!card);
-    if (card) $('colZoom').value = Math.round(card.cz * 100);
-    $('colSwap').classList.toggle('on',swap);
-    $('colHint').textContent = swap ? 'Tocca il riquadro con cui scambiarla.'
-      : card ? 'Trascina la foto per spostarla, pizzica per ingrandirla.'
-      : 'Tocca una foto per spostarla e ingrandirla.';
+  // Anteprima grande quanto lo spazio libero: titolo, anteprima, frase e pulsante layout stanno in una sola pagina.
+  function fitColBig() {
+    const big = $('colBig');
+    if (!big.offsetParent) return;
+    const free = $('stage').getBoundingClientRect().bottom - big.getBoundingClientRect().top - 132;
+    big.style.width = `${Math.floor(Math.max(180, Math.min(big.parentElement.clientWidth, free * .75, 420)))}px`;
   }
 
+  function colUpdateUi() {
+    const i = colSelIdx();
+    $('colBig').querySelectorAll('.col-cell').forEach(el => el.classList.toggle('sel',Number(el.dataset.i) === i));
+    $('colHint').textContent = i >= 0 ? 'Trascina o pizzica · tocca un’altra foto per scambiare'
+      : 'Tocca una foto per ritoccarla o scambiarla.';
+  }
+
+  // Mini collage schematico (come il mini campo dei moduli): un rettangolo per riquadro.
+  function colMini(t) {
+    const r = t.cells.map(c => `<rect class="lc" x="${(c.x * 100 + 1.2).toFixed(2)}" y="${(c.y * 133.3 + 1.2).toFixed(2)}" width="${Math.max(1,c.w * 100 - 2.4).toFixed(2)}" height="${Math.max(1,c.h * 133.3 - 2.4).toFixed(2)}" rx="1.5"/>`).join('');
+    return `<svg viewBox="0 0 100 133.3" aria-hidden="true">${r}</svg>`;
+  }
+
+  // Scelta del layout: un pulsante col layout attuale, che apre il foglio con tutti i layout (come i moduli del Probabile XI).
   function renderColGrid() {
-    const list = jrTemplates(), grid = $('colGrid'), order = jrOrder();
-    grid.innerHTML = '';
-    list.forEach((tp,i) => {
-      const ord = i === jrb.tpl ? order : colAssign(tp.px, jrb.cards);
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'col-th' + (i === jrb.tpl ? ' on' : '');
-      b.setAttribute('role','radio'); b.setAttribute('aria-checked', i === jrb.tpl ? 'true' : 'false');
-      b.setAttribute('aria-label', `Layout ${i + 1}`);
-      b.style.setProperty('--k', .1);
-      b.innerHTML = colCellsHtml(tp, ord, -1);
-      b.addEventListener('click',() => {
-        if (i === jrb.tpl) return;
-        haptic('select');
-        jrb.tpl = i; jrb.order = null; jrb.swap = -1; jrb.csel = -1;
-        renderJrLayout(); renderSteps();
-      });
-      grid.appendChild(b);
-    });
+    const list = jrTemplates(), box = $('colGrid');
+    if (!list.length) { box.innerHTML = ''; return; }
+    box.innerHTML = `<button type="button" class="mod-btn">${colMini(list[jrb.tpl])}<span><b>Layout ${jrb.tpl + 1}</b><small>tocca per cambiare</small></span><i>▾</i></button>`;
+    box.firstChild.addEventListener('click',openColSheet);
+  }
+
+  function openColSheet() {
+    haptic('select');
+    const list = jrTemplates(), sh = $('modSh');
+    sh.innerHTML = `<div class="mod-bar"></div><div class="mod-top"><b>Layout</b><button type="button" id="colShClose">Chiudi</button></div>`
+      + `<div class="mod-grid">${list.map((t,i) => `<button type="button" class="mod-tile${i === jrb.tpl ? ' on' : ''}" data-i="${i}">${colMini(t)}<span>${i + 1}</span></button>`).join('')}</div>`;
+    $('colShClose').addEventListener('click',closeModSheet);
+    sh.querySelectorAll('.mod-tile').forEach(b => b.addEventListener('click',() => {
+      const i = Number(b.dataset.i);
+      closeModSheet();
+      if (i === jrb.tpl) return;
+      haptic('select');
+      jrb.tpl = i; jrb.order = null; jrb.swap = -1; jrb.csel = -1;
+      renderJrLayout(); renderSteps();
+    }));
+    $('modOv').classList.add('open');
   }
 
   function renderJrLayout(reset = false) {
@@ -4872,9 +4884,10 @@
     big.addEventListener('pointerdown',e => {
       const el = e.target.closest('.col-cell');
       if (!ptrs.size) {
-        if (!el) { g = null; if (jrb.csel >= 0 || jrb.swap >= 0) { jrb.csel = -1; jrb.swap = -1; colUpdateUi(); } return; }
+        if (!el) { g = null; if (jrb.csel >= 0) { jrb.csel = -1; colUpdateUi(); } return; }
         const i = Number(el.dataset.i);
-        g = {i, el, swapTap:jrb.swap >= 0, x0:e.clientX, y0:e.clientY, dirty:false};
+        const cur = colSelIdx();
+        g = {i, el, swapTap:cur >= 0 && cur !== i, from:cur, x0:e.clientX, y0:e.clientY, dirty:false};
         if (!g.swapTap) select(i);
       }
       if (!g) return;
@@ -4896,12 +4909,13 @@
     const end = e => {
       if (!ptrs.delete(e.pointerId) || !g) return;
       if (g.swapTap) {
-        // Scambio: un tocco su un altro riquadro porta lì la foto scelta.
-        if (e.type === 'pointerup' && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < 10) {
-          const a = jrb.swap, b = g.i;
-          if (a !== b) { const o = jrOrder().slice(); [o[a], o[b]] = [o[b], o[a]]; jrb.order = o; haptic('success'); }
-          jrb.swap = -1; jrb.csel = b;
-          g = null;
+        // Con una foto scelta, un tocco su un'altra la scambia; se invece si trascina, si sceglie quella.
+        if (e.type === 'pointerup') {
+          const a = g.from, b = g.i;
+          if (Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < 10) {
+            const o = jrOrder().slice(); [o[a], o[b]] = [o[b], o[a]]; jrb.order = o; haptic('success');
+          } else { haptic('select'); }
+          jrb.csel = b; g = null;
           renderJrLayout();
         } else if (!ptrs.size) g = null;
         return;
@@ -4925,7 +4939,7 @@
     // Doppio tocco: ingrandisce sul punto toccato, o rimette la foto com'era.
     big.addEventListener('dblclick',e => {
       const el = e.target.closest('.col-cell');
-      if (!el || jrb.swap >= 0) return;
+      if (!el) return;
       const i = Number(el.dataset.i), r = el.getBoundingClientRect(), card = colCrop(colCardAt(i));
       select(i);
       if (card.cz > 1.05) { card.cz = 1; card.cpx = COL_DEF[0]; card.cpy = COL_DEF[1]; colPaint(i); }
@@ -4933,21 +4947,7 @@
       colUpdateUi(); renderColGrid();
     });
 
-    const sel = fn => () => { const i = colSelIdx(); if (i >= 0) fn(i,colCrop(colCardAt(i))); };
-    $('colZoom').addEventListener('input',e => { const i = colSelIdx(); if (i < 0) return; colZoomTo(i,Number(e.target.value) / 100); colUpdateUi(); });
-    $('colZoom').addEventListener('change',renderColGrid);
-    $('colReset').addEventListener('click',sel((i,c) => {
-      haptic('select'); c.cz = 1; c.cpx = COL_DEF[0]; c.cpy = COL_DEF[1];
-      colPaint(i); colUpdateUi(); renderColGrid();
-    }));
-    $('colSwap').addEventListener('click',() => {
-      const i = colSelIdx();
-      if (i < 0) return;
-      haptic('select');
-      jrb.swap = jrb.swap >= 0 ? -1 : i;
-      colUpdateUi();
-    });
-    window.addEventListener('resize',() => { if ($('colBig').offsetParent) renderJrLayout(); });
+    window.addEventListener('resize',() => { if ($('colBig').offsetParent) { fitColBig(); renderJrLayout(); } });
   }
 
 
