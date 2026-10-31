@@ -115,7 +115,7 @@
       display:flex;align-items:center;gap:10px;
       transition:background-color .15s ease,color .15s ease,transform .18s var(--spring);
     }
-    .side-home .emo{font-size:16px;line-height:1}
+    .side-ico{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
     @media(hover:hover){.side-home:hover{background:var(--surface2);color:var(--text)}}
     .side-home:active{transform:scale(.98);transition-duration:.1s}
     body.home-mode .side-home{background:var(--accent-soft);color:var(--text)}
@@ -312,11 +312,11 @@
     .home{display:grid;gap:28px;margin-top:22px}
     .hm-group{display:grid;gap:10px}
     .hm-head{display:flex;align-items:center;gap:8px;padding:0 2px}
-    .hm-emo{font-size:15px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+    .hm-gico{width:16px;height:16px;flex:none;color:var(--muted);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
     .hm-title{font-size:11.5px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
     .hm-list{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
     .hm-item{
-      width:100%;min-height:64px;padding:10px 14px 10px 10px;
+      width:100%;min-height:64px;padding:10px 16px;
       display:flex;align-items:center;gap:14px;text-align:left;
       background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
       box-shadow:var(--shadow-soft);
@@ -327,10 +327,7 @@
       .hm-item:hover .hm-go{transform:translateX(2px);color:var(--text)}
     }
     .hm-item:active{transform:scale(.985);transition-duration:.12s,.28s,.28s,.35s}
-    .hm-ico{
-      width:44px;height:44px;flex:none;border-radius:13px;display:grid;place-items:center;
-      background:var(--surface2);font-size:23px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
-    }
+    .hm-ico{width:26px;height:26px;flex:none;color:var(--text);fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
     .hm-txt{display:grid;gap:2px;min-width:0;flex:1}
     .hm-name{font-size:16px;font-weight:750;letter-spacing:-.01em}
     .hm-desc{font-size:12.5px;font-weight:600;color:var(--muted);line-height:1.35}
@@ -339,8 +336,6 @@
       .hm-list{grid-template-columns:1fr 1fr}
       .hm-item:last-child:nth-child(odd){grid-column:1/-1}
     }
-    /* Etichetta in alto di ogni pagina: stessa forma ovunque, con l'emoji della richiesta. */
-    .eyebrow{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Inter,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
     .brand-btn{border:0;background:transparent;padding:6px 10px;border-radius:10px;color:inherit}
     body.home-mode .brand-btn{pointer-events:none}
     @media(hover:hover){body:not(.home-mode):not(.live) .brand-btn:hover{background:var(--surface2)}}
@@ -910,7 +905,7 @@
       <div class="brand">
         <div class="brand-name">ImageGen</div>
       </div>
-      <button id="homeSide" class="side-home" type="button"><span class="emo" aria-hidden="true">🏠</span><span>Home</span></button>
+      <button id="homeSide" class="side-home" type="button"><svg class="side-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg><span>Home</span></button>
       <div id="stepsBox">
         <div class="label">Percorso</div>
         <ul id="stepList" class="steps"></ul>
@@ -1460,28 +1455,51 @@
 
   // Richieste della home: ognuna apre il suo percorso. Gli eventi della partita (Kick off,
   // Half time, ...) sono voci a sé: la fase è già scelta, quindi il passo "Quale evento?" non c'è più.
+  const ICONS = {
+    'goal':'<circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/>',
+    'saved':'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+    'stats':'<path d="M5 20v-9M12 20V5M19 20v-6"/>',
+    'kick':'<path d="M6 21V4M6 4h12l-3 4.5L18 13H6"/>',
+    'half':'<path d="M9 5v14M15 5v14"/>',
+    'second':'<path d="M8 5l11 7-11 7z"/>',
+    'end90':'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>',
+    'full':'<path d="M5 21V4M5 4h14v10H5M12 4v10M5 9h14"/>',
+    'md':'<ellipse cx="12" cy="10" rx="9" ry="4.5"/><path d="M3 10v4c0 2.5 4 4.5 9 4.5s9-2 9-4.5v-4"/>',
+    'pxi':'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><circle cx="12" cy="12" r="3"/>',
+    'squad':'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    'xi':'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M17 4.5a3.5 3.5 0 010 7M21.5 20c0-2.8-1.7-5-4-5.8"/>',
+    'cal':'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    'jr':'<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="1.8"/><path d="M21 16l-5-5-9 10"/>',
+    'igbn':'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+    'g-pre':'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/>',
+    'g-events':'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>',
+    'g-play':'<circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/>',
+    'g-other':'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+    'home':'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>'
+  };
+  const svgIcon = (id, cls) => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[id] || ''}</svg>`;
   const REQUESTS = [
-    {id:'goal',   kind:'goal',  emoji:'⚽', title:'Gol',          desc:'Giocatore, minuto e risultato'},
-    {id:'saved',  kind:'saved', emoji:'🧤', title:'Parata',       desc:'Il portiere protagonista'},
-    {id:'stats',  kind:'stats', emoji:'📊', title:'Statistiche',  desc:'Possesso, tiri, xG e altri numeri'},
-    {id:'kick',   kind:'match', phase:'kick',       emoji:'🟢', title:'Kick off',    desc:'Si parte: la partita sta per iniziare'},
-    {id:'half',   kind:'match', phase:'half',       emoji:'⏸️', title:'Half time',   desc:'Risultato dell’intervallo, con foto'},
-    {id:'second', kind:'match', phase:'second',     emoji:'▶️', title:'2nd half',    desc:'Inizia il secondo tempo'},
-    {id:'end90',  kind:'match', phase:'end_of_90',  emoji:'⏱️', title:'End of 90’',  desc:'Risultato dopo i 90 minuti, con foto'},
-    {id:'full',   kind:'match', phase:'full',       emoji:'🏁', title:'Full time',   desc:'Finale, supplementari e rigori, con foto'},
-    {id:'md',     kind:'md',    emoji:'🏟️', title:'Matchday',     desc:'Presentazione della partita'},
-    {id:'pxi',    kind:'pxi',   emoji:'🔮', title:'Probabile XI', desc:'Formazione probabile sul campo'},
-    {id:'squad',  kind:'squad', emoji:'📝', title:'Squad List',   desc:'Lista dei convocati'},
-    {id:'xi',     kind:'xi',    emoji:'👕', title:'Starting XI',  desc:'Formazione ufficiale con foto'},
-    {id:'cal',    kind:'cal',   emoji:'📅', title:'Calendario',   desc:'Le partite del mese'},
-    {id:'jr',     kind:'jr',    emoji:'📸', title:'Post',         desc:'Foto con il logo JR: classica, sfocata o collage'},
-    {id:'igbn',   kind:'igbn',  emoji:'⚡', title:'Storia IG',    desc:'Breaking News in formato storia'}
+    {id:'goal',   kind:'goal',  icon:'goal', title:'Gol',          desc:'Giocatore, minuto e risultato'},
+    {id:'saved',  kind:'saved', icon:'saved', title:'Parata',       desc:'Il portiere protagonista'},
+    {id:'stats',  kind:'stats', icon:'stats', title:'Statistiche',  desc:'Possesso, tiri, xG e altri numeri'},
+    {id:'kick',   kind:'match', phase:'kick',       icon:'kick', title:'Kick off',    desc:'Si parte: la partita sta per iniziare'},
+    {id:'half',   kind:'match', phase:'half',       icon:'half', title:'Half time',   desc:'Risultato dell’intervallo, con foto'},
+    {id:'second', kind:'match', phase:'second',     icon:'second', title:'2nd half',    desc:'Inizia il secondo tempo'},
+    {id:'end90',  kind:'match', phase:'end_of_90',  icon:'end90', title:'End of 90’',  desc:'Risultato dopo i 90 minuti, con foto'},
+    {id:'full',   kind:'match', phase:'full',       icon:'full', title:'Full time',   desc:'Finale, supplementari e rigori, con foto'},
+    {id:'md',     kind:'md',    icon:'md', title:'Matchday',     desc:'Presentazione della partita'},
+    {id:'pxi',    kind:'pxi',   icon:'pxi', title:'Probabile XI', desc:'Formazione probabile sul campo'},
+    {id:'squad',  kind:'squad', icon:'squad', title:'Squad List',   desc:'Lista dei convocati'},
+    {id:'xi',     kind:'xi',    icon:'xi', title:'Starting XI',  desc:'Formazione ufficiale con foto'},
+    {id:'cal',    kind:'cal',   icon:'cal', title:'Calendario',   desc:'Le partite del mese'},
+    {id:'jr',     kind:'jr',    icon:'jr', title:'Post',         desc:'Foto con il logo JR: classica, sfocata o collage'},
+    {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia IG',    desc:'Breaking News in formato storia'}
   ];
   const HOME_GROUPS = [
-    {emoji:'📋', title:'Pre-gara',              ids:['md','pxi','squad','xi']},
-    {emoji:'🏟️', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
-    {emoji:'⚽', title:'In partita',            ids:['goal','saved','stats']},
-    {emoji:'✨', title:'Altro',                 ids:['jr','igbn','cal']}
+    {icon:'g-pre', title:'Pre-gara',              ids:['md','pxi','squad','xi']},
+    {icon:'g-events', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
+    {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
+    {icon:'g-other', title:'Altro',                 ids:['jr','igbn','cal']}
   ];
   const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
   const COMPETITIONS_UEFA = [
@@ -2469,9 +2487,9 @@
       const sec = document.createElement('section');
       sec.className = 'hm-group';
       sec.setAttribute('aria-label',g.title);
-      sec.innerHTML = '<div class="hm-head"><span class="hm-emo" aria-hidden="true"></span><span class="hm-title"></span></div><div class="hm-list"></div>';
-      sec.querySelector('.hm-emo').textContent = g.emoji;
+      sec.innerHTML = '<div class="hm-head"><span class="hm-title"></span></div><div class="hm-list"></div>';
       sec.querySelector('.hm-title').textContent = g.title;
+      sec.querySelector('.hm-head').insertAdjacentHTML('afterbegin',svgIcon(g.icon,'hm-gico'));
       const list = sec.querySelector('.hm-list');
       g.ids.forEach(id => {
         const r = REQUESTS.find(x => x.id === id);
@@ -2480,9 +2498,8 @@
         b.type = 'button';
         b.className = 'hm-item';
         b.dataset.id = r.id;
-        b.innerHTML = '<span class="hm-ico" aria-hidden="true"></span><span class="hm-txt"><span class="hm-name"></span><span class="hm-desc"></span></span>' +
+        b.innerHTML = svgIcon(r.icon,'hm-ico') + '<span class="hm-txt"><span class="hm-name"></span><span class="hm-desc"></span></span>' +
           '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-        b.querySelector('.hm-ico').textContent = r.emoji;
         b.querySelector('.hm-name').textContent = r.title;
         b.querySelector('.hm-desc').textContent = r.desc;
         b.addEventListener('click',() => openRequest(r));
@@ -2492,14 +2509,14 @@
     });
   }
 
-  // Etichetta in alto di ogni pagina: emoji + nome della richiesta.
+  // Etichetta in alto di ogni pagina: nome della richiesta.
   function applyEyebrows(screenName) {
     if (LIVE || !screenName || screenName === 'home') return;
     const screen = document.querySelector(`[data-screen="${screenName}"]`);
     const eb = screen && screen.querySelector('.eyebrow');
     const req = currentRequest();
     if (!eb || !req) return;
-    eb.textContent = screenName === 'preview' ? `${req.emoji} ${req.title} · Anteprima` : `${req.emoji} ${req.title}`;
+    eb.textContent = screenName === 'preview' ? `${req.title} · Anteprima` : req.title;
   }
 
   function openRequest(r) {
