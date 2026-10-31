@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#F4F3F0">
-  <title>ImageGEN JR</title>
+  <title>ImageGen</title>
   <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   <style>
     :root{
@@ -71,6 +71,8 @@
     }
 
     *{box-sizing:border-box}
+    /* Nessuna animazione né transizione, in nessuna pagina. */
+    *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
     html,body{margin:0;height:100%;background:var(--bg);color:var(--text)}
     html{-webkit-text-size-adjust:100%;touch-action:manipulation}
     body{
@@ -100,32 +102,25 @@
     .side{display:none}
     .brand{display:flex;align-items:center;gap:0;min-height:36px}
     .brand-name{font-size:19px;font-weight:850;letter-spacing:-.045em}
-    .brand-name span{color:var(--accent)}
     .label{
       font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
       margin:0 0 10px;
     }
 
-    .kind-list{display:grid;gap:4px;position:relative}
-    /* Pillola che scorre sotto la voce selezionata (sidebar desktop). */
-    .kind-ind{
-      position:absolute;left:0;right:0;top:0;height:40px;border-radius:10px;
-      background:var(--accent-soft);pointer-events:none;
-      transform-origin:0 0;will-change:transform;      /* animata in JS solo con transform */
-    }
-    .kind-item{
-      position:relative;z-index:1;
-      border:0;background:transparent;text-align:left;
+    /* Pulsante Home nella sidebar (desktop) */
+    .side-home{
+      border:0;background:transparent;text-align:left;width:100%;
       min-height:40px;padding:0 12px;border-radius:10px;
       font-size:14px;font-weight:650;color:var(--muted);
       display:flex;align-items:center;gap:10px;
       transition:background-color .15s ease,color .15s ease,transform .18s var(--spring);
     }
-    @media(hover:hover){.kind-item:not(.selected):hover{background:var(--surface2);color:var(--text)}}
-    .kind-item:active{transform:scale(.98);transition-duration:.1s}
-    .kind-item.selected{color:var(--text)}
-    .kind-item .dot{width:6px;height:6px;border-radius:50%;background:var(--line);flex:none;transition:background-color .15s ease,transform .18s var(--spring)}
-    .kind-item.selected .dot{background:var(--accent);transform:scale(1.25)}
+    .side-home .emo{font-size:16px;line-height:1}
+    @media(hover:hover){.side-home:hover{background:var(--surface2);color:var(--text)}}
+    .side-home:active{transform:scale(.98);transition-duration:.1s}
+    body.home-mode .side-home{background:var(--accent-soft);color:var(--text)}
+    body.home-mode #stepsBox{display:none}
+    body.home-mode .bar,body.home-mode .progress{display:none}
 
     .steps{display:grid;gap:0;margin:0;padding:0;list-style:none}
     /* Timeline: linea di collegamento che si riempie a ogni step completato. */
@@ -168,7 +163,7 @@
     .main{
       min-width:0;min-height:0;position:relative;isolation:isolate;
       display:grid;
-      grid-template-rows:auto auto auto minmax(0,1fr) auto;
+      grid-template-rows:auto auto minmax(0,1fr) auto;
       padding-top:var(--top-pad);
       background-color:var(--bg);
     }
@@ -221,33 +216,9 @@
     }
     .busy-title{font-size:18px;font-weight:800;letter-spacing:-.01em;margin-top:6px}
     .busy-sub{font-size:13.5px;line-height:1.45;color:var(--muted);min-height:40px}
-    html.is-busy .kind-chips,html.is-busy .side,html.is-busy .bar{pointer-events:none}
-    html.is-busy .kind-chips,html.is-busy .kind-list,html.is-busy .steps{opacity:.55;transition:opacity .18s ease}
+    html.is-busy .side,html.is-busy .bar,html.is-busy .home{pointer-events:none}
+    html.is-busy .steps{opacity:.55;transition:opacity .18s ease}
 
-    .kind-chips{
-      display:flex;gap:6px;padding:8px 16px 4px;position:relative;
-      overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
-    }
-    .kind-chips::-webkit-scrollbar{display:none}
-    @media(max-width:374px){.kind-chips{gap:4px;padding-left:12px;padding-right:12px}.chip{padding:0 7px}}
-    .kind-chips.more-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent)}
-    .kind-chips.more-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px);mask-image:linear-gradient(90deg,transparent,#000 44px)}
-    .kind-chips.more-l.more-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent)}
-    .chip-ind{
-      position:absolute;top:8px;left:0;height:34px;width:0;border-radius:999px;
-      background:var(--accent);pointer-events:none;
-      transform-origin:0 0;will-change:transform;      /* animata in JS solo con transform (fluida) */
-    }
-    .chip{
-      flex:1 0 auto;border:1px solid var(--line);background:var(--surface);
-      height:34px;padding:0 10px;border-radius:999px;
-      font-size:clamp(10.5px,3.3vw,12.5px);font-weight:750;color:var(--muted);
-      white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis;
-      position:relative;z-index:1;
-      transition:color .15s ease,border-color .15s ease,background-color .15s ease,transform .18s var(--spring);
-    }
-    .chip.selected{background:transparent;border-color:transparent;color:var(--accent-ink)}
-    .chip:active{transform:scale(.97);transition-duration:.1s}
 
     .progress{
       margin:10px 16px 0;height:4px;border-radius:4px;background:var(--surface2);overflow:hidden;
@@ -337,28 +308,42 @@
     @media(min-width:700px){
       .opts.grid{grid-template-columns:1fr 1fr}
     }
-    /* Scelta del tipo di grafica: schede con icona e descrizione, a due colonne. */
-    .opts.sk{grid-template-columns:1fr 1fr;gap:12px}
-    .opts.sk .opt{
-      position:relative;flex-direction:column;align-items:flex-start;justify-content:flex-start;
-      gap:14px;min-height:132px;padding:16px;
+    /* ---------- Home: elenco delle richieste, diviso per gruppi ---------- */
+    .home{display:grid;gap:28px;margin-top:22px}
+    .hm-group{display:grid;gap:10px}
+    .hm-head{display:flex;align-items:center;gap:8px;padding:0 2px}
+    .hm-emo{font-size:15px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+    .hm-title{font-size:11.5px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+    .hm-list{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+    .hm-item{
+      width:100%;min-height:64px;padding:10px 14px 10px 10px;
+      display:flex;align-items:center;gap:14px;text-align:left;
+      background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
+      box-shadow:var(--shadow-soft);
+      transition:transform .18s var(--spring),border-color .15s ease,background-color .15s ease,box-shadow .18s var(--ease-out);
     }
-    .opts.sk .opt:last-child:nth-child(odd){grid-column:1/-1;min-height:96px}
-    .opts.sk .opt .radio{display:none}
-    .sk-ico{
-      width:44px;height:44px;border-radius:13px;flex:none;display:grid;place-items:center;
-      background:var(--surface2);color:var(--muted);
-      transition:background-color .15s ease,color .15s ease,transform .18s var(--spring);
+    @media(hover:hover){
+      .hm-item:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent) 42%,var(--line));box-shadow:var(--shadow-hover)}
+      .hm-item:hover .hm-go{transform:translateX(2px);color:var(--text)}
     }
-    .sk-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-    .opt.selected .sk-ico{background:var(--accent);color:var(--accent-ink)}
-    .sk-txt{display:grid;gap:3px;min-width:0}
-    .sk-desc{font-size:12.5px;font-weight:600;color:var(--muted);line-height:1.35}
-    .opts.sk .opt::after{
-      content:"";position:absolute;top:14px;right:14px;width:10px;height:10px;border-radius:50%;
-      background:var(--accent);transform:scale(0);transition:transform .2s var(--ease-exit);
+    .hm-item:active{transform:scale(.985);transition-duration:.12s,.28s,.28s,.35s}
+    .hm-ico{
+      width:44px;height:44px;flex:none;border-radius:13px;display:grid;place-items:center;
+      background:var(--surface2);font-size:23px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
     }
-    .opts.sk .opt.selected::after{transform:scale(1);transition:transform .18s var(--spring) .04s}
+    .hm-txt{display:grid;gap:2px;min-width:0;flex:1}
+    .hm-name{font-size:16px;font-weight:750;letter-spacing:-.01em}
+    .hm-desc{font-size:12.5px;font-weight:600;color:var(--muted);line-height:1.35}
+    .hm-go{flex:none;width:18px;height:18px;color:var(--muted);fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s var(--spring),color .15s ease}
+    @media(min-width:700px){
+      .hm-list{grid-template-columns:1fr 1fr}
+      .hm-item:last-child:nth-child(odd){grid-column:1/-1}
+    }
+    /* Etichetta in alto di ogni pagina: stessa forma ovunque, con l'emoji della richiesta. */
+    .eyebrow{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Inter,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+    .brand-btn{border:0;background:transparent;padding:6px 10px;border-radius:10px;color:inherit}
+    body.home-mode .brand-btn{pointer-events:none}
+    @media(hover:hover){body:not(.home-mode):not(.live) .brand-btn:hover{background:var(--surface2)}}
 
     /* Search */
     .search{
@@ -583,6 +568,7 @@
     .module-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
     /* Probabile XI: formazione presa dai siti */
     .src-row{display:flex;gap:8px;margin-bottom:6px}
+    .src-row[hidden],.src-row .btn[hidden]{display:none}
     .src-row .btn{flex:1;min-height:48px;padding:4px 6px;font-size:14px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.15}
     .src-row .src-upd{font-size:10.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
     .src-row .src-upd:empty{display:none}
@@ -715,8 +701,8 @@
     /* Modalita' live (dal LiveScore): solo foto della fase e conferma */
     /* Restano al loro posto (righe e colonne della griglia invariate), solo invisibili */
     body.live #closeWorkflowButton{visibility:hidden}
-    body.live #kindListMobile{visibility:hidden;height:0;min-height:0;padding:0;margin:0;overflow:hidden}
-    body.live #kindListSide{display:none}
+    body.live .side-home{display:none}
+    body.live .brand-btn{pointer-events:none}
     .quick{display:flex;gap:8px;margin-top:12px}
     .quick button{flex:1 1 0;min-width:0}
     .quick button{
@@ -880,7 +866,6 @@
       .top-title{display:none}
       .top{gap:10px}
       .top-right{order:-1}
-      .kind-chips{display:none}
       .progress{margin:16px clamp(28px,3.2vw,64px) 0}
       .stage{min-width:0;min-height:0}
       .content{
@@ -923,13 +908,10 @@
     <!-- Sidebar desktop -->
     <aside class="side">
       <div class="brand">
-        <div class="brand-name">ImageGEN <span>JR</span></div>
+        <div class="brand-name">ImageGen</div>
       </div>
-      <div>
-        <div class="label">Tipo grafica</div>
-        <div id="kindListSide" class="kind-list"></div>
-      </div>
-      <div>
+      <button id="homeSide" class="side-home" type="button"><span class="emo" aria-hidden="true">🏠</span><span>Home</span></button>
+      <div id="stepsBox">
         <div class="label">Percorso</div>
         <ul id="stepList" class="steps"></ul>
       </div>
@@ -940,7 +922,7 @@
       <header class="top">
         <button id="closeWorkflowButton" class="icon-btn" type="button" aria-label="Chiudi workflow">×</button>
         <div class="top-title">
-          <div class="brand-name">ImageGEN <span>JR</span></div>
+          <button id="homeTop" class="brand-btn" type="button" aria-label="Torna alla home"><span class="brand-name">ImageGen</span></button>
         </div>
         <div class="top-right">
           <div id="sessionTimer" class="timer hidden" role="timer" aria-label="Tempo rimasto alla sessione">
@@ -950,32 +932,24 @@
         </div>
       </header>
 
-      <div id="kindListMobile" class="kind-chips" role="tablist" aria-label="Tipo grafica"></div>
-
       <div class="progress"><i id="progressBar"></i></div>
 
       <div class="stage" id="stage">
         <div class="content">
           <div id="error" class="error"></div>
 
-          <section class="screen" data-screen="subkind">
-            <div id="subkindTitle" class="eyebrow">Grafica</div>
-            <h1>Che grafica?</h1>
-            <div id="subkindOpts" class="opts" role="radiogroup"></div>
+          <section class="screen active" data-screen="home">
+            <div class="eyebrow">Nuova grafica</div>
+            <h1>Cosa vuoi creare?</h1>
+            <p class="lead">Scegli la grafica: ti guido passo dopo passo fino all’anteprima.</p>
+            <div id="homeList" class="home"></div>
           </section>
 
-          <section class="screen active" data-screen="competition">
+          <section class="screen" data-screen="competition">
             <div class="eyebrow">Partita</div>
             <h1>Competizione</h1>
             <p class="lead">Scegli la competizione della partita.</p>
             <div id="competitionOpts" class="opts grid" role="radiogroup"></div>
-          </section>
-
-          <section class="screen" data-screen="phase">
-            <div class="eyebrow">Evento</div>
-            <h1>Quale evento?</h1>
-            <p class="lead">Scegli il momento della partita: le pagine successive si adattano.</p>
-            <div id="phaseOpts" class="opts" role="radiogroup"></div>
           </section>
 
           <section class="screen" data-screen="side">
@@ -1198,8 +1172,8 @@
           <section class="screen" data-screen="xi11">
             <div class="eyebrow">Probabile XI</div>
             <h1>Formazione</h1>
-            <p class="lead">Prendila da un sito oppure incollala come la scrivono i giornali (ogni reparto da destra a sinistra). Il modulo lo trovo da solo.</p>
-            <div class="src-row" role="group" aria-label="Probabile formazione da un sito">
+            <p class="lead">Incollala come la scrivono i giornali (ogni reparto da destra a sinistra), oppure usa Gazzetta o Sky se hanno già la formazione di questa partita. Il modulo lo trovo da solo.</p>
+            <div id="srcRow" class="src-row" role="group" aria-label="Probabile formazione da un sito" hidden>
               <button class="btn ghost" type="button" data-src="gazzetta"><span class="src-name">Gazzetta</span><span class="src-upd"></span></button>
               <button class="btn ghost" type="button" data-src="sky"><span class="src-name">Sky Sport</span><span class="src-upd"></span></button>
             </div>
@@ -1484,25 +1458,32 @@
     'https://api.github.com/repos/Tommaso20BW/LiveScore_JR/contents/data/teams.json?ref=main'
   ];
 
-  // Schede in alto. Quelle con più tipi chiedono il tipo come primo passaggio.
-  const TABS = [['goal','GOAL'],['match','EVENT'],['stats','STATS'],['pre','PRE-GARA'],['extra','ALTRO']];
-  const TAB_KINDS = {
-    goal:[['goal','Gol'],['saved','Parata']],
-    pre:[['md','Matchday'],['pxi','Probabile XI'],['squad','Squad List'],['xi','Starting XI']],
-    extra:[['cal','Calendario'],['jr','Post'],['igbn','Storia IG']]
-  };
-  // Icona (tracciato SVG 24x24) e riga di descrizione di ogni tipo, per la schermata "Che grafica?".
-  const SUBKIND_META = {
-    goal:['<circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/>','Grafica del gol'],
-    saved:['<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>','Grafica della parata'],
-    md:['<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>','Presentazione della partita'],
-    pxi:['<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><circle cx="12" cy="12" r="3"/>','Formazione probabile'],
-    squad:['<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>','Lista dei convocati'],
-    xi:['<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M17 4.5a3.5 3.5 0 010 7M21.5 20c0-2.8-1.7-5-4-5.8"/>','Formazione ufficiale'],
-    cal:['<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>','Le partite del mese'],
-    jr:['<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="1.8"/><path d="M21 16l-5-5-9 10"/>','Foto con il logo JR'],
-    igbn:['<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>','Breaking News, formato storia']
-  };
+  // Richieste della home: ognuna apre il suo percorso. Gli eventi della partita (Kick off,
+  // Half time, ...) sono voci a sé: la fase è già scelta, quindi il passo "Quale evento?" non c'è più.
+  const REQUESTS = [
+    {id:'goal',   kind:'goal',  emoji:'⚽', title:'Gol',          desc:'Giocatore, minuto e risultato'},
+    {id:'saved',  kind:'saved', emoji:'🧤', title:'Parata',       desc:'Il portiere protagonista'},
+    {id:'stats',  kind:'stats', emoji:'📊', title:'Statistiche',  desc:'Possesso, tiri, xG e altri numeri'},
+    {id:'kick',   kind:'match', phase:'kick',       emoji:'🟢', title:'Kick off',    desc:'Si parte: la partita sta per iniziare'},
+    {id:'half',   kind:'match', phase:'half',       emoji:'⏸️', title:'Half time',   desc:'Risultato dell’intervallo, con foto'},
+    {id:'second', kind:'match', phase:'second',     emoji:'▶️', title:'2nd half',    desc:'Inizia il secondo tempo'},
+    {id:'end90',  kind:'match', phase:'end_of_90',  emoji:'⏱️', title:'End of 90’',  desc:'Risultato dopo i 90 minuti, con foto'},
+    {id:'full',   kind:'match', phase:'full',       emoji:'🏁', title:'Full time',   desc:'Finale, supplementari e rigori, con foto'},
+    {id:'md',     kind:'md',    emoji:'🏟️', title:'Matchday',     desc:'Presentazione della partita'},
+    {id:'pxi',    kind:'pxi',   emoji:'🔮', title:'Probabile XI', desc:'Formazione probabile sul campo'},
+    {id:'squad',  kind:'squad', emoji:'📝', title:'Squad List',   desc:'Lista dei convocati'},
+    {id:'xi',     kind:'xi',    emoji:'👕', title:'Starting XI',  desc:'Formazione ufficiale con foto'},
+    {id:'cal',    kind:'cal',   emoji:'📅', title:'Calendario',   desc:'Le partite del mese'},
+    {id:'jr',     kind:'jr',    emoji:'📸', title:'Post',         desc:'Foto con il logo JR: classica, sfocata o collage'},
+    {id:'igbn',   kind:'igbn',  emoji:'⚡', title:'Storia IG',    desc:'Breaking News in formato storia'}
+  ];
+  const HOME_GROUPS = [
+    {emoji:'📋', title:'Pre-gara',              ids:['md','pxi','squad','xi']},
+    {emoji:'🏟️', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
+    {emoji:'⚽', title:'In partita',            ids:['goal','saved','stats']},
+    {emoji:'✨', title:'Altro',                 ids:['jr','igbn','cal']}
+  ];
+  const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
   const COMPETITIONS_UEFA = [
     ['uefa.champions','Champions League'],['uefa.europa','Europa League'],
     ['uefa.europa.conf','Conference League']
@@ -1544,16 +1525,18 @@
   const STAT_TYPES = {'POSSESSO':'pct','PRECISIONE PASSAGGI':'pct','xG':'dec'};
 
   const STEP_NAMES = {
+    home:'Home',
     competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
     player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
-    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', subkind:'Tipo', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto'
+    phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto'
   };
 
   const $ = id => document.getElementById(id);
 
   /* ---------- Motion ---------- */
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const motionOK = () => !reduceMotion.matches && typeof Element.prototype.animate === 'function';
+  // Animazioni disattivate in tutta l'app: le pagine e i controlli cambiano subito.
+  const motionOK = () => false;
   const EASE_OUT = 'cubic-bezier(.2,.8,.2,1)';
   const EASE_IN = 'cubic-bezier(.4,0,1,1)';
   // Su iOS :active non scatta al tocco senza almeno un listener touchstart.
@@ -1577,8 +1560,7 @@
   const MAX_RESULTS = 150;
   const finePointer = window.matchMedia('(pointer:fine)').matches;
 
-  let tab = 'goal';
-  let kind = '';          // tipo reale; vuoto finché non si sceglie nella scheda
+  let kind = '';          // tipo reale; vuoto = schermata Home
   // Nessuna opzione preselezionata: ogni scelta la fa l'utente.
   let phase = '';
   let pensOn = false;
@@ -1766,6 +1748,7 @@
   function buildFlow() {
     flow = [];
     if (LIVE) { flow = ['phasephoto']; flowIndex = 0; return; }
+    if (!kind) { flow = ['home']; flowIndex = 0; return; }
     const base = ['competition','side','opponent'];
     // Goal/saved: maglia sempre. Half/end/full: solo con "Italia" (serve per lo sfondo);
     // le UEFA hanno lo sfondo della competizione. Stats: come half/end/full. Kick off: mai.
@@ -1780,8 +1763,8 @@
     const pick = steps => ['mdpick',...(picked ? steps.filter(s => !base.includes(s) && !(s === 'kit' && kitFromMatch)) : steps)];
     if (kind === 'goal' || kind === 'saved') flow = pick([...withKit,'player','minute','pose']);
     else if (kind === 'kick') flow = pick(base);
-    else if (kind === 'match' && phase === 'kick') flow = ['phase',...pick(base)];
-    else if (kind === 'match') flow = ['phase',...pick([...(italy ? withKit : base),'score']),...(PHOTO_PHASES.has(phase) ? ['phasephoto'] : [])];
+    else if (kind === 'match' && phase === 'kick') flow = pick(base);
+    else if (kind === 'match') flow = [...pick([...(italy ? withKit : base),'score']),...(PHOTO_PHASES.has(phase) ? ['phasephoto'] : [])];
     else if (kind === 'stats') flow = pick([...(italy ? withKit : base),'moment','stats']);
     else if (PREMATCH.includes(kind)) {
       const rest = {squad:['squad'], xi:['kit','lineup','photo'], md:['kit','match','photo'], pxi:['kit','xi11']}[kind];
@@ -1795,7 +1778,6 @@
       : ['jrstyle','jrratio','jrcolor','photo'];
     else if (kind === 'cal') flow = ['calmonth','calrows'];
     else if (kind === 'igbn') flow = ['igcontent'];
-    if (TAB_KINDS[tab]) flow = ['subkind',...flow];
     flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
   }
 
@@ -1827,7 +1809,6 @@
         }
         return out;
       }
-      case 'phase': return labelOf(PHASES,phase);
       case 'moment': return labelOf(MOMENTS,moment);
       case 'lineup': {
         const n = lineupRows().length;
@@ -1843,7 +1824,6 @@
       case 'jrblur': return jrb.cards.length ? 'Pronta' : '';
       case 'jrlayout': return jrb.tpls ? `Layout ${jrb.tpl + 1}` : '';
       case 'module': return pxiModule;
-      case 'subkind': return labelOf(TAB_KINDS[tab] || [],kind);
       case 'mdpick': {
         if (mdPick.startsWith('site:')) {
           const s = squadSite.find(x => `site:${x.id}` === mdPick);
@@ -1923,12 +1903,12 @@
 
   function renderProgress() {
     // Tipo non ancora scelto: percorso sconosciuto, barra quasi vuota.
-    const p = previewMode ? 1 : (!kind && flow[flowIndex] === 'subkind') ? 0.04 : (flowIndex + 1) / (flow.length + 1);
+    const p = previewMode ? 1 : (flowIndex + 1) / (flow.length + 1);
     $('progressBar').style.width = `${Math.round(p * 1000) / 10}%`;
   }
 
-  // Finché il tipo non è scelto si va avanti, non all'anteprima.
-  function finalStepLabel() { return flow[flowIndex] === 'subkind' ? 'Avanti ›' : 'Anteprima ›'; }
+  // Al primo passo "Indietro" riporta alla Home (tranne in modalità live).
+  const backLocked = () => LIVE && !previewMode && flowIndex === 0;
 
   function setPreviewError(message='') {
     $('previewError').textContent = message;
@@ -1959,6 +1939,7 @@
        dal lato di marcia, con una curva lunga che decelera dolcemente.
      Tutto via Web Animations API: se l'utente tocca di nuovo, si annulla e riparte pulito. */
   let screenAnims = [];
+  let navDir = 0;     // 1 = avanti, -1 = indietro: forza il verso dell'animazione (Home ⇄ percorso)
   let pendingRefresh = false;
 
   function stopScreenAnims() {
@@ -1974,9 +1955,9 @@
     prev.classList.add('leaving');
     prev.style.top = `calc(var(--pad-top) - ${scrollTop}px)`;
     const a = prev.animate([
-      {opacity:1, transform:'none'},
-      {opacity:0, transform:`translate3d(${-dir * 6}px,0,0)`}
-    ],{duration:120, easing:EASE_IN, fill:'forwards'});
+      {opacity:1},
+      {opacity:0}
+    ],{duration:100, easing:EASE_IN, fill:'forwards'});
     a.onfinish = () => {
       prev.classList.remove('leaving');
       prev.style.top = '';
@@ -1985,19 +1966,9 @@
     screenAnims.push(a);
   }
 
-  // dir: 1 avanti, -1 indietro, 0 = stessa schermata con contenuto nuovo (cambio tipo grafica).
   function animateScreenIn(screen, dir) {
-    const items = [...screen.children].filter(el => el.getClientRects().length);
-    const base = dir ? 30 : 0;
-    items.forEach((el,i) => {
-      const from = dir
-        ? `translate3d(${dir * 10}px,0,0)`
-        : 'translate3d(0,6px,0)';
-      screenAnims.push(el.animate([
-        {opacity:0, transform:from},
-        {opacity:1, transform:'none'}
-      ],{duration:dir ? 240 : 200, delay:base + Math.min(i,4) * 20, easing:EASE_OUT, fill:'backwards'}));
-    });
+    // Solo dissolvenza: nessuno scorrimento tra una pagina e l'altra.
+    screenAnims.push(screen.animate([{opacity:0},{opacity:1}],{duration:160, easing:EASE_OUT, fill:'backwards'}));
   }
 
   function renderFlow() {
@@ -2011,6 +1982,7 @@
       backwards = flowIndex < lastRenderedFlowIndex;
     }
     const animate = motionOK() && lastRenderedScreen !== '';
+    if (navDir) { backwards = navDir < 0; navDir = 0; }
     const dir = backwards ? -1 : 1;
     const scrollTop = $('stage').scrollTop;
 
@@ -2019,22 +1991,21 @@
       if (el !== screen) el.classList.remove('active');
     });
     if (screen) screen.classList.add('active');
+    document.body.classList.toggle('home-mode',screenName === 'home');
     const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur' || screenName === 'jrlayout';
     $('stage').classList.toggle('photo-mode', editing);
     if (editing) $('stage').scrollTop = 0;
     try {
       if (tg && tg.disableVerticalSwipes) editing ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
     } catch (_) {}
-    if (screenName === 'phasephoto') { $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
-    if (screenName === 'photo') { $('photoEyebrow').textContent = ({xi:'Starting XI', md:'Matchday', jr:'Post'})[kind] || 'Foto'; updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
+    if (screenName === 'phasephoto') { if (LIVE) $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
+    if (screenName === 'photo') { updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
     if (screenName === 'jrphotos') renderJrPicker();
     if (screenName === 'jrlayout') { renderJrLayout(true); requestAnimationFrame(() => { fitColBig(); renderJrLayout(); }); }
     if (screenName === 'jrbg') renderJrBg();
     if (screenName === 'jrblur') { jrbAutoLayout(); requestAnimationFrame(() => { fitJrbFrame(); renderJrb(); }); }
     if (screenName === 'lineup') readXiText();
     if (screenName === 'mdpick') {
-      $('mdPickEyebrow').textContent = ({squad:'Squad List', xi:'Starting XI', md:'Matchday', pxi:'Probabile XI',
-        goal:'Gol', saved:'Parata', match:'Event', kick:'Kick off', stats:'Statistiche'})[kind] || 'Partita';
       $('mdPickLead').textContent = kind === 'md'
         ? 'Dal calendario della Juventus: competizione, avversario, stadio, data e ora si compilano da soli.'
         : PREMATCH.includes(kind)
@@ -2054,14 +2025,15 @@
     lastRenderedPreviewMode = previewMode;
 
     $('stage').scrollTop = 0;
-    $('backButton').disabled = !previewMode && flowIndex === 0;
-    $('backButton').textContent = '‹ Indietro';
+    $('backButton').disabled = backLocked();
+    $('backButton').textContent = (!previewMode && flowIndex === 0 && !LIVE) ? '‹ Home' : '‹ Indietro';
     // Calendario compilato da solo: "Modifica" in alto apre l'elenco partite.
     $('previewEdit').hidden = !(previewMode && (kind === 'cal' || kind === 'pxi'));
-    $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? finalStepLabel() : 'Avanti ›');
+    $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? 'Anteprima ›' : 'Avanti ›');
 
     clearError();
     updateScreenValues();
+    applyEyebrows(screenName);
     renderSteps();
     renderProgress();
 
@@ -2082,27 +2054,6 @@
   }
 
   /* ---------- Option groups ---------- */
-  // Trasforma le opzioni del tipo in schede: icona, titolo e descrizione (vedi SUBKIND_META).
-  function decorateSubkind() {
-    const box = $('subkindOpts');
-    box.classList.add('sk');
-    box.querySelectorAll('.opt').forEach(b => {
-      const m = SUBKIND_META[b.dataset.v];
-      if (!m || b.querySelector('.sk-ico')) return;
-      const ico = document.createElement('span');
-      ico.className = 'sk-ico';
-      ico.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + m[0] + '</svg>';
-      const label = b.querySelector('.opt-label');
-      const txt = document.createElement('span');
-      txt.className = 'sk-txt';
-      const desc = document.createElement('span');
-      desc.className = 'sk-desc';
-      desc.textContent = m[1];
-      label.replaceWith(txt);
-      txt.append(label,desc);
-      b.insertBefore(ico,b.firstChild);
-    });
-  }
   // Ricostruisce i bottoni solo se cambiano le opzioni; altrimenti sposta la selezione
   // sugli elementi esistenti, così il passaggio radio→radio è animato.
   function renderOptions(id, options, value, onSelect) {
@@ -2167,26 +2118,9 @@
       buildFlow();
     });
     renderModuleButton();
-    $('subkindTitle').textContent = labelOf(TABS,tab);
-    renderOptions('subkindOpts',TAB_KINDS[tab] || [],kind,v => {
-      // Scelta del tipo: riparte da zero; si va avanti solo con il pulsante Avanti.
-      kind = v;
-      resetAllData();
-      if (kind === 'squad') prefetchSquadSite();
-      buildFlow();
-      flowIndex = 0;
-      renderFlow();
-    });
-    decorateSubkind();
     renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); autoCalendar(); });
     renderOptions('poseOpts',POSES,pose,v => pose = v);
     renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
-    renderOptions('phaseOpts',PHASES,phase,v => {
-      phase = v;
-      if (phase !== 'full') { pensOn = false; etOn = false; $('homePens').value = ''; $('awayPens').value = ''; }
-      buildFlow();
-      updatePhaseUI();
-    });
     updatePhaseUI();
 
     $('playerTitle').textContent = kind === 'saved' ? 'Scegli il portiere' : 'Scegli il giocatore';
@@ -2526,83 +2460,68 @@
     document.documentElement.classList.remove('is-busy');
   }
 
-  /* ---------- Kind menu ---------- */
-  function renderKindMenu() {
-    ['kindListSide','kindListMobile'].forEach(id => {
-      const box = $(id);
-      const mobile = id === 'kindListMobile';
-      if (!box.querySelector('.chip,.kind-item')) {
-        TABS.forEach(([value,label]) => {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = mobile ? 'chip' : 'kind-item';
-          b.dataset.v = value;
-          if (mobile) b.textContent = label;
-          else b.innerHTML = '<span class="dot"></span><span></span>', b.lastChild.textContent = label;
-          b.addEventListener('click',() => changeTab(value));
-          box.appendChild(b);
-        });
-      }
-      box.querySelectorAll('.chip,.kind-item').forEach(b => b.classList.toggle('selected',b.dataset.v === tab));
+  /* ---------- Home ---------- */
+  function renderHome() {
+    const box = $('homeList');
+    if (!box || box.dataset.ready) return;
+    box.dataset.ready = '1';
+    HOME_GROUPS.forEach(g => {
+      const sec = document.createElement('section');
+      sec.className = 'hm-group';
+      sec.setAttribute('aria-label',g.title);
+      sec.innerHTML = '<div class="hm-head"><span class="hm-emo" aria-hidden="true"></span><span class="hm-title"></span></div><div class="hm-list"></div>';
+      sec.querySelector('.hm-emo').textContent = g.emoji;
+      sec.querySelector('.hm-title').textContent = g.title;
+      const list = sec.querySelector('.hm-list');
+      g.ids.forEach(id => {
+        const r = REQUESTS.find(x => x.id === id);
+        if (!r) return;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'hm-item';
+        b.dataset.id = r.id;
+        b.innerHTML = '<span class="hm-ico" aria-hidden="true"></span><span class="hm-txt"><span class="hm-name"></span><span class="hm-desc"></span></span>' +
+          '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+        b.querySelector('.hm-ico').textContent = r.emoji;
+        b.querySelector('.hm-name').textContent = r.title;
+        b.querySelector('.hm-desc').textContent = r.desc;
+        b.addEventListener('click',() => openRequest(r));
+        list.appendChild(b);
+      });
+      box.appendChild(sec);
     });
-    placeIndicators();
   }
 
-  // Pillola che scivola sotto il tipo selezionato (orizzontale su mobile, verticale su desktop).
-  // Fluida anche su telefoni lenti: si anima solo transform (lo fa la GPU). La pillola prende
-  // subito misura e posto finali e parte "schiacciata" da dove si trovava (tecnica FLIP).
-  function placeIndicator(box, itemSel, cls, vertical) {
-    let ind = box.querySelector('.' + cls);
-    if (!ind) {
-      ind = document.createElement('span');
-      ind.className = cls;
-      ind.setAttribute('aria-hidden','true');
-      box.prepend(ind);
-    }
-    const sel = box.querySelector(itemSel + '.selected');
-    if (!sel || !sel.offsetWidth) return;
-    const pos = vertical ? sel.offsetTop : sel.offsetLeft;
-    const size = vertical ? sel.offsetHeight : sel.offsetWidth;
-    if (!vertical && (sel.offsetLeft < box.scrollLeft || sel.offsetLeft + sel.offsetWidth > box.scrollLeft + box.clientWidth)) {
-      box.scrollTo({left:Math.max(0,sel.offsetLeft - 16), behavior:motionOK() ? 'smooth' : 'auto'});
-    }
-    const last = ind._at;
-    if (last && last.pos === pos && last.size === size) return;
-    // Da dove parte: la posizione che si vede adesso (anche a metà di un'altra animazione).
-    let from = last;
-    if (ind._anim && ind._anim.playState === 'running') {
-      const r = ind.getBoundingClientRect(), b = box.getBoundingClientRect();
-      from = vertical ? {pos:r.top - b.top + box.scrollTop, size:r.height}
-                      : {pos:r.left - b.left + box.scrollLeft, size:r.width};
-      ind._anim.cancel();
-    }
-    const at = (p, k) => vertical ? `translate3d(0,${p}px,0) scaleY(${k})` : `translate3d(${p}px,0,0) scaleX(${k})`;
-    ind.style[vertical ? 'height' : 'width'] = size + 'px';
-    ind.style.transform = at(pos, 1);
-    ind._at = {pos, size};
-    if (from && motionOK() && ind.animate) {
-      ind._anim = ind.animate([{transform:at(from.pos, from.size / size)},{transform:at(pos, 1)}],
-        {duration:300, easing:'cubic-bezier(.2,.8,.2,1)'});
-    }
+  // Etichetta in alto di ogni pagina: emoji + nome della richiesta.
+  function applyEyebrows(screenName) {
+    if (LIVE || !screenName || screenName === 'home') return;
+    const screen = document.querySelector(`[data-screen="${screenName}"]`);
+    const eb = screen && screen.querySelector('.eyebrow');
+    const req = currentRequest();
+    if (!eb || !req) return;
+    eb.textContent = screenName === 'preview' ? `${req.emoji} ${req.title} · Anteprima` : `${req.emoji} ${req.title}`;
   }
-  function placeIndicators() {
-    placeIndicator($('kindListMobile'),'.chip','chip-ind',false);
-    placeIndicator($('kindListSide'),'.kind-item','kind-ind',true);
+
+  function openRequest(r) {
+    navDir = 1;
+    changeKind(r.kind,true,false,r.phase || '');
   }
-  window.addEventListener('resize',placeIndicators);
-  if (window.ResizeObserver) {
-    const ro = new ResizeObserver(placeIndicators);
-    ro.observe($('kindListMobile'));
-    const chips = $('kindListMobile');
-    const edgeFade = () => {
-      const max = chips.scrollWidth - chips.clientWidth;
-      chips.classList.toggle('more-l', chips.scrollLeft > 2);
-      chips.classList.toggle('more-r', chips.scrollLeft < max - 2);
-    };
-    chips.addEventListener('scroll', edgeFade, {passive:true});
-    window.addEventListener('resize', edgeFade);
-    requestAnimationFrame(edgeFade);
-    ro.observe($('kindListSide'));
+
+  function goHome() {
+    navDir = -1;
+    haptic('select');
+    changeKind('',true,true);
+  }
+
+  // Dalla Home laterale / dal titolo: se c'è lavoro in corso, prima si chiede conferma.
+  function askGoHome() {
+    if (LIVE || !kind) return;
+    if (flowIndex === 0 && !previewMode) { goHome(); return; }
+    const msg = 'Tornare alla Home? Quello che hai inserito in questa grafica andrà perso.';
+    if (tg && typeof tg.showConfirm === 'function') {
+      try { tg.showConfirm(msg,ok => { if (ok) goHome(); }); return; } catch (_) {}
+    }
+    if (window.confirm(msg)) goHome();
   }
 
   // Cambiando tipo di grafica si riparte da zero: nessun dato resta salvato.
@@ -2658,29 +2577,17 @@
     setPreviewError('');
   }
 
-  function changeTab(value) {
-    if (value === tab && !previewMode) return;
-    tab = value;
-    // Prima parte la pillola, poi (al fotogramma dopo) il cambio di schermata:
-    // così il lavoro della pagina nuova non la fa scattare.
-    renderKindMenu();
-    haptic('select');
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (tab === value) changeKind(TAB_KINDS[value] ? '' : value, true, true);
-    }));
-  }
-
-  function changeKind(value, force=false, quiet=false) {
+  function changeKind(value, force=false, quiet=false, ph='') {
     if (value === kind && !previewMode && !force) return;
     if (!quiet) haptic('select');
     previewMode = false;
     kind = value;
     resetAllData();
+    phase = ph;
     if (kind === 'squad') prefetchSquadSite();
     buildFlow();
     flowIndex = 0;
     refreshSearchSummaries();
-    renderKindMenu();
     pendingRefresh = true;
     renderFlow();
   }
@@ -2921,7 +2828,7 @@
   function validateCurrent() {
     const step = flow[flowIndex];
 
-    const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, subkind:kind, mdpick:mdPick, jrstyle:jrb.style};
+    const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, mdpick:mdPick, jrstyle:jrb.style};
     if (step in choice && !choice[step]) { showError('Seleziona un’opzione per continuare.'); return false; }
 
     if (step === 'opponent') return resolveTeam();
@@ -3066,7 +2973,7 @@
       return;
     }
 
-    if (flowIndex <= 0) return;
+    if (flowIndex <= 0) { if (!LIVE) goHome(); return; }
     flowIndex -= 1;
     renderFlow();
   }
@@ -3645,22 +3552,51 @@
     }
   }
 
-  // Giorno e ora dell'ultimo aggiornamento di ogni sito, sotto i pulsanti (se il sito lo dice).
-  let pxiUpdLoaded = false;
+  // Pulsanti dei siti: compaiono solo se il sito parla della partita scelta (stesso avversario).
+  // Qui anche giorno e ora dell'ultimo aggiornamento, sotto ogni pulsante.
+  let pxiInfoAt = 0, pxiInfoBusy = false;   // ultima lettura dei siti (si rilegge dopo 1 minuto)
+  let pxiInfo = null;       // {updated:{sito:'gg/mm hh:mm'}, opponents:{sito:'Genoa'}} dal servizio
+  function sameTeam(siteName, team) {
+    const a = stripNoise(norm(siteName));
+    if (!a || !team) return false;
+    // Nome italiano e alias; il nome originale solo se non ha traduzione (come nella ricerca:
+    // "FC Inter Milan" non deve combaciare con "Milan").
+    const shown = displayTeamName(team.name);
+    const names = [shown,...(team.aliases || [])];
+    if (norm(shown) === norm(team.name)) names.push(team.name);
+    const words = v => ` ${v} `;
+    return names.map(n => stripNoise(norm(n))).filter(Boolean).some(b =>
+      a === b || (Math.min(a.length,b.length) >= 4 && (words(b).includes(words(a)) || words(a).includes(words(b)))));
+  }
+  function updatePxiSources() {
+    const row = $('srcRow');
+    if (!row) return;
+    let shown = 0;
+    row.querySelectorAll('.btn').forEach(b => {
+      const src = b.dataset.src;
+      const ok = Boolean(pxiInfo && selectedTeam && sameTeam(pxiInfo.opponents && pxiInfo.opponents[src],selectedTeam));
+      b.hidden = !ok;
+      if (!ok) b.classList.remove('on');
+      if (ok) shown++;
+      const when = ok && pxiInfo.updated && pxiInfo.updated[src];
+      b.querySelector('.src-upd').textContent = when ? when.replace(' ', ' · ') : '';
+    });
+    row.hidden = !shown;
+  }
   async function loadPxiUpdates() {
-    if (pxiUpdLoaded || !directBase || !session) return;
-    pxiUpdLoaded = true;
+    updatePxiSources();
+    if (pxiInfoBusy || (pxiInfo && Date.now() - pxiInfoAt < 60000) || !directBase || !session) return;
+    pxiInfoBusy = true;
     try {
       const response = await netFetch(`${directBase}/probabili_info?session=${encodeURIComponent(session)}`,{}, 60000, 1);
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.ok) throw new Error();
-      document.querySelectorAll('.src-row .btn').forEach(b => {
-        const when = body.updated && body.updated[b.dataset.src];
-        b.querySelector('.src-upd').textContent = when ? when.replace(' ', ' · ') : '';
-      });
+      pxiInfo = {updated:body.updated || {}, opponents:body.opponents || {}};
+      pxiInfoAt = Date.now();
+      updatePxiSources();
     } catch (_) {
-      pxiUpdLoaded = false;          // si riprova alla prossima apertura della schermata
-    }
+      // si riprova alla prossima apertura della schermata
+    } finally { pxiInfoBusy = false; }
   }
 
   /* ---------- Scelta modulo: pannello dal basso (5 colonne), + per crearne, Elimina ---------- */
@@ -4121,7 +4057,6 @@
 
   function renderJrPicker() {
     const style = jrb.style;
-    $('jrPhotosEyebrow').textContent = `Post · ${labelOf(JR_STYLES,style) || ''}`;
     $('jrPhotosLead').textContent = style === 'collage'
       ? `Scegli da ${jrMin()} a ${jrLimit()} foto in una volta sola. Il layout lo scegli dopo.`
       : `Scegli da 1 a ${jrLimit()} foto in una volta sola.`;
@@ -5823,8 +5758,8 @@
     } finally {
       hideBusy();
       $('nextButton').disabled = sessionExpired();
-      $('backButton').disabled = !previewMode && flowIndex === 0;
-      $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? finalStepLabel() : 'Avanti ›');
+      $('backButton').disabled = backLocked();
+      $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? 'Anteprima ›' : 'Avanti ›');
     }
   }
 
@@ -6127,6 +6062,8 @@
   $('nextButton').addEventListener('click',() => { haptic('light'); nextField(true); });
   $('backButton').addEventListener('click',() => { haptic('light'); previousField(); });
   $('closeWorkflowButton').addEventListener('click',askCloseWorkflow);
+  $('homeSide').addEventListener('click',askGoHome);
+  $('homeTop').addEventListener('click',askGoHome);
 
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize',updateViewport);
@@ -6156,7 +6093,7 @@
 
   buildStatRows();
   buildFlow();
-  renderKindMenu();
+  renderHome();
   renderFlow();
   updateViewport();
 

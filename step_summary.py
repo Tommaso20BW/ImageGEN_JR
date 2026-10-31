@@ -66,7 +66,7 @@ def _text_of(body: dict) -> str:
 
 
 def record(method: str, body: dict | None, *, has_image: bool = False, ok: bool = True,
-           title: str = "ImageGEN JR", message_id=None) -> None:
+           title: str = "ImageGen", message_id=None) -> None:
     """Aggiunge una voce al riepilogo. ``body`` e' il payload/data della chiamata Telegram."""
     label = TRACKED.get(method)
     path = _target()

@@ -157,15 +157,33 @@ def fetch(source):
     return result
 
 
-def updates():
-    """{sito: 'gg/mm hh:mm' o ''} per tutti i siti, letti in parallelo."""
+def _opponent(match):
+    """\"Juventus - Genoa\" / \"Genoa - Juventus\" -> \"Genoa\" (vuoto se non si capisce)."""
+    teams = [t.strip() for t in re.split(r'\s+-\s+', str(match or ''))]
+    others = [t for t in teams if t and TEAM not in t.lower()]
+    return others[0] if len(teams) == 2 and len(others) == 1 else ''
+
+
+def info():
+    """Per ogni sito, letti in parallelo: ultimo aggiornamento e avversario della partita
+    che il sito sta trattando. La Mini App mostra il pulsante solo se è la partita scelta.
+
+    {'updated': {sito: 'gg/mm hh:mm' o ''}, 'opponents': {sito: 'Genoa' o ''}}
+    """
     def one(source):
         try:
-            return source, fetch(source).get('updated', '')
+            found = fetch(source)
+            return source, found.get('updated', ''), _opponent(found.get('match', ''))
         except LineupError:
-            return source, ''
+            return source, '', ''
     with ThreadPoolExecutor(max_workers=len(SOURCES)) as pool:
-        return dict(pool.map(one, SOURCES))
+        rows = list(pool.map(one, SOURCES))
+    return {'updated': {s: u for s, u, _ in rows}, 'opponents': {s: o for s, _, o in rows}}
+
+
+def updates():
+    """{sito: 'gg/mm hh:mm' o ''} per tutti i siti, letti in parallelo."""
+    return info()['updated']
 
 
 def _fetch(source):

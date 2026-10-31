@@ -205,7 +205,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
                 return
             import probabili_web
-            self._json(200, {'ok': True, 'updated': probabili_web.updates()})
+            self._json(200, {'ok': True, **probabili_web.info()})
             return
         if parts.path.rstrip('/') == '/probabili':
             # PROBABILE XI: formazione della Juventus da Gazzetta o Sky Sport.
