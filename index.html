@@ -2263,8 +2263,8 @@
   let timerHandle = null;
   let expiredShown = false;
 
-  /* Ultimo minuto: un tocco nella Mini App allunga la sessione di 5 minuti (servizio:
-     Service.extend, fino a 35 minuti in tutto per il limite del workflow GitHub). */
+  /* Ultimi 5 minuti: un tocco nella Mini App allunga la sessione di 5 minuti (servizio:
+     Service.extend, fino a 60 minuti in tutto per il limite del workflow GitHub). */
   let extending = false;
   let limitShown = false;
   function applySessionInfo(info) {
@@ -2276,7 +2276,7 @@
   async function maybeExtendSession() {
     if (!sessionExpiresAt || !directBase || !session || extending) return;
     const left = sessionExpiresAt - Date.now();
-    if (left <= 0 || left > 60000) return;
+    if (left <= 0 || left > 300000) return;
     extending = true;
     try {
       const response = await netFetch(`${directBase}/extend`,{
@@ -2289,14 +2289,14 @@
       if (body.extended) haptic('success');
       else if (!limitShown && body.max && body.expires >= body.max - 1000) {
         limitShown = true;
-        showError('Limite di 35 minuti raggiunto: dopo la scadenza riavvia ImageGen dal workflow.');
+        showError('Limite di 60 minuti raggiunto: dopo la scadenza riavvia ImageGen dal workflow.');
       }
     } catch (_) {
     } finally {
       extending = false;
     }
   }
-  // Qualsiasi tocco o tasto nell'ultimo minuto conta.
+  // Qualsiasi tocco o tasto negli ultimi 5 minuti conta.
   document.addEventListener('pointerdown',() => { maybeExtendSession(); },{capture:true, passive:true});
   document.addEventListener('keydown',() => { maybeExtendSession(); },{capture:true});
 

@@ -25,12 +25,12 @@ from graphics.starting_xi import MAX_PHOTO_BYTES, check_photo
 
 
 SESSION_DURATION_SECONDS = 30 * 60
-# Ultimo minuto: un tocco nella Mini App allunga la sessione di 5 minuti, ogni volta.
-EXTEND_WHEN_LEFT_SECONDS = 60
+# Ultimi 5 minuti: un tocco nella Mini App allunga la sessione di 5 minuti, ogni volta.
+EXTEND_WHEN_LEFT_SECONDS = 300
 EXTEND_BY_SECONDS = 300
-# Il job GitHub si ferma a 40 minuti (timeout-minutes in imagegen.yml): margine per
-# avvio e pulizia, la sessione non va oltre 35 minuti in tutto.
-SESSION_MAX_SECONDS = 35 * 60
+# Il job GitHub si ferma a 65 minuti (timeout-minutes in imagegen.yml): margine per
+# avvio e pulizia, la sessione non va oltre 60 minuti in tutto.
+SESSION_MAX_SECONDS = 60 * 60
 MAX_PHOTOS = 24               # il collage ne usa fino a 9, più quelle dell'altra grafica
 # Campi che spostano o cambiano solo le foto: non cambiano la sagoma dell'editor.
 PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame')
@@ -393,7 +393,7 @@ class Service:
                 'max': int((time.time() + (self.started_at + SESSION_MAX_SECONDS - time.monotonic())) * 1000)}
 
     def extend(self):
-        """Ultimo minuto + tocco nella Mini App: +5 minuti (fino a 35 minuti in tutto)."""
+        """Ultimi 5 minuti + tocco nella Mini App: +5 minuti (fino a 60 minuti in tutto)."""
         with self.deadline_lock:
             now = time.monotonic()
             left = self.deadline - now
