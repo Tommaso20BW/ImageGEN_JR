@@ -1032,6 +1032,14 @@
     .nav-done{border:0;background:none;color:var(--text);font:inherit;font-weight:800;font-size:16px;padding:8px 6px;cursor:pointer;white-space:nowrap}
     .nav-done:disabled{color:#c3c1bb;cursor:default}
     .nav-done[hidden]{display:none}
+    body.last-step:not(.preview-mode) .bar{display:block}
+    body.last-step #backButton{display:none}
+    body.last-step .bar-inner{grid-template-columns:minmax(0,1fr)}
+    /* lati larghi quanto serve (icone + Fine): il titolo si accorcia, non si sovrappone */
+    .top{grid-template-columns:minmax(max-content,1fr) minmax(0,auto) minmax(max-content,1fr)!important}
+    .top-left,.top-right{min-width:64px}
+    .ios-in::-webkit-date-and-time-value{text-align:right}
+    .ios-in[type=date],.ios-in[type=time]{-webkit-appearance:none;appearance:none;display:block;text-align:right}
     body:not(.home-mode) .top .timer:not(.warn):not(.over){display:none}
     body:not(.home-mode) .top .timer{height:24px;font-size:11.5px;padding:0 7px;margin-left:4px}
     body:not(.preview-mode) .bar{display:none}
@@ -1175,6 +1183,79 @@
       .top-title{display:block!important}
       .top-right{order:0!important;justify-content:flex-end}
     }
+
+    /* ===== Schermate in stile Apple: contatori, statistiche, formazione, colore ===== */
+    /* risultato: righe "squadra .... 2  [ − | + ]" in un unico riquadro */
+    .pair{display:block!important;background:var(--surface);border-radius:14px;overflow:hidden}
+    .num-card{display:flex!important;flex-direction:row!important;align-items:center;gap:10px;min-height:58px;padding:0 12px 0 16px!important;
+      background:none!important;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;box-shadow:none!important}
+    .num-card:last-child{border-bottom:0!important}
+    .num-card:focus-within{box-shadow:none!important}
+    .num-name{flex:1;min-width:0;margin:0!important;text-align:left!important;font-size:16px!important;font-weight:600!important;letter-spacing:0!important;
+      text-transform:none!important;color:var(--text)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .num-row{display:flex!important;align-items:center;width:auto!important;gap:0!important}
+    .num-row .num-input{order:-1;width:44px!important;height:auto!important;font-size:22px!important;font-weight:800!important;text-align:center;margin-right:8px;background:none!important;border:0!important;padding:0!important}
+    .step-btn{width:46px!important;height:34px!important;min-height:0!important;border-radius:0!important;background:var(--surface2)!important;font-size:20px!important;font-weight:600!important;box-shadow:none!important;transform:none!important}
+    .num-row .step-btn:first-of-type{border-radius:9px 0 0 9px!important;border-right:1px solid var(--line)!important}
+    .num-row .step-btn:last-of-type{border-radius:0 9px 9px 0!important}
+    .step-btn:active{background:var(--line)!important}
+    /* scorciatoie del minuto: controllo segmentato */
+    .quick{gap:0!important;margin-top:10px!important;padding:3px;border-radius:10px;background:var(--surface2)}
+    .quick button{min-height:32px!important;height:32px;border:0!important;border-radius:8px!important;background:none!important;box-shadow:none!important;font-size:14px!important;font-weight:700!important;color:var(--text)!important}
+    .quick button:active{background:var(--surface)!important;transform:none!important}
+    /* statistiche: un unico elenco, valori ai lati senza bolle */
+    .stat-head{background:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;position:static!important;padding:6px 16px 6px!important}
+    .stat-head span{font-size:12.5px!important;font-weight:700!important;letter-spacing:.04em!important;color:var(--muted)!important}
+    .stat-head span:first-child{text-align:left}.stat-head span:last-child{text-align:right}
+    .stat-rows{gap:0!important;background:var(--surface);border-radius:14px;overflow:hidden}
+    .stat-row{min-height:50px;padding:0 16px!important;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:none!important;box-shadow:none!important}
+    .stat-row:last-child{border-bottom:0!important}
+    .stat-row.bad{background:color-mix(in srgb,var(--danger) 8%,transparent)!important}
+    .stat-row label{font-size:15px!important;font-weight:600!important;color:var(--text)!important}
+    .stat-row input{height:44px!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;padding:0!important;font-size:17px!important;font-weight:700!important;color:var(--text)}
+    .stat-row input:first-child{text-align:left}.stat-row input:last-child{text-align:right}
+    .stat-row input:focus{box-shadow:none!important;background:none!important}
+    .stat-row input::placeholder{color:#c3c1bb!important;opacity:1!important;font-weight:500!important}
+    .stat-tools{padding:10px 16px 0}
+    /* formazione: siti come righe con la spunta, modulo come riga */
+    .src-row{display:block!important;background:var(--surface);border-radius:14px;overflow:hidden;margin-bottom:12px!important}
+    .src-row[hidden]{display:none!important}
+    .src-row .btn{width:100%;display:flex!important;flex-direction:row!important;justify-content:flex-start!important;gap:10px!important;min-height:50px!important;padding:0 16px!important;
+      border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:none!important;box-shadow:none!important;font-size:16px!important;font-weight:600!important}
+    .src-row .btn:last-child{border-bottom:0!important}
+    .src-row .src-upd{margin-left:auto;font-size:14px!important;font-weight:500!important}
+    .src-row .src-name{display:inline-flex;align-items:center;gap:8px}
+    .src-row .btn.on .src-name::after{content:"✓";color:var(--text);font-weight:800}
+    .src-row .btn.on{box-shadow:none!important}
+    #pxiSummary,#lineupSummary{padding:8px 16px 0}
+    .mod-btn{gap:12px!important;margin-top:12px!important;min-height:54px;padding:6px 16px 6px 10px!important;border:0!important;background:var(--surface)!important}
+    .mod-btn svg{width:40px!important}
+    .mod-btn b{font-size:16px!important;font-weight:600!important}
+    .mod-btn em{margin-left:auto;font-style:normal;color:var(--muted);font-size:16px;font-weight:500}
+    .mod-btn i{margin-left:6px!important;font-size:20px;color:#c3c1bb!important}
+    /* colore del JR: segmentato, griglia di pallini, riga Personalizza */
+    .jrc-bgs{display:grid!important;grid-template-columns:repeat(3,1fr);gap:0!important;margin:12px 0 0!important;padding:3px;border-radius:10px;background:var(--surface2)}
+    .jrc-bgs button{height:30px!important;border-radius:8px!important;background:none!important;color:var(--text)!important;font-size:13.5px!important;font-weight:700!important}
+    .jrc-bgs button.on{background:var(--surface)!important;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+    .jrc-name{text-transform:none;letter-spacing:0;color:var(--text)}
+    .jrc-car{display:grid!important;grid-template-columns:repeat(7,1fr);gap:10px 0!important;overflow:visible!important;padding:14px 8px!important;margin:0!important;
+      background:var(--surface);border-radius:14px;scroll-snap-type:none!important}
+    .jrc-sw{justify-self:center}
+    .jrc-sw i{width:34px!important;height:34px!important;margin:4px!important;transform:none!important;opacity:1!important}
+    .jrc-sw.on i{transform:none!important;box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--text)!important}
+    .jrc-cu-list{margin-top:12px}
+    .jrc-cu{width:100%;margin:0!important;height:auto!important;padding:0 16px 0 12px!important;border:0!important;border-radius:0!important;background:none!important;
+      font-size:16px!important;font-weight:600!important;color:var(--text);cursor:pointer;text-align:left}
+    .jrc-cu i{width:28px!important;height:28px!important}
+    .ios-chev{margin-left:auto;color:#c3c1bb;font-size:20px}
+    /* Supplementari / Rigori: un riquadro con due righe */
+    #pensToggleWrap .reveal-in{padding-top:12px!important}
+    #pensToggleWrap .opt{margin:0!important;min-height:50px;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--surface)!important;font-weight:600}
+    #pensToggleWrap .opt:first-child{border-radius:14px 14px 0 0!important;border-bottom:1px solid var(--line)!important}
+    #pensToggleWrap .opt:last-child{border-radius:0 0 14px 14px!important}
+    /* valori a destra tutti sullo stesso bordo: niente icone calendario/orologio */
+    .ios-in::-webkit-calendar-picker-indicator{display:none!important}
+    .ios-in::-webkit-inner-spin-button,.ios-in::-webkit-clear-button{display:none}
 </style>
 </head>
 
@@ -1298,8 +1379,8 @@
               </div>
             </div>
             <div class="field-label gap">Minuto</div>
-            <div class="inline-field">
-              <input id="minute" class="field-input" inputmode="numeric" enterkeyhint="done" placeholder="67 o 90+4" autocomplete="off">
+            <div class="ios-list">
+              <label class="ios-row"><span>Minuto</span><input id="minute" class="ios-in" inputmode="numeric" enterkeyhint="done" placeholder="67 o 90+4" autocomplete="off"></label>
             </div>
             <div class="quick" id="minuteQuick">
               <button type="button" data-v="45+">45+</button>
@@ -1522,10 +1603,11 @@
             <h1>Colore del JR</h1>
             <div id="jrcPrev" class="jrc-pv" aria-hidden="true"><div class="jrc-tile jrc-bg-photo"></div></div>
             <div id="jrcBgs" class="jrc-bgs"><button type="button" data-bg="photo" class="on">Foto</button><button type="button" data-bg="dark">Scuro</button><button type="button" data-bg="light">Chiaro</button></div>
+            <div class="field-label">Colore <span id="jrcName" class="jrc-name"></span></div>
             <div id="jrcCar" class="jrc-car" role="radiogroup" aria-label="Colore del JR"></div>
-            <p id="jrcName" class="jrc-big"></p>
-            <p class="jrc-sub">Scorri per scegliere</p>
-            <button id="jrcCu" class="jrc-cu" type="button"><i></i><span id="jrcCuT">Personalizza</span></button>
+            <div class="ios-list jrc-cu-list">
+              <button id="jrcCu" class="ios-row jrc-cu" type="button"><i></i><span id="jrcCuT">Personalizza</span><span class="ios-chev">›</span></button>
+            </div>
           </section>
 
           <section class="screen" data-screen="photo">
@@ -2387,7 +2469,7 @@
     $('backButton').textContent = (!previewMode && flowIndex === 0 && !LIVE) ? '‹ Home' : '‹ Indietro';
     // Calendario compilato da solo: "Modifica" in alto apre l'elenco partite.
     $('previewEdit').hidden = !(previewMode && (kind === 'cal' || kind === 'pxi'));
-    $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? 'Anteprima ›' : 'Avanti ›');
+    $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? 'Anteprima' : 'Avanti ›');
 
     clearError();
     updateScreenValues();
@@ -3623,6 +3705,8 @@
     buildFlow();
     renderSteps();
     renderFlow();
+    // Convocati dal sito: la partita è l'unico passaggio, il tocco porta all'anteprima.
+    if (flow[flowIndex] === 'mdpick') nextField(true);
   }
 
   // Un tocco: competizione, campo, avversario, stadio, data e ora.
@@ -3714,11 +3798,17 @@
     const busyLabel = /…/.test(next.textContent) ? next.textContent.replace(/[›✓]/g, '').trim() : '';
     $('navDone').hidden = home || !!previewMode || NAV_AUTO.has(screenName);
     $('navDone').disabled = next.disabled;
-    $('navDone').textContent = busyLabel || (isLastStep() ? 'Anteprima' : 'Fine');
+    // Ultimo passaggio: niente "Fine" in alto, tasto giallo "Anteprima" in basso (come "Invia").
+    const lastStep = !home && !previewMode && isLastStep() && !NAV_AUTO.has(screenName);
+    document.body.classList.toggle('last-step', lastStep);
+    if (lastStep) $('navDone').hidden = true;
+    $('navDone').textContent = busyLabel || 'Fine';
     document.querySelectorAll('#navTools .nav-tools-g').forEach(g => g.classList.toggle('on', g.dataset.for === screenName && !home));
   }
 
   function initNav() {
+    document.querySelectorAll('.ios-in[type=date], .ios-in[type=time]').forEach(el =>
+      el.addEventListener('click', () => { try { el.showPicker(); } catch (_) {} }));
     // Icone e tasti in alto delle schermate (A mano, Scegli foto, Modifica, Svuota…) vanno nella barra.
     document.querySelectorAll('[data-screen] .photo-head, [data-screen] .cal-head').forEach(head => {
       const group = document.createElement('span');
@@ -4684,7 +4774,7 @@
   function renderModuleButton() {
     const box = $('moduleOpts');
     if (!box) return;
-    box.innerHTML = `<button type="button" class="mod-btn">${pxiModule ? modPitch(pxiModule) : ''}<span><b>${pxiModule || 'Scegli il modulo'}</b><small>tocca per cambiare</small></span><i>▾</i></button>`;
+    box.innerHTML = `<button type="button" class="mod-btn">${pxiModule ? modPitch(pxiModule) : ''}<span><b>${pxiModule ? 'Modulo' : 'Scegli il modulo'}</b></span><em>${pxiModule || ''}</em><i>›</i></button>`;
     box.firstChild.addEventListener('click',openModSheet);
   }
 
@@ -5499,7 +5589,7 @@
         car.appendChild(b);
       });
     }
-    $('jrcName').textContent = custom ? 'Personalizzato' : cur ? (JRC_PRESETS.find(p => p.id === cur) || {label:''}).label : 'Scegli un colore';
+    $('jrcName').textContent = custom ? '· Personalizzato' : cur ? '· ' + (JRC_PRESETS.find(p => p.id === cur) || {label:''}).label : '';
     $('jrcCuT').textContent = custom ? 'Modifica personalizzato' : 'Personalizza';
     [...car.children].forEach(b => {
       const on = b.dataset.id === cur;
@@ -6815,7 +6905,7 @@
       hideBusy();
       $('nextButton').disabled = sessionExpired();
       $('backButton').disabled = backLocked();
-      $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? 'Anteprima ›' : 'Avanti ›');
+      $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? 'Anteprima' : 'Avanti ›');
     }
   }
 
