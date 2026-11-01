@@ -29,9 +29,9 @@ def _h2h_stats(name, team_id=''):
         if normalize(row.get('name') or '') == normalize(name) or (team_id and str(row.get('espn_id') or '') == str(team_id)):
             names += [row.get('name'), *(row.get('aliases') or [])]
     try:
-        stats = h2h_data.fetch(names)
-    except LookupError as exc:
-        raise ValueError(str(exc)) from None
+        stats = h2h_data.fetch(names, team_id)
+    except LookupError:
+        raise ValueError('Precedenti non disponibili per questa squadra.') from None
     except OSError:
         raise ValueError('Transfermarkt non risponde: riprova tra poco.') from None
     _H2H_CACHE[name] = (time.time(), stats)
