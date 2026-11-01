@@ -1275,6 +1275,26 @@
     .hm-item[data-id="jr"] .hm-ico{background:#FF2D55}
     .hm-item[data-id="igbn"] .hm-ico{background:#AF52DE}
     .hm-item[data-id="cal"] .hm-ico{background:#FF9500}
+
+    /* azioni (testo colorato come su iPhone) */
+    :root{--tint:#007AFF}
+    html[data-theme="dark"]{--tint:#0A84FF}
+    .ios-act,.sp-act{width:100%;border:0;background:none;font:inherit;font-size:16px!important;font-weight:500!important;color:var(--tint)!important;text-align:left;cursor:pointer}
+    .ios-act.danger{color:#FF3B30!important}
+    .ios-act[hidden]{display:none}
+    /* campi di testo lunghi: riquadro bianco come le righe, testo normale */
+    textarea.field-input{display:block;width:100%;min-height:132px;border:0!important;border-radius:14px!important;background:var(--surface)!important;box-shadow:none!important;
+      padding:13px 16px!important;font-size:16px!important;font-weight:500!important;line-height:1.4;color:var(--text);resize:none}
+    textarea.field-input::placeholder{color:var(--chev);font-weight:500;opacity:1}
+    textarea.field-input:focus{box-shadow:none!important;outline:0}
+    /* note sotto i riquadri: allineate al testo delle righe */
+    #pxiSummary,#lineupSummary,#squadSummary,.ig-count{margin:0!important;padding:7px 16px 0!important;font-size:13px!important;color:var(--muted)}
+    .ig-list{display:block}
+    .ig-list .ig-thumb{width:100%;height:180px;border-radius:0;background-size:cover;border-bottom:1px solid var(--line)}
+    .ig-list .ig-thumb[hidden]{display:none}
+    /* data e ora su iPhone: valore al centro della riga, a destra */
+    .ios-in[type=date],.ios-in[type=time]{display:flex!important;align-items:center;justify-content:flex-end;line-height:48px;min-height:48px}
+    .ios-in::-webkit-date-and-time-value{text-align:right;margin:0;padding:0;line-height:48px}
 </style>
 </head>
 
@@ -1519,10 +1539,11 @@
             <textarea id="igText" class="field-input" maxlength="500" style="min-height:170px" spellcheck="true"
               placeholder="Testo (facoltativo se scegli una foto)"></textarea>
             <div class="hint ig-count"><span id="igHint"></span><span id="igCount">0 / 500</span></div>
-            <div class="ig-photo">
+            <div class="field-label gap">Foto</div>
+            <div class="ios-list ig-list">
               <div id="igThumb" class="ig-thumb" hidden></div>
-              <button id="igPick" class="btn ghost" type="button">Scegli foto</button>
-              <button id="igClear" class="btn ghost" type="button" hidden>Rimuovi</button>
+              <button id="igPick" class="ios-row ios-act" type="button">Scegli foto</button>
+              <button id="igClear" class="ios-row ios-act danger" type="button" hidden>Rimuovi foto</button>
             </div>
             <input id="igFile" type="file" accept="image/*" hidden>
           </section>
@@ -4181,7 +4202,7 @@
         <div class="sp-lbl">Nome mostrato</div>
         <div class="sp-list"><input id="spName" class="sp-field" type="text" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false" value="${setEsc(D.name)}" placeholder="${setEsc(orig)}"></div>
         ${T.isNew ? '' : `<p class="sp-note">Originale: <b>${setEsc(orig)}</b></p>
-        <div class="sp-list"><button type="button" class="sp-item" data-sp="name-orig">${spIco('undo', 20)}<span>Ripristina originale</span></button></div>`}
+        <div class="sp-list"><button type="button" class="sp-item sp-act" data-sp="name-orig">Ripristina originale</button></div>`}
         <p class="sp-note sp-bottom">Vale per la mini app, le grafiche e LiveScore.</p>
         <div id="setErr" class="sp-err"></div></div>`;
     } else if (page === 'espn') {
@@ -4191,7 +4212,7 @@
         <div class="sp-list">${D.aliases.map((a, i) => `<div class="sp-item"><span>${setEsc(a)}</span><button type="button" class="sp-rm" data-sp="rm" data-i="${i}" aria-label="Togli ${setEsc(a)}">−</button></div>`).join('')}
           ${D.adding ? `<div class="sp-item"><input id="spAlias" class="sp-field sp-inline" type="text" maxlength="40" placeholder="Nome come lo scrive ESPN" autocomplete="off" spellcheck="false" list="spAliasList"><button type="button" class="sp-add-ok" data-sp="add-ok">Aggiungi</button></div>
             <datalist id="spAliasList">${unmatchedEspn().map(x => `<option value="${setEsc(x.name)}">`).join('')}</datalist>`
-            : `<button type="button" class="sp-item sp-add" data-sp="add">${spIco('plus', 20)}<span>Aggiungi nome</span></button>`}</div>
+            : `<button type="button" class="sp-item sp-act" data-sp="add">Aggiungi nome</button>`}</div>
         <p class="sp-note">Se ESPN scrive la squadra con uno di questi nomi, si usano questo logo e questo nome.</p>
         <div id="setErr" class="sp-err"></div></div>`;
     } else if (page === 'fix') {
@@ -4895,7 +4916,7 @@
       row.children[2].textContent = r.player ? '' : 'non in rosa';
       box.appendChild(row);
     });
-    $('pxiSummary').textContent = `Modulo: ${pxiModule || 'scegli qui sotto'} · ${pxiRead.length} / 11 giocatori`;
+    $('pxiSummary').textContent = `${pxiRead.length} / 11 giocatori`;
     renderSteps();
   }
 

@@ -68,7 +68,10 @@ def _get(url):
         response.raise_for_status()
     except requests.RequestException as exc:
         raise ConvocatiError(f'juventus.com non raggiungibile ({type(exc).__name__}).') from exc
-    response.encoding = response.encoding or 'utf-8'
+    # Senza charset nell'intestazione requests usa latin-1: lo spazio speciale tra numero e nome
+    # ("3 Bremer") e gli accenti si rovinano. Il sito è in UTF-8.
+    if 'charset' not in response.headers.get('Content-Type', '').lower():
+        response.encoding = 'utf-8'
     return response.text
 
 
@@ -99,15 +102,21 @@ def _competition(candidates):
     return '', ''
 
 
+JUVE = r'(?:juventus|juve)'
+
+
 def _teams(headline):
-    """\"Serie A | Genoa-Juventus | I convocati\" o \"I convocati per Juventus-Lecce\" -> (casa, trasferta)."""
-    for part in re.split(r'\s*\|\s*', headline):
+    """Casa e trasferta dal titolo. Formati visti sul sito:
+    "Serie A | Genoa-Juventus | I convocati", "I convocati per Juventus-Lecce",
+    "Genoa-Juve, i convocati", "Atalanta-Juventus, i convocati per la finale di Coppa Italia"."""
+    headline = ' '.join(html.unescape(headline).replace('\u00a0', ' ').split())
+    for part in re.split(r'\s*[|,:]\s*', headline):
         text = re.sub(r'(?i)\bi\s+convocati\b(\s+(?:per|di|della|del|contro))?', ' ', part)
-        text = ' '.join(text.replace(',', ' ').split()).strip(' -–—')
-        match = re.match(r'(?i)^juventus\s*[-–—]\s*(.+)$', text)
-        if match:
+        text = ' '.join(text.split()).strip(' -–—')
+        match = re.match(rf'(?i)^{JUVE}\s*[-–—]\s*(.+)$', text)
+        if match and not re.match(rf'(?i)^{JUVE}\b', match.group(1)):
             return 'Juventus', match.group(1).strip()
-        match = re.match(r'(?i)^(.+?)\s*[-–—]\s*juventus$', text)
+        match = re.match(rf'(?i)^(.+?)\s*[-–—]\s*{JUVE}$', text)
         if match:
             return match.group(1).strip(), 'Juventus'
     return None
@@ -116,6 +125,7 @@ def _teams(headline):
 MONTHS = ('gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto',
           'settembre', 'ottobre', 'novembre', 'dicembre', 'january', 'february', 'march', 'april',
           'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december')
+MONTH_ABBR = {m[:3] for m in MONTHS} | {'sett', 'sept'}
 ROW = re.compile(r'(\d{1,2})\s+([^\W\d_][^\n]{0,40})')
 
 
@@ -125,10 +135,19 @@ def _row(text):
     match = ROW.fullmatch(text)
     if not match or int(match.group(1)) == 0:
         return None
-    name = match.group(2)
-    if name.lower().split()[0] in MONTHS or ':' in name or '|' in name:
+    # note tra parentesi: "50 Rizzo (inserito in Lista B UEFA)" -> "Rizzo"
+    name = ' '.join(re.sub(r'\s*[(\[].*$', '', match.group(2)).split())
+    if not name:
         return None
-    return int(match.group(1)), text
+    token = name.lower().split()[0]
+    # date ("28 ottobre", "28 ott."), orari e righe con altre cifre ("28 ott 2026") non sono giocatori;
+    # il mese abbreviato conta solo col punto, così cognomi come "Mar" restano
+    if token in MONTHS or (token.endswith('.') and token[:-1] in MONTH_ABBR) or re.search(r'[\d:|!?]', name):
+        return None
+    # testo attaccato al nome ("BarrenecheaULTIMI BIGLIETTI"): minuscola seguita da più maiuscole
+    if re.search(r'[a-zà-ÿ][A-ZÀ-Þ]{2,}', name):
+        return None
+    return int(match.group(1)), f'{int(match.group(1))} {name}'
 
 
 def _players(page, article):
@@ -139,16 +158,21 @@ def _players(page, article):
     body = re.search(r'<article.*?</article>', page, re.S | re.I)
     flat = re.sub(r'<(?:br|/p|/li|/div|/h\d)[^>]*>', '\n', body.group(0) if body else page, flags=re.I)
     sources.append([_clean(line) for line in flat.split('\n')])
-    found = {}
+    votes = {}          # numero -> {riga: in quanti metodi compare}
+    order = {}          # prima volta che si vede una riga (a parità vince la prima)
     counts = []
     for lines in sources:
-        n = 0
+        rows = {}
         for line in lines:
             parsed = _row(line)
             if parsed:
-                n += 1
-                found.setdefault(parsed[0], parsed[1])
-        counts.append(n)
+                rows.setdefault(parsed, True)
+        counts.append(len(rows))
+        for num, text in rows:
+            votes.setdefault(num, {})
+            votes[num][text] = votes[num].get(text, 0) + 1
+            order.setdefault(text, len(order))
+    found = {num: max(cands, key=lambda text: (cands[text], -order[text])) for num, cands in votes.items()}
     print(f'INFO IMAGEGEN: convocati letti per metodo {counts} -> {len(found)}', flush=True)
     return [found[k] for k in sorted(found)]
 
