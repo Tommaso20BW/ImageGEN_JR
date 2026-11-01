@@ -1010,7 +1010,9 @@
     /* ================= Stile Impostazioni Apple =================
        Barra in alto: ‹ a sinistra, titolo del passaggio al centro, "Fine" (o icone) a destra.
        Niente barra in basso (solo "Invia" nell'anteprima). Elenchi bianchi raggruppati con la spunta. */
-    :root{--bg:#F2F1EE;--bg-grad-a:#F2F1EE;--bg-grad-b:#F2F1EE;--line:#E7E5E0}
+    :root{--bg:#F2F1EE;--bg-grad-a:#F2F1EE;--bg-grad-b:#F2F1EE;--line:#E7E5E0;--chev:#c3c1bb}
+    /* scuro come iPhone: fondo nero, riquadri grigio scuro */
+    html[data-theme="dark"]{--bg:#000000;--bg-grad-a:#000000;--bg-grad-b:#000000;--surface:#1C1C1E;--surface2:#2C2C2E;--line:#38383A;--muted:#8E8E93;--chev:#5A5A5F}
     .progress{display:none}
     .top{grid-template-columns:104px minmax(0,1fr) 104px;padding:6px 8px 2px;min-height:52px}
     .top-left{display:flex;align-items:center;gap:2px;min-width:0}
@@ -1030,7 +1032,7 @@
     .nav-tools-g .head-icos{margin-right:0}
     .nav-tools-g .cal-clear{font-weight:700;font-size:15px;color:var(--text);padding:8px 6px}
     .nav-done{border:0;background:none;color:var(--text);font:inherit;font-weight:800;font-size:16px;padding:8px 6px;cursor:pointer;white-space:nowrap}
-    .nav-done:disabled{color:#c3c1bb;cursor:default}
+    .nav-done:disabled{color:var(--chev);cursor:default}
     .nav-done[hidden]{display:none}
     body.last-step:not(.preview-mode) .bar{display:block}
     body.last-step #backButton{display:none}
@@ -1069,7 +1071,7 @@
     .hm-ico{width:30px;height:30px;padding:6px;border-radius:8px;background:#111;color:#fff;stroke-width:2}
     .hm-desc{display:none}
     .hm-name{font-size:16px;font-weight:600;letter-spacing:0}
-    .hm-go{color:#c3c1bb;width:16px;height:16px}
+    .hm-go{color:var(--chev);width:16px;height:16px}
     /* opzioni: righe con la spunta (un tocco = avanti) */
     .opts,.opts.grid{display:block!important;background:var(--surface);border-radius:14px;overflow:hidden}
     .opts .opt{width:100%;border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;min-height:50px;padding:0 16px!important;
@@ -1093,7 +1095,7 @@
     .fx-team{font-size:16px;font-weight:700}
     .fx-when{font-size:13px;font-weight:600;color:var(--muted)}
     .fx-info{font-size:12.5px}
-    .fx-card::after{content:"›";margin-left:auto;padding-left:6px;color:#c3c1bb;font-size:22px;line-height:1}
+    .fx-card::after{content:"›";margin-left:auto;padding-left:6px;color:var(--chev);font-size:22px;line-height:1}
     /* risultati di ricerca e campi */
     .results{gap:0!important;background:var(--surface);border-radius:14px;overflow:hidden}
     .results:empty{display:none}
@@ -1125,15 +1127,15 @@
     .sp-l{justify-self:start;font-weight:700;color:var(--muted)}
     .sp-back{display:inline-flex;align-items:center;gap:1px;color:var(--text)}
     .sp-r{justify-self:end;font-weight:800}
-    .sp-r:disabled{color:#c3c1bb;cursor:default}
+    .sp-r:disabled{color:var(--chev);cursor:default}
     .sp-body{flex:1;overflow:auto;padding:4px 16px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;max-width:640px;width:100%;margin:0 auto}
     .sp-hero{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0 22px}
     .sp-hero h2{font-size:24px;font-weight:900;letter-spacing:-.02em;text-align:center}
     .sp-hero p{color:var(--muted);font-size:14px;font-weight:600}
-    .sp-logo{display:inline-block;flex:none;background:#111;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
-    .sp-ph{display:inline-block;flex:none;border:2px dashed #cfccc4;border-radius:50%}
+    .sp-logo{display:inline-block;flex:none;background:var(--text);-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+    .sp-ph{display:inline-block;flex:none;border:2px dashed var(--line);border-radius:50%}
     .sp-sq{position:relative;display:block;width:92px;height:92px}
-    .sp-sq i{position:absolute;background:#111;-webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}
+    .sp-sq i{position:absolute;background:var(--text);-webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}
     .sp-list{background:var(--surface);border-radius:14px;overflow:hidden}
     .sp-item{display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:0 16px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--text);
       font:inherit;font-size:16px;font-weight:600;text-align:left;cursor:pointer}
@@ -1142,7 +1144,7 @@
     .sp-item .logo,.sp-item .logo img,.sp-item .logo.fallback{width:30px;height:30px}
     .sp-v{margin-left:auto;color:var(--muted);font-weight:500;font-size:15px;display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .sp-v.warn{color:var(--danger)}
-    .sp-chev{margin-left:auto;color:#c3c1bb;font-size:20px;padding-left:4px}
+    .sp-chev{margin-left:auto;color:var(--chev);font-size:20px;padding-left:4px}
     .sp-v + .sp-chev{margin-left:4px}
     .sp-big{min-height:64px}
     .sp-ic{width:36px;height:36px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex:none}
@@ -1215,7 +1217,7 @@
     .stat-row input{height:44px!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;padding:0!important;font-size:17px!important;font-weight:700!important;color:var(--text)}
     .stat-row input:first-child{text-align:left}.stat-row input:last-child{text-align:right}
     .stat-row input:focus{box-shadow:none!important;background:none!important}
-    .stat-row input::placeholder{color:#c3c1bb!important;opacity:1!important;font-weight:500!important}
+    .stat-row input::placeholder{color:var(--chev)!important;opacity:1!important;font-weight:500!important}
     .stat-tools{padding:10px 16px 0}
     /* formazione: siti come righe con la spunta, modulo come riga */
     .src-row{display:block!important;background:var(--surface);border-radius:14px;overflow:hidden;margin-bottom:12px!important}
@@ -1232,7 +1234,7 @@
     .mod-btn svg{width:40px!important}
     .mod-btn b{font-size:16px!important;font-weight:600!important}
     .mod-btn em{margin-left:auto;font-style:normal;color:var(--muted);font-size:16px;font-weight:500}
-    .mod-btn i{margin-left:6px!important;font-size:20px;color:#c3c1bb!important}
+    .mod-btn i{margin-left:6px!important;font-size:20px;color:var(--chev)!important}
     /* colore del JR: segmentato, griglia di pallini, riga Personalizza */
     .jrc-bgs{display:grid!important;grid-template-columns:repeat(3,1fr);gap:0!important;margin:12px 0 0!important;padding:3px;border-radius:10px;background:var(--surface2)}
     .jrc-bgs button{height:30px!important;border-radius:8px!important;background:none!important;color:var(--text)!important;font-size:13.5px!important;font-weight:700!important}
@@ -1247,7 +1249,7 @@
     .jrc-cu{width:100%;margin:0!important;height:auto!important;padding:0 16px 0 12px!important;border:0!important;border-radius:0!important;background:none!important;
       font-size:16px!important;font-weight:600!important;color:var(--text);cursor:pointer;text-align:left}
     .jrc-cu i{width:28px!important;height:28px!important}
-    .ios-chev{margin-left:auto;color:#c3c1bb;font-size:20px}
+    .ios-chev{margin-left:auto;color:var(--chev);font-size:20px}
     /* Supplementari / Rigori: un riquadro con due righe */
     #pensToggleWrap .reveal-in{padding-top:12px!important}
     #pensToggleWrap .opt{margin:0!important;min-height:50px;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--surface)!important;font-weight:600}
@@ -1256,6 +1258,23 @@
     /* valori a destra tutti sullo stesso bordo: niente icone calendario/orologio */
     .ios-in::-webkit-calendar-picker-indicator{display:none!important}
     .ios-in::-webkit-inner-spin-button,.ios-in::-webkit-clear-button{display:none}
+    /* home: icone colorate come nelle Impostazioni di iPhone */
+    .hm-item[data-id="md"] .hm-ico{background:#FF9500}
+    .hm-item[data-id="pxi"] .hm-ico{background:#34C759}
+    .hm-item[data-id="squad"] .hm-ico{background:#007AFF}
+    .hm-item[data-id="xi"] .hm-ico{background:#5856D6}
+    .hm-item[data-id="h2h"] .hm-ico{background:#8E8E93}
+    .hm-item[data-id="kick"] .hm-ico{background:#34C759}
+    .hm-item[data-id="half"] .hm-ico{background:#FF9500}
+    .hm-item[data-id="second"] .hm-ico{background:#32ADE6}
+    .hm-item[data-id="end90"] .hm-ico{background:#AF52DE}
+    .hm-item[data-id="full"] .hm-ico{background:#FF3B30}
+    .hm-item[data-id="goal"] .hm-ico{background:#FF3B30}
+    .hm-item[data-id="saved"] .hm-ico{background:#007AFF}
+    .hm-item[data-id="stats"] .hm-ico{background:#5856D6}
+    .hm-item[data-id="jr"] .hm-ico{background:#FF2D55}
+    .hm-item[data-id="igbn"] .hm-ico{background:#AF52DE}
+    .hm-item[data-id="cal"] .hm-ico{background:#FF9500}
 </style>
 </head>
 
