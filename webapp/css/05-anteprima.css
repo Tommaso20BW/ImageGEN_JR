@@ -1,0 +1,118 @@
+/* Mini App ImageGen JR. File caricati in ordine da index.html: l'ordine conta. */
+/* Preview */
+.preview-wrap{display:grid;gap:14px;justify-items:center}
+.preview-image{
+  display:block;width:100%;max-width:540px;height:auto;border-radius:14px;
+  border:1px solid var(--line);background:var(--surface);
+  box-shadow:var(--preview-shadow);
+}
+.note{color:var(--muted);font-size:12.5px;text-align:center}
+
+/* Bottom bar */
+.bar{
+  border-top:1px solid color-mix(in srgb,var(--line) 88%,transparent);
+  background:color-mix(in srgb,var(--bg) 84%,transparent);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+}
+.bar-inner{
+  width:100%;max-width:600px;margin:0 auto;
+  display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;
+}
+.btn{
+  min-height:50px;border-radius:14px;font-size:15px;font-weight:800;border:0;padding:0 20px;
+  transition:transform .18s var(--spring),background-color .15s ease,color .15s ease,box-shadow .18s var(--ease-out),opacity .25s ease;
+}
+.btn:disabled{opacity:.4;cursor:default;transform:none;box-shadow:none}
+.btn.ghost{background:var(--surface2);color:var(--text);box-shadow:var(--shadow-soft)}
+.btn.primary{background:var(--cta);color:var(--cta-ink);box-shadow:none}
+@media(hover:hover){
+  .btn.ghost:hover:not(:disabled){background:color-mix(in srgb,var(--surface2) 76%,var(--accent-soft));box-shadow:var(--shadow-hover)}
+  .btn.primary:hover:not(:disabled){background:var(--cta-hover)}
+}
+.btn:active:not(:disabled){transform:scale(.98);transition-duration:.12s,.22s,.22s,.3s,.25s}
+
+/* ---------- Desktop: usa l'intera finestra, senza cornice centrale ---------- */
+@media(min-width:900px){
+  html,body{width:100%;height:100%;overflow:hidden}
+  html{--top-pad:0px}
+  .shell{
+    width:100%;max-width:none;height:100vh;height:100dvh;margin:0;
+    grid-template-columns:280px minmax(0,1fr);
+  }
+  .side{
+    min-width:0;min-height:0;height:100%;
+    display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:30px;
+    padding:30px 22px 24px;border-right:1px solid var(--line);
+    background:var(--surface);
+    overflow-y:auto;
+  }
+  .main{min-width:0;min-height:0;height:100%;overflow:hidden;grid-template-rows:max-content max-content minmax(0,1fr) max-content;align-content:stretch}
+  .top{display:flex;justify-content:flex-end;padding:18px clamp(28px,3.2vw,64px) 0}
+  .top-title{display:none}
+  .top{gap:10px}
+  .top-right{order:-1}
+  .progress{margin:16px clamp(28px,3.2vw,64px) 0}
+  .stage{min-width:0;min-height:0}
+  .content{
+    --pad-top:42px;--pad-x:clamp(28px,3.2vw,64px);
+    max-width:calc(820px + 2 * var(--pad-x));padding:var(--pad-top) var(--pad-x) 44px;
+  }
+  h1{font-size:36px}
+  .lead{font-size:15px;margin-bottom:26px}
+  .bar{padding:16px clamp(28px,3.2vw,64px) calc(16px + env(safe-area-inset-bottom))}
+  .bar-inner{max-width:820px;grid-template-columns:auto 1fr}
+  .btn.primary{min-width:180px}
+  #nextButton{justify-self:end}
+  .num-input{font-size:52px}
+  .preview-image{max-width:min(760px,100%)}
+}
+@media(min-width:1400px){
+  .shell{grid-template-columns:300px minmax(0,1fr)}
+}
+
+@media(max-width:380px){
+  h1{font-size:25px}
+  .num-input{font-size:38px}
+}
+/* Rispetta la preferenza di accessibilità senza disattivare le animazioni per tutti. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    scroll-behavior:auto!important;
+  }
+  .screen.leaving{display:none!important}
+}
+  
+/* ================= Stile Impostazioni Apple =================
+   Barra in alto: ‹ a sinistra, titolo del passaggio al centro, "Fine" (o icone) a destra.
+   Niente barra in basso (solo "Invia" nell'anteprima). Elenchi bianchi raggruppati con la spunta. */
+:root{--bg:#F2F1EE;--bg-grad-a:#F2F1EE;--bg-grad-b:#F2F1EE;--line:#E7E5E0;--chev:#c3c1bb}
+/* scuro come iPhone: fondo nero, riquadri grigio scuro */
+html[data-theme="dark"]{--bg:#000000;--bg-grad-a:#000000;--bg-grad-b:#000000;--surface:#1C1C1E;--surface2:#2C2C2E;--line:#38383A;--muted:#8E8E93;--chev:#5A5A5F}
+.progress{display:none}
+.top{grid-template-columns:104px minmax(0,1fr) 104px;padding:6px 8px 2px;min-height:52px}
+.top-left{display:flex;align-items:center;gap:2px;min-width:0}
+.nav-back{border:0;background:none;color:var(--text);display:inline-flex;align-items:center;gap:1px;font:inherit;font-weight:700;font-size:16px;
+  padding:8px 6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.nav-back svg{flex:none}
+.nav-back[hidden],#closeWorkflowButton[hidden]{display:none}
+.nav-back:disabled{opacity:.35}
+.top-title .brand-btn{display:none}
+.nav-title{font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.nav-sub{font-weight:600;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.nav-sub:empty{display:none}
+.top-right{align-items:center;gap:0}
+#navTools{display:flex;align-items:center}
+.nav-tools-g{display:none;align-items:center}
+.nav-tools-g.on{display:flex}
+.nav-tools-g .head-icos{margin-right:0}
+.nav-tools-g .cal-clear{font-weight:700;font-size:15px;color:var(--text);padding:8px 6px}
+.nav-done{border:0;background:none;color:var(--text);font:inherit;font-weight:800;font-size:16px;padding:8px 6px;cursor:pointer;white-space:nowrap}
+.nav-done:disabled{color:var(--chev);cursor:default}
+.nav-done[hidden]{display:none}
+body.last-step:not(.preview-mode) .bar{display:block}
+body.last-step #backButton{display:none}
+body.last-step .bar-inner{grid-template-columns:minmax(0,1fr)}

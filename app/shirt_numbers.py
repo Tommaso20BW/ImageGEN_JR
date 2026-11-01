@@ -12,8 +12,8 @@ from pathlib import Path
 
 import requests
 
-PATH = 'data/shirt_numbers.json'
-LOCAL = Path(__file__).parent / PATH
+PATH = 'app/data/shirt_numbers.json'                      # percorso nella repository (salvataggio via GitHub)
+LOCAL = Path(__file__).parent / 'data' / 'shirt_numbers.json'
 _lock = threading.Lock()
 
 

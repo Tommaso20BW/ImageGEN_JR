@@ -16,8 +16,8 @@ from pathlib import Path
 
 import requests
 
-PATH = 'data/probabili_layouts.json'
-LOCAL = Path(__file__).parent / PATH
+PATH = 'app/data/probabili_layouts.json'                      # percorso nella repository (salvataggio via GitHub)
+LOCAL = Path(__file__).parent / 'data' / 'probabili_layouts.json'
 SCALE_MIN, SCALE_MAX = 0.7, 1.3
 ROLE_MAX = 5                       # lunghezza massima di un'etichetta (POR, DC, TRQ...)
 _lock = threading.Lock()

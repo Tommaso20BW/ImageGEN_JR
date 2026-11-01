@@ -147,7 +147,7 @@ jobs:
           IMAGEGEN_ASSETS_PAT: ${{ secrets.ASSETS_PAT }}
           IMAGEGEN_ASSETS_REPO: Tommaso20BW/LiveScore_Assets_JR
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/_graphics_core
+          PYTHONPATH: ${{ github.workspace }}/app:${{ github.workspace }}/_graphics_core
         run: |
           set -euo pipefail
 
@@ -197,7 +197,7 @@ jobs:
 
           # Se il run viene annullato, lo stop arriva sempre a Python, che
           # chiude la sessione e cancella i messaggi prima di uscire.
-          python -u service.py &
+          python -u app/service.py &
           SERVICE_PID=$!
           trap 'kill -TERM "$SERVICE_PID" 2>/dev/null || true' INT TERM
           set +e
