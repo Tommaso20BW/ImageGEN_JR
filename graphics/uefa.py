@@ -33,7 +33,7 @@ from graphics.common import asset_dir
 KITS = ('home', 'away', 'third')
 THEMES = ('ucl', 'uel', 'conference')
 ALL = KITS + THEMES
-LABELS = {'ucl': 'UCL', 'uel': 'UEL', 'conference': 'Conference'}
+LABELS = {'ucl': 'Champions League', 'uel': 'Europa League', 'conference': 'Conference League'}
 
 PALETTES = {
     'ucl': {

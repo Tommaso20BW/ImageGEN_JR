@@ -972,13 +972,9 @@
 
           <section class="screen" data-screen="kit">
             <div class="eyebrow">Aspetto</div>
-            <h1>Quale maglia?</h1>
-            <p class="lead">Scegli il kit Juventus da usare nella grafica.</p>
+            <h1 id="kitTitle">Quale maglia?</h1>
+            <p id="kitLead" class="lead">Scegli il kit Juventus da usare nella grafica.</p>
             <div id="kitOpts" class="opts" role="radiogroup"></div>
-            <div id="shirtBox" hidden>
-              <p class="lead" style="margin-top:18px">Con i colori della competizione: quale maglia indossano i giocatori nelle foto?</p>
-              <div id="shirtOpts" class="opts" role="radiogroup"></div>
-            </div>
           </section>
 
           <section class="screen" data-screen="player">
@@ -1527,22 +1523,19 @@
   };
   const SIDES = [['home','In casa'],['away','In trasferta']];
   const KITS = [['home','Home'],['away','Away'],['third','Third']];
-  // Colori della competizione (UCL / UEL / Conference): quarta opzione accanto alle maglie,
-  // solo per Matchday, Starting XI e Probabile XI e solo con una partita di quella coppa.
-  const UEFA_THEMES = {ucl:'UCL', uel:'UEL', conference:'Conference'};
+  // Colori della competizione (UCL / UEL / Conference) per Matchday, Starting XI e
+  // Probabile XI: con una partita di quella coppa si mettono da soli, la maglia non si chiede.
+  const UEFA_THEMES = {ucl:'Champions League', uel:'Europa League', conference:'Conference League'};
   const uefaTheme = c => {
     c = String(c || '').toLowerCase();
     if (c.includes('conf')) return 'conference';
     if (c.includes('champions')) return 'ucl';
     return c === 'uefa.europa' ? 'uel' : '';
   };
-  // Probabile XI a tema UEFA: la maglia serve comunque per le foto dei giocatori.
+  const uefaAuto = () => ['md','xi','pxi'].includes(kind) ? uefaTheme(competition) : '';
+  // Probabile XI a tema UEFA: il passo "Maglia" resta, ma solo per le foto dei giocatori.
   let shirt = '';
   const needsShirt = () => kind === 'pxi' && !!UEFA_THEMES[kit];
-  function kitOptions() {
-    const t = uefaTheme(competition);
-    return t && ['md','xi','pxi'].includes(kind) ? [...KITS,[t,UEFA_THEMES[t]]] : KITS;
-  }
   const JR_COLORS = [['black','Nero'],['white','Bianco'],['gold','Oro']];
   const JR_STYLES = [['classic','Classica'],['blur','Sfocata'],['collage','Collage']];
   // Formati della Classica: larghezza fissa 1080, cambia l'altezza (come graphics/photo_jr.py RATIOS).
@@ -1786,8 +1779,10 @@
   /* ---------- Flow ---------- */
   function buildFlow() {
     flow = [];
-    // Tema UEFA rimasto da un'altra partita/grafica: non vale più, si risceglie.
-    if (UEFA_THEMES[kit] && !kitOptions().some(o => o[0] === kit)) kit = '';
+    // Partita UEFA: tema della competizione automatico; tema rimasto da un'altra partita: via.
+    const uefa = uefaAuto();
+    if (uefa) kit = uefa;
+    else if (UEFA_THEMES[kit]) kit = '';
     if (LIVE) { flow = ['phasephoto']; flowIndex = 0; return; }
     if (!kind) { flow = ['home']; flowIndex = 0; return; }
     const base = ['competition','side','opponent'];
@@ -1808,7 +1803,9 @@
     else if (kind === 'match') flow = [...pick([...(italy ? withKit : base),'score']),...(PHOTO_PHASES.has(phase) ? ['phasephoto'] : [])];
     else if (kind === 'stats') flow = pick([...(italy ? withKit : base),'moment','stats']);
     else if (PREMATCH.includes(kind)) {
-      const rest = {squad:['squad'], xi:['kit','lineup','photo'], md:['kit','match','photo'], pxi:['kit','xi11']}[kind];
+      // Matchday / Starting XI di una partita UEFA: niente passo "Maglia" (colori della coppa).
+      const kitStep = uefa && kind !== 'pxi' ? [] : ['kit'];
+      const rest = {squad:['squad'], xi:[...kitStep,'lineup','photo'], md:[...kitStep,'match','photo'], pxi:['kit','xi11']}[kind];
       flow = pick([...base,...rest]);
       // Squad List da una partita dei convocati: giocatori già compilati, si va dritti all'anteprima.
       if (kind === 'squad' && String(mdPick).startsWith('site:')) flow = ['mdpick'];
@@ -1832,7 +1829,7 @@
       case 'competition': return labelOf(competitionOptions(),competition);
       case 'side': return labelOf(SIDES,side);
       case 'opponent': return selectedTeam ? displayTeamName(selectedTeam.name) : '';
-      case 'kit': return labelOf(kitOptions(),kit) + (needsShirt() && shirt ? ` · ${labelOf(KITS,shirt)}` : '');
+      case 'kit': return needsShirt() ? labelOf(KITS,shirt) : labelOf(KITS,kit);
       case 'player': return selectedPlayer ? surnameOf(selectedPlayer) : '';
       case 'minute': {
         const min = $('minute').value.trim();
@@ -2145,9 +2142,16 @@
       refreshSearchSummaries();
     });
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
-    renderOptions('kitOpts',kitOptions(),kit,v => { kit = v; kitAuto = false; updatePhotoOverlay(); $('shirtBox').hidden = !needsShirt(); });
-    renderOptions('shirtOpts',KITS,shirt,v => { shirt = v; });
-    $('shirtBox').hidden = !needsShirt();
+    if (needsShirt()) {
+      // Probabile XI UEFA: colori della competizione già decisi, qui solo le foto.
+      $('kitTitle').textContent = 'Maglia dei giocatori';
+      $('kitLead').textContent = `Colori ${UEFA_THEMES[kit]} già impostati. Scegli la maglia delle foto dei giocatori.`;
+      renderOptions('kitOpts',KITS,shirt,v => { shirt = v; });
+    } else {
+      $('kitTitle').textContent = 'Quale maglia?';
+      $('kitLead').textContent = 'Scegli il kit Juventus da usare nella grafica.';
+      renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; updatePhotoOverlay(); });
+    }
     renderJrColor();
     renderOptions('jrRatioOpts',JR_RATIOS,jrb.ratio,v => { jrb.ratio = v; photoState.x = 0; photoState.y = 0; });
     renderOptions('jrStyleOpts',JR_STYLES,jrb.style,v => {
@@ -2874,7 +2878,7 @@
     const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, mdpick:mdPick, jrstyle:jrb.style};
     if (step in choice && !choice[step]) { showError('Seleziona un’opzione per continuare.'); return false; }
 
-    if (step === 'kit' && needsShirt() && !shirt) { showError('Scegli anche la maglia dei giocatori.'); return false; }
+    if (step === 'kit' && needsShirt() && !shirt) { showError('Scegli la maglia dei giocatori.'); return false; }
     if (step === 'opponent') return resolveTeam();
     if (step === 'player') return resolvePlayer();
 
@@ -3060,8 +3064,9 @@
   }
 
   /* ---------- Calendario Juventus (ESPN, tramite il workflow) ---------- */
-  const COMP_SHORT = {'ita.1':'Serie A','ita.coppa_italia':'Coppa Italia','ita.super_cup':'Supercoppa',
-    'uefa.champions':'Champions','uefa.europa':'Europa League','uefa.europa.conf':'Conference'};
+  // Nomi completi delle competizioni (mai abbreviati).
+  const COMP_SHORT = {'ita.1':'Serie A','ita.coppa_italia':'Coppa Italia','ita.super_cup':'Supercoppa Italiana',
+    'uefa.champions':'Champions League','uefa.europa':'Europa League','uefa.europa.conf':'Conference League'};
   const MONTHS_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
   const isoDay = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
 
