@@ -16,7 +16,8 @@ jobs:
   generator:
     name: Generatore manuale
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Sessione fino a 60 minuti (service.py, SESSION_MAX_SECONDS) + avvio e pulizia.
+    timeout-minutes: 65
 
     steps:
       - name: Checkout ImageGEN JR
