@@ -249,6 +249,11 @@ class Renderer:
 
             return calendar.render(month=data['month'], matches=data['matches'])
 
+        if kind == 'table':
+            from graphics import classifica
+
+            return classifica.render(data['competition'])
+
         if kind == 'igbn':
             from graphics import ig_story
 

@@ -17,6 +17,7 @@ KINDS = [
     ('STARTING XI', 'xi'),
     ('HEAD TO HEAD', 'h2h'),
     ('CALENDARIO', 'cal'),
+    ('CLASSIFICA', 'table'),
     ('FOTO + JR', 'jr'),
     ('STORIE IG - BREAKING NEWS', 'igbn'),
 ]

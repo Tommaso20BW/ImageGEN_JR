@@ -12,6 +12,7 @@ from graphics import ig_story, photo_jr
 from graphics.calendar import parse_matches
 
 VALID_KINDS = {value for _, value in KINDS}
+TABLE_COMPETITIONS = {'SA', 'UCL', 'UEL', 'UECL'}
 VALID_COMPETITIONS = {value for _, value in COMPETITIONS}
 VALID_KITS = {'home', 'away', 'third'}
 from graphics.uefa import THEMES as UEFA_THEMES, theme_for as uefa_theme_for  # noqa: E402
@@ -174,6 +175,18 @@ def _build_state(envelope, catalog, now, expected_session):
         return {
             'id': uuid.uuid4().hex[:10],
             'data': {'kind': 'cal', 'month': month, 'year': year, 'matches': matches},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
+    # CLASSIFICA: solo la competizione; i dati si leggono da Diretta.it al momento del render.
+    if kind == 'table':
+        if competition not in TABLE_COMPETITIONS:
+            raise ValueError('Scegli Serie A, Champions, Europa o Conference League.')
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {'kind': 'table', 'competition': competition},
             'status': 'ready',
             'updated': now,
             'source': 'webapp-direct',

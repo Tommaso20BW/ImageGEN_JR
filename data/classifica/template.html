@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<title>Classifica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Barlow+Semi+Condensed:wght@500;600;700;800&family=Roboto+Slab:wght@600;700;800;900&family=Saira:wght@500;600;700;800&family=Saira+Semi+Condensed:wght@500;600;700;800&family=Sofia+Sans+Semi+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:900px;height:1200px;overflow:hidden;}
+
+  body{
+    color:var(--ink);display:flex;flex-direction:column;position:relative;
+    font-family:var(--f-body),sans-serif;background-color:var(--base);
+    --head-h:136px;--leg-h:62px;
+    --f-display:'Saira';--f-body:'Saira Semi Condensed';--f-num:'Saira';
+  }
+  body::after{
+    content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(circle at 52% 36%,transparent 24%,rgba(0,0,0,.17) 100%);
+  }
+  .header,.table-area,.legend{position:relative;z-index:1;}
+
+  /* ════ SERIE A — bianco, azzurro e blu ════ */
+  body.comp-SA{
+    background:
+      linear-gradient(180deg,transparent 0 136px,rgba(239,246,255,.80) 136px 100%),
+      repeating-linear-gradient(135deg,rgba(22,111,255,.035) 0 2px,transparent 2px 34px),
+      #f6f9fd;
+    --base:#f6f9fd;
+    --f-display:'Archivo';--f-body:'Archivo';--f-num:'Archivo';
+    --ink:#102345;--ink-dim:#71809a;--head-ink:#fff;
+    --row-odd:rgba(20,87,175,.045);--line:rgba(19,55,105,.14);--scrim:rgba(255,255,255,.88);
+    --chip-bg:#e5eefb;--chip-fg:#174a98;
+    --dr-pos:#09864e;--dr-neg:#c53343;
+    --z1:#1388ff;--z2:#ff7b32;--z3:#08ac73;--z4:#e83f55;
+  }
+  body.comp-SA::after{background:linear-gradient(90deg,rgba(28,111,255,.035),transparent 35%,rgba(22,55,145,.035));}
+
+  /* ════ UEFA CHAMPIONS LEAGUE — Kick of Light ════ */
+  body.comp-UCL{
+    --base:#02051b;
+    --f-display:'Saira';--f-body:'Saira Semi Condensed';--f-num:'Saira';
+    --ink:#f5f7ff;--ink-dim:rgba(220,227,255,.68);--head-ink:#fff;
+    --row-odd:rgba(255,255,255,.045);--line:rgba(136,177,255,.18);--scrim:rgba(0,2,20,.72);
+    --chip-bg:rgba(86,143,255,.22);--chip-fg:#fff;
+    --dr-pos:#8cf3d2;--dr-neg:#ff9aa8;
+    --z1:#50e2ff;--z2:#8f85ff;--z3:#ff668a;
+  }
+
+  /* ════ UEFA EUROPA LEAGUE — nero e arancione ════ */
+  body.comp-UEL{
+    --base:#030303;
+    --f-display:'Roboto Slab';--f-body:'Barlow Semi Condensed';--f-num:'Barlow Semi Condensed';
+    --ink:#fff7ef;--ink-dim:rgba(255,224,203,.66);--head-ink:#fff;
+    --row-odd:rgba(255,100,19,.055);--line:rgba(255,98,18,.24);--scrim:rgba(0,0,0,.76);
+    --chip-bg:rgba(255,91,12,.22);--chip-fg:#fff;
+    --dr-pos:#8de7ac;--dr-neg:#ff956f;
+    --z1:#ff6a17;--z2:#ffb020;--z3:#e64d45;
+  }
+
+  /* ════ UEFA CONFERENCE LEAGUE — nero e verde ════ */
+  body.comp-UECL{
+    --base:#020403;
+    --f-display:'Sofia Sans Semi Condensed';--f-body:'Sofia Sans Semi Condensed';--f-num:'Sofia Sans Semi Condensed';
+    --ink:#f3fff7;--ink-dim:rgba(202,255,221,.66);--head-ink:#fff;
+    --row-odd:rgba(0,211,98,.052);--line:rgba(0,220,104,.22);--scrim:rgba(0,0,0,.76);
+    --chip-bg:rgba(0,204,91,.20);--chip-fg:#fff;
+    --dr-pos:#8fffc0;--dr-neg:#ff9e9e;
+    --z1:#00d763;--z2:#a7f13e;--z3:#ea5d5d;
+  }
+  body.comp-UCL::after,body.comp-UEL::after,body.comp-UECL::after{background:transparent;}
+
+  /* ──────── HEADER: compatto, senza marchi decorativi ──────── */
+  .header{
+    height:var(--head-h);flex-shrink:0;padding:13px 40px 10px;text-align:left;
+    display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+    color:var(--head-ink);
+  }
+  body.comp-SA .header{background:linear-gradient(105deg,#0268d7 0%,#168eff 55%,#2448ca 100%);}
+  body.comp-UCL .header,body.comp-UEL .header,body.comp-UECL .header{background:transparent;}
+
+  .titleline{height:100px;display:flex;align-items:center;gap:16px;min-width:0;position:relative;z-index:1;}
+  .titlecopy{display:flex;flex-direction:column;justify-content:center;min-width:0;}
+  .competition-mark{height:96px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .competition-mark img{display:block;max-width:100%;max-height:100%;object-fit:contain;pointer-events:none;}
+  body.comp-SA .competition-mark{width:76px;}
+  body.comp-SA .competition-mark img{width:76px;height:90px;}
+  body.comp-UCL .competition-mark{width:75px;height:112px;}
+  body.comp-UEL .competition-mark{width:78px;height:112px;}
+  body.comp-UECL .competition-mark{width:84px;height:112px;}
+  body.comp-UCL .competition-mark img,body.comp-UEL .competition-mark img,body.comp-UECL .competition-mark img{
+    filter:drop-shadow(0 2px 5px rgba(0,0,0,.45));
+  }
+  body.comp-UCL .competition-mark img{transform:scaleX(1.06);}
+  /* I PNG UEL/UECL hanno più trasparenza sopra che sotto: compensazione ottica. */
+  body.comp-UEL .competition-mark img{transform:translateY(-9px);}
+  body.comp-UECL .competition-mark img{transform:translateY(-10px);}
+
+  .header-title{font-family:var(--f-display),sans-serif;line-height:.94;white-space:nowrap;color:var(--head-ink);}
+  body.comp-SA .header-title{font-weight:900;font-size:3.7rem;letter-spacing:.005em;}
+  body.comp-UCL .header-title{font-weight:700;font-size:3.05rem;letter-spacing:.045em;text-transform:uppercase;}
+  body.comp-UEL .header-title{font-weight:800;font-size:3.18rem;letter-spacing:.005em;text-transform:uppercase;}
+  body.comp-UECL .header-title{font-weight:900;font-size:3.02rem;letter-spacing:.01em;text-transform:uppercase;}
+
+  .header-sub{
+    font-family:var(--f-body),sans-serif;font-size:.88rem;font-weight:700;
+    letter-spacing:.19em;text-transform:uppercase;color:rgba(255,255,255,.72);
+    margin-top:8px;
+  }
+  body.comp-UECL .header-sub{letter-spacing:.15em;}
+
+  /* ──────── TABLE ──────── */
+  .table-area{flex:1;display:flex;gap:19px;padding:17px 28px 9px;min-height:0;overflow:hidden;}
+  .col{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .col + .col{border-left:1px solid var(--line);padding-left:19px;}
+  body.comp-SA .col{background:rgba(255,255,255,.72);border-radius:10px;padding-top:9px;box-shadow:0 12px 30px rgba(20,63,126,.07);}
+  body.comp-SA .col:first-child{padding-left:0;}
+  body.comp-SA .col + .col{padding-left:19px;border-radius:10px;}
+
+  .col-head{
+    display:grid;grid-template-columns:29px 33px minmax(0,1fr) 42px 38px;align-items:center;
+    padding:0 7px 8px;color:var(--ink-dim);font-family:var(--f-body),sans-serif;
+    font-size:.68rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+  }
+  .col-head div{text-align:center;}
+  .col-head div:nth-child(3){text-align:left;padding-left:8px;}
+  .col-rows{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .zone-divider{height:0;border-top:1px solid var(--line);opacity:.92;flex-shrink:0;}
+
+  .row{
+    position:relative;display:grid;grid-template-columns:29px 33px minmax(0,1fr) 42px 38px;align-items:center;
+    padding:0 7px;flex:1;min-height:0;border-bottom:1px solid var(--line);
+  }
+  .row:last-child{border-bottom:0;}
+  .row::before{content:"";position:absolute;left:0;top:0;bottom:1px;width:3px;background:transparent;}
+  .row[data-zone="z1"]::before{background:var(--z1);}
+  .row[data-zone="z2"]::before{background:var(--z2);}
+  .row[data-zone="z3"]::before{background:var(--z3);}
+  .row[data-zone="z4"]::before{background:var(--z4);}
+  .row.odd{background:var(--row-odd);}
+  body.comp-SA .row.hl{background:linear-gradient(90deg,rgba(15,119,238,.18),rgba(63,146,255,.06));}
+  body.comp-UCL .row.hl{background:linear-gradient(90deg,rgba(56,219,255,.20),rgba(112,78,255,.15),rgba(255,76,196,.10));}
+  body.comp-UEL .row.hl{background:linear-gradient(90deg,rgba(255,104,17,.25),rgba(255,104,17,.06));}
+  body.comp-UECL .row.hl{background:linear-gradient(90deg,rgba(0,216,101,.25),rgba(0,216,101,.06));}
+  body.comp-UCL .row.hl{box-shadow:inset 0 0 0 1px rgba(100,224,255,.30);}
+  body.comp-UEL .row.hl{box-shadow:inset 0 0 0 1px rgba(255,124,48,.32);}
+  body.comp-UECL .row.hl{box-shadow:inset 0 0 0 1px rgba(50,235,133,.30);}
+  .row.hl .c-name{font-weight:900;}
+
+  .c-pos{font-family:var(--f-num),sans-serif;font-weight:700;text-align:center;color:var(--ink-dim);font-variant-numeric:tabular-nums;}
+  body.comp-SA .c-pos{font-size:1.05rem;}
+  body.comp-UCL .c-pos,body.comp-UEL .c-pos,body.comp-UECL .c-pos{font-size:.92rem;}
+
+  .c-logo{display:flex;align-items:center;justify-content:center;}
+  .c-logo img{object-fit:contain;filter:none;}
+  body.comp-SA .c-logo img{width:32px;height:32px;}
+  body.comp-UCL .c-logo img,body.comp-UEL .c-logo img,body.comp-UECL .c-logo img{width:24px;height:24px;}
+  body.comp-UCL .c-logo,body.comp-UEL .c-logo,body.comp-UECL .c-logo{
+    width:27px;height:27px;justify-self:center;
+  }
+  .c-init{display:flex;align-items:center;justify-content:center;border-radius:50%;font-family:var(--f-display),sans-serif;font-weight:800;background:var(--chip-bg);color:var(--chip-fg);}
+  body.comp-SA .c-init{width:30px;height:30px;font-size:.78rem;}
+  body.comp-UCL .c-init,body.comp-UEL .c-init,body.comp-UECL .c-init{width:23px;height:23px;font-size:.65rem;}
+
+  .c-name{
+    font-family:var(--f-display),sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    color:var(--ink);padding-left:8px;text-transform:uppercase;letter-spacing:.005em;
+  }
+  body.comp-SA .c-name{font-size:.96rem;font-weight:700;}
+  body.comp-UCL .c-name{font-family:'Saira Semi Condensed',sans-serif;font-size:.89rem;font-weight:600;letter-spacing:.006em;}
+  body.comp-UEL .c-name{font-size:.90rem;font-weight:700;letter-spacing:.009em;}
+  body.comp-UECL .c-name{font-size:.90rem;font-weight:800;letter-spacing:.008em;}
+
+  .c-pt{font-family:var(--f-num),sans-serif;font-weight:900;text-align:center;color:var(--ink);font-variant-numeric:tabular-nums;}
+  body.comp-SA .c-pt{font-size:1.42rem;}
+  body.comp-UCL .c-pt,body.comp-UEL .c-pt,body.comp-UECL .c-pt{font-size:1.11rem;}
+  .c-dr{font-family:var(--f-num),sans-serif;font-weight:700;text-align:center;font-size:.91rem;color:var(--ink-dim);font-variant-numeric:tabular-nums;}
+  body.comp-SA .c-dr{font-size:1.02rem;}
+  .c-dr.pos{color:var(--dr-pos);}.c-dr.neg{color:var(--dr-neg);}.c-dr.zer{color:var(--ink-dim);opacity:.75;}
+
+  /* ──────── LEGEND ──────── */
+  .legend{
+    height:var(--leg-h);flex-shrink:0;display:flex;justify-content:center;align-items:center;
+    gap:23px;padding:0 24px;border-top:1px solid var(--line);background:var(--scrim);
+  }
+  .legend-item{display:flex;align-items:center;gap:8px;font-family:var(--f-body),sans-serif;font-size:.79rem;font-weight:800;letter-spacing:.075em;text-transform:uppercase;color:var(--ink);opacity:.92;}
+  .legend-bul{width:8px;height:8px;border-radius:2px;background:var(--z1);flex-shrink:0;}
+  .legend-item:nth-child(2) .legend-bul{background:var(--z2);}
+  .legend-item:nth-child(3) .legend-bul{background:var(--z3);}
+  .legend-item:nth-child(4) .legend-bul{background:var(--z4);}
+
+  /* ──────── Serie A: ripristino del design approvato ──────── */
+  body.comp-SA{background:#f7faff;--base:#f7faff;--line:#dce8f8;--scrim:#062d79;}
+  body.comp-SA::after{background:transparent;}
+  body.comp-SA .header{
+    position:relative;overflow:hidden;
+    background:linear-gradient(105deg,#052878 0%,#0757d7 55%,#168bd4 100%);
+  }
+  body.comp-SA .header-title{font-size:3.38rem;letter-spacing:-.035em;}
+  body.comp-SA .table-area{gap:22px;padding:17px 27px 9px;background:#f7faff;}
+  body.comp-SA .col{background:transparent;border-radius:0;padding-top:0;box-shadow:none;}
+  body.comp-SA .col + .col{border-left:2px solid #d8e6ff;padding-left:22px;border-radius:0;}
+  body.comp-SA .col-head{
+    grid-template-columns:38px 58px minmax(0,1fr) 52px 48px;height:34px;flex:0 0 34px;
+    padding:0 5px;border-bottom:2px solid #1669d8;color:#174c9b;
+    font-size:.68rem;letter-spacing:.15em;
+  }
+  body.comp-SA .row{
+    grid-template-columns:38px 58px minmax(0,1fr) 52px 48px;padding:0 5px;
+    border-bottom:1px solid #dce8f8;color:#08245e;
+  }
+  body.comp-SA .row::before{display:block;width:4px;top:0;bottom:1px;}
+  body.comp-SA .row.odd{background:transparent;}
+  body.comp-SA .row.even{background:#edf4ff;}
+  body.comp-SA .row.hl{
+    color:#fff;background:linear-gradient(90deg,#063d9e,#0c70dd);
+    box-shadow:none;
+  }
+  body.comp-SA .row.hl .c-pos,body.comp-SA .row.hl .c-name,
+  body.comp-SA .row.hl .c-pt,body.comp-SA .row.hl .c-dr{color:#fff;}
+  body.comp-SA .c-pos{font-size:1.05rem;color:#2b6fc2;font-weight:900;}
+  body.comp-SA .c-logo img{width:46px;height:46px;}
+  body.comp-SA .c-init{width:44px;height:44px;font-size:.84rem;background:#fff;color:#0b56bd;border:1px solid #b9d1f4;}
+  body.comp-SA .c-name{font-size:1.12rem;font-weight:700;padding-left:9px;letter-spacing:-.012em;}
+  body.comp-SA .c-pt{font-size:1.62rem;}
+  body.comp-SA .c-dr{font-size:.94rem;color:#5681b7;}
+  body.comp-SA .legend{
+    background:linear-gradient(105deg,#052878 0%,#0757d7 55%,#168bd4 100%);
+    border:0;
+  }
+  body.comp-SA .legend-item{color:#fff;font-size:.65rem;letter-spacing:.08em;}
+  body.comp-SA .legend-bul{background:var(--z1);}
+  body.comp-SA .legend-item:nth-child(2) .legend-bul{background:var(--z2);}
+  body.comp-SA .legend-item:nth-child(3) .legend-bul{background:var(--z3);}
+  body.comp-SA .legend-item:nth-child(4) .legend-bul{background:var(--z4);}
+
+  /* Un solo overlay scuro vive nel background del body UEFA. */
+  body.comp-UCL .table-area,body.comp-UEL .table-area,body.comp-UECL .table-area{
+    background:transparent;
+  }
+  body.comp-UCL .legend{background:rgba(0,2,20,.78);border-top:1px solid rgba(136,177,255,.16);}
+  body.comp-UEL .legend{background:rgba(0,0,0,.80);border-top:1px solid rgba(255,98,18,.20);}
+  body.comp-UECL .legend{background:rgba(0,0,0,.80);border-top:1px solid rgba(0,220,104,.18);}
+  .col-head,.row{text-shadow:none;}
+
+  /* ──────── preview switch (solo demo) ──────── */
+  .preview-bar{
+    position:fixed;top:10px;left:50%;transform:translateX(-50%);
+    display:none;gap:8px;z-index:50;
+    background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);
+    padding:7px 9px;border-radius:999px;border:1px solid rgba(255,255,255,0.14);
+    font-family:'Barlow Semi Condensed',sans-serif;
+  }
+  .preview-bar.on{display:flex;}
+  .preview-bar button{
+    border:0;cursor:pointer;border-radius:999px;padding:6px 14px;
+    font-size:.78rem;font-weight:700;letter-spacing:.08em;
+    background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.8);transition:.15s;
+  }
+  .preview-bar button:hover{background:rgba(255,255,255,0.22);color:#fff;}
+
+  /* ══ GRAFICA UEFA 2026: sfondi ufficiali pieni, senza velature ══ */
+  body.comp-UCL{
+    background:#050f61 url("bg-ucl.png") -210px -190px / 1200px 1600px no-repeat;
+    --panel:#071663;--panel-row:#091d81;--panel-alt:#091d81;
+    --ink:#f7f9ff;--ink-dim:#a9c8ff;--head-ink:#fff;
+    --line:#3154b8;--chip-bg:#153596;--chip-fg:#fff;
+    --dr-pos:#54efff;--dr-neg:#ff82b0;
+    --z1:#37e9ff;--z2:#a688ff;--z3:#ff5e91;
+  }
+  body.comp-UEL{
+    background:#ff6900 url("bg-uel.png") center / cover no-repeat;
+    --panel:#050505;--panel-row:#090909;--panel-alt:#090909;
+    --ink:#fffaf5;--ink-dim:#ffc39c;--head-ink:#050505;
+    --line:#585858;--chip-bg:#3b1d0d;--chip-fg:#fff;
+    --dr-pos:#b5f0c2;--dr-neg:#ff8d62;
+    --z1:#ff6a17;--z2:#ffbf26;--z3:#e45442;
+  }
+  body.comp-UECL{
+    background:#00c91a url("bg-uecl.png") center / cover no-repeat;
+    --panel:#050505;--panel-row:#090909;--panel-alt:#090909;
+    --ink:#f4fff7;--ink-dim:#a9eabd;--head-ink:#050505;
+    --line:#585858;--chip-bg:#0b4927;--chip-fg:#fff;
+    --dr-pos:#72ffac;--dr-neg:#ff9c9c;
+    --z1:#00e16d;--z2:#b4f43f;--z3:#ed5b5b;
+  }
+
+  body.comp-UCL::after,
+  body.comp-UEL::after,
+  body.comp-UECL::after{content:none;background:none;}
+
+  body.comp-UCL .competition-mark img{filter:none;}
+  body.comp-UEL .competition-mark img,
+  body.comp-UECL .competition-mark img{filter:brightness(0);}
+
+  body.comp-UEL .header-title,
+  body.comp-UECL .header-title{color:#050505;}
+  body.comp-UEL .header-sub,
+  body.comp-UECL .header-sub{color:#111;}
+
+  body.comp-UCL .table-area,
+  body.comp-UEL .table-area,
+  body.comp-UECL .table-area{
+    flex:1;margin:0 28px;padding:16px 20px 8px;min-height:0;
+    background:var(--panel);border:0;border-radius:0;
+  }
+  body.comp-UCL .col + .col,
+  body.comp-UEL .col + .col,
+  body.comp-UECL .col + .col{border-left:1px solid var(--line);}
+
+  body.comp-UCL .col-head,
+  body.comp-UEL .col-head,
+  body.comp-UECL .col-head{
+    height:34px;flex:0 0 34px;
+    grid-template-columns:29px 40px minmax(0,1fr) 42px 38px;
+    border-bottom:0;
+  }
+  body.comp-UCL .col-head,body.comp-UCL .legend-item{color:#b9d8ff;}
+  body.comp-UEL .col-head,body.comp-UEL .legend-item{color:#ffb27f;}
+  body.comp-UECL .col-head,body.comp-UECL .legend-item{color:#9ff1bd;}
+
+  body.comp-UCL .row,
+  body.comp-UEL .row,
+  body.comp-UECL .row{
+    grid-template-columns:29px 40px minmax(0,1fr) 42px 38px;
+    background:var(--panel-row);border-bottom-color:var(--line);
+  }
+  body.comp-UCL .row.odd,body.comp-UCL .row.even,
+  body.comp-UEL .row.odd,body.comp-UEL .row.even,
+  body.comp-UECL .row.odd,body.comp-UECL .row.even{background:var(--panel-row);}
+
+  body.comp-UCL .c-logo,
+  body.comp-UEL .c-logo,
+  body.comp-UECL .c-logo{width:36px;height:36px;}
+  body.comp-UCL .c-logo img,
+  body.comp-UEL .c-logo img,
+  body.comp-UECL .c-logo img{width:31px;height:31px;}
+
+  body.comp-UCL .c-pt{color:#45e9ff;}
+  body.comp-UEL .c-pt{color:#ff7a2a;}
+  body.comp-UECL .c-pt{color:#21df72;}
+
+  body.comp-UCL .row.hl{
+    background:linear-gradient(90deg,#17459b 0%,var(--panel-row) 72%);
+  }
+  body.comp-UEL .row.hl{
+    background:linear-gradient(90deg,#3a1708 0%,var(--panel-row) 72%);
+  }
+  body.comp-UECL .row.hl{
+    background:linear-gradient(90deg,#07351d 0%,var(--panel-row) 72%);
+  }
+  body.comp-UCL .row.hl,
+  body.comp-UEL .row.hl,
+  body.comp-UECL .row.hl{box-shadow:none;}
+  body.comp-UCL .row.hl .c-logo img,
+  body.comp-UEL .row.hl .c-logo img,
+  body.comp-UECL .row.hl .c-logo img{width:35px;height:35px;}
+  body.comp-UCL .row.hl .c-name,
+  body.comp-UEL .row.hl .c-name,
+  body.comp-UECL .row.hl .c-name{font-weight:900;letter-spacing:.015em;}
+  body.comp-UCL .row.hl .c-pt{color:#45e9ff;}
+  body.comp-UEL .row.hl .c-pt{color:#ff7a2a;}
+  body.comp-UECL .row.hl .c-pt{color:#21df72;}
+  body.comp-UCL .row.hl .c-dr.pos,
+  body.comp-UEL .row.hl .c-dr.pos,
+  body.comp-UECL .row.hl .c-dr.pos{color:var(--dr-pos);}
+  body.comp-UCL .row.hl .c-dr.neg,
+  body.comp-UEL .row.hl .c-dr.neg,
+  body.comp-UECL .row.hl .c-dr.neg{color:var(--dr-neg);}
+  body.comp-UCL .row.hl .c-dr.zer,
+  body.comp-UEL .row.hl .c-dr.zer,
+  body.comp-UECL .row.hl .c-dr.zer{color:var(--ink-dim);opacity:.75;}
+
+  body.comp-UCL .row::before,
+  body.comp-UEL .row::before,
+  body.comp-UECL .row::before{display:block;}
+  body.comp-UCL .zone-divider,
+  body.comp-UEL .zone-divider,
+  body.comp-UECL .zone-divider{display:none;}
+
+  body.comp-UCL .legend,
+  body.comp-UEL .legend,
+  body.comp-UECL .legend{
+    width:auto;height:64px;margin:0 28px 26px;padding:0 20px;
+    background:var(--panel);border:0;border-top:1px solid var(--line);border-radius:0;
+  }
+  body.comp-UCL .legend-item,
+  body.comp-UEL .legend-item,
+  body.comp-UECL .legend-item{opacity:1;}
+
+  body.comp-UCL .header-title{
+    font-family:'Saira Semi Condensed',sans-serif;font-size:3.42rem;
+    font-weight:800;letter-spacing:.025em;
+  }
+  body.comp-UEL .header-title{
+    font-family:'Roboto Slab',serif;font-size:3.50rem;
+    font-weight:900;letter-spacing:-.005em;
+  }
+  body.comp-UECL .header-title{
+    font-family:'Sofia Sans Semi Condensed',sans-serif;font-size:3.50rem;
+    font-weight:900;letter-spacing:-.005em;
+  }
+  body.comp-UECL .header-sub{letter-spacing:.19em;}
+  body.comp-UCL .titlecopy,
+  body.comp-UEL .titlecopy,
+  body.comp-UECL .titlecopy{height:86px;justify-content:flex-start;}
+  body.comp-UCL .header-title,
+  body.comp-UEL .header-title,
+  body.comp-UECL .header-title{height:62px;line-height:62px;}
+  body.comp-UCL .header-sub,
+  body.comp-UEL .header-sub{height:16px;line-height:16px;margin-top:8px;}
+  body.comp-UECL .header-sub{height:16px;line-height:16px;margin-top:2px;}
+  .preview-bar button.active{background:#fff;color:#111;}
+</style>
+</head>
+<body>
+
+  <div class="preview-bar" id="previewBar"></div>
+
+  <div class="header">
+    <div class="titleline">
+      <span class="competition-mark" aria-hidden="true"><img id="competitionIcon" src="serie-a-scudetto.png" alt=""></span>
+      <div class="titlecopy">
+        <div class="header-title" id="heroTitle">Classifica</div>
+        <div class="header-sub" id="heroSub"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-area" id="tableArea"></div>
+  <div class="legend" id="legend"></div>
+
+<script>
+/* ══ NOMI SQUADRE ══
+   Diretta.it è già localizzato in italiano: si usa il nome così com'è nei dati. */
+function nome(n){ return n ? n.trim() : n; }
+function initial(n){ return (n||'?').trim().charAt(0).toUpperCase(); }
+
+/* stagione corrente ("2026/27") ricavata dalla data: usata come fallback
+   se classifica.json non contiene il campo "stagione". La stagione inizia a luglio. */
+function stagioneCorrente(){
+  const o = new Date();
+  const inizio = o.getMonth() >= 6 ? o.getFullYear() : o.getFullYear() - 1; // getMonth(): luglio = 6
+  return inizio + '/' + String((inizio + 1) % 100).padStart(2, '0');
+}
+
+/* squadra/e da evidenziare ovunque compaiano (match sul nome normalizzato) */
+const HIGHLIGHT = new Set(["Juventus"]);
+
+/* ══ CONFIG ══ */
+const CFG = {
+  SA:{
+    titolo:"SERIE A",
+    subLabel:(g,s)=>`Classifica · Giornata ${g} · ${s}`,
+    cols:2, perCol:10,
+    zone:(t,p)=>Object.prototype.hasOwnProperty.call(t,'zone')
+      ? t.zone
+      : (p<=4 ? "z1" : p===5 ? "z2" : p===6 ? "z3" : p>=18 ? "z4" : ""),
+    sepAfter:[],
+    legend:["1–4 Champions","5 Europa","6 Conference","18–20 Retrocesse"]
+  },
+  UCL:{
+    titolo:"CHAMPIONS LEAGUE",
+    subLabel:(g,s)=>`Classifica · Giornata ${g} · ${s}`,
+    cols:2, perCol:18,
+    zone:(t,p)=>{ if(p<=8)return"z1"; if(p<=24)return"z2"; return"z3"; },
+    sepAfter:[8,24],
+    legend:["1–8 Ottavi diretti","9–24 Playoff","25–36 Eliminate"]
+  },
+  UEL:{
+    titolo:"EUROPA LEAGUE",
+    subLabel:(g,s)=>`Classifica · Giornata ${g} · ${s}`,
+    cols:2, perCol:18,
+    zone:(t,p)=>{ if(p<=8)return"z1"; if(p<=24)return"z2"; return"z3"; },
+    sepAfter:[8,24],
+    legend:["1–8 Ottavi diretti","9–24 Playoff","25–36 Eliminate"]
+  },
+  UECL:{
+    titolo:"CONFERENCE LEAGUE",
+    subLabel:(g,s)=>`Classifica · Giornata ${g} · ${s}`,
+    cols:2, perCol:18,
+    zone:(t,p)=>{ if(p<=8)return"z1"; if(p<=24)return"z2"; return"z3"; },
+    sepAfter:[8,24],
+    legend:["1–8 Ottavi diretti","9–24 Playoff","25–36 Eliminate"]
+  }
+};
+
+/* ══ RIGHE ══ */
+function drCls(v){ return v>0?'pos':v<0?'neg':'zer'; }
+function drVal(v){ return v>0?'+'+v:''+v; }
+
+const COMPETITION_ICONS = {
+  SA:'serie-a-scudetto.png',
+  UCL:'ucl-mark.png',
+  UEL:'uel-mark.png',
+  UECL:'uecl-mark.png'
+};
+
+function escAttr(v){
+  return String(v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function logoPerTema(t,key){
+  const fondoScuro = key !== 'SA';
+  const chiaro = t.logo_light_bg || t.logo || '';
+  const scuro = t.logo_dark_bg || t.logo || chiaro;
+  const primary = fondoScuro ? scuro : chiaro;
+  const fallback = fondoScuro ? chiaro : scuro;
+  return {primary, fallback: fallback !== primary ? fallback : ''};
+}
+function logoFallback(img){
+  const fallback = img.dataset.fallback;
+  if(fallback){
+    img.dataset.fallback = '';
+    img.src = fallback;
+    return;
+  }
+  const chip = document.createElement('span');
+  chip.className = 'c-init';
+  chip.textContent = img.dataset.initial || '?';
+  img.replaceWith(chip);
+}
+
+function buildRow(t, parity, zone, key){
+  const n = nome(t.team);
+  const cls = parity % 2 === 0 ? 'even' : 'odd';
+  const hl = HIGHLIGHT.has(n) ? ' hl' : '';
+  const logos = logoPerTema(t,key);
+  const badge = logos.primary
+    ? `<img src="${escAttr(logos.primary)}" data-fallback="${escAttr(logos.fallback)}" data-initial="${escAttr(initial(n))}" onerror="logoFallback(this)" alt="">`
+    : `<span class="c-init">${initial(n)}</span>`;
+  const posizione = key === 'SA' ? String(t.pos).padStart(2,'0') : t.pos;
+  return `<div class="row ${cls}${hl}" data-zone="${zone}">
+    <div class="c-pos">${posizione}</div>
+    <div class="c-logo">${badge}</div>
+    <div class="c-name">${n}</div>
+    <div class="c-pt">${t.pt}</div>
+    <div class="c-dr ${drCls(t.dr)}">${drVal(t.dr)}</div>
+  </div>`;
+}
+function buildHead(key){
+  return `<div class="col-head"><div>${key === 'SA' ? 'Pos' : ''}</div><div></div><div>Squadra</div><div>PT</div><div>DR</div></div>`;
+}
+
+function render(data){
+  const key = (data.competition||'SA').toUpperCase();
+  const cfg = CFG[key] || CFG.SA;
+
+  document.body.className = 'comp-'+key;
+  document.getElementById('heroTitle').textContent = cfg.titolo;
+  document.getElementById('competitionIcon').src = COMPETITION_ICONS[key] || COMPETITION_ICONS.SA;
+  const stagione = data.stagione || stagioneCorrente();
+  document.getElementById('heroSub').textContent = cfg.subLabel(data.giornata || '—', stagione);
+
+  const area = document.getElementById('tableArea');
+  let html='';
+  for(let i=0;i<cfg.cols;i++){
+    const slice = data.classifica.slice(i*cfg.perCol,(i+1)*cfg.perCol);
+    if(!slice.length) continue;
+    let rows='';
+    slice.forEach((t,idx)=>{
+      const posG = i*cfg.perCol + idx + 1;
+      rows += buildRow(t, idx, cfg.zone(t, posG), key);
+      if(cfg.sepAfter && cfg.sepAfter.includes(posG)) rows += `<div class="zone-divider"></div>`;
+    });
+    html += `<div class="col">${buildHead(key)}<div class="col-rows">${rows}</div></div>`;
+  }
+  area.innerHTML = html;
+
+  const legend = key === 'SA' && Array.isArray(data.qualification_legend)
+    ? data.qualification_legend
+    : cfg.legend;
+  document.getElementById('legend').innerHTML = legend.map(l=>
+    `<div class="legend-item"><span class="legend-bul"></span>${l}</div>`
+  ).join('');
+}
+
+/* ══ DATI DEMO (solo senza dataset reale) ══ */
+const DEMO_TEAMS = {
+  SA:["Napoli","Inter","Atalanta","Juventus","Milan","Bologna","Roma","Lazio","Fiorentina","Como",
+      "Torino","Udinese","Genoa","Verona","Cagliari","Lecce","Parma","Pisa","Cremonese","Sassuolo"],
+  UCL:["Liverpool","Barcellona","Real Madrid","Man City","Arsenal","Inter","Bayern Monaco","Leverkusen",
+       "B. Dortmund","Atlético Madrid","Aston Villa","Atalanta","Milan","Juventus","Napoli","PSV","Benfica",
+       "Sporting CP","Feyenoord Rotterdam","Brest","Stuttgart","Lille","Bologna","Celtic","Club Brugge",
+       "Monaco","Salzburg","GNK Dinamo","Crvena Zvezda","Young Boys","Shakhtar","Leipzig","Girona",
+       "Sparta Praha","Sturm Graz","S. Bratislava"],
+  UEL:["Roma","Tottenham","Lazio","Athletic Club","Eintracht Frankfurt","Lyon","Porto","Rangers",
+       "Ajax Amsterdam","Galatasaray","Fenerbahçe","Slavia Prague","Ferencváros","Nice","Bodo/Glimt",
+       "Midtjylland","Viktoria Plzeň","FCSB","PAOK Salonika","Union St.-Gilloise","Braga","Olympiacos",
+       "M. Tel-Aviv","Malmö","Ludogorets Razgrad","FK Qarabag","Real Betis","Marseille","Newcastle United",
+       "Nott'm Forest","Racing Genk","Utrecht","Basel","Brann","Pafos","Kairat Almaty"],
+  UECL:["Fiorentina","Real Betis","Villarreal","Panathinaikos","F.C. København","Go Ahead Eagles","Freiburg",
+        "Celtic","Rangers","Basel","Young Boys","Pafos","Brann","Bodo/Glimt","Malmö","Ludogorets Razgrad",
+        "FCSB","FK Qarabag","M. Tel-Aviv","Kairat Almaty","PAOK Salonika","Olympiacos","Slavia Prague",
+        "Sparta Praha","Viktoria Plzeň","S. Bratislava","GNK Dinamo","Crvena Zvezda","Shakhtar","Salzburg",
+        "Sturm Graz","Racing Genk","Union St.-Gilloise","Utrecht","Braga","Nice"]
+};
+function makeDemo(key){
+  const teams = DEMO_TEAMS[key]; const n = teams.length;
+  return {
+    competition:key,
+    giornata: key==='SA' ? 14 : 6,
+    stagione: stagioneCorrente(),
+    classifica: teams.map((team,i)=>({
+      pos:i+1, team,
+      pt: Math.max(0,(n-i)*2 + ((n-i)%3) + (i<3?6:0)),
+      dr: Math.round((n/2 - i) * 1.6)
+    }))
+  };
+}
+
+/* ══ AVVIO ══ */
+const PREVIEW_KEY = (new URLSearchParams(location.search).get('comp') || '').toUpperCase();
+(window.__CLASSIFICA__
+  ? Promise.resolve(window.__CLASSIFICA__)
+  : PREVIEW_KEY && CFG[PREVIEW_KEY]
+    ? Promise.resolve(makeDemo(PREVIEW_KEY))
+    : fetch('./classifica.json').then(r=>{ if(!r.ok) throw 0; return r.json(); })
+).then(render)
+ .catch(()=>{
+   const bar = document.getElementById('previewBar');
+   bar.classList.add('on');
+   const comps = [['SA','Serie A'],['UCL','Champions'],['UEL','Europa'],['UECL','Conference']];
+   bar.innerHTML = comps.map(c=>`<button data-k="${c[0]}">${c[1]}</button>`).join('');
+   function show(k){ render(makeDemo(k)); [...bar.children].forEach(b=>b.classList.toggle('active', b.dataset.k===k)); }
+   bar.querySelectorAll('button').forEach(b=>b.onclick=()=>show(b.dataset.k));
+   show('SA');
+ });
+</script>
+</body>
+</html>
