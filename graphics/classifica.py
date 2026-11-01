@@ -3,6 +3,9 @@
 La pagina è la stessa del vecchio bot (data/classifica/template.html, 900x1200): qui
 si incorporano dati, loghi, immagini e font, così il browser non scarica niente
 durante lo scatto. Uscita 1920x2560 con la texture sopra, come prima.
+
+Le immagini (sfondi, loghi delle coppe, texture, loghi Juventus e Roma) stanno nella
+repo asset, in canva/classifica/.
 """
 import base64
 import io
@@ -14,9 +17,9 @@ from pathlib import Path
 import requests
 from PIL import Image
 
-from graphics.common import render_html
+from graphics.common import asset_dir, render_html
 
-DIR = Path(__file__).resolve().parent.parent / 'data' / 'classifica'
+TEMPLATE = Path(__file__).resolve().parent.parent / 'data' / 'classifica' / 'template.html'
 PAGE = (900, 1200)
 
 # Serie A e UCL: texture bianca; UEL e UECL: nera.
@@ -30,12 +33,16 @@ UA = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
 LOGO_HEADERS = {'User-Agent': UA,
                 'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'}
 
-# Loghi personalizzati (Juventus bianco, Roma): copia nel repository, niente download.
+# Loghi personalizzati (Juventus bianco, Roma): copia nella repo asset, niente download.
 CUSTOM_LOGOS = {
     'https://upload.wikimedia.org/wikipedia/commons/9/99/Juventus_FC_2017_squared_icon_%28white%29.png':
-        'juventus-custom.png.b64',
-    'https://assets.football-logos.cc/logos/italy/512x512/roma.8dfa8968.png': 'roma-custom.png.b64',
+        'juventus-custom.png',
+    'https://assets.football-logos.cc/logos/italy/512x512/roma.8dfa8968.png': 'roma-custom.png',
 }
+
+
+def images_dir():
+    return asset_dir() / 'canva' / 'classifica'
 
 # Durante una sessione loghi e font restano in memoria: la seconda classifica è più veloce.
 _logos = {}
@@ -92,9 +99,9 @@ def render_data(data):
 
 
 def build_html(data):
-    html = (DIR / 'template.html').read_text(encoding='utf-8')
+    html = TEMPLATE.read_text(encoding='utf-8')
     for name in IMAGES:
-        html = html.replace(name, _data_uri(DIR / name))
+        html = html.replace(name, _data_uri(images_dir() / name))
     match = re.search(r'href="(https://fonts\.googleapis\.com/css2[^"]+)"', html)
     html = re.sub(r'<link[^>]+fonts\.(?:googleapis|gstatic)[^>]*>', '', html)
     fonts = _font_css(match.group(1)) if match else ''
@@ -115,9 +122,7 @@ def _logo(url):
     if url not in _logos:
         custom = CUSTOM_LOGOS.get(url)
         if custom:
-            encoded = (DIR / custom).read_text(encoding='ascii').strip()
-            base64.b64decode(encoded, validate=True)
-            _logos[url] = f'data:image/png;base64,{encoded}'
+            _logos[url] = _data_uri(images_dir() / custom)
         else:
             response = requests.get(url, headers=LOGO_HEADERS, timeout=25)
             response.raise_for_status()
@@ -176,7 +181,7 @@ def _font_css(css_url):
 def _texture(png, name):
     base = Image.open(io.BytesIO(png)).convert('RGBA')
     if name:
-        texture = Image.open(DIR / name).convert('RGBA')
+        texture = Image.open(images_dir() / name).convert('RGBA')
         if texture.size != base.size:
             texture = texture.resize(base.size, Image.Resampling.LANCZOS)
         base.paste(texture, (0, 0), texture)
