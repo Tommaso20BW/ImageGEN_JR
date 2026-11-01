@@ -24,13 +24,25 @@ from livescore.core import team_overrides
 from livescore.core.team_matching import normalize_team_name
 
 ASSETS_REPO_DEFAULT = 'Tommaso20BW/LiveScore_Assets_JR'
-LOGO_MAX = 512
+LOGO_MAX = 800          # lato del logo salvato: come i PNG FCLogo (800x800)
+FRAME_DEFAULT = {'x': 0.0, 'y': 0.0, 's': 0.88}   # FCLogo: stemma centrato, lato lungo all'88%
 MAX_ALIASES = 12
 MAX_NAME = 40
 _lock = threading.Lock()
 
 
 # ---------- logo ----------
+ALPHA_MIN = 24   # sotto questa opacità un pixel conta come trasparente (aloni, ombre quasi invisibili)
+
+
+def _clean_alpha(alpha):
+    """Toglie la trasparenza attorno allo stemma: azzera i pixel quasi invisibili e ritaglia
+    sul contorno visibile, così il centro e la dimensione sono quelli dello stemma vero."""
+    alpha = alpha.point(lambda a: 0 if a < ALPHA_MIN else a)
+    bbox = alpha.getbbox()
+    return (alpha.crop(bbox), bbox) if bbox else (alpha, None)
+
+
 def make_mono(raw):
     """PNG caricato -> sagoma nera su trasparente (come i loghi FCLogo mono).
 
@@ -59,16 +71,56 @@ def make_mono(raw):
         # A colori o senza trasparenza: opaco dove è scuro/colorato, trasparente sul bianco.
         ink = image.convert('L').point(lambda v: 255 if v <= 170 else 0 if v >= 235 else int((235 - v) * 255 / 65))
         alpha = Image.composite(ink, Image.new('L', image.size, 0), alpha)
-    bbox = alpha.getbbox()
+    alpha, bbox = _clean_alpha(alpha)
     if not bbox:
         raise ValueError('Logo vuoto dopo la conversione: usa un PNG con sfondo trasparente.')
-    alpha = alpha.crop(bbox)
     alpha.thumbnail((LOGO_MAX, LOGO_MAX), Image.LANCZOS)
     out = Image.new('RGBA', alpha.size, (0, 0, 0, 255))
     out.putalpha(alpha)
     buf = io.BytesIO()
     out.save(buf, format='PNG', optimize=True)
     return buf.getvalue()
+
+
+def frame_of(value):
+    """Posizione scelta nell'editor: x, y = spostamento del centro (frazione del lato),
+    s = lato lungo dello stemma (frazione del lato). Assente = come FCLogo."""
+    if not isinstance(value, dict):
+        return dict(FRAME_DEFAULT)
+    try:
+        x, y, s = (float(value.get(k, FRAME_DEFAULT[k])) for k in ('x', 'y', 's'))
+    except (TypeError, ValueError):
+        return dict(FRAME_DEFAULT)
+    return {'x': max(-.5, min(.5, x)), 'y': max(-.5, min(.5, y)), 's': max(.3, min(1.2, s))}
+
+
+def trim(png):
+    """Logo salvato (quadrato) -> solo lo stemma, senza margini trasparenti."""
+    image = Image.open(io.BytesIO(png)).convert('RGBA')
+    alpha, bbox = _clean_alpha(image.getchannel('A'))
+    if bbox:
+        image = image.crop(bbox)
+        image.putalpha(alpha)
+    out = io.BytesIO()
+    image.save(out, format='PNG')
+    return out.getvalue()
+
+
+def compose(mono, frame=None):
+    """Stemma (senza margini) -> PNG quadrato 800x800 nella posizione scelta."""
+    f = frame_of(frame)
+    logo = Image.open(io.BytesIO(mono)).convert('RGBA')
+    side = LOGO_MAX
+    k = f['s'] * side / max(logo.size)
+    logo = logo.resize((max(1, round(logo.width * k)), max(1, round(logo.height * k))), Image.LANCZOS)
+    canvas = Image.new('RGBA', (side, side), (0, 0, 0, 0))
+    cx, cy = side / 2 + f['x'] * side, side / 2 + f['y'] * side
+    canvas.paste(logo, (round(cx - logo.width / 2), round(cy - logo.height / 2)), logo)   # fuori bordo: tagliato
+    if not canvas.getchannel('A').getbbox():
+        raise ValueError('Il logo è finito fuori dal riquadro: ricentralo.')
+    out = io.BytesIO()
+    canvas.save(out, format='PNG', optimize=True)
+    return out.getvalue()
 
 
 def preview_uri(png, size=160):
@@ -107,7 +159,7 @@ def _catalog(manifest_rows):
     return out
 
 
-def build_change(request, manifest_rows, current, photos):
+def build_change(request, manifest_rows, current, photos, assets=None):
     """Valida la richiesta della mini app. Ritorna (chiave, voce o None, png nuovo o None).
 
     request: {key?, base?, name?, aliases: [...], logo: 'keep' | 'upload:<id>' | null, reset?: true}
@@ -147,16 +199,23 @@ def build_change(request, manifest_rows, current, photos):
 
     logo, png = request.get('logo', 'keep'), None
     old = current.get(key) or {}
+    frame = request.get('logo_frame')
     if logo == 'keep':
         logo = old.get('logo')
+        # Solo nuova posizione per il logo già caricato: si ricompone dal file salvato.
+        if logo and frame is not None and assets is not None:
+            stored = Path(assets) / team_overrides.DIRNAME / logo
+            if stored.is_file():
+                png = compose(trim(stored.read_bytes()), frame)
     elif isinstance(logo, str) and logo.startswith('upload:'):
         raw = photos.get(logo[7:])
         if raw is None:
             raise ValueError('Logo caricato scaduto: caricalo di nuovo.')
-        png = make_mono(raw)
-        logo = f'logos/{_slug(base or name or key)}-{hashlib.sha256(png).hexdigest()[:8]}.png'
+        png = compose(make_mono(raw), frame)
     else:
-        logo = None
+        logo = None          # "Torna a fclogo"
+    if png:
+        logo = f'logos/{_slug(base or name or key)}-{hashlib.sha256(png).hexdigest()[:8]}.png'
     if not base and not (name and logo):
         raise ValueError('Per una squadra nuova servono nome e logo.')
     entry = team_overrides.clean_entry({'base': base, 'name': name, 'aliases': aliases, 'logo': logo})
@@ -210,7 +269,7 @@ def save(request, assets, manifest_rows, photos, env=None):
     folder = assets / team_overrides.DIRNAME
     with _lock:
         current = _read(assets)
-        key, entry, png = build_change(request, manifest_rows, current, photos)
+        key, entry, png = build_change(request, manifest_rows, current, photos, assets)
         new = dict(current)
         if entry:
             new[key] = entry

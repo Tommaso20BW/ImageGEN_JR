@@ -687,10 +687,28 @@ class Service:
             raise ValueError('Richiesta non valida.')
         action = envelope.get('action')
         if action == 'logo_preview':
-            raw = self.photos.get(str(envelope.get('photo_id') or ''))
-            if raw is None:
-                raise ValueError('Logo caricato scaduto: caricalo di nuovo.')
-            return {'preview': team_settings.preview_uri(team_settings.make_mono(raw))}
+            # Per l'editor: stemma senza margini (+ proporzioni) e posizione di partenza.
+            # photo_id = logo appena caricato (parte come FCLogo); key = logo già salvato (parte da dov'è).
+            from PIL import Image
+            key = str(envelope.get('key') or '')
+            if key:
+                entry = team_settings._read(asset_dir()).get(key) or {}
+                stored = asset_dir() / 'team_overrides' / str(entry.get('logo') or '')
+                if not entry.get('logo') or not stored.is_file():
+                    raise ValueError('Logo non trovato.')
+                square = Image.open(stored)
+                box = square.getchannel('A').getbbox() or (0, 0, *square.size)
+                side = square.width
+                frame = {'x': (box[0] + box[2]) / 2 / side - .5, 'y': (box[1] + box[3]) / 2 / side - .5,
+                         's': max(box[2] - box[0], box[3] - box[1]) / side}
+                mono = team_settings.trim(stored.read_bytes())
+            else:
+                raw = self.photos.get(str(envelope.get('photo_id') or ''))
+                if raw is None:
+                    raise ValueError('Logo caricato scaduto: caricalo di nuovo.')
+                mono, frame = team_settings.make_mono(raw), dict(team_settings.FRAME_DEFAULT)
+            w, h = Image.open(io.BytesIO(mono)).size
+            return {'preview': team_settings.preview_uri(mono, 480), 'aspect': w / h, 'frame': frame}
         if action != 'team_save':
             raise ValueError('Richiesta non valida.')
         assets = str(asset_dir())
