@@ -267,7 +267,6 @@
     .photo-head .btn{flex:0 0 auto;min-height:42px;padding:0 16px}
     .photo-tools .btn{flex:0 0 auto;min-height:44px;padding:0 16px}
     .photo-tools .link-btn{flex:0 0 auto;padding:10px 4px}
-    #calAdd{min-height:44px;padding:0 16px}
 
     .error{
       display:none;margin:0 0 18px;padding:12px 14px;border-radius:12px;
@@ -617,9 +616,37 @@
     .xi-row{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center}
     .xi-row .field-input{min-height:48px;font-size:16px;font-weight:700;padding:0 12px;min-width:0}
     .xi-num{text-align:center}
-    .cal-rows{display:grid;gap:8px}
-    .cal-row{display:grid;grid-template-columns:62px 1fr 92px 36px;gap:6px;align-items:center}
-    .cal-row .field-input{min-height:48px;font-size:15px;font-weight:700;padding:0 8px;min-width:0}
+    /* CALENDARIO: griglia del mese + elenco + pannello dal basso. */
+    .cal-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+    .cal-clear{border:0;background:none;color:var(--muted);font:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:4px 2px}
+    .cal-wk,.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+    .cal-wk{margin-top:4px}
+    .cal-wk span{text-align:center;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+    .cal-grid{margin-top:6px}
+    .cal-day{height:60px;border:0;border-radius:12px;background:var(--surface);color:var(--muted);font:inherit;font-weight:700;font-size:14px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding:0;box-shadow:var(--shadow-soft)}
+    .cal-day.has{background:var(--surface2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+    .cal-day.sel{box-shadow:inset 0 0 0 2px var(--cta)}
+    .cal-day .n{font-size:11px;line-height:1}
+    .cal-day .logo,.cal-day .logo img,.cal-day .logo.fallback{width:22px;height:22px}
+    .cal-day .tag{font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--muted);line-height:1}
+    .cal-list{display:grid;gap:6px;margin-top:14px}
+    .cal-item{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 12px;border:0;border-radius:12px;background:var(--surface);color:var(--text);
+      font:inherit;font-weight:700;font-size:15px;text-align:left;cursor:pointer;box-shadow:var(--shadow-soft)}
+    .cal-item .when{flex:none;width:46px;color:var(--muted);font-size:13px}
+    .cal-item .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cal-item .pill{margin-left:auto;flex:none;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+    .cal-sh{padding-left:16px;padding-right:16px}
+    .cal-search{display:flex;align-items:center;gap:10px;height:52px;border-radius:14px;background:var(--surface2);padding:0 14px}
+    .cal-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;font-weight:700;font-size:17px;padding:0}
+    .cal-sug{display:grid;margin-top:4px}
+    .cal-sug button{display:flex;align-items:center;gap:10px;min-height:46px;border:0;border-radius:10px;background:none;color:var(--text);font:inherit;font-weight:700;font-size:16px;text-align:left;cursor:pointer;padding:0 6px}
+    .cal-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:12px;padding:4px;border-radius:14px;background:var(--surface2)}
+    .cal-seg button{min-height:44px;border:0;border-radius:11px;background:none;color:var(--muted);font:inherit;font-weight:800;font-size:15px;cursor:pointer}
+    .cal-seg button.on{background:var(--text);color:var(--bg)}
+    .cal-sh-btns{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+    .cal-sh-btns .btn{min-height:52px}
+    .cal-sh-btns.solo{grid-template-columns:1fr}
     .pxi-row{display:flex;align-items:center;gap:10px}
     .pxi-role{flex:0 0 46px;font-weight:800;font-size:13px;color:var(--muted);text-align:center}
     .pxi-select{min-height:48px;font-size:16px;font-weight:700;padding:0 12px}
@@ -1156,13 +1183,12 @@
 
           <section class="screen" data-screen="calrows">
             <div class="eyebrow">Calendario</div>
-            <h1>Partite</h1>
-            <p class="lead">Una riga per partita (da 1 a 9). L’ordine per giorno lo fa ImageGEN.</p>
-            <div id="calRowsBox" class="cal-rows"></div>
-            <div class="photo-tools" style="max-width:none">
-              <button id="calAdd" class="btn ghost" type="button">+ Aggiungi partita</button>
-              <span id="calSummary" class="hint"></span>
-            </div>
+            <div class="cal-head"><h1 id="calTitle">Partite</h1><button id="calClear" class="cal-clear" type="button">Svuota</button></div>
+            <p class="lead">Tocca un giorno per aggiungere o cambiare una partita.</p>
+            <div class="cal-wk" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span></div>
+            <div id="calGrid" class="cal-grid"></div>
+            <div id="calList" class="cal-list"></div>
+            <div id="calSummary" class="hint" style="margin-top:10px"></div>
           </section>
 
           <section class="screen" data-screen="xi11">
@@ -1385,6 +1411,15 @@
   <div class="jrc-lab">Colore</div><div id="jrcHue" class="jrc-sl jrc-hue"><i class="jrc-knob"></i></div>
   <div class="jrc-lab">Luce</div><div id="jrcLum" class="jrc-sl"><i class="jrc-knob"></i></div>
   <div class="jrc-hexrow"><div id="jrcChip" class="jrc-chip"></div><label id="jrcHexBox" class="jrc-hex"><span>#</span><input id="jrcHex" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="FF3366" aria-label="Colore esadecimale"></label></div>
+</div></div>
+<div id="calOv" class="mod-ov"><div id="calSh" class="mod-sh cal-sh" role="dialog" aria-modal="true" aria-labelledby="calShTitle">
+  <div class="mod-bar"></div>
+  <div class="mod-top"><b id="calShTitle"></b><button type="button" id="calShClose">Chiudi</button></div>
+  <label class="cal-search"><span class="logo" id="calShLogo"></span><input id="calShQ" type="text" placeholder="Avversario" autocomplete="off" autocapitalize="words" spellcheck="false"></label>
+  <div id="calShSug" class="cal-sug"></div>
+  <div class="cal-seg" role="radiogroup" aria-label="Casa o trasferta"><button type="button" data-side="home">Casa</button><button type="button" data-side="away">Trasferta</button></div>
+  <div id="calShErr" class="lnk-err"></div>
+  <div class="cal-sh-btns"><button type="button" id="calShDel" class="btn ghost">Togli</button><button type="button" id="calShSave" class="btn primary">Salva</button></div>
 </div></div>
 <div id="lnkOv" class="mod-ov"><div id="lnkSh" class="mod-sh">
   <div class="mod-bar"></div>
@@ -2056,7 +2091,8 @@
       } else loadMdFixtures();
     }
     if (screenName === 'calrows') fillCalendarFromFixtures();
-    if (screenName === 'calrows') { if (!calRows.length) calRows.push({day:'', team:'', side:'home'}); renderCalRows(); }
+    if (screenName === 'calrows') renderCalRows();
+    else closeCalSheet();
     if (screenName === 'xi11') { readPxiText(); loadPxiUpdates(); loadLayouts().then(() => { syncModules(); readPxiText(); }); }
     lastRenderedScreen = screenName || '';
     lastRenderedFlowIndex = flowIndex;
@@ -3371,29 +3407,136 @@
     if (!found.length) $('calSummary').textContent = `${calRows.length} / ${CAL_MAX} partite · nessuna trovata nel calendario`;
   }
 
-  /* ---------- Calendario: righe partita ---------- */
+  /* ---------- Calendario: griglia del mese ---------- */
+  // Una partita per giorno: tocco sul giorno (o sulla riga dell'elenco) -> pannello dal basso
+  // con avversario (ricerca) e Casa/Trasferta.
+  const CAL_DOW = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+  let calEdit = null;   // {day, team, side, isNew} mentre il pannello è aperto
+
+  function calYearMonth() { return [Number($('calYear').value) || new Date().getFullYear(), calMonth || 1]; }
+  function calTeam(name) { return teams.find(t => t.name === name) || findTeamByName(name) || null; }
+
   function renderCalRows() {
-    const box = $('calRowsBox');
-    box.innerHTML = '';
-    const pool = teams.slice().sort((a,b) => displayTeamName(a.name).localeCompare(displayTeamName(b.name),'it',{sensitivity:'base'}));
-    const options = '<option value="">— avversario —</option>' + pool
-      .map(t => `<option value="${t.name.replace(/"/g,'&quot;')}">${displayTeamName(t.name)}</option>`).join('');
-    calRows.forEach((row,i) => {
-      const line = document.createElement('div'); line.className = 'cal-row';
-      line.innerHTML = `<input class="field-input cal-day" type="number" inputmode="numeric" min="1" max="31" placeholder="gg">
-        <select class="field-input cal-team">${options}</select>
-        <select class="field-input cal-side"><option value="home">Casa</option><option value="away">Trasf.</option></select>
-        <button class="icon-btn cal-del" type="button" aria-label="Togli partita">×</button>`;
-      const [day,team,side,del] = line.children;
-      day.value = row.day || ''; team.value = row.team || ''; side.value = row.side;
-      day.addEventListener('input',() => { row.day = day.value; renderSteps(); });
-      team.addEventListener('change',() => { row.team = team.value; clearError(); renderSteps(); });
-      side.addEventListener('change',() => { row.side = side.value; });
-      del.addEventListener('click',() => { calRows.splice(i,1); renderCalRows(); renderSteps(); });
-      box.appendChild(line);
+    const [y, m] = calYearMonth();
+    const last = new Date(y, m, 0).getDate();
+    $('calTitle').textContent = `${CAL_MONTHS[m - 1]} ${y}`;
+    const byDay = new Map(calRows.map(r => [Number(r.day), r]));
+    const grid = $('calGrid');
+    grid.innerHTML = '';
+    for (let i = 0; i < (new Date(y, m - 1, 1).getDay() + 6) % 7; i++) grid.appendChild(document.createElement('span'));
+    for (let d = 1; d <= last; d++) {
+      const row = byDay.get(d);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cal-day' + (row ? ' has' : '') + (calEdit && calEdit.day === d ? ' sel' : '');
+      b.setAttribute('aria-label', row ? `${d}: ${displayTeamName(row.team)}, ${row.side === 'home' ? 'casa' : 'trasferta'}` : `${d}: aggiungi partita`);
+      if (row) {
+        b.innerHTML = `<span class="n">${d}</span><span class="logo"></span><span class="tag">${row.side === 'home' ? 'CASA' : 'TRASF.'}</span>`;
+        fillLogo(b.querySelector('.logo'), calTeam(row.team));
+      } else b.textContent = String(d);
+      b.addEventListener('click', () => { haptic('select'); openCalSheet(d); });
+      grid.appendChild(b);
+    }
+    const list = $('calList');
+    list.innerHTML = '';
+    calRows.slice().sort((a, b) => a.day - b.day).forEach(row => {
+      const d = Number(row.day);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cal-item';
+      b.innerHTML = '<span class="when"></span><span class="logo"></span><span class="nm"></span><span class="pill"></span>';
+      b.querySelector('.when').textContent = `${CAL_DOW[new Date(y, m - 1, d).getDay()].slice(0, 3)} ${d}`;
+      b.querySelector('.nm').textContent = displayTeamName(row.team);
+      b.querySelector('.pill').textContent = row.side === 'home' ? 'Casa' : 'Trasferta';
+      fillLogo(b.querySelector('.logo'), calTeam(row.team));
+      b.addEventListener('click', () => openCalSheet(d));
+      list.appendChild(b);
     });
-    $('calAdd').disabled = calRows.length >= CAL_MAX;
-    $('calSummary').textContent = `${calRows.length} / ${CAL_MAX} partite`;
+    $('calClear').hidden = !calRows.length;
+    $('calSummary').textContent = calRows.length ? `${calRows.length} / ${CAL_MAX} partite` : 'Nessuna partita: tocca un giorno per aggiungerla.';
+  }
+
+  function openCalSheet(day) {
+    const [y, m] = calYearMonth();
+    const row = calRows.find(r => Number(r.day) === day);
+    calEdit = {day, team: row ? row.team : '', side: row ? row.side : 'home', isNew: !row};
+    const w = CAL_DOW[new Date(y, m - 1, day).getDay()];
+    $('calShTitle').textContent = `${w.charAt(0).toUpperCase()}${w.slice(1)} ${day} ${CAL_MONTHS[m - 1].toLowerCase()}`;
+    $('calShQ').value = row ? displayTeamName(row.team) : '';
+    $('calShDel').hidden = !row;
+    $('calShDel').parentElement.classList.toggle('solo', !row);
+    $('calShErr').textContent = '';
+    calSheetSync();
+    $('calOv').classList.add('open');
+    renderCalRows();
+    if (!row) setTimeout(() => $('calShQ').focus(), 50);
+  }
+
+  function closeCalSheet() {
+    if (!calEdit) return;
+    calEdit = null;
+    $('calOv').classList.remove('open');
+    if ($('calShQ') === document.activeElement) $('calShQ').blur();
+    if (flow[flowIndex] === 'calrows') renderCalRows();
+  }
+
+  function calSheetSync() {
+    fillLogo($('calShLogo'), calEdit.team ? calTeam(calEdit.team) : null);
+    $('calSh').querySelectorAll('.cal-seg button').forEach(b => {
+      const on = b.dataset.side === calEdit.side;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    const box = $('calShSug');
+    box.innerHTML = '';
+    const q = $('calShQ').value;
+    if (!norm(q) || (calEdit.team && norm(displayTeamName(calEdit.team)) === norm(q))) return;
+    searchTeams(teams, q).slice(0, 4).forEach(team => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.innerHTML = '<span class="logo"></span><span></span>';
+      b.lastChild.textContent = displayTeamName(team.name);
+      fillLogo(b.firstChild, team);
+      b.addEventListener('click', () => {
+        calEdit.team = team.name;
+        $('calShQ').value = displayTeamName(team.name);
+        $('calShErr').textContent = '';
+        calSheetSync();
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function initCalendarSheet() {
+    $('calShQ').addEventListener('input', () => {
+      const q = norm($('calShQ').value);
+      const exact = teams.find(t => namesFor(t).some(n => norm(n) === q));
+      calEdit.team = exact ? exact.name : '';
+      $('calShErr').textContent = '';
+      calSheetSync();
+    });
+    $('calSh').querySelectorAll('.cal-seg button').forEach(b => b.addEventListener('click', () => {
+      calEdit.side = b.dataset.side; haptic('select'); calSheetSync();
+    }));
+    $('calShSave').addEventListener('click', () => {
+      if (!calEdit.team) { $('calShErr').textContent = 'Scegli l’avversario dall’elenco.'; return; }
+      if (calEdit.isNew && calRows.length >= CAL_MAX) { $('calShErr').textContent = `Al massimo ${CAL_MAX} partite.`; return; }
+      calRows = calRows.filter(r => Number(r.day) !== calEdit.day);
+      calRows.push({day: String(calEdit.day), team: calEdit.team, side: calEdit.side});
+      calRows.sort((a, b) => a.day - b.day);
+      haptic('success');
+      clearError();
+      closeCalSheet();
+      renderSteps();
+    });
+    $('calShDel').addEventListener('click', () => {
+      calRows = calRows.filter(r => Number(r.day) !== calEdit.day);
+      closeCalSheet();
+      renderSteps();
+    });
+    $('calShClose').addEventListener('click', closeCalSheet);
+    $('calOv').addEventListener('click', e => { if (e.target === $('calOv')) closeCalSheet(); });
+    $('calClear').addEventListener('click', () => { calRows = []; haptic('light'); renderCalRows(); renderSteps(); });
   }
 
   /* ---------- Liste incollate (Starting XI e Probabili) ---------- */
@@ -6066,7 +6209,7 @@
   $('igPick').addEventListener('click',() => $('igFile').click());
   $('igClear').addEventListener('click',igClearPhoto);
   $('igFile').addEventListener('change',e => { uploadIgPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
-  $('calAdd').addEventListener('click',() => { if (calRows.length < CAL_MAX) { calRows.push({day:'', team:'', side:'home'}); renderCalRows(); renderSteps(); } });
+  initCalendarSheet();
 
   $('minuteQuick').addEventListener('click',event => {
     const b = event.target.closest('button[data-v]');
