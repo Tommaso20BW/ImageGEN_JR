@@ -1133,7 +1133,10 @@
             <div id="mdPickEyebrow" class="eyebrow">Matchday</div>
             <div class="photo-head">
               <h1>Scegli la partita</h1>
-              <button id="squadLinkBtn" class="btn ghost" type="button" hidden>Link</button>
+              <div style="display:flex;gap:8px">
+                <button id="squadLinkBtn" class="btn ghost" type="button" hidden>Link</button>
+                <button id="mdManualBtn" class="btn ghost" type="button">A mano</button>
+              </div>
             </div>
             <p id="mdPickLead" class="lead">Dal calendario della Juventus: competizione, campo e avversario si compilano da soli.</p>
             <div id="mdPickOpts" class="fx-list" role="list"></div>
@@ -3177,16 +3180,10 @@
 
   function renderMdFixtures(mode) {
     fixtureList = fixtureCache[mode] || [];
-    $('mdPickHint').textContent = fixtureList.length ? '' : 'Calendario non disponibile: usa “Altra partita”.';
+    $('mdPickHint').textContent = fixtureList.length ? '' : 'Calendario non disponibile: usa “A mano”.';
     const box = $('mdPickOpts');
     box.innerHTML = '';
     fixtureList.slice(0,10).forEach(m => box.appendChild(fixtureCard(m)));
-    const other = document.createElement('button');
-    other.type = 'button';
-    other.className = 'fx-card fx-other' + (mdPick === 'manual' ? ' selected' : '');
-    other.textContent = 'Altra partita o dati inventati (a mano)';
-    other.addEventListener('click',() => { haptic('select'); pickMdFixture('manual'); });
-    box.appendChild(other);
   }
 
   async function loadMdFixtures() {
@@ -3243,12 +3240,6 @@
     const box = $('mdPickOpts');
     box.innerHTML = '';
     squadSite.forEach(m => box.appendChild(siteCard(m)));
-    const other = document.createElement('button');
-    other.type = 'button';
-    other.className = 'fx-card fx-other' + (mdPick === 'manual' ? ' selected' : '');
-    other.textContent = 'Altra partita o dati inventati (a mano)';
-    other.addEventListener('click',() => { haptic('select'); pickMdFixture('manual'); });
-    box.appendChild(other);
   }
 
   // Lettura dei convocati da juventus.com (o da un link incollato). Lancia se non riesce.
@@ -6210,6 +6201,8 @@
   $('igClear').addEventListener('click',igClearPhoto);
   $('igFile').addEventListener('change',e => { uploadIgPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
   initCalendarSheet();
+  // "A mano": altra partita o dati inventati, si passa subito al passo successivo.
+  $('mdManualBtn').addEventListener('click', async () => { haptic('select'); await pickMdFixture('manual'); nextField(true); });
 
   $('minuteQuick').addEventListener('click',event => {
     const b = event.target.closest('button[data-v]');
