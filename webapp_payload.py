@@ -240,7 +240,7 @@ def _build_state(envelope, catalog, now, expected_session):
     # UCL / UEL / Conference: colori della competizione, solo per Matchday, Starting XI e
     # Probabile XI e solo con una partita di quella competizione.
     if kit in UEFA_THEMES:
-        if kind not in ('md', 'xi', 'pxi') or uefa_theme_for(competition) != kit:
+        if kind not in ('md', 'xi', 'pxi', 'h2h') or uefa_theme_for(competition) != kit:
             raise ValueError('Tema UEFA non valido per questa partita.')
     elif kit not in VALID_KITS:
         raise ValueError('Kit non valido.')

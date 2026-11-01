@@ -15,6 +15,7 @@ KINDS = [
     ('PROBABILE XI', 'pxi'),
     ('SQUAD LIST', 'squad'),
     ('STARTING XI', 'xi'),
+    ('HEAD TO HEAD', 'h2h'),
     ('CALENDARIO', 'cal'),
     ('FOTO + JR', 'jr'),
     ('STORIE IG - BREAKING NEWS', 'igbn'),

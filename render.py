@@ -11,6 +11,33 @@ import threading
 from constants import COMPETITIONS
 
 
+_H2H_CACHE = {}
+
+
+def _h2h_stats(name, team_id=''):
+    """Dati Transfermarkt dell'avversario (cache 30 minuti: anteprima e invio non scaricano due volte)."""
+    import time
+
+    import h2h_data
+    from graphics.common import _logo_rows, asset_dir, normalize
+
+    hit = _H2H_CACHE.get(name)
+    if hit and time.time() - hit[0] < 1800:
+        return hit[1]
+    names = [name]
+    for row in _logo_rows(str(asset_dir())):
+        if normalize(row.get('name') or '') == normalize(name) or (team_id and str(row.get('espn_id') or '') == str(team_id)):
+            names += [row.get('name'), *(row.get('aliases') or [])]
+    try:
+        stats = h2h_data.fetch(names)
+    except LookupError as exc:
+        raise ValueError(str(exc)) from None
+    except OSError:
+        raise ValueError('Transfermarkt non risponde: riprova tra poco.') from None
+    _H2H_CACHE[name] = (time.time(), stats)
+    return stats
+
+
 def teams(data):
     opponent = data['opponent']
     juve = {'name': 'Juventus', 'id': '111'}
@@ -383,6 +410,17 @@ class Renderer:
                 module=data['module'],
                 players=[roster[name] for name in data['players']],
                 layout=data.get('layout'),
+            )
+
+        if kind == 'h2h':
+            from graphics import h2h
+
+            opponent = data['opponent']
+            return h2h.render(
+                kit=data['kit'],
+                stats=_h2h_stats(opponent['name'], opponent.get('id', '')),
+                opponent_name=opponent['name'],
+                opponent_id=opponent.get('id', ''),
             )
 
         if kind == 'squad':
