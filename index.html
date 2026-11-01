@@ -1363,6 +1363,12 @@
     .ptab-pt{text-align:right;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
     .ptab-row.juve{background:color-mix(in srgb,var(--tint) 12%,transparent)}
     .ptab-row.juve .ptab-team{font-weight:800}
+
+    /* cronometro: si tocca per allungare la sessione */
+    #sessionTimer{cursor:pointer;-webkit-tap-highlight-color:transparent}
+    #sessionTimer:active{opacity:.6}
+    .ia-btns.one{grid-template-columns:1fr}
+    .ia-btns [hidden]{display:none}
 </style>
 </head>
 
@@ -1395,7 +1401,7 @@
         <div class="top-right">
           <span id="navTools"></span>
           <button id="navDone" class="nav-done" type="button" hidden>Fine</button>
-          <div id="sessionTimer" class="timer hidden" role="timer" aria-label="Tempo rimasto alla sessione">
+          <div id="sessionTimer" class="timer hidden" role="button" tabindex="0" aria-label="Tempo rimasto alla sessione: tocca per allungarla">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
             <span id="sessionTimerText">10:00</span>
           </div>
@@ -2854,9 +2860,11 @@
      Service.extend, fino a 60 minuti in tutto per il limite del workflow GitHub). */
   let extending = false;
   let limitShown = false;
+  let sessionMaxAt = 0;     // ora massima della sessione (60 minuti dall'avvio)
   function applySessionInfo(info) {
     if (!info || !Number(info.expires)) return;
     sessionExpiresAt = Number(info.expires);
+    if (Number(info.max)) sessionMaxAt = Number(info.max);
     updateSessionTimer();
     if (!timerHandle && !sessionExpired()) timerHandle = setInterval(updateSessionTimer,1000);
   }
@@ -2883,6 +2891,49 @@
       extending = false;
     }
   }
+  // Tocco sul cronometro: popup per portare subito la sessione al massimo.
+  const clock = ms => new Date(ms).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  function openTimeSheet() {
+    if (!sessionExpiresAt || sessionExpired()) return;
+    haptic('select');
+    const atMax = !sessionMaxAt || sessionExpiresAt >= sessionMaxAt - 60000;
+    $('tmTitle').textContent = atMax ? 'Tempo massimo' : 'Più tempo';
+    $('tmText').textContent = atMax
+      ? `La sessione dura già il massimo (60 minuti dall’avvio): scade alle ${clock(sessionExpiresAt)}.`
+      : `Porto la sessione al massimo? Scadrà alle ${clock(sessionMaxAt)} invece che alle ${clock(sessionExpiresAt)}.`;
+    $('tmCancel').textContent = atMax ? 'OK' : 'Annulla';
+    $('tmGo').hidden = atMax;
+    $('tmBtns').classList.toggle('one', atMax);
+    $('tmGo').disabled = false;
+    $('tmOv').classList.add('open');
+  }
+  function closeTimeSheet() { $('tmOv').classList.remove('open'); }
+  async function extendToMax() {
+    $('tmGo').disabled = true;
+    try {
+      const response = await netFetch(`${directBase}/extend`,{
+        method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+        body:JSON.stringify({v:1, action:'extend', session, to_max:true})
+      }, 20000);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) throw new Error(body.error || 'Non riesco ad allungare la sessione.');
+      applySessionInfo(body);
+      haptic('success');
+      closeTimeSheet();
+    } catch (error) {
+      closeTimeSheet();
+      showError(error && error.name !== 'AbortError' && error.message ? error.message : 'Non riesco ad allungare la sessione. Riprova.');
+    }
+  }
+  $('sessionTimer').addEventListener('click', openTimeSheet);
+  $('sessionTimer').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTimeSheet(); } });
+  // Il popup è in fondo alla pagina (dopo questo script): i tocchi si leggono dal documento.
+  document.addEventListener('click', e => {
+    if (e.target.closest('#tmCancel')) closeTimeSheet();
+    else if (e.target.closest('#tmGo')) extendToMax();
+    else if (e.target.id === 'tmOv') closeTimeSheet();
+  });
+
   // Qualsiasi tocco o tasto negli ultimi 5 minuti conta.
   document.addEventListener('pointerdown',() => { maybeExtendSession(); },{capture:true, passive:true});
   document.addEventListener('keydown',() => { maybeExtendSession(); },{capture:true});
@@ -7451,6 +7502,15 @@
   }
 })();
 </script>
+<div id="tmOv" class="ask" role="dialog" aria-modal="true" aria-labelledby="tmTitle">
+  <div class="ios-alert">
+    <div class="ia-body">
+      <h2 id="tmTitle">Più tempo</h2>
+      <p id="tmText"></p>
+    </div>
+    <div id="tmBtns" class="ia-btns"><button id="tmCancel" type="button">Annulla</button><button id="tmGo" class="ia-main" type="button">Al massimo</button></div>
+  </div>
+</div>
 <div id="ask" class="ask" role="dialog" aria-modal="true" aria-labelledby="askTitle">
   <form id="askForm" class="ios-alert">
     <div class="ia-body">

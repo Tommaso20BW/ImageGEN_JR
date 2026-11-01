@@ -323,7 +323,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 return
 
             if path == '/extend':
-                self._json(200, {'ok': True, **self.service.extend()})
+                self._json(200, {'ok': True, **self.service.extend(envelope)})
                 return
 
             if path == '/layout':
@@ -419,14 +419,20 @@ class Service:
         return {'expires': self._expires_ms(),
                 'max': int((time.time() + (self.started_at + SESSION_MAX_SECONDS - time.monotonic())) * 1000)}
 
-    def extend(self):
-        """Ultimi 5 minuti + tocco nella Mini App: +5 minuti (fino a 60 minuti in tutto)."""
+    def extend(self, envelope=None):
+        """Ultimi 5 minuti + tocco nella Mini App: +5 minuti (fino a 60 minuti in tutto).
+        Con "to_max" (tocco sul cronometro e conferma): subito al massimo, 60 minuti dall'avvio."""
+        to_max = isinstance(envelope, dict) and envelope.get('to_max') is True
         with self.deadline_lock:
             now = time.monotonic()
             left = self.deadline - now
             limit = self.started_at + SESSION_MAX_SECONDS
             extended = False
-            if 0 < left <= EXTEND_WHEN_LEFT_SECONDS + 5 and self.deadline < limit and not self.stopped:
+            if to_max and left > 0 and self.deadline < limit and not self.stopped:
+                self.deadline = limit
+                extended = True
+                print(f'INFO IMAGEGEN: sessione al massimo | mancano {self.deadline - now:.0f}s', flush=True)
+            elif 0 < left <= EXTEND_WHEN_LEFT_SECONDS + 5 and self.deadline < limit and not self.stopped:
                 self.deadline = min(self.deadline + EXTEND_BY_SECONDS, limit)
                 extended = True
                 print(f'INFO IMAGEGEN: sessione allungata | mancano {self.deadline - now:.0f}s', flush=True)
@@ -971,8 +977,8 @@ class Service:
             self.launcher_message_id,
         ])
 
-        # Nessun messaggio in chiusura (farebbe notifica): il pulsante sta nel messaggio
-        # appena cancellato e nel tasto menu, rimesso com'era qui sotto.
+        # Nessun messaggio, né all'avvio né in chiusura: il tasto "ImageGEN" in basso
+        # nella chat torna quello normale qui sotto e sparisce.
         try:
             self.telegram.reset_menu_button()
         except TelegramError:

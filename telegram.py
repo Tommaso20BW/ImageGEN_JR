@@ -5,27 +5,6 @@ from urllib.parse import urlparse
 import requests
 
 
-# Session message: bold title + italic line, both with custom emoji (offsets in UTF-16 units).
-SESSION_TITLE = "🎨 ImageGen"
-SESSION_LINE = "Sessione attiva per almeno 30min."
-SESSION_TEXT = f"{SESSION_TITLE}\n\n⏳ {SESSION_LINE}"
-
-
-def _u16(text):
-    """Lunghezza in unità UTF-16, come la contano le entità di Telegram."""
-    return len(text.encode('utf-16-le')) // 2
-
-
-# Corsivo su tutta la riga, calcolato dal testo (prima era fisso a 26 e "10min." restava fuori).
-_LINE_AT = _u16(SESSION_TEXT) - _u16(SESSION_LINE)
-SESSION_ENTITIES = [
-    {'type': 'bold', 'offset': 0, 'length': _u16(SESSION_TITLE)},
-    {'type': 'custom_emoji', 'offset': 0, 'length': 2, 'custom_emoji_id': '5431456208487716895'},
-    {'type': 'custom_emoji', 'offset': _LINE_AT - 2, 'length': 1, 'custom_emoji_id': '5451732530048802485'},
-    {'type': 'italic', 'offset': _LINE_AT, 'length': _u16(SESSION_LINE)},
-]
-
-
 class TelegramError(RuntimeError):
     pass
 
@@ -148,24 +127,19 @@ class Telegram:
         )
 
     def webapp_launcher(self, url):
+        """Tasto "ImageGEN" in basso nella chat (menu della chat), nessun messaggio.
+        Alla chiusura reset_menu_button lo toglie. Senza tasto non c'è modo di aprire
+        la Mini App: se Telegram lo rifiuta, la sessione si ferma con l'errore."""
         parsed = urlparse(str(url).strip())
 
         if parsed.scheme != 'https' or not parsed.netloc:
             raise TelegramError('URL Mini App non HTTPS')
 
-        # Pulsante sotto il messaggio + tasto menu della chat (niente tastiera): alla chiusura
-        # basta cancellare il messaggio e rimettere il menu normale, senza inviare nulla
-        # (una tastiera si toglie solo con un messaggio, che fa sempre notifica).
-        url = str(url).strip()
-        keyboard = {'inline_keyboard': [[{'text': 'Apri ImageGEN', 'web_app': {'url': url}}]]}
-        try:
-            self.call('setChatMenuButton', {
-                'chat_id': self.chat_id,
-                'menu_button': json.dumps({'type': 'web_app', 'text': 'ImageGEN', 'web_app': {'url': url}}),
-            })
-        except TelegramError:
-            pass
-        return self.prompt(SESSION_TEXT, keyboard, SESSION_ENTITIES)
+        self.call('setChatMenuButton', {
+            'chat_id': self.chat_id,
+            'menu_button': json.dumps({'type': 'web_app', 'text': 'ImageGEN', 'web_app': {'url': str(url).strip()}}),
+        })
+        return None
 
     def delete(self, message_id):
         return self.call(
