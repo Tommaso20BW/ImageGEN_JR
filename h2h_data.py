@@ -15,8 +15,11 @@ JUVE_TM = '506'
 HEADERS = {
     'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                    '(KHTML, like Gecko) Chrome/130.0 Safari/537.36'),
-    'Accept-Language': 'it-IT,it;q=0.9',
+    'Accept-Language': 'it-IT,it;q=0.9,en;q=0.8',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Referer': 'https://www.transfermarkt.it/',
 }
+LAST = {}   # ultima pagina scaricata (per capire cosa risponde il sito se qualcosa va storto)
 YOUTH = re.compile(r'\b(U\d\d|Primavera|Giovan|Under|Femminile|Women|Frauen|Youth|Reserves?|II|B)\b|\(U\d', re.I)
 PREFIXES = re.compile(r'^(?:FC|AC|AS|ACF|SSC|SS|US|UC|AFC|CF|SC|SK|FK|NK|HNK|GNK|PFC|RCD|RC|CD|SD|UD|SL|SV|VfB|VfL|TSG|BSC|OGC|AJ|RB|KRC|KAA|KV|RSC|PSV)\s+', re.I)
 SUFFIXES = re.compile(r'\s+(?:FC|CF|AC|SC|1\d{3}|Calcio|Milan)$', re.I)
@@ -41,7 +44,12 @@ COMPETITION_NAMES = {
 def _get(path, timeout=20):
     req = urllib.request.Request(BASE + path, headers=HEADERS)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.read().decode('utf-8', 'replace')
+        page = resp.read().decode('utf-8', 'replace')
+        title = re.search(r'<title>(.*?)</title>', page, re.S)
+        LAST.update(url=resp.geturl(), status=resp.status, size=len(page),
+                    title=' '.join(html.unescape(title[1]).split())[:80] if title else '')
+        print(f"TRANSFERMARKT {LAST['status']} {LAST['url']} {LAST['size']}B «{LAST['title']}»", flush=True)
+        return page
 
 
 def _variants(names):
@@ -65,7 +73,8 @@ def find_club(names):
                 r'<td class="hauptlink"><a title="([^"]+)" href="/[^/]+/startseite/verein/(\d+)"', page):
             if club_id != JUVE_TM and not YOUTH.search(html.unescape(title)):
                 return club_id
-    raise LookupError('Squadra non trovata su Transfermarkt.')
+    raise LookupError(f'Squadra non trovata su Transfermarkt ({", ".join(_variants(names)[:3])}). '
+                      f'Risposta: {LAST.get("status")} «{LAST.get("title")}» {LAST.get("size")}B')
 
 
 def _competition(name):
