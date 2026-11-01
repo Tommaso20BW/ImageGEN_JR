@@ -612,7 +612,7 @@
     .lay-role label{color:var(--muted);font-size:13px;font-weight:700}
     .lay-role input{width:92px;min-height:38px;text-align:center;text-transform:uppercase;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--text);font:inherit;font-weight:800;font-size:16px}
     /* Popup numero di maglia */
-    .ask{position:fixed;inset:0;z-index:50;display:none;place-items:center;padding:24px;background:rgba(0,0,0,.45)}
+    .ask{position:fixed;inset:0;z-index:70;display:none;place-items:center;padding:24px;background:rgba(0,0,0,.45)}
     .ask.open{display:grid}
     .ask-card{width:100%;max-width:340px;padding:20px;border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-hover)}
     .ask-card h2{margin:0 0 6px;font-size:20px}
@@ -1295,6 +1295,57 @@
     /* data e ora su iPhone: valore al centro della riga, a destra */
     .ios-in[type=date],.ios-in[type=time]{display:flex!important;align-items:center;justify-content:flex-end;line-height:48px;min-height:48px}
     .ios-in::-webkit-date-and-time-value{text-align:right;margin:0;padding:0;line-height:48px}
+    /* popup al centro come gli avvisi di iPhone (link convocati, numero di maglia) */
+    .ios-alert{width:min(300px,100%);border-radius:14px;overflow:hidden;background:var(--surface);box-shadow:0 10px 40px rgba(0,0,0,.25);text-align:center}
+    html[data-theme="dark"] .ios-alert{background:#2C2C2E}
+    .ia-body{padding:20px 16px 16px}
+    .ia-body h2{margin:0;font-size:17px;font-weight:700}
+    .ia-body p{margin:4px 0 14px;color:var(--text);font-size:13px;font-weight:500;line-height:1.35}
+    .ia-field{display:flex;align-items:center;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--bg);padding:0 4px 0 8px}
+    html[data-theme="dark"] .ia-field{background:#1C1C1E}
+    .ia-field input{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;font-size:14px;font-weight:500}
+    .ia-field input::placeholder{color:var(--chev)}
+    .ia-num{text-align:center;font-size:18px!important;font-weight:700!important}
+    .ia-paste{flex:none;border:0;background:none;color:var(--tint);font:inherit;font-size:13px;font-weight:600;padding:4px 6px;cursor:pointer}
+    .ia-err{margin-top:8px;color:var(--danger);font-size:12.5px;font-weight:500;line-height:1.3}
+    .ia-err:empty{display:none}
+    .ia-btns{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
+    .ia-btns button{height:44px;border:0;background:none;color:var(--tint);font:inherit;font-size:16px;font-weight:500;cursor:pointer}
+    .ia-btns button + button{border-left:1px solid var(--line)}
+    .ia-btns .ia-main{font-weight:700}
+    .ia-btns button:disabled{color:var(--chev);cursor:default}
+    .ia-btns button:active:not(:disabled){background:var(--accent-soft)}
+    /* Modulo / Layout e Personalizza colore: popup al centro come su iPhone */
+    #modOv{align-items:center;justify-content:center;padding:16px}
+    #modSh{max-width:380px;max-height:84vh;border-radius:14px;padding:14px 14px 16px;background:var(--surface);box-shadow:0 10px 40px rgba(0,0,0,.25)}
+    html[data-theme="dark"] #modSh,html[data-theme="dark"] .jrc-sh{background:#2C2C2E}
+    #modSh .mod-bar{display:none}
+    #modSh .mod-top{display:grid;grid-template-columns:80px 1fr 80px;margin:0 0 12px}
+    #modSh .mod-top b{grid-column:2;text-align:center;font-size:17px;font-weight:700}
+    #modSh .mod-top button{grid-column:3;justify-self:end;color:var(--tint);font-size:16px;font-weight:500}
+    #modSh .mod-grid{grid-template-columns:repeat(4,1fr);gap:8px}
+    #modSh .mod-tile{border:0;background:var(--bg);border-radius:12px;padding:6px 4px 7px;font-size:12px}
+    #modSh .mod-tile.on{box-shadow:inset 0 0 0 2px var(--tint)}
+    .jrc-ov{align-items:center!important;justify-content:center;padding:16px}
+    .jrc-sh{max-width:380px!important;max-height:86vh!important;border-radius:14px!important;transform:none!important;padding:14px 14px 16px!important;background:var(--surface)!important;box-shadow:0 10px 40px rgba(0,0,0,.25)!important}
+    .jrc-ov:not(.open) .jrc-sh{display:none}
+    .jrc-grab{padding:0 0 4px!important;cursor:default!important}
+    .jrc-grab>i{display:none!important}
+    .jrc-top{display:grid!important;grid-template-columns:80px 1fr 80px}
+    .jrc-top b{grid-column:2;text-align:center;font-size:17px!important;font-weight:700}
+    .jrc-top button{grid-column:3;justify-self:end;height:auto!important;padding:4px 0!important;border-radius:0!important;background:none!important;color:var(--tint)!important;font-size:16px!important;font-weight:700!important}
+    .jrc-sprev{background:var(--bg)!important;box-shadow:none!important;border-radius:12px!important}
+    .jrc-seg{border-radius:10px!important;padding:3px!important}
+    .jrc-seg button{height:30px!important;border-radius:8px!important;color:var(--text)!important;font-weight:700!important}
+    .jrc-seg button.on{background:var(--surface)!important;color:var(--text)!important;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+    html[data-theme="dark"] .jrc-seg button.on{background:#636366!important}
+    .jrc-end{background:var(--bg)!important}
+    /* campi di testo lunghi: più alti (crescono da soli col testo) */
+    textarea.field-input{min-height:190px!important;overflow:hidden}
+    #igText{min-height:230px!important}
+    /* Logo: "Originale" solo se c'è un logo fclogo a cui tornare */
+    .sp-tiles.two{grid-template-columns:repeat(2,1fr)}
+    .sp-link button{color:var(--tint)!important;font-weight:600!important}
 </style>
 </head>
 
@@ -1813,14 +1864,14 @@
   <div id="calShErr" class="lnk-err"></div>
   <div class="cal-sh-btns"><button type="button" id="calShDel" class="btn ghost">Togli</button><button type="button" id="calShSave" class="btn primary">Salva</button></div>
 </div></div>
-<div id="lnkOv" class="mod-ov"><div id="lnkSh" class="mod-sh">
-  <div class="mod-bar"></div>
-  <div class="mod-top"><b>Link convocati</b><button type="button" id="lnkClose">Chiudi</button></div>
-  <div class="lnk-row">
-    <input id="lnkIn" class="field-input" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="Incolla il link dell’articolo">
-    <button type="button" id="lnkGo" class="btn primary">Genera</button>
+<div id="lnkOv" class="ask ios-alert-ov" role="dialog" aria-modal="true" aria-labelledby="lnkTitle"><div id="lnkSh" class="ios-alert">
+  <div class="ia-body">
+    <h2 id="lnkTitle">Link convocati</h2>
+    <p>Copia il link dell’articolo dei convocati su juventus.com e incollalo qui.</p>
+    <label class="ia-field"><input id="lnkIn" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="https://www.juventus.com/…"><button type="button" id="lnkPaste" class="ia-paste">Incolla</button></label>
+    <div id="lnkErr" class="ia-err" role="alert"></div>
   </div>
-  <div id="lnkErr" class="lnk-err" role="alert"></div>
+  <div class="ia-btns"><button type="button" id="lnkClose">Annulla</button><button type="button" id="lnkGo" class="ia-main" disabled>Genera</button></div>
 </div></div>
 <script>
 (() => {
@@ -3703,6 +3754,7 @@
     haptic('select');
     $('lnkErr').textContent = '';
     $('lnkIn').value = '';
+    $('lnkGo').disabled = true;
     $('lnkOv').classList.add('open');
     setTimeout(() => $('lnkIn').focus(), 80);
   }
@@ -3729,7 +3781,7 @@
     } catch (e) {
       fail(e && e.message ? e.message : 'Link non valido.');
     } finally {
-      lnkBusy = false; btn.disabled = false; btn.textContent = 'Genera';
+      lnkBusy = false; btn.textContent = 'Genera'; btn.disabled = !$('lnkIn').value.trim();
     }
   }
 
@@ -3843,10 +3895,26 @@
     document.body.classList.toggle('last-step', lastStep);
     if (lastStep) $('navDone').hidden = true;
     $('navDone').textContent = busyLabel || 'Fine';
+    document.querySelectorAll('textarea.field-input').forEach(el => { if (el.offsetParent) fitTextarea(el); });
     document.querySelectorAll('#navTools .nav-tools-g').forEach(g => g.classList.toggle('on', g.dataset.for === screenName && !home));
   }
 
+  // I campi di testo lunghi si allungano col contenuto (anche quando il testo arriva da Gazzetta/Sky o dal sito).
+  function fitTextarea(el) {
+    el.style.height = 'auto';                                   // nascosto: resta l'altezza minima
+    if (el.offsetParent) el.style.height = el.scrollHeight + 2 + 'px';
+  }
+  function initTextareas() {
+    document.querySelectorAll('textarea.field-input').forEach(el => {
+      el.addEventListener('input', () => fitTextarea(el));
+      const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+      Object.defineProperty(el, 'value', {get() { return desc.get.call(this); },
+        set(v) { desc.set.call(this, v); requestAnimationFrame(() => fitTextarea(el)); }});
+    });
+  }
+
   function initNav() {
+    initTextareas();
     document.querySelectorAll('.ios-in[type=date], .ios-in[type=time]').forEach(el =>
       el.addEventListener('click', () => { try { el.showPicker(); } catch (_) {} }));
     // Icone e tasti in alto delle schermate (A mano, Scegli foto, Modifica, Svuota…) vanno nella barra.
@@ -4075,7 +4143,7 @@
   const SP_ICONS = {
     phone:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
     search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
-    undo:'<path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/>',
+    undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
     link:'<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/>',
     lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     plus:'<path d="M12 5v14M5 12h14"/>',
@@ -4191,9 +4259,9 @@
       html = spNav('Logo', {save:true, cancel:true, saveLabel:T.isNew ? 'Fine' : 'Salva', saveOff:!changed}) + `<div class="sp-body sp-logo-page">
         <div class="sp-stage"><div class="set-ed-box sp-ed${live ? ' live' : ''}${uri ? '' : ' empty'}" id="setEdBox"${uri ? '' : ' data-sp="phone"'}>${guides}${inner}${uri ? '' : `<span class="set-ed-empty">${spIco('phone', 28)}Carica il logo</span>`}${corner}</div></div>
         <p class="sp-hint">${live ? 'Trascina per spostare · due dita per la dimensione' : '&nbsp;'}</p>
-        <div class="sp-tiles"><button type="button" class="sp-tile" data-sp="phone">${spIco('phone')}Telefono</button>
+        <div class="sp-tiles${canOrig ? '' : ' two'}"><button type="button" class="sp-tile" data-sp="phone">${spIco('phone')}Telefono</button>
           <button type="button" class="sp-tile" data-sp="fcl-open">${spIco('search')}Cerca fclogo</button>
-          <button type="button" class="sp-tile" data-sp="orig" ${canOrig ? '' : 'disabled'}>${spIco('undo')}Originale</button></div>
+          ${canOrig ? `<button type="button" class="sp-tile" data-sp="orig">${spIco('undo')}Originale</button>` : ''}</div>
         <label class="sp-link">${spIco('link', 20)}<input id="setFcl" type="url" inputmode="url" placeholder="Incolla link fclogo.top" autocomplete="off" spellcheck="false"><button type="button" data-sp="fcl-use">Usa</button></label>
         <div id="setErr" class="sp-err"></div></div>`;
     } else if (page === 'name') {
@@ -7189,7 +7257,15 @@
   $('lnkClose').addEventListener('click',closeLinkSheet);
   $('lnkGo').addEventListener('click',submitLink);
   $('lnkIn').addEventListener('keydown',e => { if (e.key === 'Enter') { e.preventDefault(); submitLink(); } });
-  $('lnkIn').addEventListener('input',() => { $('lnkErr').textContent = ''; });
+  $('lnkIn').addEventListener('input',() => { $('lnkErr').textContent = ''; $('lnkGo').disabled = lnkBusy || !$('lnkIn').value.trim(); });
+  // "Incolla": prende il link dagli appunti (se il telefono lo permette, altrimenti si tiene premuto il campo)
+  $('lnkPaste').addEventListener('click', async () => {
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (text) { $('lnkIn').value = text; $('lnkIn').dispatchEvent(new Event('input')); return; }
+    } catch (_) {}
+    $('lnkIn').focus();
+  });
   $('lnkOv').addEventListener('click',e => { if (e.target.id === 'lnkOv') closeLinkSheet(); });
   $('previewEdit').addEventListener('click',() => {
     if (kind === 'pxi') { openLayoutEditor(); return; }
@@ -7301,14 +7377,13 @@
 })();
 </script>
 <div id="ask" class="ask" role="dialog" aria-modal="true" aria-labelledby="askTitle">
-  <form id="askForm" class="ask-card">
-    <h2 id="askTitle">Numero di maglia</h2>
-    <p id="askText"></p>
-    <input id="askInput" class="field-input" type="text" inputmode="numeric" maxlength="2" autocomplete="off" enterkeyhint="done">
-    <div class="ask-btns">
-      <button id="askCancel" class="btn ghost" type="button">Annulla</button>
-      <button class="btn primary" type="submit">OK</button>
+  <form id="askForm" class="ios-alert">
+    <div class="ia-body">
+      <h2 id="askTitle">Numero di maglia</h2>
+      <p id="askText"></p>
+      <label class="ia-field"><input id="askInput" class="ia-num" type="text" inputmode="numeric" maxlength="2" autocomplete="off" enterkeyhint="done" placeholder="10"></label>
     </div>
+    <div class="ia-btns"><button id="askCancel" type="button">Annulla</button><button class="ia-main" type="submit">OK</button></div>
   </form>
 </div>
 </body>
