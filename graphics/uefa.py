@@ -1,4 +1,4 @@
-"""Temi UEFA (UCL / UEL / Conference) per Matchday, Starting XI e Probabile XI.
+"""Temi UEFA (UCL / UEL / Conference) e Amichevole per Matchday, Starting XI e Probabile XI.
 
 Stesso design delle maglie, con i colori della competizione: i livelli Canva di una
 maglia di partenza vengono ricolorati pixel per pixel (anche sfumature e grana).
@@ -31,9 +31,10 @@ from PIL import Image
 from graphics.common import asset_dir
 
 KITS = ('home', 'away', 'third')
-THEMES = ('ucl', 'uel', 'conference')
+THEMES = ('ucl', 'uel', 'conference', 'friendly')
 ALL = KITS + THEMES
-LABELS = {'ucl': 'Champions League', 'uel': 'Europa League', 'conference': 'Conference League'}
+LABELS = {'ucl': 'Champions League', 'uel': 'Europa League', 'conference': 'Conference League',
+          'friendly': 'Amichevole'}
 
 PALETTES = {
     'ucl': {
@@ -55,6 +56,14 @@ PALETTES = {
         'light': (21, 180, 24),      # verde dello sfondo Conference
         'accent': ((0, 0, 0), (20, 20, 20), (46, 46, 46)),
     },
+    # Amichevoli: parte dalla Third -> fondi grigio antracite, scritte e loghi argento.
+    'friendly': {
+        'base': 'third',
+        'dark': (22, 24, 28),
+        'light': (226, 229, 234),
+        'accent': ((140, 146, 154), (238, 241, 245)),
+        'flat_fx': True,
+    },
 }
 
 
@@ -68,8 +77,10 @@ def base_kit(kit):
 
 
 def theme_for(competition):
-    """Tema UEFA della competizione (codice ESPN), '' se non è una coppa UEFA a tema."""
+    """Tema della competizione (codice ESPN): coppa UEFA o amichevole, '' altrimenti."""
     value = str(competition or '').lower()
+    if 'friendly' in value:
+        return 'friendly'
     if 'conf' in value:
         return 'conference'
     if 'champions' in value:

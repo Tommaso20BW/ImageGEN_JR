@@ -146,6 +146,12 @@ def _catalog_name(espn_team, rows):
     return None
 
 
+def _competition(slug):
+    """Codice ESPN della competizione; tutte le amichevoli diventano "club.friendly"."""
+    slug = str(slug or '')
+    return 'club.friendly' if 'friendly' in slug.lower() else slug
+
+
 def matches(rows, start=None, end=None, session=None):
     """Partite Juventus fra start ed end (datetime con fuso), ordinate per data.
 
@@ -170,7 +176,7 @@ def matches(rows, start=None, end=None, session=None):
             'id': str(event.get('id')),
             'date': local.strftime('%Y-%m-%d'),
             'time': local.strftime('%H:%M'),
-            'competition': (event.get('league') or {}).get('slug', ''),
+            'competition': _competition((event.get('league') or {}).get('slug', '')),
             'side': 'home' if home else 'away',
             'opponent': _catalog_name(espn_team, rows),
             'opponent_espn': espn_team.get('displayName', ''),

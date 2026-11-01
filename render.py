@@ -288,6 +288,25 @@ class Renderer:
             'competition': data['competition'],
         }
 
+        friendly = 'friendly' in str(data.get('competition') or '')
+
+        if kind in ('goal', 'saved') and friendly:
+            # Amichevoli: card senza la foto del calciatore, solo scritte, risultato e loghi.
+            score = data.get('score') or (None, None)
+            return p.event(
+                player=None, scorer_name=data['player'], minute=data['minute'],
+                saved=kind == 'saved', home_goals=score[0], away_goals=score[1], **common,
+            ).png
+
+        if kind in ('half', 'full', 'end_of_90') and friendly:
+            # Amichevoli: niente foto, solo scritta della fase, risultato e loghi.
+            score = data.get('score') or (0, 0)
+            return _phase_with_translated_shootout(
+                p, shootout=data.get('shootout') if kind == 'full' else None, layers=None,
+                kind=kind, home_goals=score[0], away_goals=score[1],
+                extra_time=kind == 'full' and bool(data.get('extra_time')), **common,
+            )
+
         if kind in ('goal', 'saved'):
             # Risultato accanto al minuto (assente nei payload vecchi: la card lo omette).
             score = data.get('score') or (None, None)

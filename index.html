@@ -2021,9 +2021,10 @@
     ['uefa.europa.conf','Conference League']
   ];
   function competitionOptions() {
-    if (kind === 'squad') return [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['uefa.champions','Champions League'],['uefa.europa','Europa League'],['uefa.europa.conf','Conference League']];
+    const friendly = [['club.friendly','Amichevole']];
+    if (kind === 'squad') return [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['uefa.champions','Champions League'],['uefa.europa','Europa League'],['uefa.europa.conf','Conference League'], ...friendly];
     const italy = [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana']];
-    return [...italy, ...COMPETITIONS_UEFA];
+    return [...italy, ...COMPETITIONS_UEFA, ...friendly];
   }
   // Fasi con foto caricata (sfondo + persona), prima prese dalla pagina 1 Canva.
   const PHOTO_PHASES = new Set(['half','end_of_90','full']);
@@ -2038,9 +2039,12 @@
   const KITS = [['home','Home'],['away','Away'],['third','Third']];
   // Colori della competizione (UCL / UEL / Conference) per Matchday, Starting XI e
   // Probabile XI: con una partita di quella coppa si mettono da soli, la maglia non si chiede.
-  const UEFA_THEMES = {ucl:'Champions League', uel:'Europa League', conference:'Conference League'};
+  // Amichevoli: tema grigio e argento, come quello di una coppa.
+  const UEFA_THEMES = {ucl:'Champions League', uel:'Europa League', conference:'Conference League', friendly:'Amichevole'};
+  const isFriendly = () => String(competition || '').includes('friendly');
   const uefaTheme = c => {
     c = String(c || '').toLowerCase();
+    if (c.includes('friendly')) return 'friendly';
     if (c.includes('conf')) return 'conference';
     if (c.includes('champions')) return 'ucl';
     return c === 'uefa.europa' ? 'uel' : '';
@@ -2048,7 +2052,8 @@
   const uefaAuto = () => ['md','xi','pxi','h2h'].includes(kind) ? uefaTheme(competition) : '';
   // Probabile XI a tema UEFA: il passo "Maglia" resta, ma solo per le foto dei giocatori.
   let shirt = '';
-  const needsShirt = () => kind === 'pxi' && !!UEFA_THEMES[kit];
+  // Amichevole: niente foto dei giocatori, quindi nessuna maglia da scegliere.
+  const needsShirt = () => kind === 'pxi' && !!UEFA_THEMES[kit] && kit !== 'friendly';
   const JR_COLORS = [['black','Nero'],['white','Bianco'],['gold','Oro']];
   const TABLE_COMPS = [['SA','Serie A'],['UCL','Champions League'],['UEL','Europa League'],['UECL','Conference League']];
   const JR_STYLES = [['classic','Classica'],['blur','Sfocata'],['collage','Collage']];
@@ -2323,15 +2328,18 @@
     const picked = mdPick && mdPick !== 'manual';
     // Partita scelta: via competizione/campo/avversario; via anche la maglia se ESPN la sa.
     const pick = steps => ['mdpick',...(picked ? steps.filter(s => !base.includes(s) && !(s === 'kit' && kitFromMatch)) : steps)];
-    if (kind === 'goal' || kind === 'saved') flow = pick([...withKit,'player','minute','pose']);
+    // Amichevole: Gol/Parata senza foto del calciatore (niente maglia e posa), fasi senza foto.
+    const friendly = isFriendly();
+    if ((kind === 'goal' || kind === 'saved') && friendly) flow = pick([...base,'player','minute']);
+    else if (kind === 'goal' || kind === 'saved') flow = pick([...withKit,'player','minute','pose']);
     else if (kind === 'kick') flow = pick(base);
     else if (kind === 'match' && phase === 'kick') flow = pick(base);
-    else if (kind === 'match') flow = [...pick([...(italy ? withKit : base),'score']),...(PHOTO_PHASES.has(phase) ? ['phasephoto'] : [])];
+    else if (kind === 'match') flow = [...pick([...(italy ? withKit : base),'score']),...(PHOTO_PHASES.has(phase) && !friendly ? ['phasephoto'] : [])];
     else if (kind === 'stats') flow = pick([...(italy ? withKit : base),'moment','stats']);
     else if (PREMATCH.includes(kind)) {
       // Matchday / Starting XI di una partita UEFA: niente passo "Maglia" (colori della coppa).
       const kitStep = uefa && kind !== 'pxi' ? [] : ['kit'];
-      const rest = {squad:['squad'], xi:[...kitStep,'lineup','photo'], md:[...kitStep,'match','photo'], pxi:['kit','xi11'], h2h:[...kitStep]}[kind];
+      const rest = {squad:['squad'], xi:[...kitStep,'lineup','photo'], md:[...kitStep,'match','photo'], pxi:friendly ? ['xi11'] : ['kit','xi11'], h2h:[...kitStep]}[kind];
       flow = pick([...base,...rest]);
       // Squad List da una partita dei convocati: giocatori già compilati, si va dritti all'anteprima.
       if (kind === 'squad' && String(mdPick).startsWith('site:')) flow = ['mdpick'];
@@ -6786,7 +6794,7 @@
       if (phase === 'full' && pensOn) {
         data.shootout = scorePair('homePens','awayPens',true);
       }
-      if (PHOTO_PHASES.has(phase)) Object.assign(data, phasePhotoData(ghost));
+      if (PHOTO_PHASES.has(phase) && !isFriendly()) Object.assign(data, phasePhotoData(ghost));
     } else if (kind === 'xi') {
       if (!photoId) throw new Error('Scegli una foto.');
       data.lineup = lineupRows().map(p => ({number:p.number, name:p.name}));

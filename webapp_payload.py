@@ -267,6 +267,9 @@ def _build_state(envelope, catalog, now, expected_session):
         'side': side,
         'opponent': _canonical_team(catalog, incoming.get('opponent')),
     }
+    # Amichevoli: grafiche senza foto dei calciatori e senza foto caricate (solo testo,
+    # risultato e loghi) in Gol, Parata, Half time, End of 90', Full time e Probabile XI.
+    friendly = uefa_theme_for(competition) == 'friendly'
 
     if kind in ('goal', 'saved'):
         data['player'] = _canonical_player(
@@ -277,14 +280,14 @@ def _build_state(envelope, catalog, now, expected_session):
         data['minute'] = parse_minute(str(incoming.get('minute') or ''))
         # Score shown next to the minute on the card; older clients may not send it.
         data['score'] = _score(incoming.get('score'), optional=True)
-        pose = str(incoming.get('pose') or '')
+        pose = str(incoming.get('pose') or ('arms_crossed' if friendly else ''))
         if pose not in VALID_POSES:
             raise ValueError('Posa non valida.')
         data['pose'] = pose
 
     elif kind in ('second', 'half', 'full', 'end_of_90'):
         data['score'] = _score(incoming.get('score'))
-        if kind != 'second':
+        if kind != 'second' and not friendly:
             # Sfondo (foto) + persona: scontornata dalla foto stessa (person_id
             # assente) o caricata a parte; person_frame assente = segue lo sfondo.
             data['photo_id'] = _photo_id(incoming.get('photo_id'))
@@ -337,7 +340,7 @@ def _build_state(envelope, catalog, now, expected_session):
         data['module'] = module
         data['players'] = players
         # Colori UEFA: la maglia serve comunque per le foto dei giocatori.
-        if kit in UEFA_THEMES:
+        if kit in UEFA_THEMES and not friendly:
             shirt = str(incoming.get('shirt') or '')
             if shirt not in VALID_KITS:
                 raise ValueError('Scegli la maglia dei giocatori.')

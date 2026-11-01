@@ -15,13 +15,14 @@ BACKGROUNDS = {
     'uefa.europa': 'squad_list_europa_league.png',
     'uefa.champions': 'squad_list_champions_league.png',
     'uefa.europa.conf': 'squad_list_conference_league.png',
+    'club.friendly': 'squad_list_amichevole.png',
 }
 
 # Titolo "squad list" (Allogist Italic, misure Canva), tutto minuscolo: "list" nel colore della competizione.
 TITLE_SIZE, TITLE_BASE, TITLE_X = 206.7, 324.75, 540.0
 TITLE_ACCENT = {
     'ita.1': '#ffffff', 'ita.coppa_italia': '#ffffff', 'uefa.europa': '#fa6c08',
-    'uefa.champions': '#73aabf', 'uefa.europa.conf': '#11b913',
+    'uefa.champions': '#73aabf', 'uefa.europa.conf': '#11b913', 'club.friendly': '#d9dde3',
 }
 NO_LIGATURES = "font-variant-ligatures:none;font-feature-settings:'liga' 0,'clig' 0,'dlig' 0"
 
@@ -67,7 +68,7 @@ def columns(players):
 
 def build_html(*, players, competition, home_name, home_id, away_name, away_id, title_word='list', **_):
     if competition not in BACKGROUNDS:
-        raise ValueError('Squad List disponibile per Serie A, Coppa Italia, Champions, Europa e Conference League.')
+        raise ValueError('Squad List disponibile per Serie A, Coppa Italia, Champions, Europa, Conference League e amichevoli.')
     assets = asset_dir()
     left, right = columns(players)
     n = max(len(left), 1)

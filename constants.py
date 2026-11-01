@@ -31,6 +31,7 @@ COMPETITIONS = [
     ('Conference League', 'uefa.europa.conf'),
     ('Supercoppa UEFA', 'uefa.super_cup'),
     ('Mondiale per Club', 'fifa.cwc'),
+    ('Amichevole', 'club.friendly'),
 ]
 
 STATS = (

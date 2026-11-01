@@ -191,17 +191,20 @@ def build_html(*, kit, module, players, shirt=None, home_name, home_id, away_nam
     s = layout['scale']
     k = meta['head_rect'][2] * s / (HEAD_CROP[2] - HEAD_CROP[0])
 
+    # Amichevoli: solo i nomi, senza foto dei giocatori e senza lastre sfumate (effetto luce).
+    names_only = kit == 'friendly'
     cards, labels, names = [], [], []   # lastre+teste sotto, blocchi coi nomi sempre sopra
     for i, ((cx, top), player) in enumerate(zip(place_cards(layout['cards'], s), players)):
         px, py, pw, ph = _rect((cx, top), meta['plates_rect'], s)
         hx, hy, hw, hh = _rect((cx, top), meta['head_rect'], s)
         lx, ly, lw, lh = _rect((cx, top), meta['label_rect'], s)
-        cards.append(
-            f'<img class="abs" src="{plates}" style="left:{px}px;top:{py}px;width:{pw}px;height:{ph}px">'
-            f'<div class="head" style="left:{hx}px;top:{hy}px;width:{hw}px;height:{hh}px">'
-            f'<img src="{data_uri(head_photo(player, kit, shirt))}" style="left:{-HEAD_CROP[0] * k}px;'
-            f'top:{-HEAD_CROP[1] * k}px;width:{1254 * k}px;height:{1254 * k}px"></div>'
-        )
+        if not names_only:
+            cards.append(
+                f'<img class="abs" src="{plates}" style="left:{px}px;top:{py}px;width:{pw}px;height:{ph}px">'
+                f'<div class="head" style="left:{hx}px;top:{hy}px;width:{hw}px;height:{hh}px">'
+                f'<img src="{data_uri(head_photo(player, kit, shirt))}" style="left:{-HEAD_CROP[0] * k}px;'
+                f'top:{-HEAD_CROP[1] * k}px;width:{1254 * k}px;height:{1254 * k}px"></div>'
+            )
         labels.append(f'<img class="abs" src="{label}" style="left:{lx}px;top:{ly}px;width:{lw}px;height:{lh}px">')
         x, base = cx + text['cx'] * s, top + text['base'] * s
         t = (f'<text x="{x}" y="{base}" text-anchor="middle" font-family="{NAME_FONT}" font-weight="500" '
