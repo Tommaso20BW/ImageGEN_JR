@@ -17,7 +17,7 @@ BACKGROUNDS = {
     'uefa.europa.conf': 'squad_list_conference_league.png',
 }
 
-# Titolo "squad List" (Allogist Italic, misure Canva): "List" nel colore della competizione.
+# Titolo "squad list" (Allogist Italic, misure Canva), tutto minuscolo: "list" nel colore della competizione.
 TITLE_SIZE, TITLE_BASE, TITLE_X = 206.7, 324.75, 540.0
 TITLE_ACCENT = {
     'ita.1': '#ffffff', 'ita.coppa_italia': '#ffffff', 'uefa.europa': '#fa6c08',
@@ -65,7 +65,7 @@ def columns(players):
     return players[:half], players[half:]
 
 
-def build_html(*, players, competition, home_name, home_id, away_name, away_id, title_word='List', **_):
+def build_html(*, players, competition, home_name, home_id, away_name, away_id, title_word='list', **_):
     if competition not in BACKGROUNDS:
         raise ValueError('Squad List disponibile per Serie A, Coppa Italia, Champions, Europa e Conference League.')
     assets = asset_dir()
