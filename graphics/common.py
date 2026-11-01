@@ -178,6 +178,19 @@ def warm_up():
     render_html('<!doctype html><html><body></body></html>', ghost=True)
 
 
+def page_background(kit, photo, graphic=None):
+    """Sfondo della maglia/competizione dietro la foto (scontornata: si vede dove è
+    trasparente). Senza foto (versione "fantasma" per l'editor) niente sfondo."""
+    if photo is None:
+        return ''
+    from graphics.uefa import background
+    path = background(kit, graphic)
+    if not path.is_file():
+        return ''
+    return (f'<img src="{data_uri(path)}" style="position:absolute;left:0;top:0;'
+            f'width:{DESIGN_W}px;height:{DESIGN_H}px;object-fit:cover">')
+
+
 def photo_layer(photo, frame, page=None):
     """(<img> della foto, colore di fondo pagina). Senza foto: niente <img> e fondo
     trasparente, per la versione "fantasma" mostrata sopra la foto nell'editor."""
@@ -223,6 +236,22 @@ def overlay_preview(name, kit, width=540, full=False):
 
     if not name.replace('_', '').isalnum() or not kit.isalnum():
         raise ValueError('Modello non valido.')
+    from graphics import uefa
+    if uefa.is_theme(kit):
+        if name not in ('matchday', 'starting_xi'):
+            raise ValueError('Modello non valido.')
+        ready = uefa.placeholder_file(name, kit)
+        if not full and ready is not None:
+            return ready.read_bytes()
+        with Image.open(uefa.overlay_file(name, kit)) as image:
+            if full:
+                out = io.BytesIO()
+                image.save(out, format='PNG')
+                return out.getvalue()
+            small = image.resize((width, round(width * DESIGN_H / DESIGN_W)), Image.LANCZOS)
+            out = io.BytesIO()
+            small.save(out, format='PNG', optimize=True)
+            return out.getvalue()
     ready = asset_dir() / 'canva' / f'{name}_{kit}_placeholder.png'
     if not full and ready.is_file():
         return ready.read_bytes()

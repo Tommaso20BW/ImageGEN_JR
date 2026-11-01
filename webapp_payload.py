@@ -14,6 +14,7 @@ from graphics.calendar import parse_matches
 VALID_KINDS = {value for _, value in KINDS}
 VALID_COMPETITIONS = {value for _, value in COMPETITIONS}
 VALID_KITS = {'home', 'away', 'third'}
+from graphics.uefa import THEMES as UEFA_THEMES, theme_for as uefa_theme_for  # noqa: E402
 VALID_SIDES = {'home', 'away'}
 VALID_POSES = {'arms_crossed', 'pointing'}
 VALID_MOMENTS = {'HT', '2H_END', 'FT'}
@@ -236,7 +237,12 @@ def _build_state(envelope, catalog, now, expected_session):
         }
     if competition not in VALID_COMPETITIONS:
         raise ValueError('Competizione non valida.')
-    if kit not in VALID_KITS:
+    # UCL / UEL / Conference: colori della competizione, solo per Matchday, Starting XI e
+    # Probabile XI e solo con una partita di quella competizione.
+    if kit in UEFA_THEMES:
+        if kind not in ('md', 'xi', 'pxi') or uefa_theme_for(competition) != kit:
+            raise ValueError('Tema UEFA non valido per questa partita.')
+    elif kit not in VALID_KITS:
         raise ValueError('Kit non valido.')
     if side not in VALID_SIDES:
         raise ValueError('Casa/trasferta non valido.')
@@ -317,6 +323,12 @@ def _build_state(envelope, catalog, now, expected_session):
             raise ValueError('Lo stesso giocatore è stato scelto due volte.')
         data['module'] = module
         data['players'] = players
+        # Colori UEFA: la maglia serve comunque per le foto dei giocatori.
+        if kit in UEFA_THEMES:
+            shirt = str(incoming.get('shirt') or '')
+            if shirt not in VALID_KITS:
+                raise ValueError('Scegli la maglia dei giocatori.')
+            data['shirt'] = shirt
         # Disposizione di "Modifica" (assente = salvata o Canva).
         if incoming.get('layout') is not None:
             import layouts

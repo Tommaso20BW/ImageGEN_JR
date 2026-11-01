@@ -413,6 +413,7 @@
     .photo-frame{position:relative;width:100%;max-width:min(380px,calc((100dvh - 420px) * .75));min-width:220px;aspect-ratio:3/4;margin:0 auto;overflow:hidden;
       border-radius:var(--radius);background:var(--surface2);border:1.5px solid var(--line);touch-action:none;cursor:grab;user-select:none}
     .photo-frame.dragging{cursor:grabbing}
+    #photoFrame{background-size:cover;background-position:center}
     /* STORIE IG: testo + foto facoltativa */
     .ig-photo{display:flex;align-items:center;gap:14px;margin-top:14px}
     .ig-thumb{flex:0 0 auto;width:64px;height:86px;border-radius:12px;background:var(--surface2) center/cover no-repeat;
@@ -974,6 +975,10 @@
             <h1>Quale maglia?</h1>
             <p class="lead">Scegli il kit Juventus da usare nella grafica.</p>
             <div id="kitOpts" class="opts" role="radiogroup"></div>
+            <div id="shirtBox" hidden>
+              <p class="lead" style="margin-top:18px">Con i colori della competizione: quale maglia indossano i giocatori nelle foto?</p>
+              <div id="shirtOpts" class="opts" role="radiogroup"></div>
+            </div>
           </section>
 
           <section class="screen" data-screen="player">
@@ -1522,6 +1527,22 @@
   };
   const SIDES = [['home','In casa'],['away','In trasferta']];
   const KITS = [['home','Home'],['away','Away'],['third','Third']];
+  // Colori della competizione (UCL / UEL / Conference): quarta opzione accanto alle maglie,
+  // solo per Matchday, Starting XI e Probabile XI e solo con una partita di quella coppa.
+  const UEFA_THEMES = {ucl:'UCL', uel:'UEL', conference:'Conference'};
+  const uefaTheme = c => {
+    c = String(c || '').toLowerCase();
+    if (c.includes('conf')) return 'conference';
+    if (c.includes('champions')) return 'ucl';
+    return c === 'uefa.europa' ? 'uel' : '';
+  };
+  // Probabile XI a tema UEFA: la maglia serve comunque per le foto dei giocatori.
+  let shirt = '';
+  const needsShirt = () => kind === 'pxi' && !!UEFA_THEMES[kit];
+  function kitOptions() {
+    const t = uefaTheme(competition);
+    return t && ['md','xi','pxi'].includes(kind) ? [...KITS,[t,UEFA_THEMES[t]]] : KITS;
+  }
   const JR_COLORS = [['black','Nero'],['white','Bianco'],['gold','Oro']];
   const JR_STYLES = [['classic','Classica'],['blur','Sfocata'],['collage','Collage']];
   // Formati della Classica: larghezza fissa 1080, cambia l'altezza (come graphics/photo_jr.py RATIOS).
@@ -1765,6 +1786,8 @@
   /* ---------- Flow ---------- */
   function buildFlow() {
     flow = [];
+    // Tema UEFA rimasto da un'altra partita/grafica: non vale più, si risceglie.
+    if (UEFA_THEMES[kit] && !kitOptions().some(o => o[0] === kit)) kit = '';
     if (LIVE) { flow = ['phasephoto']; flowIndex = 0; return; }
     if (!kind) { flow = ['home']; flowIndex = 0; return; }
     const base = ['competition','side','opponent'];
@@ -1809,7 +1832,7 @@
       case 'competition': return labelOf(competitionOptions(),competition);
       case 'side': return labelOf(SIDES,side);
       case 'opponent': return selectedTeam ? displayTeamName(selectedTeam.name) : '';
-      case 'kit': return labelOf(KITS,kit);
+      case 'kit': return labelOf(kitOptions(),kit) + (needsShirt() && shirt ? ` · ${labelOf(KITS,shirt)}` : '');
       case 'player': return selectedPlayer ? surnameOf(selectedPlayer) : '';
       case 'minute': {
         const min = $('minute').value.trim();
@@ -2122,7 +2145,9 @@
       refreshSearchSummaries();
     });
     renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
-    renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; });
+    renderOptions('kitOpts',kitOptions(),kit,v => { kit = v; kitAuto = false; updatePhotoOverlay(); $('shirtBox').hidden = !needsShirt(); });
+    renderOptions('shirtOpts',KITS,shirt,v => { shirt = v; });
+    $('shirtBox').hidden = !needsShirt();
     renderJrColor();
     renderOptions('jrRatioOpts',JR_RATIOS,jrb.ratio,v => { jrb.ratio = v; photoState.x = 0; photoState.y = 0; });
     renderOptions('jrStyleOpts',JR_STYLES,jrb.style,v => {
@@ -2547,6 +2572,7 @@
     side = '';
     kit = '';
     kitAuto = false;
+    shirt = '';
     jrColor = '';
     jrb.cards.forEach(c => { try { URL.revokeObjectURL(c.url); } catch (_) {} });
     Object.assign(jrb,{style:'', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null});
@@ -2848,6 +2874,7 @@
     const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, mdpick:mdPick, jrstyle:jrb.style};
     if (step in choice && !choice[step]) { showError('Seleziona un’opzione per continuare.'); return false; }
 
+    if (step === 'kit' && needsShirt() && !shirt) { showError('Scegli anche la maglia dei giocatori.'); return false; }
     if (step === 'opponent') return resolveTeam();
     if (step === 'player') return resolvePlayer();
 
@@ -3860,6 +3887,9 @@
       const url = `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${name}&kit=${encodeURIComponent(kit || 'home')}`;
       if (overlay.getAttribute('src') !== url) overlay.src = url;
     }
+    // Sfondo della maglia/competizione dietro la foto (scontornata: si vede dove è trasparente).
+    const bg = kind === 'jr' ? '' : `url("${directBase}/pagebg?session=${encodeURIComponent(session)}&kit=${encodeURIComponent(kit || 'home')}&name=${kind === 'md' ? 'matchday' : 'starting_xi'}")`;
+    if ($('photoFrame').style.backgroundImage !== bg) $('photoFrame').style.backgroundImage = bg;
     overlay.classList.add('ghost');
     // La sagoma è sempre 3:4, larga come la pagina e ancorata in alto: in un altro formato viene
     // tagliata (o lascia vuoto sotto) e il logo resta in alto a destra senza deformarsi.
@@ -3901,9 +3931,10 @@
     photoState.uploading = true;
     $('photoSummary').textContent = 'Caricamento foto…';
     try {
-      const {blob,w,h} = await preparePhoto(file);
+      // Matchday / Starting XI: foto con sfondo trasparente, lo sfondo lo mette la grafica.
+      const {blob,w,h,type} = await preparePhoto(file, kind === 'md' || kind === 'xi');
       const response = await netFetch(`${directBase}/upload`,{
-        method:'POST', headers:{'Content-Type':'image/jpeg','X-ImageGEN-Session':session}, body:blob
+        method:'POST', headers:{'Content-Type':type,'X-ImageGEN-Session':session}, body:blob
       }, 60000);
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.ok) throw new Error(body.error || 'Caricamento non riuscito.');
@@ -5419,6 +5450,7 @@
       kind: realKind(), competition, kit: kit || 'home', side,
       opponent:{ name:selectedTeam.name, id:String(selectedTeam.espn_id || '') }
     };
+    if (needsShirt()) data.shirt = shirt;
 
     if (kind === 'goal' || kind === 'saved') {
       if (!selectedPlayer) throw new Error('Giocatore mancante.');

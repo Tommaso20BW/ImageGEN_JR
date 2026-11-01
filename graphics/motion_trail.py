@@ -22,16 +22,28 @@ BAND = (0.06, 1.12)  # fascia verticale (frazione dell'altezza) in cui compare l
 
 
 def apply(photo, person):
-    """Ritorna la foto (JPEG) con la scia. `photo`: byte della foto; `person`: PNG scontornato
-    (la trasparenza è la maschera della persona, anche a risoluzione diversa)."""
+    """Ritorna la foto con la scia. `photo`: byte della foto; `person`: PNG scontornato
+    (la trasparenza è la maschera della persona, anche a risoluzione diversa).
+
+    Foto normale -> JPEG. Foto già scontornata (PNG trasparente) -> PNG trasparente:
+    la scia è semitrasparente e sotto si vede lo sfondo della grafica."""
     with Image.open(io.BytesIO(photo)) as image:
-        rgb = np.asarray(image.convert('RGB')).astype(np.float32) / 255
+        rgba = np.asarray(image.convert('RGBA')).astype(np.float32) / 255
+    rgb, own = rgba[..., :3], rgba[..., 3]
     h, w = rgb.shape[:2]
+    buf = io.BytesIO()
+    if own.min() < 0.98:
+        mask = own
+        color, g = trail_parts(rgb, mask)
+        alpha = mask + g[..., 0] * (1 - mask)
+        out = (rgb * mask[..., None] * (1 - g) + color * g) / np.maximum(alpha[..., None], 1e-4)
+        done = np.dstack([np.clip(out, 0, 1), np.clip(alpha, 0, 1)])
+        Image.fromarray((done * 255 + 0.5).astype(np.uint8), 'RGBA').save(buf, 'PNG')
+        return buf.getvalue()
     with Image.open(io.BytesIO(person)) as cut:
         alpha = cut.convert('RGBA').getchannel('A').resize((w, h), Image.Resampling.LANCZOS)
     mask = np.asarray(alpha).astype(np.float32) / 255
     out = trail(rgb, mask)
-    buf = io.BytesIO()
     Image.fromarray((np.clip(out, 0, 1) * 255 + 0.5).astype(np.uint8)).save(buf, 'JPEG', quality=95, subsampling=0)
     return buf.getvalue()
 
@@ -50,10 +62,16 @@ def _left_edge(mask, sigma):
 
 
 def trail(rgb, mask, seed=3):
+    color, g = trail_parts(rgb, mask, seed)
+    return rgb * (1 - g) + color * g
+
+
+def trail_parts(rgb, mask, seed=3):
+    """(colore della scia, opacità per pixel (h, w, 1))."""
     h, w = mask.shape
     edge = _left_edge(mask, sigma=max(1.0, h * 0.0057))
     if edge is None:
-        return rgb
+        return rgb, np.zeros((h, w, 1), np.float32)
     length = max(8, int(w * LENGTH))
     t = np.linspace(1, 0, length, dtype=np.float32)
     kern = np.zeros((1, length * 2 + 1), np.float32)
@@ -78,5 +96,4 @@ def trail(rgb, mask, seed=3):
     x = np.arange(w, dtype=np.float32)[None, :]
     k = np.clip(1 - (x - edge) / inside, 0, 1)
     k = k * k * (3 - 2 * k)
-    g = (opacity * k)[..., None]
-    return rgb * (1 - g) + color * g
+    return color, (opacity * k)[..., None]

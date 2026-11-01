@@ -13,6 +13,8 @@ from functools import lru_cache
 from constants import COMPETITIONS
 from graphics.common import canva_layers, logo_fill, photo_layer, DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html, team_logo
 from graphics.starting_xi import KITS, check_photo, photo_box
+from graphics.common import page_background
+from graphics.uefa import meta_for
 
 # Misure dal PDF Canva (pixel 1080x1440).
 LOGO_BOXES = ((7.0, 9.31), (7.0, 143.28))   # casa sopra, trasferta sotto
@@ -72,7 +74,7 @@ def _info_text(slot, value, style):
 def build_html(*, kit, photo, frame, info, competition, home_name, home_id, away_name, away_id, **_):
     if kit not in KITS:
         raise ValueError('Maglia non valida.')
-    meta = _meta()[kit]
+    meta = meta_for('matchday', kit, _meta())
     canva = asset_dir() / 'canva'
     photo_html, page_bg = photo_layer(photo, frame)
 
@@ -94,6 +96,7 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{pa
 @font-face{{font-family:'Matchday Info';src:url({data_uri(asset_dir() / 'fonts' / 'MatchdayInfo.ttf')})}}
 svg{{position:absolute;left:0;top:0}}
 </style></head><body>
+{page_background(kit, photo, 'matchday')}
 {photo_html}
 {canva_layers(meta, photo, frame)}
 {logos}

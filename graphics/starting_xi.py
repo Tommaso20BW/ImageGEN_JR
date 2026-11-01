@@ -11,12 +11,12 @@ from functools import lru_cache
 
 from PIL import Image
 
-from graphics.common import canva_layers, photo_layer, logo_fill
+from graphics.common import canva_layers, photo_layer, logo_fill, page_background
 from graphics.common import (
     DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, font_face, render_html, team_logo,
 )
 
-KITS = ('home', 'away', 'third')
+from graphics.uefa import ALL as KITS, meta_for
 
 # Misure dal PDF Canva (pixel 1080x1440).
 NAME_X, NAME_BASE = 174.28, 490.69
@@ -126,7 +126,7 @@ def _text_rows(role, values, style, x, base, anchor, attrs):
 def build_html(*, kit, lineup, photo, frame, home_name, home_id, away_name, away_id, **_):
     if kit not in KITS:
         raise ValueError('Maglia non valida.')
-    meta = _meta()[kit]
+    meta = meta_for('starting_xi', kit, _meta())
     canva = asset_dir() / 'canva'
     photo_html, page_bg = photo_layer(photo, frame)
 
@@ -154,6 +154,7 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{pa
 @font-face{{font-family:'Allogist';font-style:italic;src:url({data_uri(asset_dir() / 'fonts' / 'AllogistItalic.ttf')})}}
 svg{{position:absolute;left:0;top:0}}
 </style></head><body>
+{page_background(kit, photo, 'starting_xi')}
 {photo_html}
 {canva_layers(meta, photo, frame)}
 {logos}

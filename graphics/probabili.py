@@ -11,7 +11,7 @@ from pathlib import Path
 
 from graphics.common import logo_fill, DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html, team_logo
 
-KITS = ('home', 'away', 'third')
+from graphics.uefa import ALL as KITS, base_kit, is_theme, meta_for, probabili_bg
 # Foto della testa per maglia: (suffisso giocatori, maglia portiere).
 PHOTO_KIT = {'home': ('', 'keeper_blue'), 'away': ('away_pink', 'keeper_green'),
              'third': ('third_black', 'keeper_orange')}
@@ -129,8 +129,8 @@ def label_name(player):
     return plain(singles[-1] if singles else player.name.split()[-1]).upper()
 
 
-def head_photo(player, kit):
-    suffix, keeper = PHOTO_KIT[kit]
+def head_photo(player, kit, shirt=None):
+    suffix, keeper = PHOTO_KIT[shirt if shirt in PHOTO_KIT else base_kit(kit)]
     folder = asset_dir() / 'players' / player.slug
     tag = keeper if player.role == 'goalkeeper' else suffix
     name = f'{player.slug}_{tag}_pose_01_arms_crossed.png' if tag else f'{player.slug}_pose_01_arms_crossed.png'
@@ -169,7 +169,7 @@ def check_layout(module):
     return clashes
 
 
-def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, layout=None, **_):
+def build_html(*, kit, module, players, shirt=None, home_name, home_id, away_name, away_id, layout=None, **_):
     if kit not in KITS:
         raise ValueError('Maglia non valida.')
     import layouts
@@ -177,7 +177,9 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
         raise ValueError('Modulo non valido.')
     if len(players) != 11:
         raise ValueError('Servono 11 giocatori.')
-    meta = _meta()[kit]
+    meta = meta_for('probabili', kit, _meta())
+    if is_theme(kit):
+        meta['bg'] = str(probabili_bg(kit))
     canva = asset_dir() / 'canva'
     plates = data_uri(canva / meta['plates'])
     label = data_uri(canva / meta['label'])
@@ -197,7 +199,7 @@ def build_html(*, kit, module, players, home_name, home_id, away_name, away_id, 
         cards.append(
             f'<img class="abs" src="{plates}" style="left:{px}px;top:{py}px;width:{pw}px;height:{ph}px">'
             f'<div class="head" style="left:{hx}px;top:{hy}px;width:{hw}px;height:{hh}px">'
-            f'<img src="{data_uri(head_photo(player, kit))}" style="left:{-HEAD_CROP[0] * k}px;'
+            f'<img src="{data_uri(head_photo(player, kit, shirt))}" style="left:{-HEAD_CROP[0] * k}px;'
             f'top:{-HEAD_CROP[1] * k}px;width:{1254 * k}px;height:{1254 * k}px"></div>'
         )
         labels.append(f'<img class="abs" src="{label}" style="left:{lx}px;top:{ly}px;width:{lw}px;height:{lh}px">')

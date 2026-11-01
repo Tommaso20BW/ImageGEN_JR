@@ -170,6 +170,17 @@ class _DirectHandler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self._json(404, {'ok': False, 'error': str(exc)})
             return
+        if parts.path.rstrip('/') == '/pagebg':
+            # Sfondo di pagina (maglia o competizione) per l'editor foto, ridotto.
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            try:
+                self._png(self.service.page_background(query.get('kit', ''), query.get('name', '')), 'image/jpeg')
+            except (KeyError, ValueError, OSError):
+                self._json(404, {'ok': False, 'error': 'Sfondo non trovato.'})
+            return
         if parts.path.rstrip('/') in ('/layouts', '/pxibg'):
             query = dict(parse_qsl(parts.query))
             if query.get('session', '') != self.service.session:
@@ -455,16 +466,34 @@ class Service:
         except Exception as exc:
             print(f'WARN IMAGEGEN: posizioni non salvate: {type(exc).__name__}: {exc}', flush=True)
 
+    def page_background(self, kit, graphic=''):
+        """Sfondo di pagina della maglia/competizione, ridotto (540x720), per l'editor foto."""
+        from PIL import Image
+        from graphics.uefa import ALL, background
+        if kit not in ALL:
+            raise ValueError('Maglia non valida.')
+        graphic = graphic if graphic in ('matchday', 'starting_xi') else None
+        key = ('pagebg', kit, graphic)
+        if key not in self.overlays:
+            with Image.open(background(kit, graphic)) as image:
+                small = image.convert('RGB').resize((540, 720), Image.LANCZOS)
+                out = io.BytesIO()
+                small.save(out, format='JPEG', quality=85)
+            self.overlays[key] = out.getvalue()
+        return self.overlays[key]
+
     def pxi_background(self, kit):
         """Sfondo del campo di PROBABILE XI, ridotto, per l'editor delle posizioni."""
         from PIL import Image
         from graphics.common import asset_dir
         from graphics.probabili import KITS, _meta
+        from graphics.uefa import is_theme, probabili_bg
         if kit not in KITS:
             raise ValueError('Maglia non valida.')
         key = ('pxibg', kit)
         if key not in self.overlays:
-            with Image.open(asset_dir() / 'canva' / _meta()[kit]['bg']) as image:
+            path = probabili_bg(kit) if is_theme(kit) else asset_dir() / 'canva' / _meta()[kit]['bg']
+            with Image.open(path) as image:
                 small = image.convert('RGB').resize((540, 720), Image.LANCZOS)
                 out = io.BytesIO()
                 small.save(out, format='JPEG', quality=85)

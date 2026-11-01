@@ -379,6 +379,7 @@ class Renderer:
             return probabili.render(
                 **teams(data),
                 kit=data['kit'],
+                shirt=data.get('shirt'),
                 module=data['module'],
                 players=[roster[name] for name in data['players']],
                 layout=data.get('layout'),
