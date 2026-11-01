@@ -631,7 +631,7 @@
       font-size:11.5px;font-weight:800;line-height:20px;text-align:center}
     .set-ov{position:fixed;inset:0;z-index:55;display:none;flex-direction:column;background:var(--bg);color:var(--text)}
     .set-ov.open{display:flex}
-    .set-top{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:calc(8px + var(--top-pad)) 12px 4px;text-align:center}
+    .set-top{display:grid;grid-template-columns:96px 1fr 96px;align-items:center;padding:calc(8px + var(--top-pad)) 12px 4px;text-align:center}
     .set-body{flex:1;overflow:auto;padding:4px 16px calc(28px + env(safe-area-inset-bottom,0px));max-width:640px;width:100%;margin:0 auto}
     .set-search{background:var(--surface);box-shadow:var(--shadow-soft);margin-top:14px}
     .set-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;font-weight:600;font-size:16px}
@@ -658,8 +658,18 @@
     .set-prev .sq{position:relative;width:66px;height:66px}
     .set-prev .sq i,.set-ed-box i{position:absolute;-webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}
     .set-ed{margin-bottom:6px}
-    .set-ed-box{position:relative;width:min(100%,300px);aspect-ratio:1;margin:0 auto 10px;border-radius:14px;background:#ede7dd;overflow:hidden;touch-action:none;cursor:grab}
+    .set-ed-box{position:relative;width:min(100%,260px);aspect-ratio:1;margin:2px auto 10px;border-radius:14px;background:#ede7dd;overflow:hidden;touch-action:none;cursor:grab}
     .set-ed-box i{background:#111;pointer-events:none}
+    .set-ed-box:not(.live){cursor:default}
+    .set-ed-box.empty{cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .set-ed-empty{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-weight:800;font-size:14px;pointer-events:none}
+    .set-ed-c{position:absolute;right:8px;top:8px;width:38px;height:38px;border:0;border-radius:11px;background:rgba(255,255,255,.85);color:#111;
+      display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+    .set-sub{color:var(--muted);font-size:14px;font-weight:600;margin:-6px 0 12px}
+    .set-ov .set-seg2{grid-template-columns:1fr 1fr;margin:0 0 14px}
+    .set-seg2 button{min-height:40px;border:0;border-radius:11px;background:none;color:var(--muted);font:inherit;font-weight:800;font-size:14px;cursor:pointer}
+    .set-seg2 button.on{background:var(--text);color:var(--bg)}
+    .set-back-fc{display:block;margin:6px auto 0;border:0;background:none;color:var(--muted);font:inherit;font-weight:700;font-size:13.5px;cursor:pointer}
     .set-ed-g{position:absolute;pointer-events:none}
     .set-ed-g.v{left:50%;top:0;bottom:0;width:0;border-left:1px dashed rgba(17,17,19,.28)}
     .set-ed-g.h{top:50%;left:0;right:0;height:0;border-top:1px dashed rgba(17,17,19,.28)}
@@ -996,7 +1006,176 @@
       }
       .screen.leaving{display:none!important}
     }
-  </style>
+  
+    /* ================= Stile Impostazioni Apple =================
+       Barra in alto: ‹ a sinistra, titolo del passaggio al centro, "Fine" (o icone) a destra.
+       Niente barra in basso (solo "Invia" nell'anteprima). Elenchi bianchi raggruppati con la spunta. */
+    :root{--bg:#F2F1EE;--bg-grad-a:#F2F1EE;--bg-grad-b:#F2F1EE;--line:#E7E5E0}
+    .progress{display:none}
+    .top{grid-template-columns:104px minmax(0,1fr) 104px;padding:6px 8px 2px;min-height:52px}
+    .top-left{display:flex;align-items:center;gap:2px;min-width:0}
+    .nav-back{border:0;background:none;color:var(--text);display:inline-flex;align-items:center;gap:1px;font:inherit;font-weight:700;font-size:16px;
+      padding:8px 6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+    .nav-back svg{flex:none}
+    .nav-back[hidden],#closeWorkflowButton[hidden]{display:none}
+    .nav-back:disabled{opacity:.35}
+    .top-title .brand-btn{display:none}
+    .nav-title{font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+    .nav-sub{font-weight:600;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+    .nav-sub:empty{display:none}
+    .top-right{align-items:center;gap:0}
+    #navTools{display:flex;align-items:center}
+    .nav-tools-g{display:none;align-items:center}
+    .nav-tools-g.on{display:flex}
+    .nav-tools-g .head-icos{margin-right:0}
+    .nav-tools-g .cal-clear{font-weight:700;font-size:15px;color:var(--text);padding:8px 6px}
+    .nav-done{border:0;background:none;color:var(--text);font:inherit;font-weight:800;font-size:16px;padding:8px 6px;cursor:pointer;white-space:nowrap}
+    .nav-done:disabled{color:#c3c1bb;cursor:default}
+    .nav-done[hidden]{display:none}
+    body:not(.home-mode) .top .timer:not(.warn):not(.over){display:none}
+    body:not(.home-mode) .top .timer{height:24px;font-size:11.5px;padding:0 7px;margin-left:4px}
+    body:not(.preview-mode) .bar{display:none}
+    .bar{grid-row:-2/-1}   /* sempre in fondo, anche senza la barra di avanzamento */
+    .preview-mode #backButton{display:none}
+    .preview-mode .bar-inner{grid-template-columns:minmax(0,1fr)}
+    /* intestazioni delle schermate: il titolo va nella barra in alto */
+    .screen:not([data-screen="home"]) > .eyebrow,.screen:not([data-screen="home"]) > h1,
+    .screen .photo-head h1,.screen .cal-head h1,.screen .photo-head > .eyebrow{display:none}
+    .screen .photo-head:not(:has(*:not(h1):not([hidden]))),.screen .cal-head:not(:has(*:not(h1))){display:none}
+    .screen:not([data-screen="home"]) > .lead{margin:0 14px 12px;font-size:13.5px;line-height:1.4}
+    .content{--pad-top:8px}
+    /* home: titolo grande con la ⚙ sulla stessa riga */
+    .home-big{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 4px}
+    .home-big h1{font-size:32px;letter-spacing:-.025em;font-weight:900}
+    .home-big .set-btn{margin-right:-8px}
+    .home{gap:20px;margin-top:12px}
+    .hm-group{gap:6px}
+    .hm-head{padding:0 14px}
+    .hm-gico{display:none}
+    .hm-title{font-size:12.5px;font-weight:700;letter-spacing:.04em}
+    .hm-list{gap:0;background:var(--surface);border-radius:14px;overflow:hidden}
+    .hm-item{border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;min-height:52px;padding:8px 14px!important;gap:12px!important;
+      border-bottom:1px solid var(--line)!important;transform:none!important}
+    .hm-item:last-child{border-bottom:0!important}
+    .hm-item:active{background:var(--accent-soft)!important}
+    .hm-ico{width:30px;height:30px;padding:6px;border-radius:8px;background:#111;color:#fff;stroke-width:2}
+    .hm-desc{display:none}
+    .hm-name{font-size:16px;font-weight:600;letter-spacing:0}
+    .hm-go{color:#c3c1bb;width:16px;height:16px}
+    /* opzioni: righe con la spunta (un tocco = avanti) */
+    .opts,.opts.grid{display:block!important;background:var(--surface);border-radius:14px;overflow:hidden}
+    .opts .opt{width:100%;border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;min-height:50px;padding:0 16px!important;
+      border-bottom:1px solid var(--line)!important;transform:none!important}
+    .opts .opt:last-child{border-bottom:0!important}
+    .opts .opt:active:not(:disabled){background:var(--accent-soft)!important}
+    .opts .opt .radio{display:none}
+    .opts .opt .opt-label{font-weight:600;font-size:16px}
+    .opts .opt.selected::after{content:"";margin-left:auto;width:20px;height:20px;flex:none;background:var(--text);
+      -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/contain no-repeat}
+    /* partite: "Oggi" / "Prossime" / "Giocate" */
+    .lst-head{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:16px 14px 6px}
+    .lst-head:first-child{margin-top:0}
+    .fx-list{gap:0!important;display:block!important}
+    .lst{background:var(--surface);border-radius:14px;overflow:hidden}
+    .fx-card{border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;min-height:62px!important;padding:8px 14px!important;gap:12px!important;
+      border-bottom:1px solid var(--line)!important;transform:none!important}
+    .lst .fx-card:last-child{border-bottom:0!important}
+    .fx-card:active{background:var(--accent-soft)!important}
+    .fx-card .fx-logo,.fx-card .fx-logo img{width:34px;height:34px}
+    .fx-team{font-size:16px;font-weight:700}
+    .fx-when{font-size:13px;font-weight:600;color:var(--muted)}
+    .fx-info{font-size:12.5px}
+    .fx-card::after{content:"›";margin-left:auto;padding-left:6px;color:#c3c1bb;font-size:22px;line-height:1}
+    /* risultati di ricerca e campi */
+    .results{gap:0!important;background:var(--surface);border-radius:14px;overflow:hidden}
+    .results:empty{display:none}
+    .result{border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;border-bottom:1px solid var(--line)!important;min-height:50px}
+    .result:last-child{border-bottom:0!important}
+    .field-input,.search{border:0!important;box-shadow:none!important}
+
+    /* righe "etichetta a sinistra, valore a destra" (come i campi di un contatto) */
+    .ios-list{background:var(--surface);border-radius:14px;overflow:hidden}
+    .ios-row{display:flex;align-items:center;gap:12px;min-height:50px;padding:0 16px;border-bottom:1px solid var(--line);font-size:16px;font-weight:600}
+    .ios-row:last-child{border-bottom:0}
+    .ios-row > span{flex:none}
+    .ios-in{flex:1;min-width:0;height:48px;border:0;outline:0;background:none;color:var(--muted);font:inherit;font-weight:500;font-size:16px;text-align:right;padding:0}
+    .ios-in:focus{color:var(--text)}
+    .ios-in::-webkit-calendar-picker-indicator{opacity:.45}
+    /* campi e intestazioni dei gruppi a misura normale */
+    .field-label{margin:16px 14px 6px!important;font-size:12.5px!important;font-weight:700!important;letter-spacing:.04em!important}
+    .screen > .field-label:first-of-type{margin-top:4px!important}
+    .field-input{min-height:50px!important;border-radius:14px!important;font-size:17px!important;font-weight:600!important;padding:0 16px!important}
+    textarea.field-input{font-size:16px!important}
+    .num-card{border:0!important;box-shadow:none!important;border-radius:14px!important}
+
+    /* Squadre e loghi: pagine una dentro l'altra */
+    .set-page{position:absolute;inset:0;z-index:5;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+    .set-page[hidden]{display:none}
+    .sp-nav{flex:none;display:grid;grid-template-columns:110px minmax(0,1fr) 110px;align-items:center;min-height:52px;padding:calc(6px + var(--top-pad)) 8px 2px;text-align:center}
+    .sp-nav b{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sp-l,.sp-r{border:0;background:none;color:var(--text);font:inherit;font-size:16px;padding:8px 6px;cursor:pointer;white-space:nowrap}
+    .sp-l{justify-self:start;font-weight:700;color:var(--muted)}
+    .sp-back{display:inline-flex;align-items:center;gap:1px;color:var(--text)}
+    .sp-r{justify-self:end;font-weight:800}
+    .sp-r:disabled{color:#c3c1bb;cursor:default}
+    .sp-body{flex:1;overflow:auto;padding:4px 16px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;max-width:640px;width:100%;margin:0 auto}
+    .sp-hero{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0 22px}
+    .sp-hero h2{font-size:24px;font-weight:900;letter-spacing:-.02em;text-align:center}
+    .sp-hero p{color:var(--muted);font-size:14px;font-weight:600}
+    .sp-logo{display:inline-block;flex:none;background:#111;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+    .sp-ph{display:inline-block;flex:none;border:2px dashed #cfccc4;border-radius:50%}
+    .sp-sq{position:relative;display:block;width:92px;height:92px}
+    .sp-sq i{position:absolute;background:#111;-webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}
+    .sp-list{background:var(--surface);border-radius:14px;overflow:hidden}
+    .sp-item{display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:0 16px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--text);
+      font:inherit;font-size:16px;font-weight:600;text-align:left;cursor:pointer}
+    .sp-item:last-child{border-bottom:0}
+    button.sp-item:active{background:var(--accent-soft)}
+    .sp-item .logo,.sp-item .logo img,.sp-item .logo.fallback{width:30px;height:30px}
+    .sp-v{margin-left:auto;color:var(--muted);font-weight:500;font-size:15px;display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sp-v.warn{color:var(--danger)}
+    .sp-chev{margin-left:auto;color:#c3c1bb;font-size:20px;padding-left:4px}
+    .sp-v + .sp-chev{margin-left:4px}
+    .sp-big{min-height:64px}
+    .sp-ic{width:36px;height:36px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex:none}
+    .sp-two{display:flex;flex-direction:column}
+    .sp-two small{color:var(--muted);font-weight:500;font-size:13px;margin-top:1px}
+    .sp-rm{margin-left:auto;width:26px;height:26px;border:0;border-radius:50%;background:var(--danger);color:#fff;font:inherit;font-weight:900;font-size:18px;line-height:1;cursor:pointer}
+    .sp-add{color:var(--text)}
+    .sp-add-ok{margin-left:auto;border:0;background:none;color:var(--text);font:inherit;font-weight:800;cursor:pointer}
+    .sp-lbl{font-size:12.5px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;margin:16px 14px 6px}
+    .sp-lbl:first-child{margin-top:6px}
+    .sp-field{width:100%;height:54px;border:0;outline:0;background:none;color:var(--text);font:inherit;font-weight:700;font-size:18px;padding:0 16px}
+    .sp-inline{height:50px;padding:0;font-size:16px;font-weight:600}
+    .sp-note{color:var(--muted);font-size:14px;padding:10px 14px 14px}
+    .sp-note b{color:var(--text)}
+    .sp-bottom{margin-top:auto}
+    .sp-danger{margin-top:auto;border:0;background:none;color:var(--danger);font:inherit;font-weight:800;font-size:15px;padding:18px 0 6px;cursor:pointer}
+    .sp-cta{margin-top:auto;height:54px;border:0;border-radius:14px;background:var(--cta);color:var(--cta-ink);font:inherit;font-weight:800;font-size:16px;cursor:pointer}
+    .sp-cta:disabled{opacity:.45;cursor:default}
+    .sp-err{color:var(--danger);font-size:13px;font-weight:600;text-align:center;min-height:18px;padding-top:8px}
+    .sp-logo-page{padding-top:0}
+    .sp-stage{flex:1;display:flex;align-items:center;justify-content:center;min-height:260px}
+    .sp-ed{width:min(100%,290px)!important;margin:0 auto!important}
+    .sp-hint{color:var(--muted);font-size:13px;text-align:center;padding:4px 0 12px}
+    .sp-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+    .sp-tile{background:var(--surface);border:0;border-radius:16px;height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+      color:var(--text);font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+    .sp-tile:active{background:var(--accent-soft)}
+    .sp-tile:disabled{opacity:.35;cursor:default}
+    .sp-link{display:flex;align-items:center;gap:8px;height:52px;background:var(--surface);border-radius:14px;padding:0 6px 0 12px;color:var(--muted)}
+    .sp-link input{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;font-size:15px;font-weight:600}
+    .sp-link button{border:0;background:none;color:var(--text);font:inherit;font-weight:800;font-size:15px;padding:8px 10px;cursor:pointer}
+    .sp-search{display:flex;align-items:center;gap:10px;height:50px;background:var(--surface);border-radius:14px;padding:0 14px;color:var(--muted);margin:6px 0 10px}
+    .sp-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;font-size:16px;font-weight:600}
+
+    /* schermi larghi: stessa barra in alto del telefono (‹ a sinistra, titolo al centro, Fine a destra) */
+    @media(min-width:900px){
+      .top{display:grid!important;grid-template-columns:140px minmax(0,1fr) 160px;padding:14px clamp(28px,3.2vw,64px) 0}
+      .top-title{display:block!important}
+      .top-right{order:0!important;justify-content:flex-end}
+    }
+</style>
 </head>
 
 <body>
@@ -1017,11 +1196,17 @@
     <!-- Main -->
     <section class="main">
       <header class="top">
-        <button id="closeWorkflowButton" class="icon-btn" type="button" aria-label="Chiudi workflow">×</button>
+        <div class="top-left">
+          <button id="closeWorkflowButton" class="icon-btn" type="button" aria-label="Chiudi workflow">×</button>
+          <button id="navBack" class="nav-back" type="button" aria-label="Indietro" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span id="navBackText"></span></button>
+        </div>
         <div class="top-title">
           <button id="homeTop" class="brand-btn" type="button" aria-label="Torna alla home"><span class="brand-name">ImageGen</span></button>
+          <div id="navTitle" class="nav-title"></div><div id="navSub" class="nav-sub"></div>
         </div>
         <div class="top-right">
+          <span id="navTools"></span>
+          <button id="navDone" class="nav-done" type="button" hidden>Fine</button>
           <div id="sessionTimer" class="timer hidden" role="timer" aria-label="Tempo rimasto alla sessione">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
             <span id="sessionTimerText">10:00</span>
@@ -1036,10 +1221,8 @@
           <div id="error" class="error"></div>
 
           <section class="screen active" data-screen="home">
-            <div class="home-head"><div class="eyebrow">Nuova grafica</div>
+            <div class="home-big"><h1>Nuova grafica</h1>
               <button id="setBtn" class="set-btn" type="button" aria-label="Impostazioni"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span id="setBadge" class="set-badge" hidden></span></button></div>
-            <h1>Cosa vuoi creare?</h1>
-            <p class="lead">Scegli la grafica: ti guido passo dopo passo fino all’anteprima.</p>
             <div id="homeList" class="home"></div>
           </section>
 
@@ -1222,17 +1405,10 @@
             <div class="eyebrow">Matchday</div>
             <h1>Partita</h1>
             <p class="lead">Stadio, orario d’inizio (CET) e data: compaiono nella riga in basso.</p>
-            <label class="field-label" for="matchStadium">Stadio</label>
-            <input id="matchStadium" class="field-input" maxlength="28" autocapitalize="characters" spellcheck="false" placeholder="ALLIANZ STADIUM" style="text-transform:uppercase">
-            <div class="field-pair">
-              <div>
-                <label class="field-label next" for="matchTime">Orario (CET)</label>
-                <input id="matchTime" class="field-input" type="time" value="20:45">
-              </div>
-              <div>
-                <label class="field-label next" for="matchDate">Data</label>
-                <input id="matchDate" class="field-input" type="date">
-              </div>
+            <div class="ios-list">
+              <label class="ios-row"><span>Stadio</span><input id="matchStadium" class="ios-in" maxlength="28" autocapitalize="characters" spellcheck="false" placeholder="ALLIANZ STADIUM" style="text-transform:uppercase"></label>
+              <label class="ios-row"><span>Data</span><input id="matchDate" class="ios-in" type="date"></label>
+              <label class="ios-row"><span>Ora (CET)</span><input id="matchTime" class="ios-in" type="time" value="20:45"></label>
             </div>
           </section>
 
@@ -1419,7 +1595,7 @@
               <h1>Controlla la grafica</h1>
               <button id="previewEdit" class="head-ico" type="button" aria-label="Modifica" title="Modifica" hidden><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
             </div>
-            <p class="lead">Se è tutto ok, premi “Invia foto”. Altrimenti torna indietro e modifica i dati.</p>
+            <p class="lead">Se è tutto ok, premi “Invia”. Altrimenti torna indietro e modifica i dati.</p>
             <div id="previewError" class="error"></div>
             <div class="preview-wrap">
               <img id="previewImage" class="preview-image" alt="Anteprima grafica">
@@ -1492,8 +1668,8 @@
 <!-- IMPOSTAZIONI › Squadre e loghi: pagina sopra l'app + pannello della squadra dal basso. -->
 <div id="setOv" class="set-ov" role="dialog" aria-modal="true" aria-labelledby="setTitle">
   <header class="set-top">
-    <button id="setBack" class="icon-btn" type="button" aria-label="Chiudi impostazioni">‹</button>
-    <span class="brand-name">ImageGen</span>
+    <button id="setBack" class="nav-back" type="button" aria-label="Chiudi impostazioni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Home</span></button>
+    <span></span>
     <span class="set-top-gap"></span>
   </header>
   <div class="set-body">
@@ -1501,6 +1677,7 @@
     <label class="cal-search set-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="setQ" type="text" placeholder="Cerca squadra o nome ESPN…" autocomplete="off" autocapitalize="words" spellcheck="false"></label>
     <div id="setList" class="set-list"></div>
   </div>
+  <div id="setPage" class="set-page" hidden></div>
   <div id="setToast" class="set-toast" role="status"></div>
 </div>
 <div id="setShOv" class="mod-ov"><div id="setSh" class="mod-sh set-sh" role="dialog" aria-modal="true"></div></div>
@@ -1711,7 +1888,7 @@
   const LIVE = urlParams.get('mode') === 'live';
   const LIVE_SLOT = urlParams.get('slot') || 'half';
   const LIVE_PHASE = urlParams.get('phase') || 'half';
-  const SEND_LABEL = LIVE ? 'Conferma foto ✓' : 'Invia foto ✓';
+  const SEND_LABEL = LIVE ? 'Conferma' : 'Invia';
   let liveTitle = '';
   // Scadenza reale della sessione (ms epoch), passata da service.py. Senza, il timer resta nascosto.
   // Si aggiorna: all'apertura si legge quella vera dal servizio (può essere stata allungata).
@@ -2041,6 +2218,7 @@
   const CHECK_SVG = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.6 6.3 5 8.6l4.4-5"/></svg>';
 
   function renderSteps() {
+    queueMicrotask(syncNav);      // sottotitolo e "Fine" seguono ogni scelta (avversario, dati…)
     const list = $('stepList');
     const key = flow.join(',');
     if (list.dataset.key !== key) {
@@ -2216,6 +2394,7 @@
     applyEyebrows(screenName);
     renderSteps();
     renderProgress();
+    syncNav();
 
     if (animate && screen) {
       if (changedScreen) {
@@ -2236,6 +2415,7 @@
   /* ---------- Option groups ---------- */
   // Ricostruisce i bottoni solo se cambiano le opzioni; altrimenti sposta la selezione
   // sugli elementi esistenti, così il passaggio radio→radio è animato.
+  const AUTO_OPTS = new Set(['competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts']);
   function renderOptions(id, options, value, onSelect) {
     const box = $(id);
     box._options = options;
@@ -2257,11 +2437,14 @@
           b.innerHTML += '<span class="soon">non disponibile</span>';
         } else {
           b.addEventListener('click',() => {
-            if (b.classList.contains('selected')) return;
+            // Elenchi di una sola scelta: toccata la riga si passa al passaggio dopo (stile Apple).
+            const auto = AUTO_OPTS.has(id) && !previewMode;
+            if (b.classList.contains('selected')) { if (auto) nextField(true); return; }
             haptic('select');
             box._onSelect(v);
             renderOptions(id,box._options,v,box._onSelect);
             renderSteps();
+            if (auto) setTimeout(() => { if (box.offsetParent) nextField(true); }, 180);
           });
         }
         box.appendChild(b);
@@ -3248,7 +3431,7 @@
     fillLogo(b.querySelector('.fx-logo'), team || null);
     if (!team) { b.disabled = true; b.title = 'Logo squadra mancante nel catalogo'; }
     else if (!competitionOptions().some(([v]) => v === m.competition)) { b.disabled = true; b.title = 'Competizione non prevista per questa grafica'; }
-    b.addEventListener('click',() => { haptic('select'); pickMdFixture(m.id); });
+    b.addEventListener('click', async () => { haptic('select'); await pickMdFixture(m.id); if (flow[flowIndex] === 'mdpick') nextField(true); });
     return b;
   }
 
@@ -3287,7 +3470,14 @@
     $('mdPickHint').textContent = fixtureList.length ? '' : 'Calendario non disponibile: usa “A mano”.';
     const box = $('mdPickOpts');
     box.innerHTML = '';
-    fixtureList.slice(0,10).forEach(m => box.appendChild(fixtureCard(m)));
+    const shown = fixtureList.slice(0,10);
+    const today = isoDay(new Date());
+    [['Oggi', shown.filter(m => m.date === today)],
+     [mode === 'next' ? 'Prossime' : 'Giocate', shown.filter(m => m.date !== today)]].forEach(([title, ms]) => {
+      if (!ms.length) return;
+      const h = document.createElement('div'); h.className = 'lst-head'; h.textContent = title; box.appendChild(h);
+      const g = document.createElement('div'); g.className = 'lst'; ms.forEach(m => g.appendChild(fixtureCard(m))); box.appendChild(g);
+    });
   }
 
   async function loadMdFixtures() {
@@ -3502,6 +3692,48 @@
     if (!found.length) $('calSummary').textContent = `${calRows.length} / ${CAL_MAX} partite · nessuna trovata nel calendario`;
   }
 
+  /* ---------- Barra in alto stile Apple ---------- */
+  // Passaggi fatti di una sola scelta: si va avanti toccando la riga, quindi niente "Fine".
+  const NAV_AUTO = new Set(['competition','side','kit','jrratio','jrstyle','calmonth','pose','moment','mdpick']);
+  function syncNav() {
+    const home = document.body.classList.contains('home-mode');
+    const screenName = previewMode ? 'preview' : (home ? 'home' : flow[flowIndex]);
+    document.body.classList.toggle('preview-mode', !!previewMode);
+    const screen = document.querySelector(`[data-screen="${screenName}"]`);
+    const h1 = screen && screen.querySelector('h1');
+    $('navTitle').textContent = home ? '' : (previewMode ? 'Anteprima' : (h1 ? h1.textContent.trim() : stepTitle(screenName)));
+    const req = currentRequest();
+    const opp = selectedTeam ? displayTeamName(selectedTeam.name) : '';
+    $('navSub').textContent = home || !req ? '' : (LIVE ? '' : req.title + (opp ? ` · ${opp}` : ''));
+    const back = $('backButton');
+    $('closeWorkflowButton').hidden = !home;
+    $('navBack').hidden = home || LIVE && !previewMode && flowIndex === 0;
+    $('navBack').disabled = back.disabled;
+    $('navBackText').textContent = !home && !previewMode && flowIndex === 0 && !LIVE ? 'Home' : '';
+    const next = $('nextButton');
+    const busyLabel = /…/.test(next.textContent) ? next.textContent.replace(/[›✓]/g, '').trim() : '';
+    $('navDone').hidden = home || !!previewMode || NAV_AUTO.has(screenName);
+    $('navDone').disabled = next.disabled;
+    $('navDone').textContent = busyLabel || (isLastStep() ? 'Anteprima' : 'Fine');
+    document.querySelectorAll('#navTools .nav-tools-g').forEach(g => g.classList.toggle('on', g.dataset.for === screenName && !home));
+  }
+
+  function initNav() {
+    // Icone e tasti in alto delle schermate (A mano, Scegli foto, Modifica, Svuota…) vanno nella barra.
+    document.querySelectorAll('[data-screen] .photo-head, [data-screen] .cal-head').forEach(head => {
+      const group = document.createElement('span');
+      group.className = 'nav-tools-g';
+      group.dataset.for = head.closest('[data-screen]').dataset.screen;
+      [...head.children].filter(el => el.tagName !== 'H1' && !el.classList.contains('eyebrow')).forEach(el => group.appendChild(el));
+      if (group.children.length) $('navTools').appendChild(group);
+    });
+    $('navBack').addEventListener('click', () => $('backButton').click());
+    $('navDone').addEventListener('click', () => $('nextButton').click());
+    const watch = new MutationObserver(syncNav);
+    ['nextButton', 'backButton'].forEach(id => watch.observe($(id), {attributes:true, childList:true, characterData:true, subtree:true}));
+    syncNav();
+  }
+
   /* ---------- Impostazioni › Squadre e loghi ---------- */
   // Correzioni salvate dal servizio nel repo degli asset (team_overrides/): valgono anche per LiveScore.
   // Ogni squadra del catalogo porta: override_key/override (correzioni), aliases_fclogo (nomi originali),
@@ -3620,42 +3852,11 @@
   }
 
   /* --- pannello: modifica squadra --- */
-  function openTeamSheet(team) {
-    haptic('select');
-    setEdit = {
-      mode:'team', team, key:team.override_key || '', base:team.manual ? null : team.name, isNew:!!team.manual,
-      name:team.display_name || (team.manual ? team.name : ''), nameOrig:team.manual ? '' : baseDisplayName(team.name),
-      locked:(team.aliases_fclogo || team.aliases || []).filter(a => norm(a) !== norm(team.name)).concat(team.manual ? [] : [team.name]),
-      aliases:customAliases(team).slice(), logo:'keep', preview:'',
-      hasCustom:!!team.logo_custom, fclogo:team.logo_custom ? (team.logo_fclogo || '') : (team.manual ? '' : (team.logo || '')),
-      current:team.logo || '', adding:false, confirmReset:false, busy:false
-    };
-    renderSetSheet();
-    $('setShOv').classList.add('open');
-  }
 
   /* --- pannello: nome ESPN senza squadra --- */
-  function openFixSheet(espnName) {
-    haptic('select');
-    setEdit = {mode:'fix', espn:espnName, choice:'', pick:null, q:'', name:espnName, logo:null, preview:'', busy:false};
-    renderSetSheet();
-    $('setShOv').classList.add('open');
-  }
 
-  function closeSetSheet() {
-    setEdit = null;
-    $('setShOv').classList.remove('open');
-    document.activeElement && document.activeElement.blur && document.activeElement.blur();
-  }
 
   // Logo mostrato ora nel pannello: caricato (anteprima), originale fclogo (dopo "Torna a fclogo") o attuale.
-  function sheetLogo() {
-    const e = setEdit;
-    if (e.preview) return e.preview;
-    if (e.mode === 'fix') return '';
-    if (e.logo === null) return e.fclogo;
-    return e.current;
-  }
 
   // Posizione dello stemma nel quadrato (percentuali): frame = {x, y, s} come nel servizio.
   function frameStyle(frame, aspect) {
@@ -3664,25 +3865,8 @@
     return `left:${(50 + (f.x - w / 2) * 100).toFixed(2)}%;top:${(50 + (f.y - h / 2) * 100).toFixed(2)}%;width:${(w * 100).toFixed(2)}%;height:${(h * 100).toFixed(2)}%`;
   }
 
-  // uri = logo quadrato già pronto (frame assente) oppure stemma senza margini + frame/aspect dell'editor.
-  function previewBoxes(uri, frame=null, aspect=1) {
-    const cell = (bg, ink) => uri
-      ? `<div style="background:${bg}"><span class="sq"><i style="background:${ink};--m:url('${uri}');${frameStyle(frame, aspect)}"></i></span></div>`
-      : `<div style="background:${bg}"><span class="none">?</span></div>`;
-    return `<div class="set-prev">${cell('#ede7dd','#111')}${cell('#111','#fff')}${cell('#fc6d06','#000')}</div>`;
-  }
-
-  // Editor: riquadro 1:1 come i PNG fclogo, linee del centro e spazio dello stemma fclogo (88%).
-  function editorBlock(e) {
-    return `<div class="set-ed">
-      <div class="set-ed-box" id="setEdBox"><div class="set-ed-g safe"></div><div class="set-ed-g lbl">come fclogo</div>
-        <div class="set-ed-g v" id="setEdV"></div><div class="set-ed-g h" id="setEdH"></div>
-        <i id="setEdImg" style="--m:url('${e.preview}');${frameStyle(e.frame, e.aspect)}"></i></div>
-      <div class="set-two"><button type="button" class="btn ghost" data-act="ed-center">Centra</button>
-        <button type="button" class="btn primary" data-act="ed-done">Fatto</button></div>
-      <p class="set-hint">Trascina per spostare, due dita per la dimensione.</p>
-    </div>`;
-  }
+  // Blocco logo: riquadro 1:1 come i PNG fclogo, che è anche l'editor (si trascina quando c'è un logo
+  // nuovo o "Sposta" su quello salvato) + una riga di icone: carica, cerca su fclogo, link, usa.
 
   function bindEditor(e) {
     const box = $('setEdBox');
@@ -3701,7 +3885,7 @@
       start = {x:e.frame.x, y:e.frame.y, s:e.frame.s, cx:p.reduce((a, q) => a + q.x, 0) / p.length, cy:p.reduce((a, q) => a + q.y, 0) / p.length,
                d:p.length > 1 ? Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) : 0};
     };
-    box.addEventListener('pointerdown', ev => { try { box.setPointerCapture(ev.pointerId); } catch (_) {} pts.set(ev.pointerId, {x:ev.clientX, y:ev.clientY}); begin(); });
+    box.addEventListener('pointerdown', ev => { if (ev.target.closest('.set-ed-c')) return; try { box.setPointerCapture(ev.pointerId); } catch (_) {} pts.set(ev.pointerId, {x:ev.clientX, y:ev.clientY}); begin(); });
     box.addEventListener('pointermove', ev => {
       if (!pts.has(ev.pointerId) || !start) return;
       pts.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
@@ -3719,148 +3903,12 @@
     paint();
   }
 
-  // Riga "da fclogo.top": 🔍 apre il sito, nel campo si incolla il link della pagina del logo, → lo usa.
-  function fclogoRow() {
-    return `<div class="set-fcl"><button type="button" class="head-ico" data-act="fcl-open" aria-label="Cerca su fclogo.top" title="Cerca su fclogo.top"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
-      <input id="setFcl" type="url" inputmode="url" placeholder="Incolla link fclogo.top" autocomplete="off" spellcheck="false">
-      <button type="button" class="head-ico" data-act="fcl-use" aria-label="Usa logo da fclogo.top" title="Usa questo logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>`;
-  }
 
-  async function setUseFclogo() {
-    const e = setEdit;
-    const link = String(($('setFcl') || {}).value || '').trim();
-    if (!e || !link) return;
-    $('setErr').textContent = 'Prendo il logo da fclogo.top…';
-    try {
-      const prev = await setPost({action:'logo_preview', fclogo:link});
-      if (setEdit !== e) return;
-      Object.assign(e, {preview:prev.preview, aspect:prev.aspect || 1, frame:prev.frame || {x:0, y:0, s:0.88},
-        logo:`upload:${prev.photo_id}`, repos:false, editing:true});
-      haptic('success');
-      renderSetSheet();
-    } catch (ex) {
-      if ($('setErr')) $('setErr').textContent = ex.message || String(ex);
-      haptic('error');
-    }
-  }
 
-  function bindFclogo() {
-    const input = $('setFcl');
-    if (!input) return;
-    // Incollando un link di fclogo.top si usa subito, senza premere →.
-    input.addEventListener('paste', () => setTimeout(() => { if (/fclogo\.top\//i.test(input.value)) setUseFclogo(); }, 0));
-    input.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); setUseFclogo(); } });
-  }
 
-  function setEsc(text) { const d = document.createElement('div'); d.textContent = String(text ?? ''); return d.innerHTML; }
 
-  function renderSetSheet() {
-    const e = setEdit;
-    const sh = $('setSh');
-    if (!e) return;
-    if (e.mode === 'fix') { renderFixSheet(sh, e); return; }
-    const team = e.team;
-    const title = e.name || e.nameOrig || team.name;
-    const canFclogo = !e.isNew && (e.preview || (e.hasCustom && e.logo !== null));
-    const nameMine = !e.isNew && !!e.name && norm(e.name) !== norm(e.nameOrig);
-    sh.innerHTML = `<div class="mod-bar"></div>
-      <div class="mod-top"><b>${setEsc(title)}</b><button type="button" data-act="close">Chiudi</button></div>
-      ${e.editing ? editorBlock(e) : `${e.preview ? previewBoxes(e.preview, e.frame, e.aspect) : previewBoxes(sheetLogo())}
-      <div class="set-two"><button type="button" class="btn ghost" data-act="upload">⤒ Carica logo</button>
-        ${e.preview || (e.hasCustom && e.logo !== null)
-          ? `<button type="button" class="btn ghost" data-act="ed-open">✥ Posiziona</button>`
-          : `<button type="button" class="btn ghost" data-act="fclogo" ${canFclogo ? '' : 'disabled'}>↺ Torna a fclogo</button>`}</div>
-      ${fclogoRow()}
-      ${canFclogo && (e.preview || (e.hasCustom && e.logo !== null)) ? '<button type="button" class="set-reset" style="color:var(--text);margin-top:4px" data-act="fclogo">↺ Torna a fclogo</button>' : ''}
-      ${e.preview || (e.logo === null && e.hasCustom) ? '<p class="set-hint">Modifica pronta: premi Salva.</p>' : ''}`}
-      <div class="set-lbl">Nome mostrato ${nameMine ? '<span class="set-tag">TUO</span>' : ''}</div>
-      <div class="set-name"><input id="setName" type="text" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false"
-        placeholder="${setEsc(e.nameOrig || 'Nome della squadra')}" value="${setEsc(e.name)}">
-        ${e.isNew ? '' : `<button type="button" data-act="name-reset" ${nameMine ? '' : 'disabled'} aria-label="Torna al nome originale">↺</button>`}</div>
-      <div class="set-lbl">Nomi ESPN collegati</div>
-      <div class="set-chips">
-        ${e.locked.map(a => `<span class="set-chip lock">${setEsc(a)} 🔒</span>`).join('')}
-        ${e.aliases.map((a, i) => `<span class="set-chip mine">${setEsc(a)}<button type="button" data-act="alias-del" data-i="${i}" aria-label="Togli ${setEsc(a)}">✕</button></span>`).join('')}
-        ${e.adding ? '' : '<button type="button" class="set-chip add" data-act="alias-add">+ Aggiungi</button>'}
-      </div>
-      ${e.adding ? `<div class="set-add"><input id="setAlias" type="text" maxlength="40" placeholder="Nome come lo scrive ESPN" autocomplete="off" spellcheck="false" list="setAliasList">
-        <button type="button" class="btn primary" data-act="alias-ok">Aggiungi</button></div>
-        <datalist id="setAliasList">${unmatchedEspn().map(t => `<option value="${setEsc(t.name)}">`).join('')}</datalist>` : ''}
-      <div id="setErr" class="lnk-err"></div>
-      <div class="set-foot"><button type="button" class="btn ghost" data-act="close">Annulla</button>
-        <button type="button" class="btn primary" data-act="save" ${e.busy ? 'disabled' : ''}>${e.busy ? 'Salvo…' : 'Salva'}</button></div>
-      ${e.key ? `<button type="button" class="set-reset" data-act="reset">${e.confirmReset ? 'Tocca di nuovo per confermare' : e.isNew ? 'Elimina questa squadra' : 'Cancella tutte le personalizzazioni'}</button>` : ''}`;
-    const nameInput = $('setName');
-    nameInput.addEventListener('input', () => { e.name = nameInput.value; });
-    nameInput.addEventListener('change', () => renderSetSheet());
-    if (e.adding) setTimeout(() => $('setAlias') && $('setAlias').focus(), 30);
-    if (e.editing) bindEditor(e); else bindFclogo();
-  }
+  // Nome ESPN senza squadra: selettore piccolo "Nuova squadra | Già nel catalogo".
 
-  function renderFixSheet(sh, e) {
-    const results = e.choice === 'link' && norm(e.q) ? searchTeams(teams, e.q).slice(0, 6) : [];
-    sh.innerHTML = `<div class="mod-bar"></div>
-      <div class="mod-top"><b>${setEsc(e.espn)} <span style="color:var(--muted);font-weight:600;font-size:14px">· nome ESPN</span></b><button type="button" data-act="close">Chiudi</button></div>
-      <button type="button" class="set-opt ${e.choice === 'link' ? 'on' : ''}" data-act="choose" data-c="link"><b>È una squadra che c’è già</b>
-        <p>Collega il nome ESPN a una squadra del catalogo (es. ESPN scrive “Man City”, nel catalogo è “Manchester City”).</p></button>
-      ${e.choice === 'link' ? `<label class="cal-search set-search" style="margin-bottom:6px"><span class="logo" id="setPickLogo"></span>
-          <input id="setPickQ" type="text" placeholder="Cerca la squadra" autocomplete="off" autocapitalize="words" spellcheck="false" value="${setEsc(e.pick ? displayTeamName(e.pick.name) : e.q)}"></label>
-        <div class="cal-sug" id="setPickSug"></div>` : ''}
-      <button type="button" class="set-opt ${e.choice === 'new' ? 'on' : ''}" data-act="choose" data-c="new"><b>Nuova squadra</b>
-        <p>Non è nel catalogo: carica il logo e scegli il nome da mostrare.</p></button>
-      ${e.choice === 'new' ? `${e.editing ? editorBlock(e) : `${previewBoxes(e.preview, e.frame, e.aspect)}
-        <div class="set-two"><button type="button" class="btn ghost" data-act="upload">⤒ Carica logo</button>
-          <button type="button" class="btn ghost" data-act="ed-open" ${e.preview ? '' : 'disabled'}>✥ Posiziona</button></div>
-        ${fclogoRow()}`}
-        <div class="set-lbl">Nome mostrato</div>
-        <div class="set-name"><input id="setName" type="text" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false" value="${setEsc(e.name)}"></div>` : ''}
-      <div id="setErr" class="lnk-err"></div>
-      <div class="set-foot"><button type="button" class="btn ghost" data-act="close">Annulla</button>
-        <button type="button" class="btn primary" data-act="save" ${!e.choice || e.busy ? 'disabled' : ''}>${e.busy ? 'Salvo…' : 'Salva'}</button></div>`;
-    if (e.choice === 'link') {
-      fillLogo($('setPickLogo'), e.pick);
-      const sug = $('setPickSug');
-      results.forEach(team => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.innerHTML = '<span class="logo"></span><span></span>';
-        b.lastChild.textContent = displayTeamName(team.name);
-        fillLogo(b.firstChild, team);
-        b.addEventListener('click', () => { e.pick = team; e.q = ''; renderSetSheet(); });
-        sug.appendChild(b);
-      });
-      const input = $('setPickQ');
-      input.addEventListener('input', () => { e.q = input.value; e.pick = null; const pos = input.selectionStart; renderSetSheet(); const n = $('setPickQ'); n.focus(); n.setSelectionRange(pos, pos); });
-    }
-    if (e.choice === 'new') $('setName').addEventListener('input', ev => { e.name = ev.target.value; });
-    if (e.editing) bindEditor(e); else bindFclogo();
-  }
-
-  async function setUploadLogo(file) {
-    const e = setEdit;
-    if (!e || !file) return;
-    const err = $('setErr');
-    try {
-      if (file.size > 8 * 1024 * 1024) throw new Error('Logo troppo grande (max 8 MB).');
-      err.textContent = 'Carico il logo…';
-      const up = await netFetch(`${directBase}/upload`, {method:'POST', headers:{'Content-Type':file.type || 'image/png','X-ImageGEN-Session':session}, body:file}, 30000);
-      const upBody = await up.json().catch(() => ({}));
-      if (!up.ok || !upBody.ok) throw new Error(upBody.error || 'Caricamento non riuscito.');
-      const prev = await setPost({action:'logo_preview', photo_id:upBody.photo_id});
-      if (setEdit !== e) return;
-      e.preview = prev.preview;
-      e.aspect = prev.aspect || 1;
-      e.frame = prev.frame || {x:0, y:0, s:0.88};
-      e.logo = `upload:${upBody.photo_id}`;
-      e.repos = false;
-      e.editing = true;
-      haptic('success');
-      renderSetSheet();
-    } catch (ex) {
-      if ($('setErr')) $('setErr').textContent = ex.message || String(ex);
-      haptic('error');
-    }
-  }
 
   async function setPost(payload) {
     const r = await netFetch(`${directBase}/settings`, {
@@ -3884,41 +3932,305 @@
     if (selectedTeam && row && norm(selectedTeam.name) === norm(row.name)) selectedTeam = row;
   }
 
-  async function setSave(reset=false) {
-    const e = setEdit;
-    if (!e || e.busy) return;
-    let team;
-    if (e.mode === 'fix') {
-      if (e.choice === 'link') {
-        if (!e.pick) { $('setErr').textContent = 'Scegli la squadra dall’elenco.'; return; }
-        const p = e.pick;
-        team = {base:p.manual ? null : p.name, key:p.override_key || '', name:p.display_name || (p.manual ? p.name : ''),
-                aliases:[...customAliases(p), e.espn], logo:'keep'};
-      } else {
-        if (!e.logo) { $('setErr').textContent = 'Carica il logo della squadra.'; return; }
-        if (!String(e.name).trim()) { $('setErr').textContent = 'Scrivi il nome della squadra.'; return; }
-        team = {name:e.name, aliases:[e.espn], logo:e.logo, logo_frame:e.frame};
-      }
-    } else {
-      team = reset ? {base:e.base, key:e.key, reset:true}
-        : {base:e.base, key:e.key, name:norm(e.name) === norm(e.nameOrig) ? '' : e.name, aliases:e.aliases, logo:e.logo,
-           ...((String(e.logo).startsWith('upload:') || e.repos) && e.frame ? {logo_frame:e.frame} : {})};
+
+
+  /* --- Squadre e loghi: pagine una dentro l'altra (stile Impostazioni Apple) ---
+     Pila di pagine sopra l'elenco: team → logo / name / espn; fix → new (→ logo/name/espn) / link.
+     Ogni pagina con "Salva" salva subito sul servizio; la squadra nuova si crea con "Crea squadra". */
+  let setStack = [];      // pagine aperte, l'ultima è quella visibile
+  let setTeam = null;     // squadra aperta (o bozza della squadra nuova)
+  let setDraft = null;    // modifiche della pagina Logo / Nome / Nomi ESPN aperta
+  let setBusy = false;
+
+  const SP_ICONS = {
+    phone:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
+    search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+    undo:'<path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/>',
+    link:'<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/>',
+    lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/>',
+    move:'<path d="M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3"/>',
+    chev:'<path d="M15 5l-7 7 7 7"/>'
+  };
+  const spIco = (name, size=24) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SP_ICONS[name]}</svg>`;
+  function setEsc(text) { const d = document.createElement('div'); d.textContent = String(text ?? ''); return d.innerHTML; }
+
+  // Stato della squadra aperta, ricavato dalla riga del catalogo (con le correzioni già applicate).
+  function teamState(team) {
+    return {
+      team, isNew:false, manual:!!team.manual, key:team.override_key || '', base:team.manual ? null : team.name,
+      custom:team.display_name || '', nameOrig:team.manual ? team.name : baseDisplayName(team.name),
+      locked:team.manual ? [] : [...new Set([team.name, ...(team.aliases_fclogo || team.aliases || [])])],
+      aliases:customAliases(team).slice(), hasCustom:!!team.logo_custom,
+      current:team.logo || '', fclogo:team.logo_custom ? (team.logo_fclogo || '') : (team.manual ? '' : (team.logo || ''))
+    };
+  }
+  const setShownName = T => T.isNew ? T.custom || T.espn : (T.custom || T.nameOrig);
+
+  function openTeamSheet(team) {
+    haptic('select');
+    setTeam = teamState(team);
+    setStack = ['team'];
+    renderSetPage();
+    // Il pacchetto ha solo miniature: logo nitido dal servizio.
+    const T = setTeam;
+    setPost({action:'logo_current', name:team.name}).then(r => {
+      if (setTeam !== T) return;
+      if (r.current) T.current = r.current;
+      if (r.fclogo) T.fclogo = r.fclogo;
+      renderSetPage();
+    }).catch(() => {});
+  }
+
+  function openFixSheet(espnName) {
+    haptic('select');
+    setTeam = {espn:espnName};
+    setStack = ['fix'];
+    renderSetPage();
+  }
+
+  function closeSetSheet() {
+    setStack = []; setTeam = null; setDraft = null;
+    $('setPage').hidden = true;
+    $('setPage').innerHTML = '';
+  }
+
+  function spPush(page) {
+    haptic('select');
+    const T = setTeam;
+    if (page === 'logo') setDraft = {logo:'keep', preview:'', aspect:1, frame:null, repos:false, moved:false,
+      ...(T.isNew && T.pending ? {logo:T.pending.logo, preview:T.pending.preview, aspect:T.pending.aspect, frame:{...T.pending.frame}} : {})};
+    if (page === 'name') setDraft = {name:setShownName(T)};
+    if (page === 'espn') setDraft = {aliases:T.aliases.slice(), adding:false};
+    if (page === 'link') setDraft = {q:''};
+    setStack.push(page);
+    renderSetPage();
+  }
+  function spPop() {
+    setStack.pop();
+    setDraft = null;
+    if (!setStack.length) { closeSetSheet(); renderSetList(); return; }
+    renderSetPage();
+  }
+
+  function spNav(title, {save=false, cancel=false, saveLabel='Salva', saveOff=false}={}) {
+    const left = cancel ? '<button type="button" class="sp-l" data-sp="back">Annulla</button>'
+      : `<button type="button" class="sp-l sp-back" data-sp="back">${spIco('chev', 22)}<span>Indietro</span></button>`;
+    const right = save ? `<button type="button" class="sp-r" data-sp="save" ${saveOff || setBusy ? 'disabled' : ''}>${setBusy ? '…' : saveLabel}</button>` : '<span></span>';
+    return `<div class="sp-nav">${left}<b>${setEsc(title)}</b>${right}</div>`;
+  }
+  const spRow = (label, value, page, warn=false) =>
+    `<button type="button" class="sp-item" data-go="${page}"><span>${label}</span><span class="sp-v${warn ? ' warn' : ''}">${value}</span><span class="sp-chev">›</span></button>`;
+  const spLogo = (uri, size) => uri
+    ? `<span class="sp-logo" style="width:${size}px;height:${size}px;--m:url('${uri}')"></span>`
+    : `<span class="sp-ph" style="width:${size}px;height:${size}px"></span>`;
+
+  function renderSetPage() {
+    const page = setStack[setStack.length - 1];
+    const box = $('setPage');
+    if (!page) { box.hidden = true; return; }
+    box.hidden = false;
+    const T = setTeam, D = setDraft;
+    let html = '';
+    if (page === 'team' || page === 'new') {
+      const isNew = page === 'new';
+      const logo = isNew ? (T.pending ? T.pending.preview : '') : T.current;
+      const nEspn = isNew ? T.aliases.length : T.locked.length + T.aliases.length;
+      const sub = isNew ? (T.pending ? 'Pronta da creare' : 'Manca solo il logo')
+        : T.manual ? 'Aggiunta da te' : (T.key ? 'Modificata da te' : 'Dal catalogo fclogo');
+      html = spNav(isNew ? 'Nuova squadra' : '') + `<div class="sp-body">
+        <div class="sp-hero">${isNew && T.pending ? `<span class="sp-sq">${frameLogo(T.pending)}</span>` : spLogo(logo, 92)}<h2>${setEsc(setShownName(T))}</h2><p>${sub}</p></div>
+        <div class="sp-list">
+          ${spRow('Logo', isNew ? (T.pending ? 'Pronto' : 'Da aggiungere') : (T.hasCustom ? 'Tuo' : 'fclogo'), 'logo', isNew && !T.pending)}
+          ${spRow('Nome', setEsc(setShownName(T)), 'name')}
+          ${spRow('Nomi ESPN', String(nEspn), 'espn')}
+        </div>
+        ${isNew ? `<button type="button" class="sp-cta" data-sp="create" ${T.pending && !setBusy ? '' : 'disabled'}>${setBusy ? 'Creo…' : 'Crea squadra'}</button>`
+          : T.key ? `<button type="button" class="sp-danger" data-sp="reset">${T.confirmReset ? 'Tocca di nuovo per confermare' : T.manual ? 'Elimina questa squadra' : 'Cancella tutte le personalizzazioni'}</button>` : ''}
+        <div id="setErr" class="sp-err"></div></div>`;
+    } else if (page === 'logo') {
+      const live = !!D.preview;
+      const uri = live ? D.preview : (D.logo === null ? T.fclogo : (T.isNew ? '' : T.current));
+      const canOrig = !T.isNew && (T.hasCustom || live) && !!T.fclogo;
+      const guides = live ? '<div class="set-ed-g safe"></div><div class="set-ed-g v" id="setEdV"></div><div class="set-ed-g h" id="setEdH"></div>' : '';
+      const inner = uri ? `<i id="setEdImg" style="--m:url('${uri}');${frameStyle(live ? D.frame : null, live ? D.aspect : 1)}"></i>` : '';
+      const corner = live ? `<button type="button" class="set-ed-c" data-sp="center" aria-label="Centra come fclogo">${spIco('target', 20)}</button>`
+        : (!T.isNew && T.hasCustom && D.logo !== null ? `<button type="button" class="set-ed-c" data-sp="move" aria-label="Sposta logo">${spIco('move', 20)}</button>` : '');
+      const changed = live || (D.logo === null && T.hasCustom);
+      html = spNav('Logo', {save:true, cancel:true, saveLabel:T.isNew ? 'Fine' : 'Salva', saveOff:!changed}) + `<div class="sp-body sp-logo-page">
+        <div class="sp-stage"><div class="set-ed-box sp-ed${live ? ' live' : ''}${uri ? '' : ' empty'}" id="setEdBox"${uri ? '' : ' data-sp="phone"'}>${guides}${inner}${uri ? '' : `<span class="set-ed-empty">${spIco('phone', 28)}Carica il logo</span>`}${corner}</div></div>
+        <p class="sp-hint">${live ? 'Trascina per spostare · due dita per la dimensione' : '&nbsp;'}</p>
+        <div class="sp-tiles"><button type="button" class="sp-tile" data-sp="phone">${spIco('phone')}Telefono</button>
+          <button type="button" class="sp-tile" data-sp="fcl-open">${spIco('search')}Cerca fclogo</button>
+          <button type="button" class="sp-tile" data-sp="orig" ${canOrig ? '' : 'disabled'}>${spIco('undo')}Originale</button></div>
+        <label class="sp-link">${spIco('link', 20)}<input id="setFcl" type="url" inputmode="url" placeholder="Incolla link fclogo.top" autocomplete="off" spellcheck="false"><button type="button" data-sp="fcl-use">Usa</button></label>
+        <div id="setErr" class="sp-err"></div></div>`;
+    } else if (page === 'name') {
+      const orig = T.isNew ? T.espn : T.nameOrig;
+      html = spNav('Nome', {save:true, cancel:true, saveLabel:T.isNew ? 'Fine' : 'Salva'}) + `<div class="sp-body">
+        <div class="sp-lbl">Nome mostrato</div>
+        <div class="sp-list"><input id="spName" class="sp-field" type="text" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false" value="${setEsc(D.name)}" placeholder="${setEsc(orig)}"></div>
+        ${T.isNew ? '' : `<p class="sp-note">Originale: <b>${setEsc(orig)}</b></p>
+        <div class="sp-list"><button type="button" class="sp-item" data-sp="name-orig">${spIco('undo', 20)}<span>Ripristina originale</span></button></div>`}
+        <p class="sp-note sp-bottom">Vale per la mini app, le grafiche e LiveScore.</p>
+        <div id="setErr" class="sp-err"></div></div>`;
+    } else if (page === 'espn') {
+      html = spNav('Nomi ESPN', {save:true, cancel:true, saveLabel:T.isNew ? 'Fine' : 'Salva'}) + `<div class="sp-body">
+        ${T.locked && T.locked.length ? `<div class="sp-lbl">Dal catalogo</div><div class="sp-list">${T.locked.map(a => `<div class="sp-item"><span>${setEsc(a)}</span><span class="sp-v">${spIco('lock', 16)}</span></div>`).join('')}</div>` : ''}
+        <div class="sp-lbl">Aggiunti da te</div>
+        <div class="sp-list">${D.aliases.map((a, i) => `<div class="sp-item"><span>${setEsc(a)}</span><button type="button" class="sp-rm" data-sp="rm" data-i="${i}" aria-label="Togli ${setEsc(a)}">−</button></div>`).join('')}
+          ${D.adding ? `<div class="sp-item"><input id="spAlias" class="sp-field sp-inline" type="text" maxlength="40" placeholder="Nome come lo scrive ESPN" autocomplete="off" spellcheck="false" list="spAliasList"><button type="button" class="sp-add-ok" data-sp="add-ok">Aggiungi</button></div>
+            <datalist id="spAliasList">${unmatchedEspn().map(x => `<option value="${setEsc(x.name)}">`).join('')}</datalist>`
+            : `<button type="button" class="sp-item sp-add" data-sp="add">${spIco('plus', 20)}<span>Aggiungi nome</span></button>`}</div>
+        <p class="sp-note">Se ESPN scrive la squadra con uno di questi nomi, si usano questo logo e questo nome.</p>
+        <div id="setErr" class="sp-err"></div></div>`;
+    } else if (page === 'fix') {
+      html = spNav('') + `<div class="sp-body">
+        <div class="sp-hero">${spLogo('', 92)}<h2>${setEsc(T.espn)}</h2><p>Nel calendario ESPN, senza logo</p></div>
+        <div class="sp-list">
+          <button type="button" class="sp-item sp-big" data-sp="to-new"><span class="sp-ic">${spIco('plus', 22)}</span><span class="sp-two">Crea squadra nuova<small>Logo e nome tuoi</small></span><span class="sp-chev">›</span></button>
+          <button type="button" class="sp-item sp-big" data-go="link"><span class="sp-ic">${spIco('link', 22)}</span><span class="sp-two">È già nel catalogo<small>Collegala a una squadra esistente</small></span><span class="sp-chev">›</span></button>
+        </div></div>`;
+    } else if (page === 'link') {
+      const found = norm(D.q) ? searchTeams(teams, D.q).slice(0, 8) : [];
+      html = spNav(`Collega ${T.espn}`) + `<div class="sp-body">
+        <label class="sp-search">${spIco('search', 20)}<input id="spLinkQ" type="text" placeholder="Cerca la squadra" autocomplete="off" autocapitalize="words" spellcheck="false" value="${setEsc(D.q)}"></label>
+        ${found.length ? `<div class="sp-list" id="spLinkList"></div>` : ''}
+        <p class="sp-note">Tocca la squadra: d’ora in poi “${setEsc(T.espn)}” di ESPN userà il suo logo e il suo nome.</p>
+        <div id="setErr" class="sp-err"></div></div>`;
+      box.innerHTML = html;
+      const list = $('spLinkList');
+      found.forEach(team => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'sp-item';
+        b.innerHTML = '<span class="logo"></span><span></span><span class="sp-chev">›</span>';
+        b.children[1].textContent = displayTeamName(team.name);
+        fillLogo(b.firstChild, team);
+        b.addEventListener('click', () => spLink(team));
+        list.appendChild(b);
+      });
+      const q = $('spLinkQ');
+      q.addEventListener('input', () => { D.q = q.value; const pos = q.selectionStart; renderSetPage(); const n = $('spLinkQ'); n.focus(); n.setSelectionRange(pos, pos); });
+      return;
     }
-    e.busy = true;
-    renderSetSheet();
+    box.innerHTML = html;
+    if (page === 'logo') {
+      if (D.preview) bindEditor(D);
+      const input = $('setFcl');
+      input.addEventListener('paste', () => setTimeout(() => { if (/fclogo\.top\//i.test(input.value)) spUseFclogo(); }, 0));
+      input.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); spUseFclogo(); } });
+    }
+    if (page === 'name') $('spName').addEventListener('input', ev => { D.name = ev.target.value; });
+    if (page === 'espn' && D.adding) setTimeout(() => $('spAlias') && $('spAlias').focus(), 30);
+  }
+
+  // Anteprima dello stemma posizionato (bozza della squadra nuova): stesso calcolo del servizio.
+  function frameLogo(p) {
+    return `<i style="--m:url('${p.preview}');${frameStyle(p.frame, p.aspect)}"></i>`;
+  }
+
+  // Salva la squadra aperta cambiando solo `change` (logo, nome o nomi ESPN).
+  async function spSave(change) {
+    const T = setTeam;
+    const team = {base:T.base, key:T.key, name:T.custom, aliases:T.aliases, logo:'keep', ...change};
+    setBusy = true; renderSetPage();
     try {
       const body = await setPost({action:'team_save', team});
       applySavedTeam(body.key, body.team);
-      closeSetSheet();
-      renderSetList();
+      setBusy = false;
       haptic('success');
-      if (body.remote) setToast(reset ? 'Personalizzazioni cancellate.' : 'Salvato.');
+      if (body.remote) setToast(change.reset ? 'Personalizzazioni cancellate.' : 'Salvato.');
       else setToast(`Salvato solo per questa sessione: ${body.warning || 'GitHub non raggiungibile'}.`, true);
+      return body;
     } catch (ex) {
-      e.busy = false;
-      renderSetSheet();
-      $('setErr').textContent = ex.message || String(ex);
+      setBusy = false; renderSetPage();
+      if ($('setErr')) $('setErr').textContent = ex.message || String(ex);
       haptic('error');
+      return null;
+    }
+  }
+
+  // Dopo un salvataggio: la pagina Squadra mostra la riga aggiornata (o si torna all'elenco se tolta).
+  function spAfterSave(body) {
+    const row = body && body.team;
+    if (!row) { closeSetSheet(); renderSetList(); return; }
+    const current = setTeam.current;
+    setTeam = teamState(row);
+    if (!row.logo_custom || !current) setTeam.current = row.logo || current;
+    setStack = ['team'];
+    setDraft = null;
+    renderSetPage();
+    renderSetList();
+    const T = setTeam;
+    setPost({action:'logo_current', name:row.name}).then(r => {
+      if (setTeam !== T) return;
+      if (r.current) T.current = r.current;
+      if (r.fclogo) T.fclogo = r.fclogo;
+      renderSetPage();
+    }).catch(() => {});
+  }
+
+  async function spLink(team) {
+    const T = setTeam;
+    haptic('select');
+    setTeam = teamState(team);
+    setTeam.espn = T.espn;
+    const body = await spSave({aliases:[...customAliases(team), T.espn]});
+    if (body) { closeSetSheet(); renderSetList(); setToast(`${T.espn} → ${displayTeamName(team.name)}`); }
+    else { setTeam = T; renderSetPage(); }
+  }
+
+  async function spLogoFrom(payload) {
+    const D = setDraft;
+    $('setErr').textContent = payload.fclogo ? 'Prendo il logo da fclogo.top…' : 'Carico il logo…';
+    try {
+      const prev = await setPost({action:'logo_preview', ...payload});
+      if (setDraft !== D) return;
+      Object.assign(D, {preview:prev.preview, aspect:prev.aspect || 1, frame:prev.frame || {x:0, y:0, s:0.88},
+        logo:prev.photo_id ? `upload:${prev.photo_id}` : D.logo, repos:!!payload.key, moved:false});
+      haptic('success');
+      renderSetPage();
+    } catch (ex) {
+      if ($('setErr')) $('setErr').textContent = ex.message || String(ex);
+      haptic('error');
+    }
+  }
+  function spUseFclogo() {
+    const link = String(($('setFcl') || {}).value || '').trim();
+    if (link) spLogoFrom({fclogo:link});
+  }
+  async function spUpload(file) {
+    if (!file || !setDraft) return;
+    try {
+      if (file.size > 8 * 1024 * 1024) throw new Error('Logo troppo grande (max 8 MB).');
+      $('setErr').textContent = 'Carico il logo…';
+      const up = await netFetch(`${directBase}/upload`, {method:'POST', headers:{'Content-Type':file.type || 'image/png','X-ImageGEN-Session':session}, body:file}, 30000);
+      const upBody = await up.json().catch(() => ({}));
+      if (!up.ok || !upBody.ok) throw new Error(upBody.error || 'Caricamento non riuscito.');
+      await spLogoFrom({photo_id:upBody.photo_id});
+    } catch (ex) {
+      if ($('setErr')) $('setErr').textContent = ex.message || String(ex);
+      haptic('error');
+    }
+  }
+
+  async function spOnSave() {
+    const page = setStack[setStack.length - 1], T = setTeam, D = setDraft;
+    if (page === 'logo') {
+      if (T.isNew) {      // bozza: il logo si salva con "Crea squadra"
+        if (D.preview) T.pending = {logo:D.logo, preview:D.preview, aspect:D.aspect, frame:{...D.frame}};
+        spPop(); return;
+      }
+      const change = D.logo === null ? {logo:null} : {logo:D.logo, ...(D.frame && (D.repos || String(D.logo).startsWith('upload:')) ? {logo_frame:D.frame} : {})};
+      spAfterSave(await spSave(change));
+    } else if (page === 'name') {
+      const name = String(D.name || '').trim();
+      if (T.isNew) { T.custom = name || T.espn; spPop(); return; }
+      spAfterSave(await spSave({name:norm(name) === norm(T.nameOrig) ? '' : name}));
+    } else if (page === 'espn') {
+      if (T.isNew) { T.aliases = D.aliases.slice(); spPop(); return; }
+      spAfterSave(await spSave({aliases:D.aliases}));
     }
   }
 
@@ -3926,46 +4238,46 @@
     $('setBtn').addEventListener('click', openSettings);
     $('setBack').addEventListener('click', closeSettings);
     $('setQ').addEventListener('input', renderSetList);
-    $('setShOv').addEventListener('click', ev => { if (ev.target === $('setShOv')) closeSetSheet(); });
-    $('setFile').addEventListener('change', () => { const f = $('setFile').files[0]; $('setFile').value = ''; setUploadLogo(f); });
-    $('setSh').addEventListener('click', ev => {
-      const btn = ev.target.closest('[data-act]');
-      const e = setEdit;
-      if (!btn || !e) return;
-      const act = btn.dataset.act;
-      if (act !== 'reset' && e.confirmReset) e.confirmReset = false;
-      if (act === 'close') closeSetSheet();
-      else if (act === 'upload') $('setFile').click();
-      else if (act === 'fclogo') { e.preview = ''; e.repos = false; e.editing = false; e.logo = e.hasCustom ? null : 'keep'; renderSetSheet(); }
-      else if (act === 'name-reset') { e.name = ''; renderSetSheet(); }
-      else if (act === 'alias-add') { e.adding = true; renderSetSheet(); }
-      else if (act === 'alias-del') { e.aliases.splice(Number(btn.dataset.i), 1); renderSetSheet(); }
-      else if (act === 'alias-ok') {
-        const v = String(($('setAlias') || {}).value || '').trim();
-        if (v && ![...e.locked, ...e.aliases].some(a => norm(a) === norm(v))) e.aliases.push(v);
-        e.adding = false; renderSetSheet();
+    $('setFile').addEventListener('change', () => { const f = $('setFile').files[0]; $('setFile').value = ''; spUpload(f); });
+    $('setPage').addEventListener('click', async ev => {
+      const go = ev.target.closest('[data-go]');
+      if (go) { spPush(go.dataset.go); return; }
+      const btn = ev.target.closest('[data-sp]');
+      if (!btn || btn.disabled) return;
+      const act = btn.dataset.sp, T = setTeam, D = setDraft;
+      if (act !== 'reset' && T && T.confirmReset) T.confirmReset = false;
+      if (act === 'back') spPop();
+      else if (act === 'save') spOnSave();
+      else if (act === 'phone') $('setFile').click();
+      else if (act === 'fcl-open') { const url = 'https://fclogo.top/'; if (tg && tg.openLink) tg.openLink(url); else window.open(url, '_blank', 'noopener'); }
+      else if (act === 'fcl-use') spUseFclogo();
+      else if (act === 'orig') { D.preview = ''; D.repos = false; D.logo = T.hasCustom ? null : 'keep'; renderSetPage(); }
+      else if (act === 'center') { D.frame = {x:0, y:0, s:0.88}; D.moved = true; renderSetPage(); }
+      else if (act === 'move') spLogoFrom({key:T.key});
+      else if (act === 'name-orig') { D.name = T.nameOrig; renderSetPage(); }
+      else if (act === 'add') { D.adding = true; renderSetPage(); }
+      else if (act === 'add-ok') {
+        const v = String(($('spAlias') || {}).value || '').trim();
+        if (v && ![...(T.locked || []), ...D.aliases].some(a => norm(a) === norm(v))) D.aliases.push(v);
+        D.adding = false; renderSetPage();
       }
-      else if (act === 'choose') { e.choice = btn.dataset.c; renderSetSheet(); }
-      else if (act === 'fcl-open') {
-        const url = 'https://fclogo.top/';
-        if (tg && tg.openLink) tg.openLink(url); else window.open(url, '_blank', 'noopener');
+      else if (act === 'rm') { D.aliases.splice(Number(btn.dataset.i), 1); renderSetPage(); }
+      else if (act === 'to-new') {
+        setTeam = {isNew:true, espn:T.espn, custom:'', aliases:[T.espn], locked:[], pending:null};
+        setStack = ['fix', 'new']; renderSetPage();
       }
-      else if (act === 'fcl-use') setUseFclogo();
-      else if (act === 'ed-center') { e.frame = {x:0, y:0, s:0.88}; e.moved = true; renderSetSheet(); }
-      else if (act === 'ed-done') { e.editing = false; renderSetSheet(); }
-      else if (act === 'ed-open') {
-        if (e.preview) { e.editing = true; renderSetSheet(); }
-        else if (e.key) setPost({action:'logo_preview', key:e.key}).then(prev => {
-          if (setEdit !== e) return;
-          Object.assign(e, {preview:prev.preview, aspect:prev.aspect || 1, frame:prev.frame, repos:true, editing:true});
-          renderSetSheet();
-        }).catch(ex => { $('setErr').textContent = ex.message || String(ex); });
+      else if (act === 'create') {
+        const p = T.pending;
+        const body = await spSave({base:null, key:'', name:T.custom || T.espn, aliases:T.aliases, logo:p.logo, logo_frame:p.frame});
+        if (body) spAfterSave(body);
       }
-      else if (act === 'save') setSave(false);
-      else if (act === 'reset') { if (e.confirmReset) setSave(true); else { e.confirmReset = true; renderSetSheet(); } }
+      else if (act === 'reset') {
+        if (!T.confirmReset) { T.confirmReset = true; renderSetPage(); return; }
+        spAfterSave(await spSave({reset:true}));
+      }
     });
-    $('setSh').addEventListener('keydown', ev => {
-      if (ev.key === 'Enter' && ev.target.id === 'setAlias') { ev.preventDefault(); $('setSh').querySelector('[data-act="alias-ok"]').click(); }
+    $('setPage').addEventListener('keydown', ev => {
+      if (ev.key === 'Enter' && ev.target.id === 'spAlias') { ev.preventDefault(); $('setPage').querySelector('[data-sp="add-ok"]').click(); }
     });
   }
 
@@ -6760,6 +7072,7 @@
   $('igFile').addEventListener('change',e => { uploadIgPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
   initCalendarSheet();
   initSettings();
+  initNav();
   // "A mano": altra partita o dati inventati, si passa subito al passo successivo.
   $('mdManualBtn').addEventListener('click', async () => { haptic('select'); await pickMdFixture('manual'); nextField(true); });
 

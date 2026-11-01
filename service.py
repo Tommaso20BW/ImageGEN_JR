@@ -686,6 +686,20 @@ class Service:
         if str(envelope.get('session') or '') != self.session:
             raise ValueError('Richiesta non valida.')
         action = envelope.get('action')
+        if action == 'logo_current':
+            # Logo nitido per il riquadro del pannello (il pacchetto dell'app ha solo miniature da 96 px):
+            # quello in uso (anche caricato a mano) e quello FCLogo originale.
+            from graphics.common import team_logo
+            name, out = str(envelope.get('name') or ''), {}
+            try:
+                out['current'] = team_settings.preview_uri(team_logo(name).read_bytes(), 480)
+            except (FileNotFoundError, OSError):
+                pass
+            row = next((r for r in _logo_rows(str(asset_dir())) if r.get('name') == name), None)
+            fc = asset_dir() / 'team_logos' / str((row or {}).get('file') or '')
+            if row and row.get('file') and fc.is_file():
+                out['fclogo'] = team_settings.preview_uri(fc.read_bytes(), 480)
+            return out
         if action == 'logo_preview':
             # Per l'editor: stemma senza margini (+ proporzioni) e posizione di partenza.
             # photo_id = logo appena caricato (parte come FCLogo); key = logo già salvato (parte da dov'è).
