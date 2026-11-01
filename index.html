@@ -692,6 +692,9 @@
     .set-opt.on{box-shadow:inset 0 0 0 2px var(--text)}
     .set-foot{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:16px}
     .set-foot .btn{min-height:52px}
+    .set-fcl{display:flex;align-items:center;gap:4px;height:50px;margin-top:8px;padding:0 4px;border-radius:12px;background:var(--surface)}
+    .set-fcl input{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;font-weight:600;font-size:15px;padding:0 4px}
+    .set-fcl .head-ico{width:42px;height:42px}
     .set-reset{display:block;width:100%;margin-top:12px;border:0;background:none;color:var(--danger);font:inherit;font-weight:800;font-size:14px;padding:8px;cursor:pointer}
     /* CALENDARIO: griglia del mese + elenco + pannello dal basso. */
     .cal-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
@@ -3716,6 +3719,39 @@
     paint();
   }
 
+  // Riga "da fclogo.top": 🔍 apre il sito, nel campo si incolla il link della pagina del logo, → lo usa.
+  function fclogoRow() {
+    return `<div class="set-fcl"><button type="button" class="head-ico" data-act="fcl-open" aria-label="Cerca su fclogo.top" title="Cerca su fclogo.top"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+      <input id="setFcl" type="url" inputmode="url" placeholder="Incolla link fclogo.top" autocomplete="off" spellcheck="false">
+      <button type="button" class="head-ico" data-act="fcl-use" aria-label="Usa logo da fclogo.top" title="Usa questo logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>`;
+  }
+
+  async function setUseFclogo() {
+    const e = setEdit;
+    const link = String(($('setFcl') || {}).value || '').trim();
+    if (!e || !link) return;
+    $('setErr').textContent = 'Prendo il logo da fclogo.top…';
+    try {
+      const prev = await setPost({action:'logo_preview', fclogo:link});
+      if (setEdit !== e) return;
+      Object.assign(e, {preview:prev.preview, aspect:prev.aspect || 1, frame:prev.frame || {x:0, y:0, s:0.88},
+        logo:`upload:${prev.photo_id}`, repos:false, editing:true});
+      haptic('success');
+      renderSetSheet();
+    } catch (ex) {
+      if ($('setErr')) $('setErr').textContent = ex.message || String(ex);
+      haptic('error');
+    }
+  }
+
+  function bindFclogo() {
+    const input = $('setFcl');
+    if (!input) return;
+    // Incollando un link di fclogo.top si usa subito, senza premere →.
+    input.addEventListener('paste', () => setTimeout(() => { if (/fclogo\.top\//i.test(input.value)) setUseFclogo(); }, 0));
+    input.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); setUseFclogo(); } });
+  }
+
   function setEsc(text) { const d = document.createElement('div'); d.textContent = String(text ?? ''); return d.innerHTML; }
 
   function renderSetSheet() {
@@ -3734,6 +3770,7 @@
         ${e.preview || (e.hasCustom && e.logo !== null)
           ? `<button type="button" class="btn ghost" data-act="ed-open">✥ Posiziona</button>`
           : `<button type="button" class="btn ghost" data-act="fclogo" ${canFclogo ? '' : 'disabled'}>↺ Torna a fclogo</button>`}</div>
+      ${fclogoRow()}
       ${canFclogo && (e.preview || (e.hasCustom && e.logo !== null)) ? '<button type="button" class="set-reset" style="color:var(--text);margin-top:4px" data-act="fclogo">↺ Torna a fclogo</button>' : ''}
       ${e.preview || (e.logo === null && e.hasCustom) ? '<p class="set-hint">Modifica pronta: premi Salva.</p>' : ''}`}
       <div class="set-lbl">Nome mostrato ${nameMine ? '<span class="set-tag">TUO</span>' : ''}</div>
@@ -3757,7 +3794,7 @@
     nameInput.addEventListener('input', () => { e.name = nameInput.value; });
     nameInput.addEventListener('change', () => renderSetSheet());
     if (e.adding) setTimeout(() => $('setAlias') && $('setAlias').focus(), 30);
-    if (e.editing) bindEditor(e);
+    if (e.editing) bindEditor(e); else bindFclogo();
   }
 
   function renderFixSheet(sh, e) {
@@ -3773,7 +3810,8 @@
         <p>Non è nel catalogo: carica il logo e scegli il nome da mostrare.</p></button>
       ${e.choice === 'new' ? `${e.editing ? editorBlock(e) : `${previewBoxes(e.preview, e.frame, e.aspect)}
         <div class="set-two"><button type="button" class="btn ghost" data-act="upload">⤒ Carica logo</button>
-          <button type="button" class="btn ghost" data-act="ed-open" ${e.preview ? '' : 'disabled'}>✥ Posiziona</button></div>`}
+          <button type="button" class="btn ghost" data-act="ed-open" ${e.preview ? '' : 'disabled'}>✥ Posiziona</button></div>
+        ${fclogoRow()}`}
         <div class="set-lbl">Nome mostrato</div>
         <div class="set-name"><input id="setName" type="text" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false" value="${setEsc(e.name)}"></div>` : ''}
       <div id="setErr" class="lnk-err"></div>
@@ -3795,7 +3833,7 @@
       input.addEventListener('input', () => { e.q = input.value; e.pick = null; const pos = input.selectionStart; renderSetSheet(); const n = $('setPickQ'); n.focus(); n.setSelectionRange(pos, pos); });
     }
     if (e.choice === 'new') $('setName').addEventListener('input', ev => { e.name = ev.target.value; });
-    if (e.editing) bindEditor(e);
+    if (e.editing) bindEditor(e); else bindFclogo();
   }
 
   async function setUploadLogo(file) {
@@ -3908,6 +3946,11 @@
         e.adding = false; renderSetSheet();
       }
       else if (act === 'choose') { e.choice = btn.dataset.c; renderSetSheet(); }
+      else if (act === 'fcl-open') {
+        const url = 'https://fclogo.top/';
+        if (tg && tg.openLink) tg.openLink(url); else window.open(url, '_blank', 'noopener');
+      }
+      else if (act === 'fcl-use') setUseFclogo();
       else if (act === 'ed-center') { e.frame = {x:0, y:0, s:0.88}; e.moved = true; renderSetSheet(); }
       else if (act === 'ed-done') { e.editing = false; renderSetSheet(); }
       else if (act === 'ed-open') {

@@ -131,6 +131,45 @@ def preview_uri(png, size=160):
     return 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
 
 
+# ---------- logo da una pagina di fclogo.top ----------
+FCLOGO_PATH = re.compile(r'^/(?:[a-z]{2}/)?([a-z0-9-]+)/(club|team|comp|assn|conf)/([A-Za-z0-9-]+?)(-mono)?/?$')
+
+
+def fclogo_logo(link):
+    """PNG mono dalla pagina pubblica di un logo fclogo.top (link incollato nella mini app).
+
+    Stessa lettura della sincronizzazione FCLogo di LiveScore: pagina "-mono", poi la
+    linguetta Mono della pagina del logo, altrimenti l'unica versione pubblicata."""
+    from urllib.parse import urlsplit
+
+    from livescore.graphics import logos
+
+    parts = urlsplit(str(link or '').strip())
+    match = FCLOGO_PATH.match(parts.path)
+    if parts.scheme not in ('http', 'https') or parts.hostname not in ('fclogo.top', 'www.fclogo.top') or not match:
+        raise ValueError('Incolla il link della pagina di un logo su fclogo.top (es. fclogo.top/thefa/club/…).')
+    base = f'{logos.BASE_URL}/{match[1]}/{match[2]}/{match[3]}'
+    session = logos._new_session()
+    try:
+        try:
+            page = logos._get(session, base + '-mono')
+            url = logos._asset_url_from_detail(page.text, variant='mono')
+        except requests.HTTPError as exc:
+            if exc.response is None or exc.response.status_code != 404:
+                raise
+            page = logos._get(session, base)
+            url = logos._mono_tab_url(page.text) or logos._asset_url_from_detail(page.text, variant='color')
+        raw = logos._get(session, url).content
+        logos._validate_png_bytes(raw)
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else ''
+        raise ValueError('Pagina non trovata su fclogo.top: controlla il link.' if status == 404
+                         else f'fclogo.top non risponde ({status}): riprova tra poco.') from None
+    except (requests.RequestException, logos.FCLogoSyncError):
+        raise ValueError('Logo non scaricato da fclogo.top: riprova tra poco.') from None
+    return raw
+
+
 # ---------- dati ----------
 def _slug(text):
     raw = unicodedata.normalize('NFKD', str(text)).encode('ascii', 'ignore').decode()

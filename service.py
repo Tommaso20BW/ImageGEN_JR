@@ -703,10 +703,16 @@ class Service:
                          's': max(box[2] - box[0], box[3] - box[1]) / side}
                 mono = team_settings.trim(stored.read_bytes())
             else:
-                raw = self.photos.get(str(envelope.get('photo_id') or ''))
+                photo_id = str(envelope.get('photo_id') or '')
+                if envelope.get('fclogo'):
+                    # Link di fclogo.top incollato: il PNG si scarica qui e diventa come un logo caricato.
+                    photo_id = self.store_photo(team_settings.fclogo_logo(envelope['fclogo']))['photo_id']
+                raw = self.photos.get(photo_id)
                 if raw is None:
                     raise ValueError('Logo caricato scaduto: caricalo di nuovo.')
                 mono, frame = team_settings.make_mono(raw), dict(team_settings.FRAME_DEFAULT)
+                w, h = Image.open(io.BytesIO(mono)).size
+                return {'preview': team_settings.preview_uri(mono, 480), 'aspect': w / h, 'frame': frame, 'photo_id': photo_id}
             w, h = Image.open(io.BytesIO(mono)).size
             return {'preview': team_settings.preview_uri(mono, 480), 'aspect': w / h, 'frame': frame}
         if action != 'team_save':
