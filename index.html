@@ -2871,10 +2871,20 @@
   let extending = false;
   let limitShown = false;
   let sessionMaxAt = 0;     // ora massima della sessione (60 minuti dall'avvio)
+  // La scadenza nel link è quella iniziale (30 minuti): se la sessione è stata allungata e la
+  // Mini App si riapre dopo, quella vera arriva dal servizio. Finché non arriva, niente
+  // "Sessione scaduta"; se arriva ed è ancora attiva, l'errore eventualmente mostrato sparisce.
+  let sessionChecked = !(directBase && session);
   function applySessionInfo(info) {
     if (!info || !Number(info.expires)) return;
     sessionExpiresAt = Number(info.expires);
     if (Number(info.max)) sessionMaxAt = Number(info.max);
+    if (!sessionExpired() && expiredShown) {
+      expiredShown = false;
+      if ($('error').textContent === EXPIRED_MESSAGE) clearError();
+      if ($('previewError').textContent === EXPIRED_MESSAGE) setPreviewError('');
+      $('nextButton').disabled = false;
+    }
     updateSessionTimer();
     if (!timerHandle && !sessionExpired()) timerHandle = setInterval(updateSessionTimer,1000);
   }
@@ -2960,6 +2970,8 @@
       : 'Scaduta';
     if (left <= 0) {
       clearInterval(timerHandle);
+      timerHandle = null;
+      if (!sessionChecked) { $('sessionTimerText').textContent = '…'; return; }
       if (!expiredShown) {
         expiredShown = true;
         $('nextButton').disabled = true;
@@ -7508,8 +7520,8 @@
   // Scadenza vera dal servizio (riaprendo la Mini App il link ha quella iniziale).
   if (directBase && session) {
     netFetch(`${directBase}/session?session=${encodeURIComponent(session)}`,{}, 15000)
-      .then(r => r.ok ? r.json() : null).then(body => { if (body && body.ok) applySessionInfo(body); })
-      .catch(() => {});
+      .then(r => r.ok ? r.json() : null).then(body => { sessionChecked = true; if (body && body.ok) applySessionInfo(body); else updateSessionTimer(); })
+      .catch(() => { sessionChecked = true; updateSessionTimer(); });
   }
 })();
 </script>
