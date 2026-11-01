@@ -40,7 +40,7 @@ PALETTES = {
         'base': 'third',
         'dark': (2, 8, 70),          # blu notte (fondo dello sfondo UCL, più scuro)
         'light': (190, 225, 255),
-        'accent': ((38, 188, 214), (112, 214, 240), (196, 242, 255)),   # turchese -> celeste
+        'accent': ((40, 215, 200), (110, 200, 255)),                    # turchese -> celeste
         'flat_fx': True,             # sfumatura scura in tinta unita (la grana diventava puntini)
     },
     'uel': {
@@ -164,8 +164,9 @@ def _stops(value, stops):
     return np.stack([np.interp(value, pos, stops[:, c]) for c in range(3)], axis=-1)
 
 
-def recolor_array(rgb, theme):
-    """rgb: array (..., 3) 0..255 -> stesso array con i colori del tema."""
+def recolor_array(rgb, theme, accent_range=None):
+    """rgb: array (..., 3) 0..255 -> stesso array con i colori del tema.
+    accent_range = (lum min, lum max) dell'oro nel file: la sfumatura usa tutta la scala."""
     p = PALETTES[theme]
     rgb = rgb.astype(float)
     hi, lo = rgb.max(-1), rgb.min(-1)
@@ -173,7 +174,8 @@ def recolor_array(rgb, theme):
     lum = (0.2126 * rgb[..., 0] + 0.7152 * rgb[..., 1] + 0.0722 * rgb[..., 2]) / 255
     neutral = _stops(lum, (p['dark'], p['light']))
     # Oro: luminosità ristretta a 0..1 sulla sua gamma (l'oro va da ~0,35 a ~0,85).
-    accent = _stops(np.clip((lum - 0.3) / 0.55, 0, 1), p['accent'])
+    lo_a, hi_a = accent_range or (0.3, 0.85)
+    accent = _stops(np.clip((lum - lo_a) / max(hi_a - lo_a, 0.05), 0, 1), p['accent'])
     # Oro = saturo E abbastanza luminoso: i quasi-neri con rumore di colore restano neutri.
     weight = (np.clip((sat - 0.18) / 0.2, 0, 1) * np.clip((hi - 30) / 30, 0, 1))[..., None]
     return neutral * (1 - weight) + accent * weight
@@ -193,6 +195,18 @@ def _cache_dir(theme):
     return path
 
 
+def _accent_range(a):
+    """Gamma di luminosità dell'oro (pixel saturi e visibili) del livello, se ce n'è."""
+    rgb = a[..., :3].astype(float)
+    hi, lo = rgb.max(-1), rgb.min(-1)
+    sat = (hi - lo) / np.maximum(hi, 1)
+    gold = (sat > 0.3) & (hi > 60) & (a[..., 3] > 128)
+    if gold.sum() < 50:
+        return None
+    lum = (0.2126 * rgb[..., 0] + 0.7152 * rgb[..., 1] + 0.0722 * rgb[..., 2])[gold] / 255
+    return float(np.percentile(lum, 3)), float(np.percentile(lum, 97))
+
+
 @lru_cache(maxsize=256)
 def recolor_file(name, theme, flat=False):
     """canva/<name> ricolorato: percorso del PNG pronto (in cache).
@@ -205,7 +219,7 @@ def recolor_file(name, theme, flat=False):
             if flat:
                 rgb = np.broadcast_to(np.array(PALETTES[theme]['dark'], float), a[..., :3].shape)
             else:
-                rgb = recolor_array(a[..., :3], theme)
+                rgb = recolor_array(a[..., :3], theme, _accent_range(a))
             done = np.dstack([np.clip(rgb, 0, 255), a[..., 3]]).astype('uint8')
         tmp = out.with_suffix('.tmp')
         Image.fromarray(done, 'RGBA').save(tmp, format='PNG')
