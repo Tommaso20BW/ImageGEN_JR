@@ -1263,7 +1263,6 @@
     .hm-item[data-id="pxi"] .hm-ico{background:#34C759}
     .hm-item[data-id="squad"] .hm-ico{background:#007AFF}
     .hm-item[data-id="xi"] .hm-ico{background:#5856D6}
-    .hm-item[data-id="h2h"] .hm-ico{background:#8E8E93}
     .hm-item[data-id="kick"] .hm-ico{background:#34C759}
     .hm-item[data-id="half"] .hm-ico{background:#FF9500}
     .hm-item[data-id="second"] .hm-ico{background:#32ADE6}
@@ -1974,7 +1973,6 @@
     'second':'<path d="M8 5l11 7-11 7z"/>',
     'end90':'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>',
     'full':'<path d="M5 21V4M5 4h14v10H5M12 4v10M5 9h14"/>',
-    'h2h':'<path d="M7 4v16M17 4v16M3 8h4M3 16h4M17 8h4M17 16h4M10 12h4"/>',
     'md':'<path d="M3 7h18v3.5a1.5 1.5 0 000 3V17H3v-3.5a1.5 1.5 0 000-3zM14.5 7v2M14.5 11v2M14.5 15v2"/>',
     'pxi':'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><circle cx="12" cy="12" r="3"/>',
     'squad':'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
@@ -2003,14 +2001,13 @@
     {id:'pxi',    kind:'pxi',   icon:'pxi', title:'Probabile XI', desc:'Formazione probabile sul campo'},
     {id:'squad',  kind:'squad', icon:'squad', title:'Squad List',   desc:'Lista dei convocati'},
     {id:'xi',     kind:'xi',    icon:'xi', title:'Starting XI',  desc:'Formazione ufficiale con foto'},
-    {id:'h2h',    kind:'h2h',   icon:'h2h', title:'Head to head', desc:'Bilancio, precedenti e forma delle due squadre'},
     {id:'cal',    kind:'cal',   icon:'cal', title:'Calendario',   desc:'Le partite del mese'},
     {id:'table',  kind:'table', icon:'table', title:'Classifica',  desc:'Serie A e coppe europee, aggiornata da Diretta.it'},
     {id:'jr',     kind:'jr',    icon:'jr', title:'Post',         desc:'Foto con il logo JR: classica, sfocata o collage'},
     {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia IG',    desc:'Breaking News in formato storia'}
   ];
   const HOME_GROUPS = [
-    {icon:'g-pre', title:'Pre-gara',              ids:['md','pxi','squad','xi']},   // 'h2h' (Head to head) pronta ma disattivata: aggiungerla qui per riattivarla,
+    {icon:'g-pre', title:'Pre-gara',              ids:['md','pxi','squad','xi']},
     {icon:'g-events', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
     {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
     {icon:'g-other', title:'Altro',                 ids:['jr','igbn','cal','table']}
@@ -2051,7 +2048,7 @@
     if (c.includes('champions')) return 'ucl';
     return c === 'uefa.europa' ? 'uel' : '';
   };
-  const uefaAuto = () => ['md','xi','pxi','h2h'].includes(kind) ? uefaTheme(competition) : '';
+  const uefaAuto = () => ['md','xi','pxi'].includes(kind) ? uefaTheme(competition) : '';
   // Probabile XI a tema UEFA: il passo "Maglia" resta, ma solo per le foto dei giocatori.
   let shirt = '';
   // Amichevole: niente foto dei giocatori, quindi nessuna maglia da scegliere.
@@ -2133,7 +2130,7 @@
   let pxiModule = '';    // PROBABILE XI: modulo
   let tableComp = '';    // CLASSIFICA: SA, UCL, UEL o UECL
   let calMonth = 0;      // CALENDARIO: mese (1-12)
-  const PREMATCH = ['squad','xi','md','pxi','h2h'];   // grafiche che partono dalla scelta della partita
+  const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
   let mdPick = '';       // id partita ESPN scelta, 'manual' o ''
   let kitFromMatch = false;   // maglia presa da ESPN (partite giocate): niente passaggio "Maglia"
   let fixtureList = [];
@@ -2341,7 +2338,7 @@
     else if (PREMATCH.includes(kind)) {
       // Matchday / Starting XI di una partita UEFA: niente passo "Maglia" (colori della coppa).
       const kitStep = uefa && kind !== 'pxi' ? [] : ['kit'];
-      const rest = {squad:['squad'], xi:[...kitStep,'lineup','photo'], md:[...kitStep,'match','photo'], pxi:friendly ? ['xi11'] : ['kit','xi11'], h2h:[...kitStep]}[kind];
+      const rest = {squad:['squad'], xi:[...kitStep,'lineup','photo'], md:[...kitStep,'match','photo'], pxi:friendly ? ['xi11'] : ['kit','xi11']}[kind];
       flow = pick([...base,...rest]);
       // Squad List da una partita dei convocati: giocatori già compilati, si va dritti all'anteprima.
       if (kind === 'squad' && String(mdPick).startsWith('site:')) flow = ['mdpick'];
@@ -2992,7 +2989,6 @@
   };
   const BUSY_SUB = {
     goal:'Compongo la grafica con foto e posa del giocatore.',
-    h2h:'Scarico bilancio, precedenti e forma da Transfermarkt.',
     table:'Scarico la classifica aggiornata da Diretta.it.',
     saved:'Compongo la grafica con foto e posa del portiere.',
     kick:'Preparo la grafica del calcio d’inizio.',
@@ -3002,7 +2998,7 @@
     full:'Avvio la generazione…',
     stats:'Preparo la tabella delle statistiche.'
   };
-  const DEFAULT_MS = {ppcut:12000, goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, h2h:12000, jr:4000, igbn:4000, pxi:9000, cal:5000, table:35000, half:6000, end_of_90:6000, full:6000, submit:2500};
+  const DEFAULT_MS = {ppcut:12000, goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, igbn:4000, pxi:9000, cal:5000, table:35000, half:6000, end_of_90:6000, full:6000, submit:2500};
   const MIN_FAST_MS = 3000;
   const DURATIONS_KEY = 'imagegen-jr-durations';
   const SLOW_SUB = 'Ci sta mettendo più del solito: attendi ancora qualche secondo.';
