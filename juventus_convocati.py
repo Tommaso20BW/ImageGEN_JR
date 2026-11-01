@@ -44,7 +44,12 @@ COMPETITIONS = (
     ('europa league', 'uefa.europa'),
     ('champions', 'uefa.champions'),
     ('coppa italia', 'ita.coppa_italia'),
+    ('supercoppa uefa', 'uefa.super_cup'),
+    ('uefa super cup', 'uefa.super_cup'),
+    ('mondiale per club', 'fifa.cwc'),
+    ('club world cup', 'fifa.cwc'),
     ('supercoppa', 'ita.super_cup'),
+    ('amichevol', 'club.friendly'),
     ('serie a', 'ita.1'),
 )
 # Parole che indicano una squadra diversa dalla prima maschile.

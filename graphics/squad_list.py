@@ -67,8 +67,9 @@ def columns(players):
 
 
 def build_html(*, players, competition, home_name, home_id, away_name, away_id, title_word='list', **_):
+    # Le altre competizioni (Supercoppe, Mondiale per Club...) usano la grafica delle amichevoli.
     if competition not in BACKGROUNDS:
-        raise ValueError('Squad List disponibile per Serie A, Coppa Italia, Champions, Europa, Conference League e amichevoli.')
+        competition = 'club.friendly'
     assets = asset_dir()
     left, right = columns(players)
     n = max(len(left), 1)

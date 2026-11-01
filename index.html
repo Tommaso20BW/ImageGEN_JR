@@ -2022,7 +2022,9 @@
   ];
   function competitionOptions() {
     const friendly = [['club.friendly','Amichevole']];
-    if (kind === 'squad') return [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['uefa.champions','Champions League'],['uefa.europa','Europa League'],['uefa.europa.conf','Conference League'], ...friendly];
+    // Squad list: tutte le competizioni; quelle senza grafica propria usano quella delle amichevoli.
+    if (kind === 'squad') return [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana'],
+      ...COMPETITIONS_UEFA,['uefa.super_cup','Supercoppa UEFA'],['fifa.cwc','Mondiale per Club'], ...friendly];
     const italy = [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana']];
     return [...italy, ...COMPETITIONS_UEFA, ...friendly];
   }
@@ -3686,7 +3688,8 @@
   /* ---------- Calendario Juventus (ESPN, tramite il workflow) ---------- */
   // Nomi completi delle competizioni (mai abbreviati).
   const COMP_SHORT = {'ita.1':'Serie A','ita.coppa_italia':'Coppa Italia','ita.super_cup':'Supercoppa Italiana',
-    'uefa.champions':'Champions League','uefa.europa':'Europa League','uefa.europa.conf':'Conference League'};
+    'uefa.champions':'Champions League','uefa.europa':'Europa League','uefa.europa.conf':'Conference League',
+    'uefa.super_cup':'Supercoppa UEFA','fifa.cwc':'Mondiale per Club','club.friendly':'Amichevole'};
   const MONTHS_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
   const isoDay = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
 

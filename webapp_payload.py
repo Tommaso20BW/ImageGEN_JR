@@ -5,7 +5,7 @@ import re
 import uuid
 
 from constants import COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
-from graphics.squad_list import BACKGROUNDS as SQUAD_COMPETITIONS, parse_squad
+from graphics.squad_list import parse_squad
 from graphics.starting_xi import PLAYERS as PLAYERS_IN_XI, parse_lineup
 from graphics.matchday import parse_info
 from graphics import ig_story, photo_jr
@@ -351,8 +351,6 @@ def _build_state(envelope, catalog, now, expected_session):
             data['layout'] = layouts.clean(module, incoming.get('layout'))
 
     elif kind == 'squad':
-        if competition not in SQUAD_COMPETITIONS:
-            raise ValueError('Squad List solo per Serie A, Coppa Italia ed Europa League.')
         data['players'] = parse_squad(incoming.get('squad'))
 
     elif kind == 'stats':
