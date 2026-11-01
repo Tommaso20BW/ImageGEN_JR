@@ -616,6 +616,68 @@
     .xi-row{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center}
     .xi-row .field-input{min-height:48px;font-size:16px;font-weight:700;padding:0 12px;min-width:0}
     .xi-num{text-align:center}
+    /* IMPOSTAZIONI: icona nella home, pagina Squadre e loghi, pannello della squadra. */
+    .home-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .set-btn{position:relative;flex:none;width:44px;height:44px;border:0;border-radius:12px;background:var(--surface2);color:var(--text);
+      display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .set-badge{position:absolute;top:-5px;right:-6px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--danger);color:#fff;
+      font-size:11.5px;font-weight:800;line-height:20px;text-align:center}
+    .set-ov{position:fixed;inset:0;z-index:55;display:none;flex-direction:column;background:var(--bg);color:var(--text)}
+    .set-ov.open{display:flex}
+    .set-top{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:calc(8px + var(--top-pad)) 12px 4px;text-align:center}
+    .set-body{flex:1;overflow:auto;padding:4px 16px calc(28px + env(safe-area-inset-bottom,0px));max-width:640px;width:100%;margin:0 auto}
+    .set-search{background:var(--surface);box-shadow:var(--shadow-soft)}
+    .set-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;font-weight:600;font-size:16px}
+    .set-ov .set-seg{grid-template-columns:.8fr 1.45fr 1.1fr}
+    .set-seg button{min-height:40px;border:0;border-radius:11px;background:none;color:var(--muted);font:inherit;font-weight:800;font-size:14px;cursor:pointer;white-space:nowrap}
+    .set-seg button.on{background:var(--text);color:var(--bg)}
+    .set-grp{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:18px 2px 8px}
+    .set-row{display:flex;align-items:center;gap:12px;width:100%;min-height:62px;padding:10px 14px;margin-bottom:8px;border:0;border-radius:14px;
+      background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer;box-shadow:var(--shadow-soft)}
+    .set-row .logo,.set-row .logo img,.set-row .logo.fallback{width:36px;height:36px}
+    .set-row .t{font-weight:800;font-size:16px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+    .set-row .s{color:var(--muted);font-size:13px;margin-top:2px}
+    .set-row .s.warn{color:var(--danger);font-weight:700}
+    .set-row .chev{margin-left:auto;color:var(--muted);font-size:20px}
+    .set-row .fix{margin-left:auto;flex:none;background:var(--cta);color:var(--cta-ink);border-radius:10px;font-weight:800;font-size:13px;padding:8px 12px}
+    .set-tag{font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--ok);background:rgba(30,122,76,.1);border-radius:6px;padding:2px 6px}
+    .set-ph{flex:none;width:36px;height:36px;border:2px dashed var(--line);border-radius:50%;color:var(--muted);font-weight:800;
+      display:flex;align-items:center;justify-content:center}
+    .set-empty{color:var(--muted);font-size:14px;padding:18px 4px;text-align:center}
+    .set-toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100% - 32px);
+      background:var(--text);color:var(--bg);border-radius:12px;padding:10px 16px;font-weight:700;font-size:14px;opacity:0;pointer-events:none;
+      transition:opacity .2s;z-index:70}
+    .set-toast.show{opacity:1}
+    .set-toast.warn{background:var(--danger);color:#fff}
+    .set-sh{padding-left:16px;padding-right:16px}
+    .set-prev{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+    .set-prev div{height:88px;border-radius:14px;display:flex;align-items:center;justify-content:center}
+    .set-prev i{width:62px;height:62px;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+    .set-prev .none{color:var(--muted);font-weight:800;font-size:22px}
+    .set-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .set-two .btn,.set-one{min-height:46px}
+    .set-one{width:100%}
+    .set-lbl{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+    .set-hint{color:var(--muted);font-size:12.5px;margin-top:6px;line-height:1.35}
+    .set-name{display:flex;gap:8px}
+    .set-name input{flex:1;min-width:0;height:48px;border:0;border-radius:12px;background:var(--surface);color:var(--text);font:inherit;font-weight:700;font-size:16px;padding:0 14px}
+    .set-name button{flex:none;width:48px;border:0;border-radius:12px;background:var(--surface2);color:var(--text);font-size:19px;cursor:pointer}
+    .set-name button:disabled{opacity:.35;cursor:default}
+    .set-chips{display:flex;flex-wrap:wrap;gap:6px}
+    .set-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;
+      padding:7px 12px;font:inherit;font-weight:700;font-size:14px}
+    .set-chip.lock{color:var(--muted)}
+    .set-chip.mine{border-color:var(--ok)}
+    .set-chip button{border:0;background:none;color:inherit;font:inherit;font-size:15px;line-height:1;cursor:pointer;padding:0 0 0 2px}
+    .set-chip.add{border-style:dashed;color:var(--muted);cursor:pointer}
+    .set-add{display:flex;gap:8px;margin-top:8px}
+    .set-add input{flex:1;min-width:0;height:44px;border:0;border-radius:12px;background:var(--surface);color:var(--text);font:inherit;font-weight:700;font-size:16px;padding:0 12px}
+    .set-opt{width:100%;text-align:left;border:0;background:var(--surface);color:var(--text);border-radius:14px;padding:14px;margin-bottom:8px;font:inherit;cursor:pointer}
+    .set-opt b{font-size:15.5px} .set-opt p{color:var(--muted);font-size:13px;margin-top:3px;line-height:1.35}
+    .set-opt.on{box-shadow:inset 0 0 0 2px var(--text)}
+    .set-foot{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:16px}
+    .set-foot .btn{min-height:52px}
+    .set-reset{display:block;width:100%;margin-top:12px;border:0;background:none;color:var(--danger);font:inherit;font-weight:800;font-size:14px;padding:8px;cursor:pointer}
     /* CALENDARIO: griglia del mese + elenco + pannello dal basso. */
     .cal-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
     .cal-clear{border:0;background:none;color:var(--muted);font:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:4px 2px}
@@ -962,7 +1024,8 @@
           <div id="error" class="error"></div>
 
           <section class="screen active" data-screen="home">
-            <div class="eyebrow">Nuova grafica</div>
+            <div class="home-head"><div class="eyebrow">Nuova grafica</div>
+              <button id="setBtn" class="set-btn" type="button" aria-label="Impostazioni"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span id="setBadge" class="set-badge" hidden></span></button></div>
             <h1>Cosa vuoi creare?</h1>
             <p class="lead">Scegli la grafica: ti guido passo dopo passo fino all’anteprima.</p>
             <div id="homeList" class="home"></div>
@@ -1415,6 +1478,29 @@
   <div class="jrc-lab">Luce</div><div id="jrcLum" class="jrc-sl"><i class="jrc-knob"></i></div>
   <div class="jrc-hexrow"><div id="jrcChip" class="jrc-chip"></div><label id="jrcHexBox" class="jrc-hex"><span>#</span><input id="jrcHex" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="FF3366" aria-label="Colore esadecimale"></label></div>
 </div></div>
+<!-- IMPOSTAZIONI › Squadre e loghi: pagina sopra l'app + pannello della squadra dal basso. -->
+<div id="setOv" class="set-ov" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <header class="set-top">
+    <button id="setBack" class="icon-btn" type="button" aria-label="Chiudi impostazioni">‹</button>
+    <span class="brand-name">ImageGen</span>
+    <span class="set-top-gap"></span>
+  </header>
+  <div class="set-body">
+    <div class="eyebrow">Impostazioni</div>
+    <h1 id="setTitle">Squadre e loghi</h1>
+    <p class="lead">Nomi mostrati, nomi ESPN collegati e loghi. Valgono per la mini app, le grafiche e LiveScore.</p>
+    <label class="cal-search set-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="setQ" type="text" placeholder="Cerca squadra o nome ESPN…" autocomplete="off" autocapitalize="words" spellcheck="false"></label>
+    <div class="cal-seg set-seg" role="tablist">
+      <button type="button" data-tab="all">Tutte</button>
+      <button type="button" data-tab="fix">Da sistemare</button>
+      <button type="button" data-tab="mine">Modificate</button>
+    </div>
+    <div id="setList" class="set-list"></div>
+  </div>
+  <div id="setToast" class="set-toast" role="status"></div>
+</div>
+<div id="setShOv" class="mod-ov"><div id="setSh" class="mod-sh set-sh" role="dialog" aria-modal="true"></div></div>
+<input id="setFile" type="file" accept="image/png,image/webp,image/jpeg" hidden>
 <div id="calOv" class="mod-ov"><div id="calSh" class="mod-sh cal-sh" role="dialog" aria-modal="true" aria-labelledby="calShTitle">
   <div class="mod-bar"></div>
   <div class="mod-top"><b id="calShTitle"></b><button type="button" id="calShClose">Chiudi</button></div>
@@ -1716,6 +1802,7 @@
   let teamNamesLoose = new Map();
   let teamNamesRaw = null;
   let teamNamesByAlias = new Map();
+  let teamNamesCustom = new Map();   // Impostazioni › Squadre e loghi: nome scelto, per ogni nome della squadra
 
   function setTeamNames(obj) {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
@@ -1758,6 +1845,11 @@
       }
     });
     teamNamesByAlias = byAlias;
+    const custom = new Map();
+    teams.forEach(team => {
+      if (team.display_name) [team.name, ...(team.aliases || [])].forEach(n => custom.set(norm(n), team.display_name));
+    });
+    teamNamesCustom = custom;
     if (teams.length) {
       teams.sort((a,b) =>
         displayTeamName(a.name).localeCompare(displayTeamName(b.name),'it',{sensitivity:'base'}));
@@ -1765,6 +1857,11 @@
   }
 
   function displayTeamName(name) {
+    return teamNamesCustom.get(norm(name)) || baseDisplayName(name);
+  }
+
+  // Nome senza le correzioni di Impostazioni (teams.json di LiveScore o nome del catalogo).
+  function baseDisplayName(name) {
     const raw = String(name || '').trim();
     const key = norm(raw);
     return teamNamesExact.get(key)
@@ -2695,7 +2792,7 @@
 
   // Riempie un contenitore .logo: prova le URL in ordine, se falliscono tutte mostra l'iniziale.
   function fillLogo(box, team) {
-    const key = team ? team.name : '';
+    const key = team ? `${team.name}|${(team.logo || '').length}` : '';
     if (box.dataset.team === key) return;
     box.dataset.team = key;
     box.innerHTML = '';
@@ -3399,6 +3496,351 @@
     renderCalRows();
     renderSteps();
     if (!found.length) $('calSummary').textContent = `${calRows.length} / ${CAL_MAX} partite · nessuna trovata nel calendario`;
+  }
+
+  /* ---------- Impostazioni › Squadre e loghi ---------- */
+  // Correzioni salvate dal servizio nel repo degli asset (team_overrides/): valgono anche per LiveScore.
+  // Ogni squadra del catalogo porta: override_key/override (correzioni), aliases_fclogo (nomi originali),
+  // display_name (nome scelto), logo_custom + logo_fclogo (logo caricato e originale), manual (squadra nuova).
+  let espnTeams = [];
+  let espnTeamsJob = null;
+  let setTab = 'fix';
+  let setEdit = null;     // stato del pannello aperto
+  let setToastTimer = 0;
+
+  function setToast(text, warn=false) {
+    const el = $('setToast');
+    el.textContent = text;
+    el.classList.toggle('warn', warn);
+    el.classList.add('show');
+    clearTimeout(setToastTimer);
+    setToastTimer = setTimeout(() => el.classList.remove('show'), warn ? 6000 : 2400);
+  }
+
+  async function loadEspnTeams() {
+    if (LIVE || !directBase || !session || espnTeams.length || espnTeamsJob) return espnTeamsJob;
+    espnTeamsJob = netFetch(`${directBase}/espnteams?session=${encodeURIComponent(session)}`, {}, 20000)
+      .then(r => r.json()).then(body => { if (body && body.ok) espnTeams = body.teams || []; })
+      .catch(() => {}).finally(() => { espnTeamsJob = null; updateSetBadge(); if ($('setOv').classList.contains('open')) renderSetList(); });
+    return espnTeamsJob;
+  }
+
+  // Nomi ESPN del calendario Juventus che non portano a nessuna squadra (niente logo).
+  const unmatchedEspn = () => teamsLoaded ? espnTeams.filter(t => !findTeamByName(t.name)) : [];
+
+  function updateSetBadge() {
+    const n = unmatchedEspn().length;
+    const b = $('setBadge');
+    b.hidden = !n;
+    b.textContent = n > 9 ? '9+' : String(n);
+  }
+
+  function openSettings() {
+    haptic('select');
+    setTab = unmatchedEspn().length ? 'fix' : 'all';
+    $('setQ').value = '';
+    $('setOv').classList.add('open');
+    renderSetList();
+    loadEspnTeams();
+  }
+  const closeSettings = () => { closeSetSheet(); $('setOv').classList.remove('open'); };
+
+  function setRow(team, {sub='', warn=false, fix=false, tags=[]}={}) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'set-row';
+    b.innerHTML = `${team ? '<span class="logo"></span>' : '<span class="set-ph">?</span>'}<div><div class="t"></div><div class="s"></div></div>`
+      + (fix ? '<span class="fix">Sistema</span>' : '<span class="chev">›</span>');
+    if (team) fillLogo(b.querySelector('.logo'), team);
+    const t = b.querySelector('.t');
+    t.textContent = team ? displayTeamName(team.name) : sub;
+    tags.forEach(tag => { const s = document.createElement('span'); s.className = 'set-tag'; s.textContent = tag; t.appendChild(s); });
+    const s = b.querySelector('.s');
+    s.textContent = team ? sub : 'Nome ESPN · nessuna squadra collegata';
+    s.classList.toggle('warn', warn || !team);
+    return b;
+  }
+
+  const teamTags = team => team.manual ? ['NUOVA'] : [team.logo_custom ? 'LOGO' : '', team.display_name ? 'NOME' : '',
+    (team.override && (team.override.aliases || []).length) ? 'ESPN' : ''].filter(Boolean);
+  const customAliases = team => (team.override && team.override.aliases) || [];
+
+  function renderSetList() {
+    $('setOv').querySelectorAll('.set-seg button').forEach(b => {
+      const n = b.dataset.tab === 'fix' ? unmatchedEspn().length : 0;
+      b.textContent = b.dataset.tab === 'all' ? 'Tutte' : b.dataset.tab === 'fix' ? `Da sistemare${n ? ` (${n})` : ''}` : 'Modificate';
+      b.classList.toggle('on', b.dataset.tab === setTab);
+    });
+    const box = $('setList');
+    box.innerHTML = '';
+    const q = $('setQ').value;
+    const grp = text => { const d = document.createElement('div'); d.className = 'set-grp'; d.textContent = text; box.appendChild(d); };
+    const empty = text => { const d = document.createElement('div'); d.className = 'set-empty'; d.textContent = text; box.appendChild(d); };
+    const qn = norm(q);
+    const missing = unmatchedEspn().filter(t => !qn || norm(t.name).includes(qn));
+    const modified = teams.filter(t => t.override_key);
+    const sub = team => {
+      const extra = customAliases(team);
+      if (extra.length) return `ESPN: ${extra.join(', ')}`;
+      return displayTeamName(team.name) !== team.name ? team.name : '';
+    };
+    if (setTab === 'fix') {
+      if (!espnTeams.length && espnTeamsJob) { empty('Controllo il calendario ESPN…'); return; }
+      grp('Nel calendario ESPN, senza logo');
+      if (!missing.length) empty(q ? 'Nessun risultato.' : 'Tutte le squadre del calendario ESPN hanno un logo.');
+      missing.forEach(t => { const r = setRow(null, {sub:t.name, fix:true}); r.addEventListener('click', () => openFixSheet(t.name)); box.appendChild(r); });
+      return;
+    }
+    const list = setTab === 'mine' ? (qn ? searchTeams(modified, q) : modified) : (qn ? searchTeams(teams, q) : teams);
+    if (setTab === 'mine') grp('Modificate da te');
+    if (setTab === 'all' && qn && missing.length) {
+      grp('Nomi ESPN senza squadra');
+      missing.forEach(t => { const r = setRow(null, {sub:t.name, fix:true}); r.addEventListener('click', () => openFixSheet(t.name)); box.appendChild(r); });
+      grp('Squadre');
+    }
+    if (!list.length) empty(setTab === 'mine' ? 'Non hai ancora modificato nessuna squadra.' : 'Nessuna squadra trovata.');
+    list.forEach(team => {
+      const r = setRow(team, {sub:sub(team), tags:teamTags(team)});
+      r.addEventListener('click', () => openTeamSheet(team));
+      box.appendChild(r);
+    });
+  }
+
+  /* --- pannello: modifica squadra --- */
+  function openTeamSheet(team) {
+    haptic('select');
+    setEdit = {
+      mode:'team', team, key:team.override_key || '', base:team.manual ? null : team.name, isNew:!!team.manual,
+      name:team.display_name || (team.manual ? team.name : ''), nameOrig:team.manual ? '' : baseDisplayName(team.name),
+      locked:(team.aliases_fclogo || team.aliases || []).filter(a => norm(a) !== norm(team.name)).concat(team.manual ? [] : [team.name]),
+      aliases:customAliases(team).slice(), logo:'keep', preview:'',
+      hasCustom:!!team.logo_custom, fclogo:team.logo_custom ? (team.logo_fclogo || '') : (team.manual ? '' : (team.logo || '')),
+      current:team.logo || '', adding:false, confirmReset:false, busy:false
+    };
+    renderSetSheet();
+    $('setShOv').classList.add('open');
+  }
+
+  /* --- pannello: nome ESPN senza squadra --- */
+  function openFixSheet(espnName) {
+    haptic('select');
+    setEdit = {mode:'fix', espn:espnName, choice:'', pick:null, q:'', name:espnName, logo:null, preview:'', busy:false};
+    renderSetSheet();
+    $('setShOv').classList.add('open');
+  }
+
+  function closeSetSheet() {
+    setEdit = null;
+    $('setShOv').classList.remove('open');
+    document.activeElement && document.activeElement.blur && document.activeElement.blur();
+  }
+
+  // Logo mostrato ora nel pannello: caricato (anteprima), originale fclogo (dopo "Torna a fclogo") o attuale.
+  function sheetLogo() {
+    const e = setEdit;
+    if (e.preview) return e.preview;
+    if (e.mode === 'fix') return '';
+    if (e.logo === null) return e.fclogo;
+    return e.current;
+  }
+
+  function previewBoxes(uri) {
+    const cell = (bg, ink) => uri
+      ? `<div style="background:${bg}"><i style="background:${ink};--m:url('${uri}')"></i></div>`
+      : `<div style="background:${bg}"><span class="none">?</span></div>`;
+    return `<div class="set-prev">${cell('#ede7dd','#111')}${cell('#111','#fff')}${cell('#fc6d06','#000')}</div>`;
+  }
+
+  function setEsc(text) { const d = document.createElement('div'); d.textContent = String(text ?? ''); return d.innerHTML; }
+
+  function renderSetSheet() {
+    const e = setEdit;
+    const sh = $('setSh');
+    if (!e) return;
+    if (e.mode === 'fix') { renderFixSheet(sh, e); return; }
+    const team = e.team;
+    const title = e.name || e.nameOrig || team.name;
+    const canFclogo = !e.isNew && (e.preview || (e.hasCustom && e.logo !== null));
+    const nameMine = !!e.name && norm(e.name) !== norm(e.nameOrig);
+    sh.innerHTML = `<div class="mod-bar"></div>
+      <div class="mod-top"><b>${setEsc(title)}</b><button type="button" data-act="close">Chiudi</button></div>
+      ${previewBoxes(sheetLogo())}
+      <div class="set-two"><button type="button" class="btn ghost" data-act="upload">⤒ Carica logo</button>
+        <button type="button" class="btn ghost" data-act="fclogo" ${canFclogo ? '' : 'disabled'}>↺ Torna a fclogo</button></div>
+      <p class="set-hint">${e.preview ? 'Logo nuovo pronto: premi Salva.' : e.logo === null && e.hasCustom ? 'Torna il logo fclogo: premi Salva.' : 'PNG trasparente, anche a colori: diventa a tinta unita come gli altri.'}</p>
+      <div class="set-lbl">Nome mostrato ${nameMine ? '<span class="set-tag">TUO</span>' : ''}</div>
+      <div class="set-name"><input id="setName" type="text" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false"
+        placeholder="${setEsc(e.nameOrig || 'Nome della squadra')}" value="${setEsc(e.name)}">
+        ${e.isNew ? '' : `<button type="button" data-act="name-reset" ${nameMine ? '' : 'disabled'} aria-label="Torna al nome originale">↺</button>`}</div>
+      ${e.isNew ? '' : `<p class="set-hint">↺ torna al nome originale: ${setEsc(e.nameOrig)}.</p>`}
+      <div class="set-lbl">Nomi ESPN collegati</div>
+      <div class="set-chips">
+        ${e.locked.map(a => `<span class="set-chip lock">${setEsc(a)} 🔒</span>`).join('')}
+        ${e.aliases.map((a, i) => `<span class="set-chip mine">${setEsc(a)}<button type="button" data-act="alias-del" data-i="${i}" aria-label="Togli ${setEsc(a)}">✕</button></span>`).join('')}
+        ${e.adding ? '' : '<button type="button" class="set-chip add" data-act="alias-add">+ Aggiungi</button>'}
+      </div>
+      ${e.adding ? `<div class="set-add"><input id="setAlias" type="text" maxlength="40" placeholder="Nome come lo scrive ESPN" autocomplete="off" spellcheck="false" list="setAliasList">
+        <button type="button" class="btn primary" data-act="alias-ok">Aggiungi</button></div>
+        <datalist id="setAliasList">${unmatchedEspn().map(t => `<option value="${setEsc(t.name)}">`).join('')}</datalist>` : ''}
+      <p class="set-hint">${e.locked.length ? '🔒 = dal catalogo fclogo. ' : ''}Quelli bordati di verde li hai aggiunti tu: la ✕ li toglie.</p>
+      <div id="setErr" class="lnk-err"></div>
+      <div class="set-foot"><button type="button" class="btn ghost" data-act="close">Annulla</button>
+        <button type="button" class="btn primary" data-act="save" ${e.busy ? 'disabled' : ''}>${e.busy ? 'Salvo…' : 'Salva'}</button></div>
+      ${e.key ? `<button type="button" class="set-reset" data-act="reset">${e.confirmReset ? 'Tocca di nuovo per confermare' : e.isNew ? 'Elimina questa squadra' : 'Cancella tutte le personalizzazioni'}</button>` : ''}`;
+    const nameInput = $('setName');
+    nameInput.addEventListener('input', () => { e.name = nameInput.value; });
+    nameInput.addEventListener('change', () => renderSetSheet());
+    if (e.adding) setTimeout(() => $('setAlias') && $('setAlias').focus(), 30);
+  }
+
+  function renderFixSheet(sh, e) {
+    const results = e.choice === 'link' && norm(e.q) ? searchTeams(teams, e.q).slice(0, 6) : [];
+    sh.innerHTML = `<div class="mod-bar"></div>
+      <div class="mod-top"><b>${setEsc(e.espn)} <span style="color:var(--muted);font-weight:600;font-size:14px">· nome ESPN</span></b><button type="button" data-act="close">Chiudi</button></div>
+      <button type="button" class="set-opt ${e.choice === 'link' ? 'on' : ''}" data-act="choose" data-c="link"><b>È una squadra che c’è già</b>
+        <p>Collega il nome ESPN a una squadra del catalogo (es. ESPN scrive “Man City”, nel catalogo è “Manchester City”).</p></button>
+      ${e.choice === 'link' ? `<label class="cal-search set-search" style="margin-bottom:6px"><span class="logo" id="setPickLogo"></span>
+          <input id="setPickQ" type="text" placeholder="Cerca la squadra" autocomplete="off" autocapitalize="words" spellcheck="false" value="${setEsc(e.pick ? displayTeamName(e.pick.name) : e.q)}"></label>
+        <div class="cal-sug" id="setPickSug"></div>` : ''}
+      <button type="button" class="set-opt ${e.choice === 'new' ? 'on' : ''}" data-act="choose" data-c="new"><b>Nuova squadra</b>
+        <p>Non è nel catalogo: carica il logo e scegli il nome da mostrare.</p></button>
+      ${e.choice === 'new' ? `${previewBoxes(e.preview)}
+        <button type="button" class="btn ghost set-one" data-act="upload">⤒ Carica logo</button>
+        <div class="set-lbl">Nome mostrato</div>
+        <div class="set-name"><input id="setName" type="text" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false" value="${setEsc(e.name)}"></div>` : ''}
+      <div id="setErr" class="lnk-err"></div>
+      <div class="set-foot"><button type="button" class="btn ghost" data-act="close">Annulla</button>
+        <button type="button" class="btn primary" data-act="save" ${!e.choice || e.busy ? 'disabled' : ''}>${e.busy ? 'Salvo…' : 'Salva'}</button></div>`;
+    if (e.choice === 'link') {
+      fillLogo($('setPickLogo'), e.pick);
+      const sug = $('setPickSug');
+      results.forEach(team => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.innerHTML = '<span class="logo"></span><span></span>';
+        b.lastChild.textContent = displayTeamName(team.name);
+        fillLogo(b.firstChild, team);
+        b.addEventListener('click', () => { e.pick = team; e.q = ''; renderSetSheet(); });
+        sug.appendChild(b);
+      });
+      const input = $('setPickQ');
+      input.addEventListener('input', () => { e.q = input.value; e.pick = null; const pos = input.selectionStart; renderSetSheet(); const n = $('setPickQ'); n.focus(); n.setSelectionRange(pos, pos); });
+    }
+    if (e.choice === 'new') $('setName').addEventListener('input', ev => { e.name = ev.target.value; });
+  }
+
+  async function setUploadLogo(file) {
+    const e = setEdit;
+    if (!e || !file) return;
+    const err = $('setErr');
+    try {
+      if (file.size > 8 * 1024 * 1024) throw new Error('Logo troppo grande (max 8 MB).');
+      err.textContent = 'Carico il logo…';
+      const up = await netFetch(`${directBase}/upload`, {method:'POST', headers:{'Content-Type':file.type || 'image/png','X-ImageGEN-Session':session}, body:file}, 30000);
+      const upBody = await up.json().catch(() => ({}));
+      if (!up.ok || !upBody.ok) throw new Error(upBody.error || 'Caricamento non riuscito.');
+      const prev = await setPost({action:'logo_preview', photo_id:upBody.photo_id});
+      if (setEdit !== e) return;
+      e.preview = prev.preview;
+      e.logo = `upload:${upBody.photo_id}`;
+      haptic('success');
+      renderSetSheet();
+    } catch (ex) {
+      if ($('setErr')) $('setErr').textContent = ex.message || String(ex);
+      haptic('error');
+    }
+  }
+
+  async function setPost(payload) {
+    const r = await netFetch(`${directBase}/settings`, {
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify({v:1, session, ...payload})
+    }, 45000);
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok || !body.ok) throw new Error(body.error || 'Operazione non riuscita.');
+    return body;
+  }
+
+  // Aggiorna l'elenco squadre con la riga rimandata dal servizio (o la toglie se la squadra nuova è stata eliminata).
+  function applySavedTeam(key, row) {
+    const same = t => (key && t.override_key === key) || (row && !row.manual && norm(t.name) === norm(row.name));
+    const i = teams.findIndex(same);
+    if (row) { if (i >= 0) teams[i] = row; else teams.push(row); }
+    else if (i >= 0) teams.splice(i, 1);
+    resolveTeamAliases();
+    saveCatalogCache();
+    updateSetBadge();
+    if (selectedTeam && row && norm(selectedTeam.name) === norm(row.name)) selectedTeam = row;
+  }
+
+  async function setSave(reset=false) {
+    const e = setEdit;
+    if (!e || e.busy) return;
+    let team;
+    if (e.mode === 'fix') {
+      if (e.choice === 'link') {
+        if (!e.pick) { $('setErr').textContent = 'Scegli la squadra dall’elenco.'; return; }
+        const p = e.pick;
+        team = {base:p.manual ? null : p.name, key:p.override_key || '', name:p.display_name || (p.manual ? p.name : ''),
+                aliases:[...customAliases(p), e.espn], logo:'keep'};
+      } else {
+        if (!e.logo) { $('setErr').textContent = 'Carica il logo della squadra.'; return; }
+        if (!String(e.name).trim()) { $('setErr').textContent = 'Scrivi il nome della squadra.'; return; }
+        team = {name:e.name, aliases:[e.espn], logo:e.logo};
+      }
+    } else {
+      team = reset ? {base:e.base, key:e.key, reset:true}
+        : {base:e.base, key:e.key, name:norm(e.name) === norm(e.nameOrig) ? '' : e.name, aliases:e.aliases, logo:e.logo};
+    }
+    e.busy = true;
+    renderSetSheet();
+    try {
+      const body = await setPost({action:'team_save', team});
+      applySavedTeam(body.key, body.team);
+      closeSetSheet();
+      renderSetList();
+      haptic('success');
+      if (body.remote) setToast(reset ? 'Personalizzazioni cancellate.' : 'Salvato.');
+      else setToast(`Salvato solo per questa sessione: ${body.warning || 'GitHub non raggiungibile'}.`, true);
+    } catch (ex) {
+      e.busy = false;
+      renderSetSheet();
+      $('setErr').textContent = ex.message || String(ex);
+      haptic('error');
+    }
+  }
+
+  function initSettings() {
+    $('setBtn').addEventListener('click', openSettings);
+    $('setBack').addEventListener('click', closeSettings);
+    $('setQ').addEventListener('input', () => { if (setTab === 'fix' && $('setQ').value) setTab = 'all'; renderSetList(); });
+    $('setOv').querySelectorAll('.set-seg button').forEach(b => b.addEventListener('click', () => { setTab = b.dataset.tab; haptic('select'); renderSetList(); }));
+    $('setShOv').addEventListener('click', ev => { if (ev.target === $('setShOv')) closeSetSheet(); });
+    $('setFile').addEventListener('change', () => { const f = $('setFile').files[0]; $('setFile').value = ''; setUploadLogo(f); });
+    $('setSh').addEventListener('click', ev => {
+      const btn = ev.target.closest('[data-act]');
+      const e = setEdit;
+      if (!btn || !e) return;
+      const act = btn.dataset.act;
+      if (act !== 'reset' && e.confirmReset) e.confirmReset = false;
+      if (act === 'close') closeSetSheet();
+      else if (act === 'upload') $('setFile').click();
+      else if (act === 'fclogo') { e.preview = ''; e.logo = e.hasCustom ? null : 'keep'; renderSetSheet(); }
+      else if (act === 'name-reset') { e.name = ''; renderSetSheet(); }
+      else if (act === 'alias-add') { e.adding = true; renderSetSheet(); }
+      else if (act === 'alias-del') { e.aliases.splice(Number(btn.dataset.i), 1); renderSetSheet(); }
+      else if (act === 'alias-ok') {
+        const v = String(($('setAlias') || {}).value || '').trim();
+        if (v && ![...e.locked, ...e.aliases].some(a => norm(a) === norm(v))) e.aliases.push(v);
+        e.adding = false; renderSetSheet();
+      }
+      else if (act === 'choose') { e.choice = btn.dataset.c; renderSetSheet(); }
+      else if (act === 'save') setSave(false);
+      else if (act === 'reset') { if (e.confirmReset) setSave(true); else { e.confirmReset = true; renderSetSheet(); } }
+    });
+    $('setSh').addEventListener('keydown', ev => {
+      if (ev.key === 'Enter' && ev.target.id === 'setAlias') { ev.preventDefault(); $('setSh').querySelector('[data-act="alias-ok"]').click(); }
+    });
   }
 
   /* ---------- Calendario: griglia del mese ---------- */
@@ -6133,6 +6575,8 @@
 
       if (playersLoaded || teamsLoaded) saveCatalogCache();
       refreshSearchSummaries();
+      updateSetBadge();
+      loadEspnTeams();
     })().finally(() => { catalogLoadPromise = null; });
     return catalogLoadPromise;
   }
@@ -6204,6 +6648,7 @@
   $('igClear').addEventListener('click',igClearPhoto);
   $('igFile').addEventListener('change',e => { uploadIgPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
   initCalendarSheet();
+  initSettings();
   // "A mano": altra partita o dati inventati, si passa subito al passo successivo.
   $('mdManualBtn').addEventListener('click', async () => { haptic('select'); await pickMdFixture('manual'); nextField(true); });
 

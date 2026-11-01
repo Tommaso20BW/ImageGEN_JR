@@ -118,6 +118,13 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 return
             self._json(200, {'ok': True, 'matches': self.service.fixtures(query.get('from', ''), query.get('to', ''))})
             return
+        if parts.path.rstrip('/') == '/espnteams':
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            self._json(200, {'ok': True, 'teams': self.service.espn_teams()})
+            return
         if parts.path.rstrip('/') == '/fixture':
             query = dict(parse_qsl(parts.query))
             if query.get('session', '') != self.service.session:
@@ -292,7 +299,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
         if path == '/upload':
             self._upload()
             return
-        if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend'):
+        if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -321,6 +328,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/layout':
                 self._json(200, {'ok': True, 'layout': self.service.save_layout(envelope)})
+                return
+
+            if path == '/settings':
+                self._json(200, {'ok': True, **self.service.settings(envelope)})
                 return
 
             if path == '/ghost':
@@ -665,6 +676,62 @@ class Service:
         except Exception as exc:
             print(f'WARN IMAGEGEN: calendario ESPN non disponibile: {type(exc).__name__}: {exc}', flush=True)
             return []
+
+    def settings(self, envelope):
+        """Impostazioni › Squadre e loghi: anteprima logo e salvataggio di una squadra."""
+        import logo_bundle
+        import team_settings
+        from graphics.common import _logo_rows, _manifest_rows, asset_dir
+
+        if str(envelope.get('session') or '') != self.session:
+            raise ValueError('Richiesta non valida.')
+        action = envelope.get('action')
+        if action == 'logo_preview':
+            raw = self.photos.get(str(envelope.get('photo_id') or ''))
+            if raw is None:
+                raise ValueError('Logo caricato scaduto: caricalo di nuovo.')
+            return {'preview': team_settings.preview_uri(team_settings.make_mono(raw))}
+        if action != 'team_save':
+            raise ValueError('Richiesta non valida.')
+        assets = str(asset_dir())
+        result = team_settings.save(envelope.get('team') or {}, assets, _manifest_rows(assets), self.photos)
+        row = next((r for r in _logo_rows(assets) if r.get('override_key') == result['key']), None)
+        if row is None and not result['key'].startswith('new:'):
+            from livescore.core.team_matching import normalize_team_name
+            row = next((r for r in _logo_rows(assets) if normalize_team_name(r.get('name', '')) == result['key']), None)
+        team = logo_bundle._prepare(asset_dir(), row) if row else None
+        # Pacchetto della mini app rifatto con la correzione: chi la riapre in questa sessione la vede.
+        threading.Thread(target=self._rebuild_catalog, daemon=True).start()
+        return {'team': team, 'key': result['key'], 'remote': result['remote'], 'warning': result['warning']}
+
+    def _rebuild_catalog(self):
+        try:
+            self.catalog_bundle = build_team_bundle()
+        except Exception as exc:
+            print(f'WARN IMAGEGEN: pacchetto loghi non rifatto: {type(exc).__name__}: {exc}', flush=True)
+
+    def espn_teams(self):
+        """Squadre del calendario Juventus su ESPN (stagione in corso e precedente, prossime partite)."""
+        import requests
+
+        import fixtures
+        seen = {}
+        try:
+            events = list(fixtures._fetch())
+            last = requests.get(fixtures.URL, params={'season': time.localtime().tm_year - 1}, timeout=15)
+            if last.ok:
+                events += last.json().get('events', [])
+        except Exception as exc:
+            print(f'WARN IMAGEGEN: squadre ESPN non disponibili: {type(exc).__name__}: {exc}', flush=True)
+            return []
+        for e in events:
+            league = (e.get('league') or {}).get('name') or ''
+            for c in ((e.get('competitions') or [{}])[0].get('competitors') or []):
+                team = c.get('team') or {}
+                name, tid = team.get('displayName') or '', str(team.get('id') or c.get('id') or '')
+                if name and tid != fixtures.JUVENTUS_ID and name not in seen:
+                    seen[name] = {'name': name, 'id': tid, 'league': league, 'date': str(e.get('date', ''))[:10]}
+        return sorted(seen.values(), key=lambda x: x['date'], reverse=True)
 
     def kit(self, event_id, league):
         """Maglia della Juventus nella partita ESPN (partite giocate), '' se non si sa."""

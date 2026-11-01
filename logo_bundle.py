@@ -69,10 +69,16 @@ def _to_data_uri(raw):
 
 def _prepare(assets, team):
     row = dict(team)
+    custom = row.pop('custom_logo', None)
     try:
-        raw = _local_logo(assets, team) or _remote_logo(team)
+        raw = None if row.get('manual') else (_local_logo(assets, team) or _remote_logo(team))
         if raw:
             row['logo'] = _to_data_uri(raw)
+        if custom:
+            # Logo caricato in Impostazioni: prende il posto di FCLogo, che resta per "Torna a fclogo".
+            row['logo_fclogo'] = row.get('logo')
+            row['logo'] = _to_data_uri(Path(custom).read_bytes())
+            row['logo_custom'] = True
     except Exception as exc:  # un logo rotto non deve bloccare il workflow
         print(f'WARN IMAGEGEN: logo non preparato per {team.get("name")}: {exc}', flush=True)
     return row
@@ -97,6 +103,11 @@ def build_team_bundle(assets=g.DEFAULT_ASSET_DIR):
     assets = Path(assets)
     manifest = json.loads(_find_manifest().read_text(encoding='utf-8'))
     teams = manifest.get('teams', [])
+    try:   # correzioni di Impostazioni › Squadre e loghi
+        from livescore.core import team_overrides
+        teams = team_overrides.apply(teams, assets)
+    except ImportError:
+        pass
     with ThreadPoolExecutor(max_workers=8) as pool:
         rows = list(pool.map(lambda team: _prepare(assets, team), teams))
     ready = sum(1 for row in rows if row.get('logo'))

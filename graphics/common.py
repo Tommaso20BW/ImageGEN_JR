@@ -53,12 +53,23 @@ def normalize(value):
 
 
 @lru_cache(maxsize=2)
-def _logo_rows(assets_text):
+def _manifest_rows(assets_text):
     assets = Path(assets_text)
     path = assets / 'team_logos' / 'manifest.json'
     if not path.is_file():
         path = assets / 'team_logos' / 'fclogo_cache' / 'manifest.json'
     return json.loads(path.read_text(encoding='utf-8')).get('teams', [])
+
+
+def _logo_rows(assets_text):
+    """Catalogo FCLogo con le correzioni di Impostazioni › Squadre e loghi
+    (alias ESPN in più, nome mostrato, logo caricato a mano, squadre nuove)."""
+    rows = _manifest_rows(assets_text)
+    try:
+        from livescore.core import team_overrides
+    except ImportError:          # motore grafico senza correzioni: catalogo com'è
+        return rows
+    return team_overrides.apply(rows, assets_text)
 
 
 def team_logo(name, team_id=''):
@@ -67,8 +78,10 @@ def team_logo(name, team_id=''):
     rows = _logo_rows(str(assets))
     key = normalize(name)
     for row in rows:
-        names = [row.get('name'), *(row.get('aliases') or [])]
+        names = [row.get('name'), row.get('display_name'), *(row.get('aliases') or [])]
         if (team_id and str(row.get('espn_id') or '') == str(team_id)) or key in map(normalize, names):
+            if row.get('custom_logo') and Path(row['custom_logo']).is_file():
+                return Path(row['custom_logo'])
             for file in [row.get('file'), *(row.get('files') or [])]:
                 for base in ('team_logos', 'team_logos/fclogo_cache'):
                     path = assets / base / (file or '')

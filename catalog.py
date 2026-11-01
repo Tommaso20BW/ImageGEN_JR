@@ -15,6 +15,11 @@ class Catalog:
         if not path.is_file():
             path = self.assets / 'team_logos/fclogo_cache/manifest.json'
         rows = json.loads(path.read_text(encoding='utf-8')).get('teams', [])
+        try:   # correzioni di Impostazioni › Squadre e loghi (alias in più, squadre nuove)
+            from livescore.core import team_overrides
+            rows = team_overrides.apply(rows, self.assets)
+        except ImportError:
+            pass
         q = g.normalize_name(query)
         matches, exact = [], []
         for row in rows:
@@ -22,7 +27,7 @@ class Catalog:
                 continue
             names = [
                 g.normalize_name(n)
-                for n in [row['name'], *row.get('aliases', [])]
+                for n in [row['name'], row.get('display_name'), *row.get('aliases', [])] if n
             ]
             value = {
                 'name': row['name'],
