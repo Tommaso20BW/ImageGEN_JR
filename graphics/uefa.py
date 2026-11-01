@@ -40,7 +40,8 @@ PALETTES = {
         'base': 'third',
         'dark': (2, 8, 70),          # blu notte (fondo dello sfondo UCL, più scuro)
         'light': (190, 225, 255),
-        'accent': ((86, 178, 255), (140, 214, 255), (214, 242, 255)),   # celeste sfumato
+        'accent': ((38, 188, 214), (112, 214, 240), (196, 242, 255)),   # turchese -> celeste
+        'flat_fx': True,             # sfumatura scura in tinta unita (la grana diventava puntini)
     },
     'uel': {
         'base': 'home',
@@ -110,25 +111,37 @@ def themed_background(theme, graphic):
     """Sfondo competizione per la grafica: sotto JR, stemmi e scritte (CLEAR) le linee
     sfumano nel colore di fondo (arancione/verde per UEL/Conference, blu per l'UCL)."""
     from PIL import ImageFilter
-    key = hashlib.sha1(json.dumps([CLEAR[graphic], theme in FILL, 'v2']).encode()).hexdigest()[:8]
+    key = hashlib.sha1(json.dumps([CLEAR[graphic], theme in FILL, 'v4']).encode()).hexdigest()[:8]
     out = _cache_dir(theme) / f'bg_{graphic}_{key}.jpg'
     if out.is_file():
         return out
     with Image.open(asset_dir() / 'canva' / f'bg_{theme}.jpg') as image:
         src = image.convert('RGB').resize((1920, 2560), Image.LANCZOS)
     a = np.asarray(src).astype(np.float32)
-    # UEL / Conference: linee nere su colore -> si sfuma verso il colore (arancione/verde);
-    # UCL: linee chiare su blu -> verso il blu.
-    dark_lines = theme in ('uel', 'conference')
-    # Fondo senza linee: un filtro max/min (a bassa risoluzione) toglie le linee, poi si sfuma.
-    small = src.resize((240, 320), Image.BILINEAR)
-    small = small.filter(ImageFilter.MaxFilter(9) if dark_lines else ImageFilter.MinFilter(9))
-    flat_img = small.filter(ImageFilter.GaussianBlur(12)).resize((1920, 2560), Image.BICUBIC)
-    flat = np.asarray(flat_img).astype(np.float32)
-    if theme in FILL:
-        lum = a.mean(-1)
-        alpha = np.clip(1 - lum / np.maximum(flat.mean(-1), 1), 0, 1)
-        a = a * (1 - alpha[::-1, ::-1, None])      # stessa trama ruotata: anche in alto
+    # Fondo senza linee. UEL / Conference (linee nere su colore): il colore vero del fondo
+    # sotto le linee si ricostruisce (inpaint a bassa risoluzione) e si toglie solo la linea,
+    # pixel per pixel: dove non c'è linea resta lo sfondo originale con la sua grana.
+    # UCL (linee chiare su blu): filtro min a bassa risoluzione.
+    if theme in ('uel', 'conference'):
+        import cv2
+        small = cv2.resize(a, (480, 640), interpolation=cv2.INTER_AREA)
+        bright = cv2.dilate(small, np.ones((15, 15), np.uint8))          # fondo senza linee (stima)
+        lines_small = (small.mean(-1) < bright.mean(-1) * 0.8).astype(np.uint8)
+        lines_small = cv2.dilate(lines_small, np.ones((5, 5), np.uint8))
+        filled = cv2.inpaint(np.clip(small, 0, 255).astype(np.uint8), lines_small * 255, 9, cv2.INPAINT_TELEA)
+        flat = cv2.GaussianBlur(cv2.resize(filled.astype(np.float32), (1920, 2560),
+                                           interpolation=cv2.INTER_CUBIC), (0, 0), 6)
+        alpha = np.clip((flat.mean(-1) - a.mean(-1)) / np.maximum(flat.mean(-1) * 0.45, 1), 0, 1)
+        alpha = cv2.GaussianBlur(cv2.dilate(alpha, np.ones((5, 5), np.uint8)), (0, 0), 1.5)  # anche i bordi
+        # Grana dello sfondo (presa dove non ci sono linee) sotto le linee tolte.
+        y0, x0, s = 900, 760, 400
+        patch = a[y0:y0 + s, x0:x0 + s] - cv2.GaussianBlur(a[y0:y0 + s, x0:x0 + s], (0, 0), 20)
+        grain = np.tile(patch, (2560 // s + 1, 1920 // s + 1, 1))[:2560, :1920]
+        flat = a * (1 - alpha[..., None]) + (flat + grain) * alpha[..., None]
+    else:
+        small = src.resize((240, 320), Image.BILINEAR).filter(ImageFilter.MinFilter(9))
+        flat_img = small.filter(ImageFilter.GaussianBlur(12)).resize((1920, 2560), Image.BICUBIC)
+        flat = np.asarray(flat_img).astype(np.float32)
     # Zone pulite, con bordo morbido.
     k = 1920 / 1080
     zone = Image.new('L', (1920, 2560), 0)
@@ -136,7 +149,7 @@ def themed_background(theme, graphic):
     draw = ImageDraw.Draw(zone)
     for x0, y0, x1, y1 in CLEAR[graphic]:
         draw.rounded_rectangle((x0 * k - 60, y0 * k - 60, x1 * k + 60, y1 * k + 60), radius=60, fill=255)
-    m = np.asarray(zone.filter(ImageFilter.GaussianBlur(50))).astype(np.float32)[..., None] / 255
+    m = np.asarray(zone.filter(ImageFilter.GaussianBlur(90))).astype(np.float32)[..., None] / 255
     a = a * (1 - m) + flat * m
     Image.fromarray(np.clip(a, 0, 255).astype('uint8'), 'RGB').save(out, format='JPEG', quality=92)
     return out
@@ -161,7 +174,8 @@ def recolor_array(rgb, theme):
     neutral = _stops(lum, (p['dark'], p['light']))
     # Oro: luminosità ristretta a 0..1 sulla sua gamma (l'oro va da ~0,35 a ~0,85).
     accent = _stops(np.clip((lum - 0.3) / 0.55, 0, 1), p['accent'])
-    weight = np.clip((sat - 0.18) / 0.2, 0, 1)[..., None]
+    # Oro = saturo E abbastanza luminoso: i quasi-neri con rumore di colore restano neutri.
+    weight = (np.clip((sat - 0.18) / 0.2, 0, 1) * np.clip((hi - 30) / 30, 0, 1))[..., None]
     return neutral * (1 - weight) + accent * weight
 
 
@@ -180,14 +194,18 @@ def _cache_dir(theme):
 
 
 @lru_cache(maxsize=256)
-def recolor_file(name, theme):
-    """canva/<name> ricolorato: percorso del PNG pronto (in cache)."""
-    out = _cache_dir(theme) / (Path(name).stem + '.png')
+def recolor_file(name, theme, flat=False):
+    """canva/<name> ricolorato: percorso del PNG pronto (in cache).
+    flat=True: tutto nel colore scuro del tema (resta solo la trasparenza)."""
+    out = _cache_dir(theme) / (Path(name).stem + ('_flat' if flat else '') + '.png')
     if not out.is_file():
         with Image.open(asset_dir() / 'canva' / name) as image:
             image = image.convert('RGBA')
             a = np.asarray(image)
-            rgb = recolor_array(a[..., :3], theme)
+            if flat:
+                rgb = np.broadcast_to(np.array(PALETTES[theme]['dark'], float), a[..., :3].shape)
+            else:
+                rgb = recolor_array(a[..., :3], theme)
             done = np.dstack([np.clip(rgb, 0, 255), a[..., 3]]).astype('uint8')
         tmp = out.with_suffix('.tmp')
         Image.fromarray(done, 'RGBA').save(tmp, format='PNG')
@@ -215,7 +233,8 @@ def _walk(value, theme, key=''):
         return [_walk(v, theme, key) for v in value]
     if isinstance(value, str):
         if value.endswith('.png') and key != 'bg':
-            return str(recolor_file(value, theme))
+            flat = key == 'fx' and PALETTES[theme].get('flat_fx', False)
+            return str(recolor_file(value, theme, flat))
         if value.startswith('#') and len(value) == 7:
             return recolor_hex(value, theme)
     return value
@@ -313,6 +332,12 @@ def probabili_bg(theme):
         base = PALETTES[theme]['base']
         with Image.open(asset_dir() / 'canva' / f'probabili_{base}_bg.png') as image:
             src = np.asarray(image.convert('RGB').resize((1920, 2560), Image.LANCZOS))
+        # Le parti scure (bordo in rilievo del campo) hanno grana: ricolorata diventerebbe
+        # puntini chiari, quindi lì si liscia prima (filtro mediano).
+        import cv2
+        smooth = cv2.medianBlur(src, 7)
+        dark = (src.mean(-1) < 60)[..., None]
+        src = np.where(dark, smooth, src)
         pitch = Image.fromarray(np.clip(recolor_array(src, theme), 0, 255).astype('uint8'), 'RGB')
         with Image.open(background(theme, 'probabili')) as bg:
             page = bg.convert('RGB').resize((1920, 2560), Image.LANCZOS)
