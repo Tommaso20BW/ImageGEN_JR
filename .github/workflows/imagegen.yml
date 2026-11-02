@@ -161,53 +161,70 @@ jobs:
             -o "$CLOUDFLARED"
           chmod +x "$CLOUDFLARED"
 
-          "$CLOUDFLARED" tunnel \
-            --url "http://127.0.0.1:${PORT}" \
-            --no-autoupdate \
-            >"$LOG" 2>&1 &
-          TUNNEL_PID=$!
-
+          TUNNEL_PID=""
           cleanup_tunnel() {
-            kill "$TUNNEL_PID" 2>/dev/null || true
+            if [ -n "$TUNNEL_PID" ]; then
+              kill "$TUNNEL_PID" 2>/dev/null || true
+            fi
           }
           trap cleanup_tunnel EXIT
 
-          TUNNEL_URL=""
-          for _ in $(seq 1 50); do
-            TUNNEL_URL="$(grep -Eo 'https://[A-Za-z0-9-]+\.trycloudflare\.com' "$LOG" | head -n 1 || true)"
-            if [ -n "$TUNNEL_URL" ]; then
-              break
-            fi
-            if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
-              break
-            fi
-            sleep 0.4
-          done
+          # Tunnel nuovo: l'indirizzo esce nel log. Funzionante davvero lo verifica
+          # il servizio (da internet) prima di mandare il pulsante su Telegram.
+          start_tunnel() {
+            cleanup_tunnel
+            : >"$LOG"
+            "$CLOUDFLARED" tunnel \
+              --url "http://127.0.0.1:${PORT}" \
+              --no-autoupdate \
+              >"$LOG" 2>&1 &
+            TUNNEL_PID=$!
+            TUNNEL_URL=""
+            for _ in $(seq 1 50); do
+              TUNNEL_URL="$(grep -Eo 'https://[A-Za-z0-9-]+\.trycloudflare\.com' "$LOG" | head -n 1 || true)"
+              if [ -n "$TUNNEL_URL" ]; then
+                break
+              fi
+              if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
+                break
+              fi
+              sleep 0.4
+            done
+            [ -n "$TUNNEL_URL" ]
+          }
 
-          if [ -z "$TUNNEL_URL" ]; then
-            echo "ERRORE: endpoint diretto non avviato."
-            cat "$LOG" || true
-            exit 1
-          fi
-
-          export MANUAL_GRAPHICS_DIRECT_URL="$TUNNEL_URL"
           export IMAGEGEN_DIRECT_PORT="$PORT"
+          STATUS=1
+          for ATTEMPT in 1 2 3; do
+            if ! start_tunnel; then
+              echo "Tunnel $ATTEMPT/3 non avviato."
+              cat "$LOG" || true
+              continue
+            fi
+            export MANUAL_GRAPHICS_DIRECT_URL="$TUNNEL_URL"
+            echo "Tunnel $ATTEMPT/3 creato: controllo che risponda prima di mandare il pulsante."
 
-          echo "Endpoint diretto pronto. LiveScore può restare acceso."
-
-          # Se il run viene annullato, lo stop arriva sempre a Python, che
-          # chiude la sessione e cancella i messaggi prima di uscire.
-          python -u app/service.py &
-          SERVICE_PID=$!
-          trap 'kill -TERM "$SERVICE_PID" 2>/dev/null || true' INT TERM
-          set +e
-          wait "$SERVICE_PID"
-          STATUS=$?
-          while kill -0 "$SERVICE_PID" 2>/dev/null; do
+            # Se il run viene annullato, lo stop arriva sempre a Python, che
+            # chiude la sessione e cancella i messaggi prima di uscire.
+            python -u app/service.py &
+            SERVICE_PID=$!
+            trap 'kill -TERM "$SERVICE_PID" 2>/dev/null || true' INT TERM
+            set +e
             wait "$SERVICE_PID"
             STATUS=$?
+            while kill -0 "$SERVICE_PID" 2>/dev/null; do
+              wait "$SERVICE_PID"
+              STATUS=$?
+            done
+            set -e
+            # 75 = tunnel mai raggiungibile da internet: se ne apre uno nuovo.
+            if [ "$STATUS" -ne 75 ]; then
+              exit "$STATUS"
+            fi
+            echo "Tunnel $ATTEMPT/3 non raggiungibile: ne apro uno nuovo."
           done
-          exit "$STATUS"
+          echo "ERRORE: nessun tunnel raggiungibile dopo 3 tentativi."
+          exit 1
 
       - name: Elimina vecchi run ImageGen e Pages
         if: always()

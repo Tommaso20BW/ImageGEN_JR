@@ -47,6 +47,14 @@ def _ghost_webp(png):
 LOCK_WAIT_SECONDS = 75        # un nuovo tentativo aspetta la richiesta ancora in corso
 RESEND_GUARD_SECONDS = 180    # stessa grafica reinviata entro 3 min = doppione (la Mini App riprova da sola)
 DIRECT_PORT = 8765
+# Il pulsante su Telegram parte solo quando il tunnel risponde davvero da internet.
+TUNNEL_READY_SECONDS = 90     # poi il workflow riprova con un tunnel nuovo
+TUNNEL_READY_STREAK = 2       # risposte buone di fila
+TUNNEL_NOT_READY_EXIT = 75    # codice d'uscita: "tunnel non pronto, riprova"
+
+
+class TunnelNotReady(RuntimeError):
+    """Il tunnel non risponde da internet: il workflow ne apre uno nuovo."""
 
 
 class BusyError(RuntimeError):
@@ -999,6 +1007,37 @@ class Service:
         except TelegramError:
             pass
 
+    def _wait_tunnel(self, direct_url, timeout=TUNNEL_READY_SECONDS):
+        """True quando l'indirizzo pubblico risponde (da internet, come dal telefono) con
+        questa sessione, TUNNEL_READY_STREAK volte di fila. Il tunnel appena creato spesso
+        non funziona ancora per qualche secondo: il pulsante deve partire dopo."""
+        import urllib.request
+
+        url = f"{direct_url.rstrip('/')}/session?{urlencode({'session': self.session})}"
+        start = time.monotonic()
+        streak = attempts = 0
+        last = ''
+        time.sleep(1.5)
+        while time.monotonic() - start < timeout and not self.stopped:
+            attempts += 1
+            try:
+                request = urllib.request.Request(url, headers={'User-Agent': 'ImageGEN-JR tunnel check'})
+                with urllib.request.urlopen(request, timeout=6) as response:
+                    ok = response.status == 200 and b'"ok": true' in response.read(4096)
+                last = 'risposta non valida' if not ok else ''
+            except Exception as exc:
+                ok = False
+                last = f'{type(exc).__name__}: {exc}'[:120]
+            streak = streak + 1 if ok else 0
+            if streak >= TUNNEL_READY_STREAK:
+                print(f'INFO IMAGEGEN: tunnel pronto | {time.monotonic() - start:.1f}s | tentativi={attempts}',
+                      flush=True)
+                return True
+            time.sleep(0.7 if ok else 1.5)
+        print(f'WARN IMAGEGEN: tunnel non pronto | {time.monotonic() - start:.1f}s | tentativi={attempts} | {last}',
+              flush=True)
+        return False
+
     def run(self, duration=SESSION_DURATION_SECONDS):
         webapp_url = os.environ.get('MANUAL_GRAPHICS_WEBAPP_URL', '').strip()
         direct_url = os.environ.get('MANUAL_GRAPHICS_DIRECT_URL', '').strip()
@@ -1018,6 +1057,11 @@ class Service:
         # Browser per le grafiche acceso subito: la prima anteprima non aspetta l'avvio.
         threading.Thread(target=_warm_up_renderer, daemon=True).start()
         threading.Thread(target=_warm_up_cutout, daemon=True).start()
+        if not self._wait_tunnel(direct_url):
+            self._stop_http_server()
+            if self.stopped:          # run annullato mentre si aspettava: si esce e basta
+                return
+            raise TunnelNotReady(f'tunnel senza risposta dopo {TUNNEL_READY_SECONDS} s')
 
         parts = urlsplit(webapp_url)
         query = dict(parse_qsl(parts.query, keep_blank_values=True))
@@ -1108,6 +1152,9 @@ def main():
 if __name__ == '__main__':
     try:
         main()
+    except TunnelNotReady as exc:
+        print(f'WARN IMAGEGEN: {exc}: riprovo con un tunnel nuovo', flush=True)
+        raise SystemExit(TUNNEL_NOT_READY_EXIT)
     except Exception as exc:
         print(f'ERROR IMAGEGEN: {type(exc).__name__}: {exc}', flush=True)
         raise SystemExit(1)
