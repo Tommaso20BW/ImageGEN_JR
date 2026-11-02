@@ -1,7 +1,7 @@
 /* Mini App ImageGen JR. File caricati in ordine da index.html: l'ordine conta. */
 /* ---------- Caricamento ---------- */
 // HALF/END/FULL TIME: avanzamento reale letto da GET /progress (passi di render.py).
-// Altre grafiche: avanzamento stimato sulla durata delle generazioni precedenti, minimo 3 s.
+// Altre grafiche: avanzamento stimato sulla durata delle generazioni precedenti.
 const STAGE_RANGE = {idle:[0,4], render:[2,10], cutout:[10,55], erase:[55,85], compose:[60,96]};
 const STAGE_SUB = {
   cutout:'Scontorno la persona…',
@@ -20,7 +20,6 @@ const BUSY_SUB = {
   stats:'Preparo la tabella delle statistiche.'
 };
 const DEFAULT_MS = {ppcut:12000, goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, igbn:4000, pxi:9000, cal:5000, table:35000, half:6000, end_of_90:6000, full:6000, submit:2500};
-const MIN_FAST_MS = 3000;
 const DURATIONS_KEY = 'imagegen-jr-durations';
 const SLOW_SUB = 'Ci sta mettendo più del solito: attendi ancora qualche secondo.';
 const RING_C = 2 * Math.PI * 42;
@@ -119,7 +118,7 @@ function showBusy(title, sub, kind) {
   if (real) busy.poll = setInterval(pollProgress,600);
 }
 
-// Porta il cerchio al 100% (rispettando il minimo di 3 s per le grafiche veloci), poi risolve.
+// Porta il cerchio al 100% con una breve animazione, poi risolve: nessuna attesa finta.
 function finishBusy() {
   if (!busy) return Promise.resolve();
   const b = busy;
@@ -129,8 +128,7 @@ function finishBusy() {
   b.finishing = true;
   cancelAnimationFrame(b.raf);
   clearInterval(b.poll);
-  const fast = b.kind !== 'submit' && b.kind !== 'ppcut' && !PHOTO_PHASES.has(b.kind);
-  const duration = Math.max(350,fast ? MIN_FAST_MS - elapsed : 0);
+  const duration = 350;
   const from = b.shown;
   const t0 = now;
   return new Promise(resolve => {

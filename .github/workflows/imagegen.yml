@@ -18,6 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     # Sessione fino a 60 minuti (service.py, SESSION_MAX_SECONDS) + avvio e pulizia.
     timeout-minutes: 65
+    env:
+      # Scontorno fine delle fasi con foto (grafica finale). Prova: BiRefNet Portrait completo,
+      # più lento: si aspetta fino a 60 s, poi ISNet. Per tornare alla lite: birefnet-general-lite / 20.
+      PHASE_FINE_MODEL: birefnet-portrait
+      PHASE_FINE_WAIT: '60'
 
     steps:
       - name: Checkout ImageGEN JR
@@ -64,7 +69,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.rembg
-          key: rembg-isnet-birefnet-lite-v1
+          key: rembg-isnet-birefnet-portrait-v1
 
       - name: Prepara Chrome per le grafiche
         shell: bash
