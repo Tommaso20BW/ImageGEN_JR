@@ -13,6 +13,7 @@ Come si legge la pagina (struttura controllata il 28/10/2026 su "Genoa-Juventus"
 Gli articoli si trovano nelle pagine elenco del sito (link /it/news/articoli/...-convocati...);
 se l'elenco non risponde si può passare il link di un articolo preciso.
 """
+import log
 import html
 import json
 import re
@@ -178,7 +179,7 @@ def _players(page, article):
             votes[num][text] = votes[num].get(text, 0) + 1
             order.setdefault(text, len(order))
     found = {num: max(cands, key=lambda text: (cands[text], -order[text])) for num, cands in votes.items()}
-    print(f'INFO IMAGEGEN: convocati letti per metodo {counts} -> {len(found)}', flush=True)
+    log.info('DATI', f'Convocati letti: {len(found)} (per metodo {counts})')
     return [found[k] for k in sorted(found)]
 
 
@@ -295,7 +296,7 @@ def fetch(url=''):
         try:
             return _article(link)
         except ConvocatiError as exc:
-            print(f'WARN IMAGEGEN: convocati {link}: {exc}', flush=True)
+            log.warn('DATI', f'Convocati {link}: {exc}')
             return None
 
     with ThreadPoolExecutor(max_workers=6) as pool:

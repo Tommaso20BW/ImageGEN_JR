@@ -7,6 +7,7 @@ Ogni salvataggio:
   2. pubblica overrides.json e i loghi nel repo degli asset con UN solo commit
      (API Git di GitHub, token IMAGEGEN_ASSETS_PAT): mai mezzi salvataggi.
 """
+import log
 import base64
 import hashlib
 import io
@@ -332,7 +333,7 @@ def save(request, assets, manifest_rows, photos, env=None):
         what = 'cancellate le personalizzazioni di' if entry is None else 'aggiornata'
         ok, why = _commit(changes, f'Squadre e loghi: {what} {label} (mini app ImageGen)', env)
     if not ok:
-        print(f'WARN IMAGEGEN: correzione squadra salvata solo per questa sessione ({why})', flush=True)
+        log.warn('SALVATAGGIO', f'Correzione squadra salvata solo per questa sessione ({why})')
     else:
-        print(f'INFO IMAGEGEN: correzione squadra pubblicata | {key}', flush=True)
+        log.info('SALVATAGGIO', f'Correzione squadra pubblicata | {key}')
     return {'key': key, 'entry': entry, 'remote': ok, 'warning': '' if ok else why}

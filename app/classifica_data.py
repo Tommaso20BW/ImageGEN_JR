@@ -4,6 +4,7 @@ Viene dal vecchio bot Classifica_JR (aggiorna_classifica.py): stessa lettura del
 pagina, stessi controlli e stesse fasce colorate. Qui la classifica non si salva su
 file: `fetch()` la restituisce alla grafica.
 """
+import log
 import os
 import re
 import time
@@ -175,7 +176,7 @@ def _logo_grande_diretta(team_url: str, fallback: str) -> str:
                 return _LOGHI_TROVATI[team_url]
             break
         except Exception as exc:
-            print(f"⚠️  Logo grande non disponibile per {team_url} (tentativo {tentativo}): {exc}")
+            log.warn('CLASSIFICA', f"Logo grande non disponibile per {team_url} (tentativo {tentativo}): {exc}")
             if tentativo == 1:
                 time.sleep(1.5)
     return fallback
@@ -206,10 +207,8 @@ def _loghi_grandi_diretta(raw_rows: list[dict]) -> list[str]:
         logo and logo != raw.get("logo", "")
         for logo, raw in zip(loghi, raw_rows)
     )
-    print(
-        f"🖼️  Loghi ad alta risoluzione: "
-        f"{trovati}/{len(raw_rows)}."
-    )
+    log.info('CLASSIFICA', f"Loghi ad alta risoluzione: "
+        f"{trovati}/{len(raw_rows)}.")
     if trovati != len(raw_rows):
         raise RuntimeError(
             "non tutte le squadre espongono il logo Diretta.it da 100x100; "
@@ -282,23 +281,17 @@ def _applica_zone_serie_a(
     if coppa_italia_decisa and definitive_disponibili:
         modalita = "definitive_diretta"
         zone = zone_diretta
-        print(
-            "🏆 Coppa Italia conclusa: uso le fasce europee definitive "
-            "pubblicate da Diretta.it."
-        )
+        log.info('CLASSIFICA', "Coppa Italia conclusa: uso le fasce europee definitive "
+            "pubblicate da Diretta.it.")
     else:
         modalita = "provvisorie_coppa_italia"
         zone = ZONE_SERIE_A_PROVVISORIE
         if coppa_italia_decisa:
-            print(
-                "⚠️  Finale conclusa ma fasce definitive non ancora complete "
-                "su Diretta.it: mantengo temporaneamente le fasce provvisorie."
-            )
+            log.warn('CLASSIFICA', "Finale conclusa ma fasce definitive non ancora complete "
+                "su Diretta.it: mantengo temporaneamente le fasce provvisorie.")
         else:
-            print(
-                "ℹ️  Coppa Italia non ancora conclusa: 5ª Europa League, "
-                "6ª Conference League."
-            )
+            log.info('CLASSIFICA', "Coppa Italia non ancora conclusa: 5ª Europa League, "
+                "6ª Conference League.")
 
     for row in classifica:
         row["zone"] = zone.get(row["pos"], "")
@@ -337,13 +330,11 @@ def _coppa_italia_decisa(page, url: str) -> bool:
             and "vincitore:" in finale.get("match", "").lower()
         )
         stato = "conclusa" if decisa else "non conclusa"
-        print(f"🏆 Coppa Italia {stato}: {resolved_url}")
+        log.info('CLASSIFICA', f"Coppa Italia {stato}: {resolved_url}")
         return decisa
     except Exception as exc:
-        print(
-            "⚠️  Stato Coppa Italia non verificabile; per sicurezza considero "
-            f"le fasce ancora provvisorie: {exc}"
-        )
+        log.warn('CLASSIFICA', "Stato Coppa Italia non verificabile; per sicurezza considero "
+            f"le fasce ancora provvisorie: {exc}")
         return False
 
 
@@ -406,7 +397,7 @@ def scrape_standings_diretta(
             finally:
                 browser.close()
     except Exception as exc:
-        print(f"❌ Errore durante l'estrazione da Diretta.it: {exc}")
+        log.warn('CLASSIFICA', f"Errore durante l'estrazione da Diretta.it: {exc}")
         return None
 
     try:
@@ -476,10 +467,10 @@ def scrape_standings_diretta(
 
         giornata = max((row["p"] for row in classifica), default=0) or 1
         stagione = stagione_da_testo(titolo)
-        print(f"🌐 Pagina risolta: {resolved_url}")
+        log.info('CLASSIFICA', f"Pagina risolta: {resolved_url}")
         return classifica, giornata, stagione, coppa_italia_decisa
     except Exception as exc:
-        print(f"❌ Formato classifica Diretta.it non valido: {exc}")
+        log.warn('CLASSIFICA', f"Formato classifica Diretta.it non valido: {exc}")
         return None
 
 
@@ -494,7 +485,7 @@ def fetch(comp_key: str) -> dict:
     if not comp:
         raise ClassificaError("Competizione non valida: scegli Serie A, Champions, Europa o Conference.")
 
-    print(f"INFO IMAGEGEN: classifica {comp['nome']} da Diretta.it", flush=True)
+    log.info('CLASSIFICA', f"{comp['nome']}: leggo la classifica da Diretta.it")
     risultato = scrape_standings_diretta(
         comp["url"],
         COPPA_ITALIA_RISULTATI_URL if comp_key == "SA" else "",

@@ -1,4 +1,5 @@
 """Adapters to the production graphics core."""
+import log
 from functools import lru_cache
 import io
 import json
@@ -190,7 +191,7 @@ class Renderer:
             try:
                 cached = motion_trail.apply(photo, self.cutout(key))
             except Exception as exc:  # noqa: BLE001 - meglio la foto senza scia che nessuna grafica
-                print(f'WARN IMAGEGEN: effetto movimento non riuscito: {type(exc).__name__}: {exc}', flush=True)
+                log.warn('GRAFICA', f'Effetto movimento non riuscito: {type(exc).__name__}: {exc}')
                 return photo
             with self.cutout_lock:
                 self.trails[key] = cached
@@ -346,13 +347,13 @@ class Renderer:
                 import inspect
                 from graphics import backdrop
                 if 'text_shadow' not in inspect.signature(p.phase).parameters:
-                    print('WARN IMAGEGEN: portrait.phase() del motore LiveScore_JR NON accetta '
-                          '`text_shadow`: ombra calcolata ma NON applicata', flush=True)
+                    log.warn('GRAFICA', 'portrait.phase() del motore LiveScore_JR NON accetta '
+                          '`text_shadow`: ombra calcolata ma NON applicata')
                     return
                 decision = backdrop.shadow_for(kind, self._photo(data), data['frame'])
                 phase_args['text_shadow'] = decision
-                print(f'INFO IMAGEGEN: sfondo {kind} contrasto {decision["contrast"]} '
-                      f'ombra {decision["strength"]}', flush=True)
+                log.info('GRAFICA', f'Sfondo {kind} contrasto {decision["contrast"]} '
+                      f'ombra {decision["strength"]}')
 
             if ghost:
                 return phase_layers.ghost(draw)

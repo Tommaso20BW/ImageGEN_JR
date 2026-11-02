@@ -7,6 +7,7 @@ durante lo scatto. Uscita 1920x2560 con la texture sopra, come prima.
 Le immagini (sfondi, loghi delle coppe, texture, loghi Juventus e Roma) stanno nella
 repo asset, in canva/classifica/.
 """
+import log
 import base64
 import io
 import json
@@ -150,7 +151,7 @@ def _embed_logos(data):
         except Exception as exc:  # noqa: BLE001 - si riassume sotto
             errors.append(f'{url}: {exc}')
     if errors:
-        print('WARN IMAGEGEN: loghi classifica non scaricati:\n' + '\n'.join(errors), flush=True)
+        log.warn('DATI', 'Loghi classifica non scaricati:\n' + '\n'.join(errors))
         raise ValueError(f'Non riesco a scaricare {len(errors)} loghi della classifica. Riprova tra poco.')
     for row in rows:
         for f in fields:
@@ -173,7 +174,7 @@ def _font_css(css_url):
             text = text.replace(url, f'data:font/{fmt};base64,' + base64.b64encode(font.content).decode('ascii'))
         _fonts[css_url] = text
     except Exception as exc:  # noqa: BLE001 - meglio i font di sistema che nessuna grafica
-        print(f'WARN IMAGEGEN: font della classifica non scaricati: {exc}', flush=True)
+        log.warn('DATI', f'Font della classifica non scaricati: {exc}')
         return ''
     return text
 

@@ -4,6 +4,7 @@ Ogni run costruisce un pacchetto fresco (manifest + loghi ridotti come data URI)
 che la Mini App scarica una sola volta dal tunnel del workflow: nessuna cache
 vecchia e nessun caricamento di immagini esterne mentre si usa l'app.
 """
+import log
 import base64
 import io
 import json
@@ -80,7 +81,7 @@ def _prepare(assets, team):
             row['logo'] = _to_data_uri(Path(custom).read_bytes())
             row['logo_custom'] = True
     except Exception as exc:  # un logo rotto non deve bloccare il workflow
-        print(f'WARN IMAGEGEN: logo non preparato per {team.get("name")}: {exc}', flush=True)
+        log.warn('AVVIO', f'Logo non preparato per {team.get("name")}: {exc}')
     return row
 
 
@@ -111,13 +112,13 @@ def build_team_bundle(assets=g.DEFAULT_ASSET_DIR):
     with ThreadPoolExecutor(max_workers=8) as pool:
         rows = list(pool.map(lambda team: _prepare(assets, team), teams))
     ready = sum(1 for row in rows if row.get('logo'))
-    print(f'INFO IMAGEGEN: loghi incorporati {ready}/{len(rows)}', flush=True)
+    log.info('AVVIO', f'Loghi incorporati: {ready}/{len(rows)}')
     try:
         players = _players()
     except Exception as exc:  # la Mini App ripiega sul download da GitHub
-        print(f'WARN IMAGEGEN: calciatori non preparati: {exc}', flush=True)
+        log.warn('AVVIO', f'Calciatori non preparati: {exc}')
         players = []
-    print(f'INFO IMAGEGEN: calciatori nel pacchetto {len(players)}', flush=True)
+    log.info('AVVIO', f'Calciatori nel pacchetto: {len(players)}')
     return json.dumps(
         {**manifest, 'teams': rows, 'players': players, 'shirts': dict(SHIRT_NUMBERS)}, ensure_ascii=False
     ).encode('utf-8')

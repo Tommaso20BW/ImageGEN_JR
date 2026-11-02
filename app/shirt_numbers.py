@@ -4,6 +4,7 @@ Quando si invia una Starting XI, i numeri nuovi o cambiati vengono salvati con
 un commit nel repository ImageGEN_JR (API GitHub, token del workflow
 passato come IMAGEGEN_GH_PAT; serve contents: write in imagegen.yml).
 """
+import log
 import base64
 import json
 import os
@@ -58,7 +59,7 @@ def save(updates, env=None, session=None):
         text = json.dumps(data, ensure_ascii=False, indent=1) + '\n'
         LOCAL.write_text(text, encoding='utf-8')
         if not token or not repo:
-            print('WARN IMAGEGEN: numeri di maglia salvati solo per questa sessione (token mancante)', flush=True)
+            log.warn('SALVATAGGIO', 'Numeri di maglia salvati solo per questa sessione (token mancante)')
             return False
         http = session or requests
         headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json',
@@ -67,7 +68,7 @@ def save(updates, env=None, session=None):
         for _attempt in range(2):
             current = http.get(url, headers=headers, params={'ref': 'main'}, timeout=20)
             if current.status_code != 200:
-                print(f'WARN IMAGEGEN: numeri di maglia non salvati (lettura HTTP {current.status_code})', flush=True)
+                log.warn('SALVATAGGIO', f'Numeri di maglia non salvati (lettura HTTP {current.status_code})')
                 return False
             remote = json.loads(base64.b64decode(current.json()['content']).decode('utf-8'))
             remote.update(updates)
@@ -79,10 +80,10 @@ def save(updates, env=None, session=None):
             }
             put = http.put(url, headers=headers, json=body, timeout=20)
             if put.status_code in (200, 201):
-                print(f'INFO IMAGEGEN: numeri di maglia salvati nel repository | {updates}', flush=True)
+                log.info('SALVATAGGIO', f'Numeri di maglia salvati nel repository | {updates}')
                 return True
             if put.status_code != 409:              # 409 = file cambiato nel frattempo: riprova
                 break
-        print(f'WARN IMAGEGEN: numeri di maglia non salvati (scrittura HTTP {put.status_code}); '
-              'serve contents: write nel workflow imagegen.yml', flush=True)
+        log.warn('SALVATAGGIO', f'Numeri di maglia non salvati (scrittura HTTP {put.status_code}); '
+              'serve contents: write nel workflow imagegen.yml')
         return False

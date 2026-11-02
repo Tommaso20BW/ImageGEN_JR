@@ -3,6 +3,7 @@
 ImageGEN receives Mini App payloads through a temporary HTTPS tunnel instead of
 Telegram getUpdates. This lets it coexist with LiveScore on the same bot token.
 """
+import log
 import copy
 import hashlib
 import io
@@ -105,7 +106,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
     def _read_envelope(self):
         if self.headers.get('X-ImageGEN-Session', '') != self.service.session:
-            print(f'WARN IMAGEGEN: {self.path} respinta: sessione non valida', flush=True)
+            log.warn('RICHIESTA', f'{self.path} respinta: sessione non valida')
             self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
             return None
 
@@ -115,7 +116,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             length = 0
 
         if length <= 0 or length > 16384:
-            print(f'WARN IMAGEGEN: {self.path} respinta: lunghezza {length}', flush=True)
+            log.warn('RICHIESTA', f'{self.path} respinta: lunghezza {length}')
             self._json(413, {'ok': False, 'error': 'Richiesta non valida.'})
             return None
 
@@ -123,7 +124,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             raw = self.rfile.read(length)
             return json.loads(raw.decode('utf-8'))
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
-            print(f'WARN IMAGEGEN: {self.path} respinta: JSON non valido', flush=True)
+            log.warn('RICHIESTA', f'{self.path} respinta: JSON non valido')
             self._json(400, {'ok': False, 'error': 'JSON non valido.'})
             return None
 
@@ -228,10 +229,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
             import juventus_convocati
             try:
                 items = juventus_convocati.fetch(query.get('url', ''))
-                print(f'INFO IMAGEGEN: convocati dal sito: {len(items)}', flush=True)
+                log.info('DATI', f'Convocati dal sito: {len(items)}')
                 self._json(200, {'ok': True, 'items': items})
             except ValueError as exc:
-                print(f'WARN IMAGEGEN: convocati non letti: {exc}', flush=True)
+                log.warn('DATI', f'Convocati non letti: {exc}')
                 self._json(400, {'ok': False, 'error': str(exc)})
             return
         if parts.path.rstrip('/') == '/probabili_info':
@@ -252,10 +253,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
             import probabili_web
             try:
                 lineup = probabili_web.fetch(query.get('source', ''))
-                print(f"INFO IMAGEGEN: probabili {lineup['source']} | {lineup['module']}", flush=True)
+                log.info('DATI', f"Probabili lette da {lineup['source']} · modulo {lineup['module']}")
                 self._json(200, {'ok': True, 'lineup': lineup})
             except ValueError as exc:
-                print(f'WARN IMAGEGEN: probabili non lette: {exc}', flush=True)
+                log.warn('DATI', f'Probabili non lette: {exc}')
                 self._json(400, {'ok': False, 'error': str(exc)})
             return
         if parts.path.rstrip('/') == '/session':
@@ -372,14 +373,14 @@ class _DirectHandler(BaseHTTPRequestHandler):
         except BusyError as exc:
             self._json(409, {'ok': False, 'error': str(exc)})
         except ValueError as exc:
-            print(f'WARN IMAGEGEN: {path} respinta: {exc}', flush=True)
+            log.warn('RICHIESTA', f'{path} respinta: {exc}')
             self._json(400, {'ok': False, 'error': str(exc)})
         except DeliveryUncertain:
             self._json(502, {'ok': False, 'error': 'Invio incerto: controlla se la foto è arrivata.'})
         except TelegramError:
             self._json(502, {'ok': False, 'error': 'Telegram ha rifiutato la foto. Riapri ImageGEN e riprova.'})
         except Exception as exc:  # pragma: no cover - defensive fallback
-            print(f'ERROR IMAGEGEN: {type(exc).__name__}: {exc}', flush=True)
+            log.error('RICHIESTA', f'{path} non riuscita: {log.exc_text(exc)}')
             self._json(500, {'ok': False, 'error': 'Errore interno ImageGEN.'})
 
 
@@ -427,7 +428,7 @@ class Service:
         self.photos[photo_id] = raw
         while len(self.photos) > MAX_PHOTOS:
             self.photos.pop(next(iter(self.photos)))
-        print(f'INFO IMAGEGEN: foto caricata | id={photo_id} | {width}x{height}', flush=True)
+        log.info('FOTO', f'Foto caricata · {width}×{height}')
         return {'photo_id': photo_id, 'width': width, 'height': height}
 
     def _expires_ms(self):
@@ -449,11 +450,11 @@ class Service:
             if to_max and left > 0 and self.deadline < limit and not self.stopped:
                 self.deadline = limit
                 extended = True
-                print(f'INFO IMAGEGEN: sessione al massimo | mancano {self.deadline - now:.0f}s', flush=True)
+                log.info('SESSIONE', f'Sessione già al massimo · restano {(self.deadline - now) / 60:.0f} min')
             elif 0 < left <= EXTEND_WHEN_LEFT_SECONDS + 5 and self.deadline < limit and not self.stopped:
                 self.deadline = min(self.deadline + EXTEND_BY_SECONDS, limit)
                 extended = True
-                print(f'INFO IMAGEGEN: sessione allungata | mancano {self.deadline - now:.0f}s', flush=True)
+                log.info('SESSIONE', f'Sessione allungata · restano {(self.deadline - now) / 60:.0f} min')
         return {**self.session_info(), 'extended': extended}
 
     def layouts(self):
@@ -479,7 +480,7 @@ class Service:
             layouts.delete(module)
             return {'module': module}
         layout = layouts.clean(module, envelope.get('layout'))
-        print(f"INFO IMAGEGEN: posizioni {module} ricevute da Fatto | {round(layout['scale'] * 100)}%", flush=True)
+        log.info('SALVATAGGIO', f"Posizioni {module} ricevute dalla Mini App · scala {round(layout['scale'] * 100)}%")
         threading.Thread(target=self._save_layout, args=(module, layout), daemon=True).start()
         return layout
 
@@ -494,17 +495,17 @@ class Service:
         try:
             import layouts
             if data['layout'] != layouts.get(data['module']):
-                print(f"INFO IMAGEGEN: posizioni {data['module']} nuove dall'anteprima, le salvo", flush=True)
+                log.info('SALVATAGGIO', f"Posizioni {data['module']} nuove dall'anteprima: le salvo")
                 threading.Thread(target=self._save_layout, args=(data['module'], data['layout']), daemon=True).start()
         except Exception as exc:
-            print(f'WARN IMAGEGEN: posizioni non controllate: {type(exc).__name__}: {exc}', flush=True)
+            log.warn('SALVATAGGIO', f'Posizioni non controllate: {type(exc).__name__}: {exc}')
 
     def _save_layout(self, module, layout):
         try:
             import layouts
             layouts.save(module, layout)
         except Exception as exc:
-            print(f'WARN IMAGEGEN: posizioni non salvate: {type(exc).__name__}: {exc}', flush=True)
+            log.warn('SALVATAGGIO', f'Posizioni non salvate: {type(exc).__name__}: {exc}')
 
     def page_background(self, kit, graphic=''):
         """Sfondo di pagina della maglia/competizione, ridotto (540x720), per l'editor foto."""
@@ -569,7 +570,7 @@ class Service:
         except Exception as exc:  # noqa: BLE001 - l'errore va alla Mini App, non al server
             job['error'] = str(exc) if isinstance(exc, ValueError) else 'Scontorno non riuscito.'
             job['state'] = 'error'
-            print(f'WARN IMAGEGEN: scontorno non riuscito: {type(exc).__name__}: {exc}', flush=True)
+            log.warn('FOTO', f'Scontorno non riuscito: {type(exc).__name__}: {exc}')
 
     def cutout_preview(self, photo_id):
         """Persona scontornata, ridotta per l'editor (l'invio usa quella piena)."""
@@ -596,7 +597,7 @@ class Service:
     def request_stop(self):
         """End the active session immediately and let run() perform normal cleanup."""
         if not self.stopped:
-            print('INFO IMAGEGEN: chiusura richiesta dalla Mini App', flush=True)
+            log.info('SESSIONE', 'Chiusura richiesta dalla Mini App')
         self.stopped = True
 
     def _remember_bot_message(self, message_id):
@@ -632,10 +633,7 @@ class Service:
             ):
                 return cached['png'], cached.get('request_id') or request_state['id']
 
-        print(
-            f"INFO IMAGEGEN: render {data['kind']} | id={request_state['id']} | mode=preview",
-            flush=True,
-        )
+        log.info('ANTEPRIMA', f"{log.graphic_name(data)}: preparo l'anteprima")
         self._set_stage('render')
         png = self.renderer.render(data, progress=self._set_stage)
 
@@ -659,7 +657,7 @@ class Service:
             request_state = self._parse_request(envelope)
             self._remember_layout(request_state['data'])
             png, _ = self._render_and_cache(request_state)
-            print(f"INFO IMAGEGEN: anteprima pronta | {request_state['data']['kind']} | {time.time() - started:.1f}s", flush=True)
+            log.info('ANTEPRIMA', f"{log.graphic_name(request_state['data'])}: anteprima pronta in {time.time() - started:.1f} s")
             return png
         finally:
             self._set_stage('idle')
@@ -700,7 +698,7 @@ class Service:
             if updates and shirt_numbers.save(updates):
                 logo_bundle.SHIRT_NUMBERS.update(updates)
         except Exception as exc:
-            print(f'WARN IMAGEGEN: numeri di maglia non salvati: {type(exc).__name__}: {exc}', flush=True)
+            log.warn('SALVATAGGIO', f'Numeri di maglia non salvati: {type(exc).__name__}: {exc}')
 
     def fixtures(self, start, end):
         """Partite Juventus fra due date (AAAA-MM-GG, ora italiana), dal calendario ESPN."""
@@ -715,7 +713,7 @@ class Service:
             stop = datetime.fromisoformat(end).replace(tzinfo=rome) + timedelta(days=1) if end else None
             return fixtures.matches(_logo_rows(str(asset_dir())), begin, stop)
         except Exception as exc:
-            print(f'WARN IMAGEGEN: calendario ESPN non disponibile: {type(exc).__name__}: {exc}', flush=True)
+            log.warn('DATI', f'Calendario ESPN non disponibile: {type(exc).__name__}: {exc}')
             return []
 
     def settings(self, envelope):
@@ -787,7 +785,7 @@ class Service:
         try:
             self.catalog_bundle = build_team_bundle()
         except Exception as exc:
-            print(f'WARN IMAGEGEN: pacchetto loghi non rifatto: {type(exc).__name__}: {exc}', flush=True)
+            log.warn('AVVIO', f'Pacchetto loghi non rifatto: {type(exc).__name__}: {exc}')
 
     def espn_teams(self):
         """Squadre del calendario Juventus su ESPN (stagione in corso e precedente, prossime partite)."""
@@ -801,7 +799,7 @@ class Service:
             if last.ok:
                 events += last.json().get('events', [])
         except Exception as exc:
-            print(f'WARN IMAGEGEN: squadre ESPN non disponibili: {type(exc).__name__}: {exc}', flush=True)
+            log.warn('DATI', f'Squadre ESPN non disponibili: {type(exc).__name__}: {exc}')
             return []
         for e in events:
             league = (e.get('league') or {}).get('name') or ''
@@ -818,7 +816,7 @@ class Service:
             import fixtures
             return fixtures.kit(event_id, league)
         except Exception as exc:
-            print(f'WARN IMAGEGEN: maglia non trovata su ESPN: {type(exc).__name__}: {exc}', flush=True)
+            log.warn('DATI', f'Maglia non trovata su ESPN: {type(exc).__name__}: {exc}')
             return ''
 
     def fixture(self, opponent, side):
@@ -833,7 +831,7 @@ class Service:
             home = {'home': True, 'away': False}.get(side)
             return fixtures.find(names, home=home)
         except Exception as exc:
-            print(f'WARN IMAGEGEN: partita non trovata su ESPN: {type(exc).__name__}: {exc}', flush=True)
+            log.warn('DATI', f'Partita non trovata su ESPN: {type(exc).__name__}: {exc}')
             return None
 
     def preview_jpeg(self, png):
@@ -850,7 +848,7 @@ class Service:
         # Un nuovo tentativo della Mini App (rete instabile) aspetta il primo invece di fallire.
         asked = time.time()
         if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
-            print(f'WARN IMAGEGEN: invio rifiutato, servizio occupato da {LOCK_WAIT_SECONDS}s', flush=True)
+            log.warn('INVIO', f'Invio rifiutato: servizio occupato da {LOCK_WAIT_SECONDS} s')
             raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
         waited = time.time() - asked
         try:
@@ -861,7 +859,7 @@ class Service:
             # Stessa grafica appena inviata (risposta persa per strada): niente doppione.
             sent = self.recent_sends.get(fingerprint)
             if sent and time.time() - sent[1] < RESEND_GUARD_SECONDS:
-                print(f"INFO IMAGEGEN: invio già fatto, non ripeto | kind={data['kind']}", flush=True)
+                log.info('INVIO', f"{log.graphic_name(data)}: già inviata poco fa, non la rimando")
                 return sent[0]
 
             with self.preview_cache_lock:
@@ -876,10 +874,7 @@ class Service:
                     png = None
 
             if png is None:
-                print(
-                    f"INFO IMAGEGEN: render {data['kind']} | id={request_state['id']} | mode=submit",
-                    flush=True,
-                )
+                log.info('INVIO', f"{log.graphic_name(data)}: preparo la grafica da inviare")
                 png = self.renderer.render(data)
                 with self.preview_cache_lock:
                     self.preview_cache = {
@@ -890,10 +885,7 @@ class Service:
                         'updated': time.time(),
                     }
             else:
-                print(
-                    f"INFO IMAGEGEN: submit cached preview | kind={data['kind']} | id={request_state['id']}",
-                    flush=True,
-                )
+                log.info('INVIO', f"{log.graphic_name(data)}: uso l'anteprima già pronta")
 
             sending = time.time()
             try:
@@ -902,15 +894,17 @@ class Service:
                     f"{data['kind']}-{request_state['id']}.png",
                 )
             except Exception as exc:
-                print(f'WARN IMAGEGEN: Telegram non ha confermato | {type(exc).__name__} | '
-                      f'{time.time() - sending:.1f}s | {len(png) // 1024} KB', flush=True)
+                log.warn('INVIO', f"{log.graphic_name(data)}: Telegram non ha confermato "
+                                  f'({type(exc).__name__}, {time.time() - sending:.1f} s, {log.kb(len(png))})')
                 raise
             self.generated_message_ids.append(int(message_id))
             self.recent_sends[fingerprint] = (int(message_id), time.time())
             if data['kind'] == 'xi':
                 threading.Thread(target=self._remember_shirts, args=(data['lineup'],), daemon=True).start()
-            print(f"INFO IMAGEGEN: foto PNG inviata | id={request_state['id']} | attesa {waited:.1f}s | "
-                  f"Telegram {time.time() - sending:.1f}s | {len(png) // 1024} KB", flush=True)
+            took = time.time() - sending
+            log.info('INVIO', f"{log.graphic_name(data)}: inviata su Telegram · {log.kb(len(png))} in {took:.1f} s"
+                              + (f' (in coda {waited:.1f} s)' if waited >= 1 else ''))
+            log.sent(log.graphic_name(data), f'{log.kb(len(png))} · {took:.1f} s')
             return int(message_id)
         finally:
             self.operation_lock.release()
@@ -932,7 +926,7 @@ class Service:
             daemon=True,
         )
         self.http_thread.start()
-        print(f'INFO IMAGEGEN: endpoint locale pronto | port={port}', flush=True)
+        log.info('AVVIO', f'Servizio locale pronto · porta {port}')
 
     def _stop_http_server(self):
         if self.http_server is not None:
@@ -962,7 +956,7 @@ class Service:
 
         try:
             self.telegram.delete_many(ids)
-            print(f'INFO IMAGEGEN: messaggi cancellati | n={len(ids)}', flush=True)
+            log.info('SESSIONE', f'Messaggi della sessione cancellati: {len(ids)}')
             return
         except TelegramError:
             pass
@@ -978,10 +972,8 @@ class Service:
                         time.sleep(1.5)
             else:
                 failed += 1
-        print(
-            f'INFO IMAGEGEN: messaggi cancellati | n={len(ids) - failed} | falliti={failed}',
-            flush=True,
-        )
+        (log.warn if failed else log.info)('SESSIONE', f'Messaggi della sessione cancellati: {len(ids) - failed}'
+            + (f' · non cancellati: {failed}' if failed else ''))
 
     def cleanup(self):
         # Se un render/invio è ancora in corso, lo si lascia finire: così anche
@@ -1030,12 +1022,10 @@ class Service:
                 last = f'{type(exc).__name__}: {exc}'[:120]
             streak = streak + 1 if ok else 0
             if streak >= TUNNEL_READY_STREAK:
-                print(f'INFO IMAGEGEN: tunnel pronto | {time.monotonic() - start:.1f}s | tentativi={attempts}',
-                      flush=True)
+                log.info('TUNNEL', f'Tunnel raggiungibile da internet in {time.monotonic() - start:.1f} s ({attempts} prove)')
                 return True
             time.sleep(0.7 if ok else 1.5)
-        print(f'WARN IMAGEGEN: tunnel non pronto | {time.monotonic() - start:.1f}s | tentativi={attempts} | {last}',
-              flush=True)
+        log.warn('TUNNEL', f'Tunnel non raggiungibile dopo {time.monotonic() - start:.0f} s ({attempts} prove) · {last}')
         return False
 
     def run(self, duration=SESSION_DURATION_SECONDS):
@@ -1051,7 +1041,7 @@ class Service:
         try:
             self.catalog_bundle = build_team_bundle()
         except Exception as exc:
-            print(f'WARN IMAGEGEN: pacchetto loghi non disponibile: {type(exc).__name__}: {exc}', flush=True)
+            log.warn('AVVIO', f'Pacchetto loghi non disponibile: {type(exc).__name__}: {exc}')
 
         self._start_http_server()
         # Browser per le grafiche acceso subito: la prima anteprima non aspetta l'avvio.
@@ -1083,6 +1073,8 @@ class Service:
             pass
 
         self.launcher_message_id = self.telegram.webapp_launcher(launch_url)
+        opened = log.now()
+        log.info('SESSIONE', f'Pulsante inviato su Telegram · sessione aperta per {session_seconds / 60:.0f} min')
 
         try:
             # self.deadline può spostarsi in avanti (extend) mentre la sessione è aperta.
@@ -1091,15 +1083,17 @@ class Service:
         finally:
             self._stop_http_server()
             self.cleanup()
+            log.info('SESSIONE', 'Sessione chiusa')
+            log.write_summary(opened, log.now())
 
 
 def _warm_up_renderer():
     try:
         from graphics.common import warm_up
         warm_up()
-        print('INFO IMAGEGEN: browser grafiche pronto', flush=True)
+        log.info('AVVIO', 'Browser grafiche pronto')
     except Exception as exc:
-        print(f'WARN IMAGEGEN: browser grafiche non avviato: {type(exc).__name__}: {exc}', flush=True)
+        log.warn('AVVIO', f'Browser grafiche non avviato: {type(exc).__name__}: {exc}')
 
 
 def _lower_priority():
@@ -1119,9 +1113,9 @@ def _warm_up_cutout():
         from livescore.graphics import phase_layers
         from PIL import Image
         phase_layers.cutout(Image.new('RGB', (64, 64)))
-        print('INFO IMAGEGEN: scontorno pronto', flush=True)
+        log.info('AVVIO', 'Scontorno pronto')
     except Exception as exc:
-        print(f'WARN IMAGEGEN: scontorno non avviato: {type(exc).__name__}: {exc}', flush=True)
+        log.warn('AVVIO', f'Scontorno non avviato: {type(exc).__name__}: {exc}')
 
 
 def main():
@@ -1153,8 +1147,8 @@ if __name__ == '__main__':
     try:
         main()
     except TunnelNotReady as exc:
-        print(f'WARN IMAGEGEN: {exc}: riprovo con un tunnel nuovo', flush=True)
+        log.warn('TUNNEL', 'Tunnel non raggiungibile: il workflow ne apre uno nuovo')
         raise SystemExit(TUNNEL_NOT_READY_EXIT)
     except Exception as exc:
-        print(f'ERROR IMAGEGEN: {type(exc).__name__}: {exc}', flush=True)
+        log.error('AVVIO', f'Servizio fermato: {log.exc_text(exc)}')
         raise SystemExit(1)

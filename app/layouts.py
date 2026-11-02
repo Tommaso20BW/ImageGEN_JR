@@ -6,6 +6,7 @@ il suo pezzo di file; puoi aggiungere moduli nuovi (+) o cancellare quelli che n
 Il salvataggio va nel repository con un commit via API GitHub (token del workflow,
 contents: write in imagegen.yml), come i numeri di maglia.
 """
+import log
 import base64
 import json
 import math
@@ -167,7 +168,7 @@ def _persist(change, message, env=None, session=None):
         LOCAL.parent.mkdir(parents=True, exist_ok=True)
         LOCAL.write_text(_dump(new), encoding='utf-8')
         if not token or not repo:
-            print('WARN IMAGEGEN: moduli salvati solo per questa sessione (token mancante)', flush=True)
+            log.warn('SALVATAGGIO', 'Moduli salvati solo per questa sessione (token mancante)')
             return False
         http = session or requests
         headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json',
@@ -182,7 +183,7 @@ def _persist(change, message, env=None, session=None):
             elif current.status_code == 404:          # primo salvataggio: il file non c'è ancora
                 remote, sha = {}, None
             else:
-                print(f'WARN IMAGEGEN: moduli non salvati (lettura HTTP {current.status_code})', flush=True)
+                log.warn('SALVATAGGIO', f'Moduli non salvati (lettura HTTP {current.status_code})')
                 return False
             body = {'message': message, 'content': base64.b64encode(_dump(change(remote)).encode()).decode(),
                     'branch': 'main'}
@@ -191,12 +192,12 @@ def _persist(change, message, env=None, session=None):
             put = http.put(url, headers=headers, json=body, timeout=20)
             status = put.status_code
             if status in (200, 201):
-                print(f'INFO IMAGEGEN: {message} (repository)', flush=True)
+                log.info('SALVATAGGIO', f'{message} (repository)')
                 return True
             if status not in (409, 422):              # file cambiato nel frattempo: riprova
                 break
-        print(f'WARN IMAGEGEN: moduli non salvati (scrittura HTTP {status}); '
-              'serve contents: write nel workflow imagegen.yml', flush=True)
+        log.warn('SALVATAGGIO', f'Moduli non salvati (scrittura HTTP {status}); '
+              'serve contents: write nel workflow imagegen.yml')
         return False
 
 

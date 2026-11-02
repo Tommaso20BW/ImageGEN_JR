@@ -66,15 +66,16 @@ jobs:
           path: ~/.rembg
           key: rembg-isnet-general-use-v1
 
-      - name: Prepara browser per STATS
+      - name: Prepara Chrome per le grafiche
         shell: bash
         run: |
           set -euo pipefail
+          log() { printf '[%s] %-6s %-10s | %s\n' "$(TZ=Europe/Rome date +%H:%M:%S)" "$1" "$2" "$3"; }
 
           CHROME="$(command -v google-chrome || command -v google-chrome-stable || true)"
 
           if [ -n "$CHROME" ]; then
-            echo "Chrome di sistema trovato: $CHROME"
+            log INFO CHROME "Chrome di sistema: $CHROME"
             echo "IMAGEGEN_CHROME=$CHROME" >> "$GITHUB_ENV"
             python - "$CHROME" <<'PY'
           from pathlib import Path
@@ -91,10 +92,9 @@ jobs:
               raise SystemExit("Riga Playwright non trovata in livescore/graphics/stats.py")
 
           path.write_text(text.replace(old, new, 1), encoding="utf-8")
-          print(f"STATS userà Chrome di sistema: {chrome}")
           PY
           else
-            echo "Chrome di sistema non trovato: installo Chromium Playwright come fallback."
+            log WARN CHROME "Chrome di sistema non trovato: installo Chromium (Playwright)"
             playwright install --with-deps chromium
           fi
 
@@ -104,11 +104,12 @@ jobs:
           WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
         run: |
           set -euo pipefail
+          log() { printf '[%s] %-6s %-10s | %s\n' "$(TZ=Europe/Rome date +%H:%M:%S)" "$1" "$2" "$3"; }
 
           EXPECTED="$(sha256sum index.html | awk '{print $1}')"
           ACTUAL=""
 
-          echo "Attendo che GitHub Pages pubblichi l'index.html di questo commit..."
+          log INFO PAGES "Attendo la Mini App di questo commit su GitHub Pages"
 
           for ATTEMPT in $(seq 1 36); do
             URL="${WEBAPP_URL}?v=${GITHUB_SHA}&check=${ATTEMPT}"
@@ -122,19 +123,22 @@ jobs:
               ACTUAL="$(sha256sum /tmp/imagegen_pages.html | awk '{print $1}')"
 
               if [ "$ACTUAL" = "$EXPECTED" ]; then
-                echo "GitHub Pages aggiornato correttamente."
+                log INFO PAGES "Mini App aggiornata (prova ${ATTEMPT})"
                 exit 0
               fi
             fi
 
-            echo "Pages ancora vecchio | tentativo ${ATTEMPT}/36"
+            if [ $((ATTEMPT % 6)) -eq 0 ]; then
+              log INFO PAGES "Ancora la versione vecchia · prova ${ATTEMPT}/36"
+            fi
             sleep 5
           done
 
-          echo "ERRORE: GitHub Pages non ha ancora pubblicato l'index.html corrente."
+          log ERROR PAGES "GitHub Pages non ha pubblicato la Mini App di questo commit"
+          echo "::error title=GitHub Pages::La Mini App di questo commit non è ancora pubblicata."
           exit 1
 
-      - name: Avvia endpoint diretto e generatore Telegram
+      - name: Sessione ImageGen (tunnel e Telegram)
         shell: bash
         env:
           MANUAL_GRAPHICS_TELEGRAM_TOKEN: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_TOKEN }}
@@ -152,10 +156,10 @@ jobs:
           set -euo pipefail
 
           PORT=8765
+          log() { printf '[%s] %-6s %-10s | %s\n' "$(TZ=Europe/Rome date +%H:%M:%S)" "$1" "$2" "$3"; }
           CLOUDFLARED="${RUNNER_TEMP}/cloudflared"
           LOG="${RUNNER_TEMP}/cloudflared.log"
 
-          echo "Preparo il collegamento diretto della Mini App..."
           curl -fsSL \
             https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
             -o "$CLOUDFLARED"
@@ -197,12 +201,12 @@ jobs:
           STATUS=1
           for ATTEMPT in 1 2 3; do
             if ! start_tunnel; then
-              echo "Tunnel $ATTEMPT/3 non avviato."
+              log WARN TUNNEL "Tunnel $ATTEMPT/3 non avviato"
               cat "$LOG" || true
               continue
             fi
             export MANUAL_GRAPHICS_DIRECT_URL="$TUNNEL_URL"
-            echo "Tunnel $ATTEMPT/3 creato: controllo che risponda prima di mandare il pulsante."
+            log INFO TUNNEL "Tunnel $ATTEMPT/3 creato · controllo che risponda prima del pulsante"
 
             # Se il run viene annullato, lo stop arriva sempre a Python, che
             # chiude la sessione e cancella i messaggi prima di uscire.
@@ -221,9 +225,10 @@ jobs:
             if [ "$STATUS" -ne 75 ]; then
               exit "$STATUS"
             fi
-            echo "Tunnel $ATTEMPT/3 non raggiungibile: ne apro uno nuovo."
+            log WARN TUNNEL "Tunnel $ATTEMPT/3 non raggiungibile · ne apro uno nuovo"
           done
-          echo "ERRORE: nessun tunnel raggiungibile dopo 3 tentativi."
+          log ERROR TUNNEL "Nessun tunnel raggiungibile dopo 3 tentativi"
+          echo "::error title=Tunnel::Nessun tunnel raggiungibile dopo 3 tentativi."
           exit 1
 
       - name: Elimina vecchi run ImageGen e Pages
@@ -234,30 +239,30 @@ jobs:
         run: |
           set -euo pipefail
 
-          CURRENT_RUN_ID="${{ github.run_id }}"
+          log() { printf '[%s] %-6s %-10s | %s\n' "$(TZ=Europe/Rome date +%H:%M:%S)" "$1" "$2" "$3"; }
 
-          echo "Pulisco vecchi run di ImageGen..."
-          gh api --paginate \
-            "repos/${{ github.repository }}/actions/workflows/imagegen.yml/runs?per_page=100" \
-            --jq '.workflow_runs[] | select(.status == "completed") | .id' |
+          CURRENT_RUN_ID="${{ github.run_id }}"
+          IMAGEGEN_DELETED=0
+          PAGES_DELETED=0
+
           while read -r RUN_ID; do
             if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "$CURRENT_RUN_ID" ]; then
-              echo "Elimino vecchio run ImageGen $RUN_ID"
-              gh api -X DELETE \
-                "repos/${{ github.repository }}/actions/runs/$RUN_ID" \
-                || true
+              if gh api -X DELETE "repos/${{ github.repository }}/actions/runs/$RUN_ID" >/dev/null 2>&1; then
+                IMAGEGEN_DELETED=$((IMAGEGEN_DELETED + 1))
+              fi
             fi
-          done
+          done < <(gh api --paginate \
+            "repos/${{ github.repository }}/actions/workflows/imagegen.yml/runs?per_page=100" \
+            --jq '.workflow_runs[] | select(.status == "completed") | .id')
 
-          echo "Pulisco vecchi run di pages build and deployment..."
-          gh api --paginate \
-            "repos/${{ github.repository }}/actions/runs?per_page=100" \
-            --jq '.workflow_runs[] | select(.name == "pages build and deployment" and .status == "completed") | .id' |
           while read -r RUN_ID; do
             if [ -n "$RUN_ID" ]; then
-              echo "Elimino vecchio run Pages $RUN_ID"
-              gh api -X DELETE \
-                "repos/${{ github.repository }}/actions/runs/$RUN_ID" \
-                || true
+              if gh api -X DELETE "repos/${{ github.repository }}/actions/runs/$RUN_ID" >/dev/null 2>&1; then
+                PAGES_DELETED=$((PAGES_DELETED + 1))
+              fi
             fi
-          done
+          done < <(gh api --paginate \
+            "repos/${{ github.repository }}/actions/runs?per_page=100" \
+            --jq '.workflow_runs[] | select(.name == "pages build and deployment" and .status == "completed") | .id')
+
+          log INFO PULIZIA "Vecchi run cancellati · ImageGen ${IMAGEGEN_DELETED} · Pages ${PAGES_DELETED}"
