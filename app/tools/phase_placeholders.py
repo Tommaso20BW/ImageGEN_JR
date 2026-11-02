@@ -17,7 +17,8 @@ from livescore.graphics import phase_layers, portrait  # noqa: E402
 PHASES = ('half', 'end_of_90', 'full')
 THEMES = {'home': ('home', 'ita.1'), 'away': ('away', 'ita.1'), 'third': ('third', 'ita.1'),
           'ucl': ('home', 'uefa.champions'), 'uel': ('home', 'uefa.europa'),
-          'conference': ('home', 'uefa.europa.conf')}
+          'conference': ('home', 'uefa.europa.conf'), 'coppa': ('home', 'ita.coppa_italia'), 'supercoppa': ('home', 'ita.super_cup'),
+          'usc': ('home', 'uefa.super_cup'), 'cwc': ('home', 'fifa.cwc')}
 
 
 def main():

@@ -1,4 +1,4 @@
-"""Temi UEFA (UCL / UEL / Conference) e Amichevole per Matchday, Starting XI e Probabile XI.
+"""Temi delle competizioni (UCL / UEL / Conference / Supercoppe / Mondiale per Club) e Amichevole per Matchday, Starting XI e Probabile XI.
 
 Stesso design delle maglie, con i colori della competizione: i livelli Canva di una
 maglia di partenza vengono ricolorati pixel per pixel (anche sfumature e grana).
@@ -31,9 +31,10 @@ from PIL import Image
 from graphics.common import asset_dir
 
 KITS = ('home', 'away', 'third')
-THEMES = ('ucl', 'uel', 'conference', 'friendly')
+THEMES = ('ucl', 'uel', 'conference', 'coppa', 'supercoppa', 'usc', 'cwc', 'friendly')
 ALL = KITS + THEMES
 LABELS = {'ucl': 'Champions League', 'uel': 'Europa League', 'conference': 'Conference League',
+          'coppa': 'Coppa Italia', 'supercoppa': 'Supercoppa Italiana', 'usc': 'Supercoppa UEFA', 'cwc': 'Mondiale per Club',
           'friendly': 'Amichevole'}
 
 PALETTES = {
@@ -55,6 +56,51 @@ PALETTES = {
         'dark': (0, 0, 0),
         'light': (21, 180, 24),      # verde dello sfondo Conference
         'accent': ((0, 0, 0), (20, 20, 20), (46, 46, 46)),
+    },
+    # Coppa Italia Frecciarossa (legaseriea.it): parte dalla Third come l'UCL -> sfumature
+    # rosso scuro, scritte e loghi bianchi (Matchday, Starting XI, Probabile XI; le grafiche
+    # LiveScore restano in rosso). Probabile XI: rettangolo dei nomi rosso, testo bianco.
+    'coppa': {
+        'base': 'third',
+        'dark': (124, 2, 8),         # rosso scuro dello sfondo (#7C0208)
+        'light': (255, 255, 255),
+        'accent': ((226, 226, 230), (255, 255, 255)),
+        'flat_fx': True,
+        'label': '#D20317',
+        'jr': '#FFFFFF',                # logo JR pieno, uguale a LiveScore e Squad List
+    },
+    # Supercoppa Italiana (legaseriea.it): come la Coppa Italia, nel blu dello sfondo ufficiale.
+    'supercoppa': {
+        'base': 'third',
+        'dark': (1, 45, 119),        # blu scuro dello sfondo (#012D77)
+        'light': (255, 255, 255),
+        'accent': ((226, 230, 238), (255, 255, 255)),
+        'flat_fx': True,
+        'label': '#0269B9',
+        'jr': '#FFFFFF',                # logo JR pieno, uguale a LiveScore e Squad List
+    },
+    # Supercoppa UEFA (fasci di luce blu): parte dalla Third come l'UCL -> fondi blu notte,
+    # scritte e loghi blu/azzurro.
+    'usc': {
+        'base': 'third',
+        'dark': (1, 4, 40),          # blu notte dello sfondo (fasci di luce)
+        'light': (200, 225, 255),
+        'accent': ((1, 128, 226), (104, 182, 253)),                     # blu -> azzurro dei fasci
+        'flat_fx': True,
+        'label': '#0170DA',
+        'jr': '#0A8AF0',                # logo JR pieno, uguale a LiveScore e Squad List
+    },
+
+    # Mondiale per Club (FIFA): parte dalla Third -> fondi neri, scritte e loghi oro.
+    'cwc': {
+        'base': 'third',
+        'dark': (8, 8, 7),
+        'light': (240, 232, 212),
+        'accent': ((150, 112, 44), (246, 218, 146)),
+        'flat_fx': True,
+        'label': '#0E0D0B',
+        'jr': '#E2BC62',                # logo JR pieno, uguale a LiveScore e Squad List
+        'label_text': '#E2BC62',     # nomi oro sul rettangolo nero
     },
     # Amichevoli: parte dalla Third -> fondi grigio antracite, scritte e loghi argento.
     'friendly': {
@@ -81,11 +127,19 @@ def theme_for(competition):
     value = str(competition or '').lower()
     if 'friendly' in value:
         return 'friendly'
+    if value == 'uefa.super_cup':
+        return 'usc'
+    if value == 'fifa.cwc':
+        return 'cwc'
+    if value == 'ita.super_cup':
+        return 'supercoppa'
+    if value == 'ita.coppa_italia':
+        return 'coppa'
     if 'conf' in value:
         return 'conference'
     if 'champions' in value:
         return 'ucl'
-    if value == 'uefa.europa':
+    if value.startswith('uefa.europa'):      # anche i preliminari (uefa.europa_qual)
         return 'uel'
     return ''
 
@@ -122,7 +176,9 @@ def themed_background(theme, graphic):
     """Sfondo competizione per la grafica: sotto JR, stemmi e scritte (CLEAR) le linee
     sfumano nel colore di fondo (arancione/verde per UEL/Conference, blu per l'UCL)."""
     from PIL import ImageFilter
-    key = hashlib.sha1(json.dumps([CLEAR[graphic], theme in FILL, 'v4']).encode()).hexdigest()[:8]
+    src = asset_dir() / 'canva' / f'bg_{theme}.jpg'
+    stat = src.stat()                           # sfondo cambiato -> file nuovo
+    key = hashlib.sha1(json.dumps([CLEAR[graphic], theme in FILL, 'v4', stat.st_size, stat.st_mtime_ns]).encode()).hexdigest()[:8]
     out = _cache_dir(theme) / f'bg_{graphic}_{key}.jpg'
     if out.is_file():
         return out
@@ -218,6 +274,26 @@ def _accent_range(a):
     return float(np.percentile(lum, 3)), float(np.percentile(lum, 97))
 
 
+def _jr_box(shape):
+    """Riquadro del logo JR (_JR, pixel design 1080x1440) sull'immagine di dimensioni `shape`."""
+    h, w = shape[:2]
+    x0, y0, x1, y1 = _JR
+    return slice(round(y0 * h / 1440), round(y1 * h / 1440)), slice(round(x0 * w / 1080), round(x1 * w / 1080))
+
+
+def _jr_paint(rgb, weight, theme):
+    """Logo JR nel colore 'jr' del tema (se c'è): weight 0..1 = quanto ogni pixel è logo."""
+    color = PALETTES[theme].get('jr')
+    if not color:
+        return rgb
+    rgb = np.array(rgb, dtype=float)
+    ys, xs = _jr_box(rgb.shape)
+    target = np.array([int(color[i:i + 2], 16) for i in (1, 3, 5)], float)
+    w = np.asarray(weight, float)[ys, xs][..., None]
+    rgb[ys, xs] = rgb[ys, xs] * (1 - w) + target * w
+    return rgb
+
+
 @lru_cache(maxsize=256)
 def recolor_file(name, theme, flat=False):
     """canva/<name> ricolorato: percorso del PNG pronto (in cache).
@@ -231,10 +307,23 @@ def recolor_file(name, theme, flat=False):
                 rgb = np.broadcast_to(np.array(PALETTES[theme]['dark'], float), a[..., :3].shape)
             else:
                 rgb = recolor_array(a[..., :3], theme, _accent_range(a))
+                rgb = _jr_paint(rgb, a[..., 3] / 255, theme)
             done = np.dstack([np.clip(rgb, 0, 255), a[..., 3]]).astype('uint8')
         tmp = out.with_suffix('.tmp')
         Image.fromarray(done, 'RGBA').save(tmp, format='PNG')
         tmp.replace(out)
+    return out
+
+
+@lru_cache(maxsize=16)
+def tint_file(name, theme, color):
+    """canva/<name> in tinta unita `color` (resta solo la trasparenza): rettangolo dei nomi."""
+    out = _cache_dir(theme) / (Path(name).stem + '_' + color.lstrip('#') + '.png')
+    if not out.is_file():
+        with Image.open(asset_dir() / 'canva' / name) as image:
+            a = np.asarray(image.convert('RGBA'))
+        rgb = np.broadcast_to(np.array([int(color[i:i + 2], 16) for i in (1, 3, 5)], np.uint8), a[..., :3].shape)
+        Image.fromarray(np.dstack([rgb, a[..., 3]]).astype('uint8'), 'RGBA').save(out, format='PNG')
     return out
 
 
@@ -279,6 +368,11 @@ def _theme_meta(graphic, theme):
         out['logo_texture'] = str(recolor_file(_LOGO_TEXTURE[base], theme))
     if graphic in ('matchday', 'starting_xi'):
         out['overlay'] = None                   # si fa su richiesta (overlay_file)
+    label = PALETTES[theme].get('label')
+    if graphic == 'probabili' and label:        # rettangolo dei nomi nel colore della competizione, testo bianco
+        out['label'] = str(tint_file(meta[base]['label'], theme, label))
+        out['text'] = {k: v for k, v in out['text'].items() if k != 'texture'}
+        out['text']['color'] = PALETTES[theme].get('label_text', '#ffffff')
     return out
 
 
@@ -352,7 +446,9 @@ def _pitch_mask():
 @lru_cache(maxsize=4)
 def probabili_bg(theme):
     """Sfondo Probabile XI per il tema: sfondo competizione + campo/titolo ricolorati."""
-    out = _cache_dir(theme) / 'probabili_bg.png'
+    src = asset_dir() / 'canva' / f'bg_{theme}.jpg'
+    stat = src.stat()                           # sfondo cambiato -> file nuovo
+    out = _cache_dir(theme) / f'probabili_bg_{stat.st_size}_{stat.st_mtime_ns}.png'
     if not out.is_file():
         base = PALETTES[theme]['base']
         with Image.open(asset_dir() / 'canva' / f'probabili_{base}_bg.png') as image:
@@ -363,7 +459,11 @@ def probabili_bg(theme):
         smooth = cv2.medianBlur(src, 7)
         dark = (src.mean(-1) < 60)[..., None]
         src = np.where(dark, smooth, src)
-        pitch = Image.fromarray(np.clip(recolor_array(src, theme), 0, 255).astype('uint8'), 'RGB')
+        rgb = recolor_array(src, theme)
+        f = src.astype(float)                   # JR della Third: pixel oro (saturi) nel riquadro del logo
+        sat = (f.max(-1) - f.min(-1)) / np.maximum(f.max(-1), 1)
+        rgb = _jr_paint(rgb, np.clip((sat - 0.2) / 0.2, 0, 1), theme)
+        pitch = Image.fromarray(np.clip(rgb, 0, 255).astype('uint8'), 'RGB')
         with Image.open(background(theme, 'probabili')) as bg:
             page = bg.convert('RGB').resize((1920, 2560), Image.LANCZOS)
         page.paste(pitch, (0, 0), _pitch_mask())

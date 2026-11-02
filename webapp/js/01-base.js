@@ -117,7 +117,7 @@ function competitionOptions() {
   if (kind === 'squad') return [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana'],
     ...COMPETITIONS_UEFA,['uefa.super_cup','Supercoppa UEFA'],['fifa.cwc','Mondiale per Club'], ...friendly];
   const italy = [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana']];
-  return [...italy, ...COMPETITIONS_UEFA, ...friendly];
+  return [...italy, ...COMPETITIONS_UEFA, ['uefa.super_cup','Supercoppa UEFA'], ['fifa.cwc','Mondiale per Club'], ...friendly];
 }
 // Fasi con foto caricata (sfondo + persona), prima prese dalla pagina 1 Canva.
 const PHOTO_PHASES = new Set(['half','end_of_90','full']);
@@ -133,14 +133,19 @@ const KITS = [['home','Home'],['away','Away'],['third','Third']];
 // Colori della competizione (UCL / UEL / Conference) per Matchday, Starting XI e
 // Probabile XI: con una partita di quella coppa si mettono da soli, la maglia non si chiede.
 // Amichevoli: tema grigio e argento, come quello di una coppa.
-const UEFA_THEMES = {ucl:'Champions League', uel:'Europa League', conference:'Conference League', friendly:'Amichevole'};
+const UEFA_THEMES = {ucl:'Champions League', uel:'Europa League', conference:'Conference League',
+  coppa:'Coppa Italia', supercoppa:'Supercoppa Italiana', usc:'Supercoppa UEFA', cwc:'Mondiale per Club', friendly:'Amichevole'};
 const isFriendly = () => String(competition || '').includes('friendly');
 const uefaTheme = c => {
   c = String(c || '').toLowerCase();
   if (c.includes('friendly')) return 'friendly';
+  if (c === 'uefa.super_cup') return 'usc';
+  if (c === 'fifa.cwc') return 'cwc';
+  if (c === 'ita.super_cup') return 'supercoppa';
+  if (c === 'ita.coppa_italia') return 'coppa';
   if (c.includes('conf')) return 'conference';
   if (c.includes('champions')) return 'ucl';
-  return c === 'uefa.europa' ? 'uel' : '';
+  return c.startsWith('uefa.europa') ? 'uel' : '';   // anche i preliminari
 };
 const uefaAuto = () => ['md','xi','pxi'].includes(kind) ? uefaTheme(competition) : '';
 // Probabile XI a tema UEFA: il passo "Maglia" resta, ma solo per le foto dei giocatori.

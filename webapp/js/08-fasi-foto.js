@@ -148,6 +148,10 @@ function phasePhotoData(ghost) {
 // Fatte da tools/phase_placeholders.py; sfondo come theme() di portrait.py.
 function phaseTheme(competition, kit) {
   const c = String(competition || '').toLowerCase();
+  if (c === 'uefa.super_cup') return 'usc';
+  if (c === 'fifa.cwc') return 'cwc';
+  if (c === 'ita.super_cup') return 'supercoppa';
+  if (c === 'ita.coppa_italia') return 'coppa';
   if (c.includes('conf')) return 'conference';
   if (c.includes('champions')) return 'ucl';
   if (c.includes('europa')) return 'uel';

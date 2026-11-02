@@ -15,6 +15,9 @@ BACKGROUNDS = {
     'uefa.europa': 'squad_list_europa_league.png',
     'uefa.champions': 'squad_list_champions_league.png',
     'uefa.europa.conf': 'squad_list_conference_league.png',
+    'ita.super_cup': 'squad_list_supercoppa_italiana.png',
+    'uefa.super_cup': 'squad_list_supercoppa_uefa.png',
+    'fifa.cwc': 'squad_list_mondiale_per_club.png',
     'club.friendly': 'squad_list_amichevole.png',
 }
 
@@ -23,6 +26,7 @@ TITLE_SIZE, TITLE_BASE, TITLE_X = 206.7, 324.75, 540.0
 TITLE_ACCENT = {
     'ita.1': '#ffffff', 'ita.coppa_italia': '#ffffff', 'uefa.europa': '#fa6c08',
     'uefa.champions': '#73aabf', 'uefa.europa.conf': '#11b913', 'club.friendly': '#d9dde3',
+    'ita.super_cup': '#2ea8ff', 'uefa.super_cup': '#2f9bff', 'fifa.cwc': '#e2bc62',
 }
 NO_LIGATURES = "font-variant-ligatures:none;font-feature-settings:'liga' 0,'clig' 0,'dlig' 0"
 
