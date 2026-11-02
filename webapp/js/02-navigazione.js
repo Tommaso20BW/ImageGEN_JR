@@ -632,6 +632,7 @@ function updateScreenValues() {
     refreshSearchSummaries();
   });
   renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
+  $('sideLead').textContent = nat ? 'Dove gioca l’Italia?' : 'Dove gioca la Juventus?';
   if (nat) {
     $('kitTitle').textContent = 'Maglia dell’Italia';
     $('kitLead').textContent = 'Home: grafiche azzurre. Away: grafiche bianche.';
