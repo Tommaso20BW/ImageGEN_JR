@@ -250,6 +250,10 @@ def overlay_preview(name, kit, width=540, full=False):
     if not name.replace('_', '').isalnum() or not kit.isalnum():
         raise ValueError('Modello non valido.')
     from graphics import uefa
+    # Sagoma pronta (Matchday, Starting XI e fasi, per ogni maglia e competizione): subito.
+    ready = asset_dir() / 'canva' / f'{name}_{kit}_placeholder.png'
+    if not full and ready.is_file():
+        return ready.read_bytes()
     if uefa.is_theme(kit):
         if name not in ('matchday', 'starting_xi'):
             raise ValueError('Modello non valido.')

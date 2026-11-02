@@ -92,73 +92,64 @@ function layoutPhoto() {
   img.style.width = `${w * k}px`; img.style.height = `${h * k}px`;
 }
 
-/* ---------- Sagome dinamiche ----------
-   Sopra la foto, semitrasparente: la grafica vera senza foto, disegnata dal servizio (/ghost)
-   con i dati inseriti (squadre, stemmi, competizione, formazione, risultato, colori).
-   Si ridisegna solo se cambiano i dati (non la foto o la sua posizione) e resta in memoria. */
-const ghostKeyOf = data => JSON.stringify(Object.fromEntries(Object.entries(data)
-  .filter(([k]) => !['photo_id','frame','person_id','person_frame','trail'].includes(k))));
-
-function makeGhost() { return {key:'', url:'', want:'', busy:false, failed:'', overlay:null}; }
-
-function showGhost(st) {
-  const o = st.overlay;
-  if (!o) return;
-  if (st.url && st.key === st.want) { if (o.src !== st.url) o.src = st.url; o.style.visibility = ''; }
-  else o.style.visibility = 'hidden';            // niente sagoma vecchia con dati diversi
+/* ---------- Sagome fisse ----------
+   Sopra la foto, semitrasparente: la sagoma della grafica (immagine fissa del servizio,
+   /overlay, una per grafica e maglia/competizione: tools/placeholders.py). Dietro la foto:
+   lo sfondo della pagina (/pagebg). Si scaricano in anticipo e compaiono nello stesso momento. */
+const editorImages = {};          // url -> Promise: true quando è scaricata e pronta
+function fetchEditorImage(url) {
+  if (!editorImages[url]) editorImages[url] = new Promise(resolve => {
+    const im = new Image();
+    im.onload = () => Promise.resolve(im.decode ? im.decode() : null).catch(() => {}).then(() => resolve(true));
+    im.onerror = () => { delete editorImages[url]; resolve(false); };
+    im.src = url;
+  });
+  return editorImages[url];
 }
 
-// overlay = dove mostrarla; senza overlay la sagoma si prepara soltanto (in anticipo).
-async function loadGhost(st, overlay) {
+function editorImageUrls() {
+  if (!directBase || !session || (kind !== 'md' && kind !== 'xi')) return null;
+  const q = `session=${encodeURIComponent(session)}&kit=${encodeURIComponent(kit || 'home')}`
+    + `&name=${kind === 'md' ? 'matchday' : 'starting_xi'}`;
+  return {overlay:`${directBase}/overlay?${q}`, bg:`${directBase}/pagebg?${q}`};
+}
+
+// Appena si conosce la maglia (o la competizione) sagoma e sfondo partono in background.
+function preloadEditorImages() {
+  const urls = editorImageUrls();
+  if (urls) { fetchEditorImage(urls.overlay); fetchEditorImage(urls.bg); }
+  const phaseUrl = phaseOverlayUrl();
+  if (phaseUrl) fetchEditorImage(phaseUrl);
+}
+
+let editorShown = '';
+async function updatePhotoOverlay() {
+  const overlay = $('photoOverlay'), frame = $('photoFrame');
   if (!directBase || !session) return;
-  if (overlay) st.overlay = overlay;
-  let payload;
-  try { payload = buildPayload(true); } catch (_) { return; }
-  const key = ghostKeyOf(payload.data);
-  st.want = key;
-  showGhost(st);
-  if ((st.url && st.key === key) || st.busy || st.failed === key) return;
-  st.busy = true;
-  try {
-    const response = await netFetch(`${directBase}/ghost`,{
-      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-      body:JSON.stringify(payload)
-    }, 60000, 2);
-    if (!response.ok) throw new Error('Sagoma non disponibile.');
-    const url = URL.createObjectURL(await response.blob());
-    if (st.url) { try { URL.revokeObjectURL(st.url); } catch (_) {} }
-    st.url = url; st.key = key;
-  } catch (_) {
-    st.failed = key;
-  } finally {
-    st.busy = false;
-  }
-  showGhost(st);
-  if (st.want !== st.key && st.want !== st.failed) loadGhost(st);   // nel frattempo i dati sono cambiati
-}
-
-const photoGhost = makeGhost();
-
-// Appena i dati sono completi (prima dell'editor) la sagoma si prepara in background:
-// quando si apre l'editor è già pronta.
-function prefetchGhost(nextStep) {
-  if (nextStep === 'photo' && (kind === 'md' || kind === 'xi')) loadGhost(photoGhost);
-  if (nextStep === 'phasephoto') loadGhost(phaseGhost);
-}
-
-// Sopra la foto: la sagoma della grafica, solo per posizionare la foto.
-function updatePhotoOverlay() {
-  const overlay = $('photoOverlay');
-  if (!directBase || !session) return;
-  if (kind === 'jr') { overlay.style.visibility = ''; jrLogoSrc(overlay,'black'); }
-  else if (flow[flowIndex] === 'photo') loadGhost(photoGhost, overlay);   // fuori dall'editor i dati non sono completi
-  // Sfondo della maglia/competizione dietro la foto (scontornata: si vede dove è trasparente).
-  const bg = kind === 'jr' ? '' : `url("${directBase}/pagebg?session=${encodeURIComponent(session)}&kit=${encodeURIComponent(kit || 'home')}&name=${kind === 'md' ? 'matchday' : 'starting_xi'}")`;
-  if ($('photoFrame').style.backgroundImage !== bg) $('photoFrame').style.backgroundImage = bg;
   overlay.classList.add('ghost');
   // La sagoma è sempre 3:4, larga come la pagina e ancorata in alto: in un altro formato viene
   // tagliata (o lascia vuoto sotto) e il logo resta in alto a destra senza deformarsi.
   overlay.style.height = kind === 'jr' ? 'auto' : '';
+  if (kind === 'jr') {
+    editorShown = '';
+    frame.style.backgroundImage = '';
+    overlay.style.visibility = '';
+    jrLogoSrc(overlay,'black');
+    return;
+  }
+  const urls = editorImageUrls();
+  if (!urls || editorShown === urls.overlay) return;
+  const key = editorShown = urls.overlay;
+  // Niente sagoma o sfondo di un'altra maglia nel frattempo: compaiono solo insieme.
+  overlay.style.visibility = 'hidden';
+  frame.style.backgroundImage = '';
+  await Promise.all([fetchEditorImage(urls.overlay), fetchEditorImage(urls.bg)]);
+  if (editorShown !== key) return;
+  overlay.src = urls.overlay;
+  try { await overlay.decode(); } catch (_) {}
+  if (editorShown !== key) return;
+  frame.style.backgroundImage = `url("${urls.bg}")`;
+  overlay.style.visibility = '';
 }
 
 // Riduce la foto a max 2560 px (lato lungo) in JPEG: qualità piena per la grafica,

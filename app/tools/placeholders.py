@@ -33,11 +33,18 @@ def starting_xi(canva, out):
         print('OK starting_xi', kit)
 
 
+# Competizione scritta nella sagoma Matchday: quella del tema (maglie normali: Serie A).
+COMPETITION = {'ucl': 'uefa.champions', 'uel': 'uefa.europa', 'conference': 'uefa.europa.conf',
+               'coppa': 'ita.coppa_italia', 'supercoppa': 'ita.super_cup', 'usc': 'uefa.super_cup',
+               'cwc': 'fifa.cwc', 'friendly': 'club.friendly'}
+
+
 def matchday(canva, out):
     """Grafica vera senza foto, con stemmi, stadio, competizione, ora e data finti."""
     info = md.parse_info('ALLIANZ STADIUM', '20:45', '2026-11-01')
     for kit in md.KITS:
-        png = md.render(ghost=True, kit=kit, photo=None, frame={}, info=info, competition='ita.1', **FAKE_TEAMS)
+        png = md.render(ghost=True, kit=kit, photo=None, frame={}, info=info,
+                        competition=COMPETITION.get(kit, 'ita.1'), **FAKE_TEAMS)
         (out / f'matchday_{kit}_placeholder.png').write_bytes(png)
         print('OK matchday', kit)
 

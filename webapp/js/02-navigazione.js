@@ -571,6 +571,7 @@ function renderFlow() {
   }
   pendingRefresh = false;
   autoFocusCurrent();
+  if (!previewMode && (flow.includes('photo') || flow.includes('phasephoto'))) preloadEditorImages();
 }
 
 function isLastStep() {

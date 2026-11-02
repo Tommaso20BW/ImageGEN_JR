@@ -4,7 +4,7 @@
 // livescore/graphics/phase_layers.py (box): l'anteprima coincide con la grafica.
 // persona.follow = scontornata dallo sfondo e ferma su di esso (combacia esattamente).
 const PP_W = 1086, PP_H = 1448;
-const ppState = {bg:null, person:null, mode:'both', uploading:false, pick:'photo', cleanUrl:'', cleanFor:'', cleaning:false};
+const ppState = {bg:null, person:null, mode:'both', uploading:false, pick:'photo', cleanUrl:'', cleanFor:'', cleaning:false, ghostUrl:'', ghostBusy:false};
 
 function ppRevoke(url) { if (url) { try { URL.revokeObjectURL(url); } catch (_) {} } }
 
@@ -143,12 +143,60 @@ function phasePhotoData(ghost) {
   return out;
 }
 
-// Sagoma della fase sempre dinamica (/ghost): risultato, squadre e colori veri.
-const phaseGhost = makeGhost();
-function loadPpGhost() {
+// Sagoma fissa (dati finti: Juventus - Juventus 0-0) di cornice, scritta, risultato e
+// stemmi, semitrasparente: immagine statica per fase e sfondo, scaricata in anticipo.
+// Fatte da tools/phase_placeholders.py; sfondo come theme() di portrait.py.
+function phaseTheme(competition, kit) {
+  const c = String(competition || '').toLowerCase();
+  if (c === 'uefa.super_cup') return 'usc';
+  if (c === 'fifa.cwc') return 'cwc';
+  if (c === 'ita.super_cup') return 'supercoppa';
+  if (c === 'ita.coppa_italia') return 'coppa';
+  if (c.includes('conf')) return 'conference';
+  if (c.includes('champions')) return 'ucl';
+  if (c.includes('europa')) return 'uel';
+  return ['home','away','third'].includes(kit) ? kit : 'home';
+}
+
+function phaseOverlayUrl() {
+  if (LIVE || !directBase || !session || kind !== 'match' || !PHOTO_PHASES.has(phase)) return '';
+  return `${directBase}/overlay?session=${encodeURIComponent(session)}&name=phase_${phase}`
+    + `&kit=${phaseTheme(competition, kit)}`;
+}
+
+// In live il LiveScore non ha /overlay: la sagoma la disegna lui al momento (/ghost).
+async function ppGhostFromServer(overlay) {
+  if (ppState.ghostBusy) return;
+  ppState.ghostBusy = true;
+  try {
+    const response = await netFetch(`${directBase}/ghost`,{
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify(buildPayload(true))
+    }, 60000, 2);
+    if (!response.ok) throw new Error('Segnaposto non disponibile.');
+    const url = URL.createObjectURL(await response.blob());
+    ppRevoke(ppState.ghostUrl);
+    ppState.ghostUrl = url;
+    overlay.src = url;
+    overlay.hidden = false;
+  } catch (_) {
+  } finally {
+    ppState.ghostBusy = false;
+  }
+}
+
+async function loadPpGhost() {
+  if (!directBase || !session) return;
   const overlay = $('ppOverlay');
-  overlay.hidden = false;
-  loadGhost(phaseGhost, overlay);
+  if (LIVE) {
+    if (ppState.ghostUrl) { overlay.src = ppState.ghostUrl; overlay.hidden = false; }
+    else ppGhostFromServer(overlay);
+    return;
+  }
+  const url = phaseOverlayUrl();
+  if (!url || overlay.getAttribute('src') === url) { overlay.hidden = !url; return; }
+  overlay.hidden = true;
+  if (await fetchEditorImage(url) && phaseOverlayUrl() === url) { overlay.src = url; overlay.hidden = false; }
 }
 
 async function ppSend(blob, type) {
