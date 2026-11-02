@@ -99,21 +99,25 @@ function layoutPhoto() {
 const ghostKeyOf = data => JSON.stringify(Object.fromEntries(Object.entries(data)
   .filter(([k]) => !['photo_id','frame','person_id','person_frame','trail'].includes(k))));
 
-function makeGhost() { return {key:'', url:'', want:'', busy:false, failed:''}; }
+function makeGhost() { return {key:'', url:'', want:'', busy:false, failed:'', overlay:null}; }
 
+function showGhost(st) {
+  const o = st.overlay;
+  if (!o) return;
+  if (st.url && st.key === st.want) { if (o.src !== st.url) o.src = st.url; o.style.visibility = ''; }
+  else o.style.visibility = 'hidden';            // niente sagoma vecchia con dati diversi
+}
+
+// overlay = dove mostrarla; senza overlay la sagoma si prepara soltanto (in anticipo).
 async function loadGhost(st, overlay) {
   if (!directBase || !session) return;
+  if (overlay) st.overlay = overlay;
   let payload;
   try { payload = buildPayload(true); } catch (_) { return; }
   const key = ghostKeyOf(payload.data);
   st.want = key;
-  if (st.url && st.key === key) {
-    if (overlay.src !== st.url) overlay.src = st.url;
-    overlay.style.visibility = '';
-    return;
-  }
-  overlay.style.visibility = 'hidden';            // niente sagoma vecchia con dati diversi
-  if (st.busy || st.failed === key) return;
+  showGhost(st);
+  if ((st.url && st.key === key) || st.busy || st.failed === key) return;
   st.busy = true;
   try {
     const response = await netFetch(`${directBase}/ghost`,{
@@ -129,18 +133,25 @@ async function loadGhost(st, overlay) {
   } finally {
     st.busy = false;
   }
-  if (st.want === st.key && st.url) { overlay.src = st.url; overlay.style.visibility = ''; }
-  else if (st.want !== st.failed) loadGhost(st, overlay);   // nel frattempo i dati sono cambiati
+  showGhost(st);
+  if (st.want !== st.key && st.want !== st.failed) loadGhost(st);   // nel frattempo i dati sono cambiati
 }
 
 const photoGhost = makeGhost();
+
+// Appena i dati sono completi (prima dell'editor) la sagoma si prepara in background:
+// quando si apre l'editor è già pronta.
+function prefetchGhost(nextStep) {
+  if (nextStep === 'photo' && (kind === 'md' || kind === 'xi')) loadGhost(photoGhost);
+  if (nextStep === 'phasephoto') loadGhost(phaseGhost);
+}
 
 // Sopra la foto: la sagoma della grafica, solo per posizionare la foto.
 function updatePhotoOverlay() {
   const overlay = $('photoOverlay');
   if (!directBase || !session) return;
   if (kind === 'jr') { overlay.style.visibility = ''; jrLogoSrc(overlay,'black'); }
-  else loadGhost(photoGhost, overlay);
+  else if (flow[flowIndex] === 'photo') loadGhost(photoGhost, overlay);   // fuori dall'editor i dati non sono completi
   // Sfondo della maglia/competizione dietro la foto (scontornata: si vede dove è trasparente).
   const bg = kind === 'jr' ? '' : `url("${directBase}/pagebg?session=${encodeURIComponent(session)}&kit=${encodeURIComponent(kit || 'home')}&name=${kind === 'md' ? 'matchday' : 'starting_xi'}")`;
   if ($('photoFrame').style.backgroundImage !== bg) $('photoFrame').style.backgroundImage = bg;

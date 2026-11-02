@@ -149,6 +149,7 @@ async function nextField(validate=true) {
   }
 
   if (flowIndex >= flow.length - 1) { previewGraphic(); return; }
+  prefetchGhost(flow[flowIndex + 1]);
   flowIndex += 1;
   renderFlow();
 }

@@ -34,6 +34,16 @@ SESSION_MAX_SECONDS = 60 * 60
 MAX_PHOTOS = 24               # il collage ne usa fino a 9, più quelle dell'altra grafica
 # Campi che spostano o cambiano solo le foto: non cambiano la sagoma dell'editor.
 PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame', 'trail')
+GHOST_CACHE_SIZE = 12
+
+
+def _ghost_webp(png):
+    """PNG della sagoma -> WebP con trasparenza (molto più leggero da mandare al telefono)."""
+    from PIL import Image
+    with Image.open(io.BytesIO(png)) as image:
+        out = io.BytesIO()
+        image.convert('RGBA').save(out, 'WEBP', quality=82, method=1)
+        return out.getvalue()
 LOCK_WAIT_SECONDS = 75        # un nuovo tentativo aspetta la richiesta ancora in corso
 RESEND_GUARD_SECONDS = 180    # stessa grafica reinviata entro 3 min = doppione (la Mini App riprova da sola)
 DIRECT_PORT = 8765
@@ -335,7 +345,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 return
 
             if path == '/ghost':
-                self._png(self.service.ghost(envelope))
+                self._png(self.service.ghost(envelope), 'image/webp')
                 return
 
             if path == '/preview':
@@ -655,17 +665,22 @@ class Service:
         return classifica.summary(str(data.get('competition') or ''))
 
     def ghost(self, envelope):
-        """Grafica senza foto, trasparente e leggera: l'editor la mostra sopra la foto."""
+        """Grafica senza foto, trasparente e leggera: l'editor la mostra sopra la foto.
+        WebP con trasparenza (circa 10 volte più leggero del PNG: arriva prima al telefono);
+        le ultime sagome restano in memoria, così tornando indietro compaiono subito."""
         data = self._parse_request(envelope)['data']
         key = self._fingerprint({k: v for k, v in data.items() if k not in PHOTO_FIELDS})
-        if self.ghost_cache.get('key') != key:
+        if key not in self.ghost_cache:
             if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
                 raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
             try:
-                self.ghost_cache = {'key': key, 'png': self.renderer.render(data, ghost=True)}
+                if key not in self.ghost_cache:
+                    self.ghost_cache[key] = _ghost_webp(self.renderer.render(data, ghost=True))
+                    while len(self.ghost_cache) > GHOST_CACHE_SIZE:
+                        self.ghost_cache.pop(next(iter(self.ghost_cache)))
             finally:
                 self.operation_lock.release()
-        return self.ghost_cache['png']
+        return self.ghost_cache[key]
 
     def _remember_shirts(self, lineup):
         """Numeri nuovi o cambiati della Starting XI inviata -> repository."""
