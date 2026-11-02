@@ -4,7 +4,7 @@
 // livescore/graphics/phase_layers.py (box): l'anteprima coincide con la grafica.
 // persona.follow = scontornata dallo sfondo e ferma su di esso (combacia esattamente).
 const PP_W = 1086, PP_H = 1448;
-const ppState = {bg:null, person:null, mode:'both', uploading:false, ghostKey:'', pick:'photo', cleanUrl:'', cleanFor:'', cleaning:false, ghostUrl:'', ghostBusy:false, ghostFailed:false};
+const ppState = {bg:null, person:null, mode:'both', uploading:false, pick:'photo', cleanUrl:'', cleanFor:'', cleaning:false};
 
 function ppRevoke(url) { if (url) { try { URL.revokeObjectURL(url); } catch (_) {} } }
 
@@ -143,61 +143,12 @@ function phasePhotoData(ghost) {
   return out;
 }
 
-// Sagoma fissa (dati finti: Juventus - Juventus 0-0) di cornice, scritta, risultato e
-// stemmi, semitrasparente: immagine statica per fase e sfondo, compare subito.
-// Fatte da tools/phase_placeholders.py; sfondo come theme() di portrait.py.
-function phaseTheme(competition, kit) {
-  const c = String(competition || '').toLowerCase();
-  if (c === 'uefa.super_cup') return 'usc';
-  if (c === 'fifa.cwc') return 'cwc';
-  if (c === 'ita.super_cup') return 'supercoppa';
-  if (c === 'ita.coppa_italia') return 'coppa';
-  if (c.includes('conf')) return 'conference';
-  if (c.includes('champions')) return 'ucl';
-  if (c.includes('europa')) return 'uel';
-  return ['home','away','third'].includes(kit) ? kit : 'home';
-}
-
-// Segnaposto della grafica sopra la foto. Fuori dal live: immagine statica del servizio
-// (/overlay). In live (il LiveScore non ha /overlay) o se l'immagine statica manca: la
-// sagoma la disegna il servizio al momento (/ghost, ~1 s) e resta in memoria.
-async function ppGhostFromServer(overlay) {
-  if (ppState.ghostBusy) return;
-  ppState.ghostBusy = true;
-  try {
-    const response = await netFetch(`${directBase}/ghost`,{
-      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-      body:JSON.stringify(buildPayload(true))
-    }, 60000, 2);
-    if (!response.ok) throw new Error('Segnaposto non disponibile.');
-    const url = URL.createObjectURL(await response.blob());
-    ppRevoke(ppState.ghostUrl);
-    ppState.ghostUrl = url;
-    overlay.src = url;
-    overlay.hidden = false;
-  } catch (_) {
-    ppState.ghostFailed = true;
-  } finally {
-    ppState.ghostBusy = false;
-  }
-}
-
+// Sagoma della fase sempre dinamica (/ghost): risultato, squadre e colori veri.
+const phaseGhost = makeGhost();
 function loadPpGhost() {
-  if (!directBase || !session) return;
-  let data;
-  try { data = buildPayload(true).data; } catch (_) { return; }
   const overlay = $('ppOverlay');
-  if (LIVE) {
-    if (ppState.ghostUrl) { overlay.src = ppState.ghostUrl; overlay.hidden = false; }
-    else ppGhostFromServer(overlay);
-    return;
-  }
-  const kind = PHOTO_PHASES.has(data.kind) ? data.kind : 'half';
-  const url = `${directBase}/overlay?session=${encodeURIComponent(session)}&name=phase_${kind}`
-    + `&kit=${phaseTheme(data.competition, data.kit)}`;
-  overlay.onerror = () => { overlay.onerror = null; ppGhostFromServer(overlay); };
-  if (overlay.getAttribute('src') !== url) overlay.src = url;
   overlay.hidden = false;
+  loadGhost(phaseGhost, overlay);
 }
 
 async function ppSend(blob, type) {

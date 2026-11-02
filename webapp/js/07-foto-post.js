@@ -92,17 +92,55 @@ function layoutPhoto() {
   img.style.width = `${w * k}px`; img.style.height = `${h * k}px`;
 }
 
-// Sopra la foto: sagoma fissa della grafica (sfumature, titolo, riquadri di loghi
-// e testi), semitrasparente, solo per posizionare la foto. Immagine statica: subito.
+/* ---------- Sagome dinamiche ----------
+   Sopra la foto, semitrasparente: la grafica vera senza foto, disegnata dal servizio (/ghost)
+   con i dati inseriti (squadre, stemmi, competizione, formazione, risultato, colori).
+   Si ridisegna solo se cambiano i dati (non la foto o la sua posizione) e resta in memoria. */
+const ghostKeyOf = data => JSON.stringify(Object.fromEntries(Object.entries(data)
+  .filter(([k]) => !['photo_id','frame','person_id','person_frame','trail'].includes(k))));
+
+function makeGhost() { return {key:'', url:'', want:'', busy:false, failed:''}; }
+
+async function loadGhost(st, overlay) {
+  if (!directBase || !session) return;
+  let payload;
+  try { payload = buildPayload(true); } catch (_) { return; }
+  const key = ghostKeyOf(payload.data);
+  st.want = key;
+  if (st.url && st.key === key) {
+    if (overlay.src !== st.url) overlay.src = st.url;
+    overlay.style.visibility = '';
+    return;
+  }
+  overlay.style.visibility = 'hidden';            // niente sagoma vecchia con dati diversi
+  if (st.busy || st.failed === key) return;
+  st.busy = true;
+  try {
+    const response = await netFetch(`${directBase}/ghost`,{
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify(payload)
+    }, 60000, 2);
+    if (!response.ok) throw new Error('Sagoma non disponibile.');
+    const url = URL.createObjectURL(await response.blob());
+    if (st.url) { try { URL.revokeObjectURL(st.url); } catch (_) {} }
+    st.url = url; st.key = key;
+  } catch (_) {
+    st.failed = key;
+  } finally {
+    st.busy = false;
+  }
+  if (st.want === st.key && st.url) { overlay.src = st.url; overlay.style.visibility = ''; }
+  else if (st.want !== st.failed) loadGhost(st, overlay);   // nel frattempo i dati sono cambiati
+}
+
+const photoGhost = makeGhost();
+
+// Sopra la foto: la sagoma della grafica, solo per posizionare la foto.
 function updatePhotoOverlay() {
   const overlay = $('photoOverlay');
   if (!directBase || !session) return;
-  if (kind === 'jr') jrLogoSrc(overlay,'black');
-  else {
-    const name = kind === 'md' ? 'matchday' : 'starting_xi';
-    const url = `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${name}&kit=${encodeURIComponent(kit || 'home')}`;
-    if (overlay.getAttribute('src') !== url) overlay.src = url;
-  }
+  if (kind === 'jr') { overlay.style.visibility = ''; jrLogoSrc(overlay,'black'); }
+  else loadGhost(photoGhost, overlay);
   // Sfondo della maglia/competizione dietro la foto (scontornata: si vede dove è trasparente).
   const bg = kind === 'jr' ? '' : `url("${directBase}/pagebg?session=${encodeURIComponent(session)}&kit=${encodeURIComponent(kit || 'home')}&name=${kind === 'md' ? 'matchday' : 'starting_xi'}")`;
   if ($('photoFrame').style.backgroundImage !== bg) $('photoFrame').style.backgroundImage = bg;

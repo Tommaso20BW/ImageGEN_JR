@@ -33,7 +33,7 @@ EXTEND_BY_SECONDS = 300
 SESSION_MAX_SECONDS = 60 * 60
 MAX_PHOTOS = 24               # il collage ne usa fino a 9, più quelle dell'altra grafica
 # Campi che spostano o cambiano solo le foto: non cambiano la sagoma dell'editor.
-PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame')
+PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame', 'trail')
 LOCK_WAIT_SECONDS = 75        # un nuovo tentativo aspetta la richiesta ancora in corso
 RESEND_GUARD_SECONDS = 180    # stessa grafica reinviata entro 3 min = doppione (la Mini App riprova da sola)
 DIRECT_PORT = 8765
