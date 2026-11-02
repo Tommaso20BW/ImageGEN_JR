@@ -364,12 +364,14 @@
           <section class="screen" data-screen="jrcolor">
             <div class="eyebrow">Post</div>
             <h1>Colore del JR</h1>
-            <div id="jrcPrev" class="jrc-pv" aria-hidden="true"><div class="jrc-tile jrc-bg-photo"></div></div>
-            <div id="jrcBgs" class="jrc-bgs"><button type="button" data-bg="photo" class="on">Foto</button><button type="button" data-bg="dark">Scuro</button><button type="button" data-bg="light">Chiaro</button></div>
-            <div class="field-label">Colore <span id="jrcName" class="jrc-name"></span></div>
-            <div id="jrcCar" class="jrc-car" role="radiogroup" aria-label="Colore del JR"></div>
-            <div class="ios-list jrc-cu-list">
-              <button id="jrcCu" class="ios-row jrc-cu" type="button"><i></i><span id="jrcCuT">Personalizza</span><span class="ios-chev">›</span></button>
+            <div id="jrcPrev" class="jrc-pv" aria-hidden="true"><div class="jrc-tile"></div></div>
+            <div class="field-label">Classici</div>
+            <div id="jrcListA" class="ios-list" role="radiogroup" aria-label="Colori classici"></div>
+            <div class="field-label">Colori</div>
+            <div id="jrcListB" class="ios-list" role="radiogroup" aria-label="Colori"></div>
+            <div class="field-label">Su misura</div>
+            <div class="ios-list">
+              <button id="jrcCu" class="ios-row jrc-it" type="button"><i id="jrcCuSw" class="jrc-dot jrc-rainbow"></i><span>Personalizzato</span><em id="jrcCuV" class="jrc-val"></em><span class="ios-chev">›</span></button>
             </div>
           </section>
 
@@ -502,14 +504,20 @@
   </div>
 </div>
 <div id="modOv" class="mod-ov"><div id="modSh" class="mod-sh"></div></div>
-<div id="jrcOv" class="jrc-ov"><div id="jrcSh" class="jrc-sh" role="dialog" aria-modal="true" aria-label="Personalizza colore">
-  <div id="jrcGrab" class="jrc-grab"><i></i><div class="jrc-top"><b>Personalizza</b><button id="jrcDone" type="button">Fine</button></div></div>
-  <div class="jrc-sprev"><div class="jrc-tile jrc-bg-photo"></div><div><b id="jrcSName"></b><small id="jrcSHex"></small></div></div>
+<div id="jrcOv" class="jrc-ov"><div id="jrcSh" class="jrc-sh" role="dialog" aria-modal="true" aria-label="Colore personalizzato">
+  <div class="jrc-top"><b>Personalizzato</b><button id="jrcDone" type="button">Fine</button></div>
+  <div class="jrc-sprev" aria-hidden="true"><div class="jrc-tile"></div></div>
   <div class="jrc-seg"><button id="jrcSolid" type="button">Tinta unita</button><button id="jrcGradBtn" type="button">Sfumatura</button></div>
-  <div id="jrcEnds" class="jrc-ends" hidden><button class="jrc-end" type="button" data-e="0"><i></i>Inizio</button><button class="jrc-end" type="button" data-e="1"><i></i>Fine</button><button id="jrcRev" class="jrc-mini" type="button" aria-label="Inverti">⇄</button></div>
-  <div class="jrc-lab">Colore</div><div id="jrcHue" class="jrc-sl jrc-hue"><i class="jrc-knob"></i></div>
-  <div class="jrc-lab">Luce</div><div id="jrcLum" class="jrc-sl"><i class="jrc-knob"></i></div>
-  <div class="jrc-hexrow"><div id="jrcChip" class="jrc-chip"></div><label id="jrcHexBox" class="jrc-hex"><span>#</span><input id="jrcHex" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="FF3366" aria-label="Colore esadecimale"></label></div>
+  <div id="jrcEnds" class="jrc-group" hidden>
+    <button class="jrc-it jrc-end" type="button" data-e="0"><i class="jrc-dot"></i><span>Inizio</span></button>
+    <button class="jrc-it jrc-end" type="button" data-e="1"><i class="jrc-dot"></i><span>Fine</span></button>
+    <button id="jrcRev" class="jrc-it jrc-act" type="button">Inverti i colori</button>
+  </div>
+  <div class="jrc-group jrc-sls">
+    <div class="jrc-sll">Colore</div><div id="jrcHue" class="jrc-sl jrc-hue"><i class="jrc-knob"></i></div>
+    <div class="jrc-sll">Luce</div><div id="jrcLum" class="jrc-sl"><i class="jrc-knob"></i></div>
+  </div>
+  <div class="jrc-group"><label id="jrcHexBox" class="jrc-it jrc-hex"><span>Codice</span><span class="jrc-hexv">#<input id="jrcHex" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="FF3366" aria-label="Colore esadecimale"></span></label></div>
 </div></div>
 <!-- IMPOSTAZIONI › Squadre e loghi: pagina sopra l'app + pannello della squadra dal basso. -->
 <div id="setOv" class="set-ov" role="dialog" aria-modal="true" aria-labelledby="setTitle">

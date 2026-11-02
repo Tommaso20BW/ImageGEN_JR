@@ -230,7 +230,7 @@ function resetAllData() {
   jrColor = '';
   jrb.cards.forEach(c => { try { URL.revokeObjectURL(c.url); } catch (_) {} });
   Object.assign(jrb,{style:'', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null});
-  jrc.key = ''; jrc.centered = ''; jrcCloseSheet();
+  jrc.key = ''; jrcCloseSheet();
   pxiModule = '';
   pxiPicks = Array(11).fill('');
   calMonth = 0;
