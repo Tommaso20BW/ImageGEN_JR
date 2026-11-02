@@ -350,3 +350,6 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .jrc-hexv{margin-left:auto;display:flex;align-items:center;color:var(--muted);font-size:16px;font-weight:500}
 .jrc-hex input{width:7ch;flex:none;height:44px;padding:0;border:0;outline:0;background:none;color:var(--text);text-align:right;text-transform:uppercase;font:inherit;font-size:16px;font-weight:500;font-variant-numeric:tabular-nums}
 .jrc-hex.bad input{color:var(--danger)}
+/* Elenco con gruppi (Italia · Grafica): titoli come nella Home */
+.opt-group{margin:24px 0 8px}
+.lead + .opt-group{margin-top:18px}

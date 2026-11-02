@@ -1,6 +1,6 @@
 /* Mini App ImageGen JR. File caricati in ordine da index.html: l'ordine conta. */
 /* ---------- Italia (Nazionale) e tipo di gol ----------
-   Voce "Italia" in fondo alla Home: le grafiche LiveScore della Nazionale (senza foto, tema
+   Voce "Italia" nella sezione "Nazionale" in fondo alla Home: le grafiche LiveScore della Nazionale (senza foto, tema
    azzurro Home o bianco Away, nomi delle squadre al posto degli stemmi). Prima si sceglie la
    grafica, poi competizione, campo, avversaria (scritta a mano) e maglia.
    Gol (Juventus e Italia): Gol / Rigore / Autogol / Senza foto (Senza foto solo Juventus). */
@@ -8,8 +8,8 @@ let nat = false;          // true = voce "Italia"
 let natSel = '';          // grafica scelta: kick, half, second, end_of_90, full, goal, saved, stats
 let goalType = 'goal';    // goal | penalty | own | nophoto
 
-const NAT_KINDS = [['kick','Kick off'],['half','Half time'],['second','2nd half'],['end_of_90','End of 90’'],
-  ['full','Full time'],['goal','Gol'],['saved','Parata'],['stats','Statistiche']];
+const NAT_KINDS = [['kick','Kick Off'],['half','Half Time'],['second','2nd Half'],['end_of_90','End Of 90’'],
+  ['full','Full Time'],['goal','Gol'],['saved','Parata'],['stats','Statistiche']];
 const NAT_COMPETITIONS = [['fifa.friendly','Amichevole'],['uefa.nations','Nations League'],
   ['fifa.worldq.uefa','Qualificazioni Mondiali'],['fifa.world','Mondiali'],
   ['uefa.euroq','Qualificazioni Europei'],['uefa.euro','Europei']];
@@ -70,7 +70,9 @@ function natValidate(step) {
 }
 
 function natRender() {
-  renderOptions('natKindOpts',NAT_KINDS,natSel,natPickKind);
+  // Due gruppi come nella Home: eventi della partita (fasi) e in partita (gol, parata, statistiche).
+  renderOptions('natKindOpts',NAT_KINDS.filter(([v]) => NAT_PHASES.has(v)),natSel,natPickKind);
+  renderOptions('natPlayOpts',NAT_KINDS.filter(([v]) => !NAT_PHASES.has(v)),natSel,natPickKind);
   if (nat && goalType === 'nophoto') goalType = 'goal';
   renderOptions('goalTypeOpts',goalTypeOptions(),goalType,v => { goalType = v; buildFlow(); });
   $('natPlayerTitle').textContent = kind === 'saved' ? 'Portiere' : goalType === 'own' ? 'Chi ha fatto autogol' : 'Marcatore';

@@ -87,11 +87,11 @@ const REQUESTS = [
   {id:'goal',   kind:'goal',  icon:'goal', title:'Gol',          desc:'Giocatore, minuto e risultato'},
   {id:'saved',  kind:'saved', icon:'saved', title:'Parata',       desc:'Il portiere protagonista'},
   {id:'stats',  kind:'stats', icon:'stats', title:'Statistiche',  desc:'Possesso, tiri, xG e altri numeri'},
-  {id:'kick',   kind:'match', phase:'kick',       icon:'kick', title:'Kick off',    desc:'Si parte: la partita sta per iniziare'},
-  {id:'half',   kind:'match', phase:'half',       icon:'half', title:'Half time',   desc:'Risultato dell’intervallo, con foto'},
-  {id:'second', kind:'match', phase:'second',     icon:'second', title:'2nd half',    desc:'Inizia il secondo tempo'},
-  {id:'end90',  kind:'match', phase:'end_of_90',  icon:'end90', title:'End of 90’',  desc:'Risultato dopo i 90 minuti, con foto'},
-  {id:'full',   kind:'match', phase:'full',       icon:'full', title:'Full time',   desc:'Finale, supplementari e rigori, con foto'},
+  {id:'kick',   kind:'match', phase:'kick',       icon:'kick', title:'Kick Off',    desc:'Si parte: la partita sta per iniziare'},
+  {id:'half',   kind:'match', phase:'half',       icon:'half', title:'Half Time',   desc:'Risultato dell’intervallo, con foto'},
+  {id:'second', kind:'match', phase:'second',     icon:'second', title:'2nd Half',    desc:'Inizia il secondo tempo'},
+  {id:'end90',  kind:'match', phase:'end_of_90',  icon:'end90', title:'End Of 90’',  desc:'Risultato dopo i 90 minuti, con foto'},
+  {id:'full',   kind:'match', phase:'full',       icon:'full', title:'Full Time',   desc:'Finale, supplementari e rigori, con foto'},
   {id:'md',     kind:'md',    icon:'md', title:'Matchday',     desc:'Presentazione della partita'},
   {id:'pxi',    kind:'pxi',   icon:'pxi', title:'Probabile XI', desc:'Formazione probabile sul campo'},
   {id:'squad',  kind:'squad', icon:'squad', title:'Squad List',   desc:'Lista dei convocati'},
@@ -106,7 +106,8 @@ const HOME_GROUPS = [
   {icon:'g-pre', title:'Pre-gara',              ids:['md','pxi','squad','xi']},
   {icon:'g-events', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
   {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
-  {icon:'g-other', title:'Altro',                 ids:['jr','igbn','cal','table','ita']}
+  {icon:'g-other', title:'Altro',                 ids:['jr','igbn','cal','table']},
+  {icon:'ita', title:'Nazionale',                 ids:['ita']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
 const COMPETITIONS_UEFA = [
