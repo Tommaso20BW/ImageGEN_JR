@@ -54,16 +54,24 @@ function buildPayload(ghost=false) {
       frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}
     }};
   }
-  if (!selectedTeam) throw new Error('Avversario mancante.');
+  if (!nat && !selectedTeam) throw new Error('Avversario mancante.');
 
-  const data = {
+  const data = nat ? natPayload() : {
     // KICK OFF non chiede la maglia: in quel caso vale home (non viene mostrata).
     kind: realKind(), competition, kit: kit || 'home', side,
     opponent:{ name:selectedTeam.name, id:String(selectedTeam.espn_id || '') }
   };
-  if (needsShirt()) data.shirt = shirt;
+  if (!nat && needsShirt()) data.shirt = shirt;
 
-  if (kind === 'goal' || kind === 'saved') {
+  if (nat && (kind === 'goal' || kind === 'saved')) {
+    // dati già pronti (natPayload)
+  } else if (kind === 'goal' && goalType !== 'goal') {
+    // Autogol (nome scritto a mano) o gol senza marcatore: senza foto, niente posa.
+    data.goal_type = goalType;
+    data.player = goalType === 'own' ? natPlayerName() : '';
+    data.minute = $('minute').value.trim();
+    data.score = scorePair('evHomeScore','evAwayScore',true);
+  } else if (kind === 'goal' || kind === 'saved') {
     if (!selectedPlayer) throw new Error('Giocatore mancante.');
     data.player = selectedPlayer.name;
     data.minute = $('minute').value.trim();
@@ -75,7 +83,7 @@ function buildPayload(ghost=false) {
     if (phase === 'full' && pensOn) {
       data.shootout = scorePair('homePens','awayPens',true);
     }
-    if (PHOTO_PHASES.has(phase) && !isFriendly()) Object.assign(data, phasePhotoData(ghost));
+    if (PHOTO_PHASES.has(phase) && !isFriendly() && !nat) Object.assign(data, phasePhotoData(ghost));
   } else if (kind === 'xi') {
     if (!photoId) throw new Error('Scegli una foto.');
     data.lineup = lineupRows().map(p => ({number:p.number, name:p.name}));

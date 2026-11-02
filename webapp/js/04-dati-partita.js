@@ -14,6 +14,7 @@ function validateScoreValue(id, optional=false) {
 
 function validateCurrent() {
   const step = flow[flowIndex];
+  if (!natValidate(step)) return false;
 
   const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, mdpick:mdPick, jrstyle:jrb.style, tablecomp:tableComp};
   if (step in choice && !choice[step]) { showError('Seleziona un’opzione per continuare.'); return false; }

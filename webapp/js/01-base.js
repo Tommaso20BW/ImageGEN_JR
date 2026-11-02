@@ -72,6 +72,7 @@ const ICONS = {
   'squad':'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   'xi':'<path d="M8.5 3L3 6l2 4.5 2.5-1.2V21h9V9.3l2.5 1.2L21 6l-5.5-3c-.6 1.6-1.9 2.5-3.5 2.5S9.1 4.6 8.5 3z"/>',
   'cal':'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  'ita':'<path fill="currentColor" stroke="none" d="M7.9 13.1 7.6 13.1 6.6 13.9 6.4 13.9 6.4 13.4 6.2 13.4 5.9 14.0 5.9 14.4 6.2 14.6 6.3 14.8 6.3 15.8 6.4 16.1 6.4 16.3 6.4 17.2 6.3 17.3 6.3 17.4 6.6 17.6 6.8 17.8 7.3 17.7 7.4 17.3 8.1 17.3 8.4 15.7 8.4 15.4 8.2 15.2 8.3 15.0 8.4 14.8 8.3 14.3 8.4 13.8 8.3 13.8 8.1 13.7ZM4.3 4.3 4.0 4.4 4.0 4.7 4.6 5.3 4.1 5.7 3.8 5.7 3.8 6.1 4.3 6.4 4.3 6.7 4.1 6.9 4.2 7.6 4.7 7.9 5.2 7.9 4.9 8.2 5.1 8.6 5.9 8.4 6.3 8.0 6.4 7.6 6.9 7.3 7.6 7.4 8.2 7.9 8.7 7.9 8.9 8.3 8.9 8.7 9.3 9.6 9.3 10.1 9.6 10.1 9.7 10.3 9.9 10.4 10.3 10.8 10.1 11.1 10.7 11.1 11.6 11.9 12.0 12.6 12.9 13.3 14.0 13.4 14.3 13.9 14.3 14.1 14.4 14.2 14.7 14.1 14.8 14.2 14.7 14.4 14.8 14.7 15.0 14.7 15.3 14.4 15.6 14.4 15.6 14.6 15.6 15.3 15.8 15.4 16.3 15.7 16.6 15.7 16.7 15.6 16.8 15.7 16.8 16.2 17.2 17.1 17.2 17.6 17.4 17.8 17.4 17.9 17.0 17.9 16.9 18.1 17.0 18.6 16.9 18.7 16.0 19.1 15.6 19.0 15.1 19.3 14.0 19.3 13.4 19.0 13.1 19.0 13.0 19.3 12.8 19.3 12.7 19.1 12.4 19.0 12.1 19.3 12.0 19.6 12.0 19.8 12.3 20.3 12.7 20.2 13.8 21.1 14.7 21.3 15.0 21.8 15.6 21.9 16.1 21.9 16.0 21.7 16.3 21.4 16.4 21.1 16.2 21.0 16.2 20.7 16.0 20.6 16.0 20.4 16.1 20.3 16.2 19.8 16.6 19.2 16.7 19.2 16.7 19.4 16.8 19.6 17.4 19.6 17.7 19.0 18.1 18.6 18.1 18.0 18.6 17.7 19.0 17.7 19.0 17.4 18.8 17.2 18.8 16.6 18.4 16.3 18.1 16.2 18.0 16.1 18.2 15.8 18.2 15.6 18.4 15.2 18.4 15.0 18.8 14.7 19.0 15.0 19.3 15.1 19.6 15.1 19.9 15.4 20.0 15.8 20.4 16.1 20.7 16.1 20.8 15.1 20.0 14.2 19.4 13.9 18.4 13.3 17.4 12.9 17.2 12.7 17.2 12.6 17.6 12.3 17.4 11.9 16.8 11.8 16.1 11.9 15.1 11.2 14.6 10.7 13.9 8.7 13.2 8.3 12.0 7.4 12.0 6.6 12.3 6.4 12.4 6.0 12.2 6.0 12.1 5.9 12.0 5.4 12.4 5.2 13.7 4.9 13.9 5.1 14.3 5.0 14.2 4.6 13.9 4.4 13.9 3.7 13.7 3.7 13.6 3.6 14.0 3.4 14.0 3.0 12.4 2.9 11.9 2.4 11.9 2.0 11.6 2.0 11.3 2.2 10.3 2.2 10.0 2.6 9.9 2.6 9.7 2.4 9.3 2.4 8.9 2.9 8.7 3.0 8.6 3.4 8.0 3.4 7.9 3.0 7.7 3.0 7.3 3.8 7.2 4.4 6.6 3.4 6.4 3.3 6.0 3.4 5.8 4.0 5.6 4.2 5.1 4.1 4.8 4.3Z"/>',
   'table':'<path d="M3 20h18M4.5 20v-6h5v6M9.5 20V8h5v12M14.5 20v-4h5v4"/>',
   'jr':'<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="1.8"/><path d="M21 16l-5-5-9 10"/>',
   'igbn':'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
@@ -98,13 +99,14 @@ const REQUESTS = [
   {id:'cal',    kind:'cal',   icon:'cal', title:'Calendario',   desc:'Le partite del mese'},
   {id:'table',  kind:'table', icon:'table', title:'Classifica',  desc:'Serie A e coppe europee, aggiornata da Diretta.it'},
   {id:'jr',     kind:'jr',    icon:'jr', title:'Post',         desc:'Foto con il logo JR: classica, sfocata o collage'},
-  {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia IG',    desc:'Breaking News in formato storia'}
+  {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia IG',    desc:'Breaking News in formato storia'},
+  {id:'ita',    kind:'ita',   icon:'ita', title:'Italia',       desc:'Grafiche della Nazionale'}
 ];
 const HOME_GROUPS = [
   {icon:'g-pre', title:'Pre-gara',              ids:['md','pxi','squad','xi']},
   {icon:'g-events', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
   {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
-  {icon:'g-other', title:'Altro',                 ids:['jr','igbn','cal','table']}
+  {icon:'g-other', title:'Altro',                 ids:['jr','igbn','cal','table','ita']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
 const COMPETITIONS_UEFA = [
@@ -112,6 +114,7 @@ const COMPETITIONS_UEFA = [
   ['uefa.europa.conf','Conference League']
 ];
 function competitionOptions() {
+  if (nat) return NAT_COMPETITIONS;
   const friendly = [['club.friendly','Amichevole']];
   // Squad list: tutte le competizioni; quelle senza grafica propria usano quella delle amichevoli.
   if (kind === 'squad') return [['ita.1','Serie A'],['ita.coppa_italia','Coppa Italia'],['ita.super_cup','Supercoppa Italiana'],
@@ -177,6 +180,7 @@ const STEP_NAMES = {
   home:'Home',
   competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
   player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
+  natkind:'Grafica', natopp:'Avversaria', natplayer:'Giocatore', goaltype:'Tipo di gol',
   phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Classifica', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto'
 };
 

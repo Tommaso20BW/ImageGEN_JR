@@ -4,7 +4,7 @@ import math
 import re
 import uuid
 
-from constants import COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
+from constants import COMPETITIONS, ITALY_COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
 from graphics.squad_list import parse_squad
 from graphics.starting_xi import PLAYERS as PLAYERS_IN_XI, parse_lineup
 from graphics.matchday import parse_info
@@ -17,6 +17,9 @@ VALID_COMPETITIONS = {value for _, value in COMPETITIONS}
 VALID_KITS = {'home', 'away', 'third'}
 from graphics.uefa import THEMES as UEFA_THEMES, theme_for as uefa_theme_for  # noqa: E402
 VALID_SIDES = {'home', 'away'}
+ITALY_KINDS = {'kick', 'second', 'half', 'end_of_90', 'full', 'goal', 'saved', 'stats'}
+ITALY_KITS = {'ita_home', 'ita_away'}
+GOAL_TYPES = {'goal', 'own', 'none'}
 VALID_POSES = {'arms_crossed', 'pointing'}
 VALID_MOMENTS = {'HT', '2H_END', 'FT'}
 BUSY = {'ready', 'rendering', 'sending'}
@@ -51,6 +54,59 @@ def _canonical_team(catalog, value):
         raise ValueError('Avversario non presente nel catalogo.')
     exact = [row for row in matches if row['name'].casefold() == name.casefold()]
     return exact[0] if exact else matches[0]
+
+
+def _free_name(value, limit=40):
+    """Nome scritto a mano (giocatore o squadra): spazi uniti, lunghezza massima."""
+    name = re.sub(r'\s+', ' ', str(value or '')).strip()
+    if len(name) > limit:
+        raise ValueError(f'Nome troppo lungo (massimo {limit} caratteri).')
+    return name
+
+
+def _stats_fields(incoming):
+    moment = str(incoming.get('moment') or '')
+    if moment not in VALID_MOMENTS:
+        raise ValueError('Momento statistiche non valido.')
+    rows = _rows(incoming.get('rows'))
+    if not rows:
+        raise ValueError('Inserisci almeno una statistica.')
+    return {'moment': moment, 'rows': rows}
+
+
+def _italy_state(incoming, kind, competition, kit, side, now):
+    if kind not in ITALY_KINDS:
+        raise ValueError("Grafica non disponibile per l'Italia.")
+    if competition not in {value for _, value in ITALY_COMPETITIONS}:
+        raise ValueError('Competizione non valida.')
+    if kit not in ITALY_KITS:
+        raise ValueError('Scegli la maglia Home o Away.')
+    if side not in VALID_SIDES:
+        raise ValueError('Casa/trasferta non valido.')
+    opponent = _free_name((incoming.get('opponent') or {}).get('name') if isinstance(incoming.get('opponent'), dict) else '')
+    if not opponent:
+        raise ValueError('Scrivi la squadra avversaria.')
+    data = {'kind': kind, 'team': 'italy', 'competition': competition, 'kit': kit, 'side': side,
+            'opponent': {'name': opponent, 'id': ''}}
+    if kind in ('goal', 'saved'):
+        goal_type = str(incoming.get('goal_type') or 'goal') if kind == 'goal' else 'goal'
+        if goal_type not in GOAL_TYPES:
+            raise ValueError('Tipo di gol non valido.')
+        name = _free_name(incoming.get('player'))
+        if not name and goal_type != 'none':
+            raise ValueError('Scrivi il nome del portiere.' if kind == 'saved' else 'Scrivi il nome del marcatore.')
+        data.update(player=name if goal_type != 'none' else '', goal_type=goal_type,
+                    minute=parse_minute(str(incoming.get('minute') or '')),
+                    score=_score(incoming.get('score'), optional=True))
+    elif kind in ('second', 'half', 'full', 'end_of_90'):
+        data['score'] = _score(incoming.get('score'))
+        if kind == 'full':
+            data['extra_time'] = incoming.get('extra_time') is True
+            data['shootout'] = _score(incoming.get('shootout'), optional=True, shootout=True)
+    elif kind == 'stats':
+        data.update(_stats_fields(incoming))
+    return {'id': uuid.uuid4().hex[:10], 'data': data, 'status': 'ready', 'updated': now,
+            'source': 'webapp-direct'}
 
 
 def _canonical_player(catalog, value, *, goalkeeper=False):
@@ -248,6 +304,11 @@ def _build_state(envelope, catalog, now, expected_session):
             'updated': now,
             'source': 'webapp-direct',
         }
+    # ITALIA (Nazionale): grafiche LiveScore senza foto, colori azzurro (home) o bianco (away),
+    # avversaria scritta a mano (al posto degli stemmi vanno i nomi delle squadre).
+    if incoming.get('team') == 'italy':
+        return _italy_state(incoming, kind, competition, kit, side, now)
+
     if competition not in VALID_COMPETITIONS:
         raise ValueError('Competizione non valida.')
     # UCL / UEL / Conference: colori della competizione, solo per Matchday, Starting XI e
@@ -271,7 +332,18 @@ def _build_state(envelope, catalog, now, expected_session):
     # risultato e loghi) in Gol, Parata, Half time, End of 90', Full time e Probabile XI.
     friendly = uefa_theme_for(competition) == 'friendly'
 
-    if kind in ('goal', 'saved'):
+    goal_type = str(incoming.get('goal_type') or 'goal') if kind == 'goal' else 'goal'
+    if goal_type not in GOAL_TYPES:
+        raise ValueError('Tipo di gol non valido.')
+    if kind == 'goal' and goal_type != 'goal':
+        # Autogol (nome di chi l'ha fatto, scritto a mano) o gol senza marcatore: senza foto.
+        name = _free_name(incoming.get('player')) if goal_type == 'own' else ''
+        if goal_type == 'own' and not name:
+            raise ValueError("Scrivi chi ha fatto l'autogol.")
+        data.update(player=name, goal_type=goal_type,
+                    minute=parse_minute(str(incoming.get('minute') or '')),
+                    score=_score(incoming.get('score'), optional=True))
+    elif kind in ('goal', 'saved'):
         data['player'] = _canonical_player(
             catalog,
             incoming.get('player'),
@@ -354,13 +426,7 @@ def _build_state(envelope, catalog, now, expected_session):
         data['players'] = parse_squad(incoming.get('squad'))
 
     elif kind == 'stats':
-        moment = str(incoming.get('moment') or '')
-        if moment not in VALID_MOMENTS:
-            raise ValueError('Momento statistiche non valido.')
-        data['moment'] = moment
-        data['rows'] = _rows(incoming.get('rows'))
-        if not data['rows']:
-            raise ValueError('Inserisci almeno una statistica.')
+        data.update(_stats_fields(incoming))
 
     return {
         'id': uuid.uuid4().hex[:10],

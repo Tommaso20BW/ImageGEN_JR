@@ -222,6 +222,7 @@ button.sp-item:active{background:var(--accent-soft)}
 .hm-item[data-id="igbn"] .hm-ico{background:#AF52DE}
 .hm-item[data-id="cal"] .hm-ico{background:#FF9500}
 .hm-item[data-id="table"] .hm-ico{background:#30B0C7}
+.hm-item[data-id="ita"] .hm-ico{background:#0A5FC2}
 
 /* azioni (testo colorato come su iPhone) */
 :root{--tint:#007AFF}

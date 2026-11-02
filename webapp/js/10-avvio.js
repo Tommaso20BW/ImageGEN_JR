@@ -48,6 +48,7 @@ $('squadText').addEventListener('input',() => { updateSquadSummary(); clearError
 initPhotoEditor();
 initJrBlur();
 initJrColor();
+natInit();
 initJrCollage();
 initPhaseEditor();
 $('squadLinkBtn').addEventListener('click',openLinkSheet);

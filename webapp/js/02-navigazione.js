@@ -180,8 +180,9 @@ function baseDisplayName(name) {
 }
 
 function currentMatchupNames() {
-  const opponent = selectedTeam ? displayTeamName(selectedTeam.name) : 'Avversario';
-  return side === 'home' ? {home:'Juventus',away:opponent} : {home:opponent,away:'Juventus'};
+  const opponent = nat ? (natOppName() || 'Avversaria') : selectedTeam ? displayTeamName(selectedTeam.name) : 'Avversario';
+  const us = nat ? 'Italia' : 'Juventus';
+  return side === 'home' ? {home:us,away:opponent} : {home:opponent,away:us};
 }
 
 function namesFor(item) {
@@ -230,6 +231,7 @@ function buildFlow() {
   if (uefa) kit = uefa;
   else if (UEFA_THEMES[kit]) kit = '';
   if (LIVE) { flow = ['phasephoto']; flowIndex = 0; return; }
+  if (nat) { flow = natFlow(); flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1)); return; }
   if (!kind) { flow = ['home']; flowIndex = 0; return; }
   const base = ['competition','side','opponent'];
   // Goal/saved: maglia sempre. Half/end/full: solo con "Italia" (serve per lo sfondo);
@@ -245,8 +247,8 @@ function buildFlow() {
   const pick = steps => ['mdpick',...(picked ? steps.filter(s => !base.includes(s) && !(s === 'kit' && kitFromMatch)) : steps)];
   // Amichevole: Gol/Parata senza foto del calciatore (niente maglia e posa), fasi senza foto.
   const friendly = isFriendly();
-  if ((kind === 'goal' || kind === 'saved') && friendly) flow = pick([...base,'player','minute']);
-  else if (kind === 'goal' || kind === 'saved') flow = pick([...withKit,'player','minute','pose']);
+  if ((kind === 'goal' || kind === 'saved') && friendly) flow = pick([...base,...juveGoalSteps(true)]);
+  else if (kind === 'goal' || kind === 'saved') flow = pick([...withKit,...juveGoalSteps(false)]);
   else if (kind === 'kick') flow = pick(base);
   else if (kind === 'match' && phase === 'kick') flow = pick(base);
   else if (kind === 'match') flow = [...pick([...(italy ? withKit : base),'score']),...(PHOTO_PHASES.has(phase) && !friendly ? ['phasephoto'] : [])];
@@ -275,11 +277,13 @@ function stepTitle(step) {
 }
 
 function stepValue(step) {
+  const natValue = natStepValue(step);
+  if (natValue !== null) return natValue;
   switch (step) {
     case 'competition': return labelOf(competitionOptions(),competition);
     case 'side': return labelOf(SIDES,side);
     case 'opponent': return selectedTeam ? displayTeamName(selectedTeam.name) : '';
-    case 'kit': return needsShirt() ? labelOf(KITS,shirt) : labelOf(KITS,kit);
+    case 'kit': return nat ? labelOf(NAT_KITS,kit) : needsShirt() ? labelOf(KITS,shirt) : labelOf(KITS,kit);
     case 'player': return selectedPlayer ? surnameOf(selectedPlayer) : '';
     case 'minute': {
       const min = $('minute').value.trim();
@@ -576,7 +580,7 @@ function isLastStep() {
 /* ---------- Option groups ---------- */
 // Ricostruisce i bottoni solo se cambiano le opzioni; altrimenti sposta la selezione
 // sugli elementi esistenti, così il passaggio radio→radio è animato.
-const AUTO_OPTS = new Set(['tableCompOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts']);
+const AUTO_OPTS = new Set(['natKindOpts','goalTypeOpts','tableCompOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts']);
 function renderOptions(id, options, value, onSelect) {
   const box = $(id);
   box._options = options;
@@ -628,7 +632,11 @@ function updateScreenValues() {
     refreshSearchSummaries();
   });
   renderOptions('sideOpts',SIDES,side,v => { side = v; updateScreenValues(); });
-  if (needsShirt()) {
+  if (nat) {
+    $('kitTitle').textContent = 'Maglia dell’Italia';
+    $('kitLead').textContent = 'Home: grafiche azzurre. Away: grafiche bianche.';
+    renderOptions('kitOpts',NAT_KITS,kit,v => { kit = v; });
+  } else if (needsShirt()) {
     // Probabile XI UEFA: colori della competizione già decisi, qui solo le foto.
     $('kitTitle').textContent = 'Maglia dei giocatori';
     $('kitLead').textContent = `Colori ${UEFA_THEMES[kit]} già impostati. Scegli la maglia delle foto dei giocatori.`;
@@ -654,6 +662,7 @@ function updateScreenValues() {
   renderOptions('tableCompOpts',TABLE_COMPS,tableComp,v => { tableComp = v; });
   renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); autoCalendar(); });
   renderOptions('poseOpts',POSES,pose,v => pose = v);
+  natRender();
   renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
   updatePhaseUI();
 
@@ -691,7 +700,7 @@ function autoFocusCurrent() {
   if (previewMode) return;
   // Risultato: i campi sono solo pulsanti (+/-), il focus su telefono ruberebbe il tocco successivo.
   const inputMap = {
-    opponent:'opponentSearch', player:'playerSearch', minute:'minute'
+    opponent:'opponentSearch', player:'playerSearch', minute:'minute', natopp:'natOpp', natplayer:'natPlayer'
   };
   const id = inputMap[flow[flowIndex]];
   if (!id) return;

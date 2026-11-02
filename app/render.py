@@ -8,12 +8,13 @@ import tempfile
 import threading
 
 
-from constants import COMPETITIONS
+from constants import COMPETITIONS, ITALY, ITALY_COMPETITIONS
 
 
 def teams(data):
     opponent = data['opponent']
-    juve = {'name': 'Juventus', 'id': '111'}
+    # Voce "Italia": la squadra seguita è la Nazionale (ID ESPN 162), non la Juventus.
+    juve = dict(ITALY) if data.get('team') == 'italy' else {'name': 'Juventus', 'id': '111'}
     home, away = (
         (juve, opponent)
         if data['side'] == 'home'
@@ -262,6 +263,26 @@ class Renderer:
         }
 
         friendly = 'friendly' in str(data.get('competition') or '')
+        italy = data.get('team') == 'italy'
+        goal_type = data.get('goal_type', 'goal')
+
+        if kind in ('goal', 'saved') and (italy or goal_type != 'goal'):
+            # Italia, autogol, gol senza marcatore: card senza foto (effetto eco).
+            score = data.get('score') or (None, None)
+            return p.event(
+                player=None, scorer_name=data.get('player', ''), minute=data['minute'],
+                saved=kind == 'saved', suffix=' (AUTOGOL)' if goal_type == 'own' else '',
+                home_goals=score[0], away_goals=score[1], **common,
+            ).png
+
+        if kind in ('half', 'full', 'end_of_90') and italy:
+            # Italia: fasi senza foto (scritta su due righe, risultato con i nomi delle squadre).
+            score = data.get('score') or (0, 0)
+            return _phase_with_translated_shootout(
+                p, shootout=data.get('shootout') if kind == 'full' else None, layers=None,
+                kind=kind, home_goals=score[0], away_goals=score[1],
+                extra_time=kind == 'full' and bool(data.get('extra_time')), **common,
+            )
 
         if kind in ('goal', 'saved') and friendly:
             # Amichevoli: card senza la foto del calciatore, solo scritte, risultato e loghi.
@@ -425,7 +446,7 @@ class Renderer:
                 **common,
                 rows=data.get('rows', []),
                 momento=data['moment'],
-                league_name=dict((v, k) for k, v in COMPETITIONS)[
+                league_name=dict((v, k) for k, v in COMPETITIONS + ITALY_COMPETITIONS)[
                     data['competition']
                 ],
             )

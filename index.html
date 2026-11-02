@@ -110,6 +110,34 @@
             <div id="playerList" class="results"></div>
           </section>
 
+          <section class="screen" data-screen="natkind">
+            <div class="eyebrow">Italia</div>
+            <h1>Grafica</h1>
+            <p class="lead">Grafiche della Nazionale, senza foto: azzurre (Home) o bianche (Away), con i nomi delle squadre al posto degli stemmi.</p>
+            <div id="natKindOpts" class="opts" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="natopp">
+            <div class="eyebrow">Italia</div>
+            <h1>Avversaria</h1>
+            <p class="lead">Scrivi il nome della nazionale avversaria, come vuoi che compaia (es. Spagna).</p>
+            <div class="ios-list"><label class="ios-row"><span>Squadra</span><input id="natOpp" class="ios-in" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Spagna"></label></div>
+          </section>
+
+          <section class="screen" data-screen="goaltype">
+            <div class="eyebrow">Gol</div>
+            <h1>Tipo di gol</h1>
+            <p class="lead">Autogol e gol senza marcatore escono senza foto del giocatore.</p>
+            <div id="goalTypeOpts" class="opts" role="radiogroup"></div>
+          </section>
+
+          <section class="screen" data-screen="natplayer">
+            <div class="eyebrow">Giocatore</div>
+            <h1 id="natPlayerTitle">Marcatore</h1>
+            <p id="natPlayerLead" class="lead">Scrivi nome e cognome del giocatore.</p>
+            <div class="ios-list"><label class="ios-row"><span>Nome</span><input id="natPlayer" class="ios-in" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Nome e cognome"></label></div>
+          </section>
+
           <section class="screen" data-screen="minute">
             <div class="eyebrow">Evento</div>
             <h1>Risultato e minuto</h1>
@@ -577,7 +605,7 @@
 <script>
   // Codice della Mini App (webapp/js): file caricati in ordine, con la versione della pagina.
   (function () { var v = (new URLSearchParams(location.search).get('v') || Date.now());
-    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '10-avvio.js'].forEach(function (f) {
+    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '10-avvio.js'].forEach(function (f) {
       document.write('<script src="webapp/js/' + f + '?v=' + v + '"><\/script>'); }); })();
 </script>
 </body>

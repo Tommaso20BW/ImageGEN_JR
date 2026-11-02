@@ -200,12 +200,14 @@ function applyEyebrows(screenName) {
 
 function openRequest(r) {
   navDir = 1;
+  nat = r.id === 'ita';
   changeKind(r.kind,true,false,r.phase || '');
 }
 
 function goHome() {
   navDir = -1;
   haptic('select');
+  nat = false;
   changeKind('',true,true);
 }
 
@@ -245,6 +247,7 @@ function resetAllData() {
   etOn = false;
   selectedTeam = null;
   selectedPlayer = null;
+  natReset();
   ['opponentSearch','playerSearch','minute','homePens','awayPens','squadText','matchStadium','matchTime','matchDate','xiText','pxiText'].forEach(id => { $(id).value = ''; });
   xiPicks = [];
   pxiModuleManual = false;

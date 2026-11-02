@@ -33,6 +33,17 @@ COMPETITIONS = [
     ('Amichevole', 'club.friendly'),
 ]
 
+# Nazionale (voce "Italia" della Mini App): competizioni ESPN delle partite dell'Italia.
+ITALY_COMPETITIONS = [
+    ('Amichevole', 'fifa.friendly'),
+    ('Nations League', 'uefa.nations'),
+    ('Qualificazioni Mondiali', 'fifa.worldq.uefa'),
+    ('Mondiali', 'fifa.world'),
+    ('Qualificazioni Europei', 'uefa.euroq'),
+    ('Europei', 'uefa.euro'),
+]
+ITALY = {'name': 'Italy', 'id': '162'}
+
 STATS = (
     'POSSESSO', 'xG', 'TIRI', 'TIRI IN PORTA', 'CORNER', 'FALLI',
     'FUORIGIOCO', 'AMMONITI', 'ESPULSI', 'PARATE',
