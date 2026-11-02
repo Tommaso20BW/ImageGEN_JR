@@ -369,24 +369,10 @@ class Renderer:
             def draw(layers):
                 return _phase_with_translated_shootout(p, shootout=shootout, layers=layers, **phase_args)
 
-            def add_shadow():
-                # Ombra dietro la scritta solo se lo sfondo è troppo chiaro (o troppo scuro per una
-                # scritta scura). Passata al motore solo se p.phase accetta `text_shadow`.
-                import inspect
-                from graphics import backdrop
-                if 'text_shadow' not in inspect.signature(p.phase).parameters:
-                    log.warn('GRAFICA', 'portrait.phase() del motore LiveScore_JR NON accetta '
-                          '`text_shadow`: ombra calcolata ma NON applicata')
-                    return
-                decision = backdrop.shadow_for(kind, self._photo(data), data['frame'])
-                phase_args['text_shadow'] = decision
-                log.info('GRAFICA', f'Sfondo {kind} contrasto {decision["contrast"]} '
-                      f'ombra {decision["strength"]}')
-
+            # Ombra dietro la scritta (sfondo troppo chiaro): la decide il motore in build_layers().
             if ghost:
                 return phase_layers.ghost(draw)
 
-            add_shadow()
             note('cutout')
             person_id = data.get('person_id')
             same_photo = not person_id or person_id == data['photo_id']
