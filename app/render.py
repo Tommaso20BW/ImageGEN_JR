@@ -265,13 +265,14 @@ class Renderer:
         friendly = 'friendly' in str(data.get('competition') or '')
         italy = data.get('team') == 'italy'
         goal_type = data.get('goal_type', 'goal')
+        suffix = {'own': ' (AUTOGOL)', 'penalty': ' (RIGORE)'}.get(goal_type, '') if kind == 'goal' else ''
 
-        if kind in ('goal', 'saved') and (italy or goal_type != 'goal'):
-            # Italia, autogol, gol senza marcatore: card senza foto (effetto eco).
+        if kind in ('goal', 'saved') and (italy or goal_type in ('own', 'nophoto')):
+            # Italia, autogol, gol senza foto: card senza foto (effetto eco).
             score = data.get('score') or (None, None)
             return p.event(
                 player=None, scorer_name=data.get('player', ''), minute=data['minute'],
-                saved=kind == 'saved', suffix=' (AUTOGOL)' if goal_type == 'own' else '',
+                saved=kind == 'saved', suffix=suffix,
                 home_goals=score[0], away_goals=score[1], **common,
             ).png
 
@@ -289,7 +290,7 @@ class Renderer:
             score = data.get('score') or (None, None)
             return p.event(
                 player=None, scorer_name=data['player'], minute=data['minute'],
-                saved=kind == 'saved', home_goals=score[0], away_goals=score[1], **common,
+                saved=kind == 'saved', suffix=suffix, home_goals=score[0], away_goals=score[1], **common,
             ).png
 
         if kind in ('half', 'full', 'end_of_90') and friendly:
@@ -314,6 +315,7 @@ class Renderer:
             if kind == 'goal':
                 return g.render_goal_card(
                     **args,
+                    goal_type='penalty goal' if goal_type == 'penalty' else 'goal',
                     scorer_name=data['player'],
                 ).png
             return g.render_saved_card(

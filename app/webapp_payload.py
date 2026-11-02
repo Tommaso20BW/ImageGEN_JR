@@ -19,7 +19,7 @@ from graphics.uefa import THEMES as UEFA_THEMES, theme_for as uefa_theme_for  # 
 VALID_SIDES = {'home', 'away'}
 ITALY_KINDS = {'kick', 'second', 'half', 'end_of_90', 'full', 'goal', 'saved', 'stats'}
 ITALY_KITS = {'ita_home', 'ita_away'}
-GOAL_TYPES = {'goal', 'own', 'none'}
+GOAL_TYPES = {'goal', 'penalty', 'own', 'nophoto'}   # gol, rigore, autogol, senza foto
 VALID_POSES = {'arms_crossed', 'pointing'}
 VALID_MOMENTS = {'HT', '2H_END', 'FT'}
 BUSY = {'ready', 'rendering', 'sending'}
@@ -93,9 +93,10 @@ def _italy_state(incoming, kind, competition, kit, side, now):
         if goal_type not in GOAL_TYPES:
             raise ValueError('Tipo di gol non valido.')
         name = _free_name(incoming.get('player'))
-        if not name and goal_type != 'none':
-            raise ValueError('Scrivi il nome del portiere.' if kind == 'saved' else 'Scrivi il nome del marcatore.')
-        data.update(player=name if goal_type != 'none' else '', goal_type=goal_type,
+        if not name:
+            raise ValueError('Scrivi il nome del portiere.' if kind == 'saved'
+                             else "Scrivi chi ha fatto l'autogol." if goal_type == 'own' else 'Scrivi il nome del marcatore.')
+        data.update(player=name, goal_type=goal_type,
                     minute=parse_minute(str(incoming.get('minute') or '')),
                     score=_score(incoming.get('score'), optional=True))
     elif kind in ('second', 'half', 'full', 'end_of_90'):
@@ -335,11 +336,11 @@ def _build_state(envelope, catalog, now, expected_session):
     goal_type = str(incoming.get('goal_type') or 'goal') if kind == 'goal' else 'goal'
     if goal_type not in GOAL_TYPES:
         raise ValueError('Tipo di gol non valido.')
-    if kind == 'goal' and goal_type != 'goal':
-        # Autogol (nome di chi l'ha fatto, scritto a mano) o gol senza marcatore: senza foto.
-        name = _free_name(incoming.get('player')) if goal_type == 'own' else ''
-        if goal_type == 'own' and not name:
-            raise ValueError("Scrivi chi ha fatto l'autogol.")
+    if kind == 'goal' and goal_type in ('own', 'nophoto'):
+        # Autogol (giocatore avversario) o gol senza foto: nome scritto a mano, card senza foto.
+        name = _free_name(incoming.get('player'))
+        if not name:
+            raise ValueError("Scrivi chi ha fatto l'autogol." if goal_type == 'own' else 'Scrivi il nome del marcatore.')
         data.update(player=name, goal_type=goal_type,
                     minute=parse_minute(str(incoming.get('minute') or '')),
                     score=_score(incoming.get('score'), optional=True))
@@ -350,6 +351,8 @@ def _build_state(envelope, catalog, now, expected_session):
             goalkeeper=(kind == 'saved'),
         )
         data['minute'] = parse_minute(str(incoming.get('minute') or ''))
+        if goal_type == 'penalty':      # rigore: foto del giocatore e "(RIGORE)" accanto al nome
+            data['goal_type'] = 'penalty'
         # Score shown next to the minute on the card; older clients may not send it.
         data['score'] = _score(incoming.get('score'), optional=True)
         pose = str(incoming.get('pose') or ('arms_crossed' if friendly else ''))

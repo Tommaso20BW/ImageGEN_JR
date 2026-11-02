@@ -65,10 +65,10 @@ function buildPayload(ghost=false) {
 
   if (nat && (kind === 'goal' || kind === 'saved')) {
     // dati già pronti (natPayload)
-  } else if (kind === 'goal' && goalType !== 'goal') {
-    // Autogol (nome scritto a mano) o gol senza marcatore: senza foto, niente posa.
+  } else if (kind === 'goal' && (goalType === 'own' || goalType === 'nophoto')) {
+    // Autogol o gol senza foto: nome scritto a mano, niente foto e niente posa.
     data.goal_type = goalType;
-    data.player = goalType === 'own' ? natPlayerName() : '';
+    data.player = natPlayerName();
     data.minute = $('minute').value.trim();
     data.score = scorePair('evHomeScore','evAwayScore',true);
   } else if (kind === 'goal' || kind === 'saved') {
@@ -77,6 +77,7 @@ function buildPayload(ghost=false) {
     data.minute = $('minute').value.trim();
     data.score = scorePair('evHomeScore','evAwayScore',true);
     data.pose = pose;
+    if (kind === 'goal' && goalType === 'penalty') data.goal_type = 'penalty';
   } else if (kind === 'match' && phase !== 'kick') {
     data.score = scorePair('homeScore','awayScore',true);
     if (phase === 'full' && etOn) data.extra_time = true;
