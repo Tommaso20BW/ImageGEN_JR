@@ -47,6 +47,10 @@ def _ghost_webp(png):
         return out.getvalue()
 LOCK_WAIT_SECONDS = 75        # un nuovo tentativo aspetta la richiesta ancora in corso
 RESEND_GUARD_SECONDS = 180    # stessa grafica reinviata entro 3 min = doppione (la Mini App riprova da sola)
+# Classifica: può cambiare live. L'anteprima si riscarica sempre (tranne un nuovo tentativo
+# subito dopo) e l'invio riscarica se l'anteprima è più vecchia di un minuto.
+TABLE_PREVIEW_REUSE_SECONDS = 20
+TABLE_SEND_REUSE_SECONDS = 60
 DIRECT_PORT = 8765
 # Il pulsante su Telegram parte solo quando il tunnel risponde davvero da internet.
 TUNNEL_READY_SECONDS = 90     # poi il workflow riprova con un tunnel nuovo
@@ -619,6 +623,21 @@ class Service:
             expected_session=self.session,
         )
 
+    @staticmethod
+    def _table_version(data):
+        """Classifica: impronta delle righe lette da Diretta.it per l'ultima grafica ('' per le altre)."""
+        if data.get('kind') != 'table':
+            return ''
+        from graphics import classifica
+        snap = classifica._last.get(str(data.get('competition') or '').upper()) or {}
+        raw = json.dumps(snap.get('classifica'), sort_keys=True, ensure_ascii=False, default=str)
+        return hashlib.sha256(raw.encode('utf-8')).hexdigest()[:16]
+
+    @staticmethod
+    def _cache_fresh(cached, data, max_age):
+        """La classifica scade presto (cambia live); le altre grafiche no."""
+        return data.get('kind') != 'table' or time.time() - cached.get('updated', 0) <= max_age
+
     def _render_and_cache(self, request_state, *, force=False):
         data = copy.deepcopy(request_state['data'])
         fingerprint = self._fingerprint(data)
@@ -630,6 +649,7 @@ class Service:
                 and cached
                 and cached.get('fingerprint') == fingerprint
                 and cached.get('png')
+                and self._cache_fresh(cached, data, TABLE_PREVIEW_REUSE_SECONDS)
             ):
                 return cached['png'], cached.get('request_id') or request_state['id']
 
@@ -857,8 +877,9 @@ class Service:
             fingerprint = self._fingerprint(data)
 
             # Stessa grafica appena inviata (risposta persa per strada): niente doppione.
+            # Classifica: si controlla dopo, sulle righe aggiornate (se cambiano, si reinvia).
             sent = self.recent_sends.get(fingerprint)
-            if sent and time.time() - sent[1] < RESEND_GUARD_SECONDS:
+            if data['kind'] != 'table' and sent and time.time() - sent[1] < RESEND_GUARD_SECONDS:
                 log.info('INVIO', f"{log.graphic_name(data)}: già inviata poco fa, non la rimando")
                 return sent[0]
 
@@ -868,13 +889,17 @@ class Service:
                     cached
                     and cached.get('fingerprint') == fingerprint
                     and cached.get('png')
+                    and self._cache_fresh(cached, data, TABLE_SEND_REUSE_SECONDS)
                 ):
                     png = cached['png']
                 else:
                     png = None
+                    stale = bool(cached and cached.get('fingerprint') == fingerprint and cached.get('png'))
 
             if png is None:
-                log.info('INVIO', f"{log.graphic_name(data)}: preparo la grafica da inviare")
+                log.info('INVIO', f"{log.graphic_name(data)}: " + (
+                    "anteprima di più di un minuto fa, riscarico la classifica" if stale
+                    else "preparo la grafica da inviare"))
                 png = self.renderer.render(data)
                 with self.preview_cache_lock:
                     self.preview_cache = {
@@ -886,6 +911,14 @@ class Service:
                     }
             else:
                 log.info('INVIO', f"{log.graphic_name(data)}: uso l'anteprima già pronta")
+
+            if data['kind'] == 'table':
+                # Doppione solo se le righe della classifica sono identiche a quella appena inviata.
+                fingerprint = f'{fingerprint}:{self._table_version(data)}'
+                sent = self.recent_sends.get(fingerprint)
+                if sent and time.time() - sent[1] < RESEND_GUARD_SECONDS:
+                    log.info('INVIO', f"{log.graphic_name(data)}: classifica identica inviata poco fa, non la rimando")
+                    return sent[0]
 
             sending = time.time()
             try:
