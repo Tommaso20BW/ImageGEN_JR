@@ -143,6 +143,8 @@ class Renderer:
         self.photos = {}
         # Persone scontornate (id foto -> PNG), riusate da anteprima e invio.
         self.cutouts = {}
+        # True se l'ultima grafica con foto è uscita con lo scontorno veloce (fine non pronto).
+        self.used_fast_cutout = False
         self.cutout_lock = threading.RLock()
         # Foto del MATCHDAY e della STARTING XI con la scia (id foto -> JPEG).
         self.trails = {}
@@ -167,6 +169,32 @@ class Renderer:
                 while len(self.cutouts) > 6:
                     self.cutouts.pop(next(iter(self.cutouts)))
             return self.cutouts[photo_id]
+
+    def start_fine(self, photo_id):
+        """Scontorno fine (BiRefNet lite) in background per la grafica finale delle fasi."""
+        from livescore.graphics import phase_layers
+
+        raw = self.photos.get(photo_id)
+        if not raw:
+            return
+        try:              # mai bloccare: senza scontorno fine si usa quello veloce
+            phase_layers.start_fine_cutout(photo_id, phase_layers.open_photo(raw))
+        except Exception as exc:  # noqa: BLE001
+            log.warn('FOTO', f'Scontorno fine non avviato: {type(exc).__name__}: {exc}')
+
+    def final_cutout(self, photo_id):
+        """Persona per la grafica vera: scontorno fine se pronto (aspetta fino a 20 s),
+        altrimenti quello veloce dell'editor."""
+        from livescore.graphics import phase_layers
+
+        self.start_fine(photo_id)
+        fine = phase_layers.fine_cutout(photo_id)
+        if fine:
+            return fine
+        if photo_id in phase_layers._fine_jobs:      # avviato ma non pronto (o non riuscito)
+            self.used_fast_cutout = True
+            log.warn('FOTO', 'Scontorno fine non ancora pronto: uso quello veloce')
+        return self.cutout(photo_id)
 
     def clean_background(self, photo_id):
         """Sfondo senza la persona ricostruito (JPEG), per l'editor."""
@@ -362,7 +390,8 @@ class Renderer:
             note('cutout')
             person_id = data.get('person_id')
             same_photo = not person_id or person_id == data['photo_id']
-            person = self.cutout(person_id or data['photo_id'])
+            self.used_fast_cutout = False
+            person = self.final_cutout(person_id or data['photo_id'])
             note('erase' if same_photo and phase_layers.moved(data.get('person_frame')) else 'compose')
             with tempfile.TemporaryDirectory(prefix='jr_manual_') as cache:
                 layers = phase_layers.build_layers(

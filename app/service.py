@@ -571,6 +571,8 @@ class Service:
         try:
             self.cutout_preview(photo_id)
             job['state'] = 'ready'
+            # Editor pronto con lo scontorno veloce: ora quello fine per la grafica vera.
+            self.renderer.start_fine(photo_id)
         except Exception as exc:  # noqa: BLE001 - l'errore va alla Mini App, non al server
             job['error'] = str(exc) if isinstance(exc, ValueError) else 'Scontorno non riuscito.'
             job['state'] = 'error'
@@ -655,6 +657,7 @@ class Service:
 
         log.info('ANTEPRIMA', f"{log.graphic_name(data)}: preparo l'anteprima")
         self._set_stage('render')
+        self.renderer.used_fast_cutout = False
         png = self.renderer.render(data, progress=self._set_stage)
 
         with self.preview_cache_lock:
@@ -664,6 +667,7 @@ class Service:
                 'data': data,
                 'png': png,
                 'updated': time.time(),
+                'fast_cutout': self.renderer.used_fast_cutout,
             }
 
         return png, request_state['id']
@@ -890,16 +894,19 @@ class Service:
                     and cached.get('fingerprint') == fingerprint
                     and cached.get('png')
                     and self._cache_fresh(cached, data, TABLE_SEND_REUSE_SECONDS)
+                    and not cached.get('fast_cutout')
                 ):
                     png = cached['png']
                 else:
                     png = None
-                    stale = bool(cached and cached.get('fingerprint') == fingerprint and cached.get('png'))
+                    same = bool(cached and cached.get('fingerprint') == fingerprint and cached.get('png'))
+                    reason = ('anteprima con lo scontorno veloce, rifaccio con quello fine'
+                              if same and cached.get('fast_cutout')
+                              else 'anteprima di più di un minuto fa, riscarico la classifica' if same
+                              else 'preparo la grafica da inviare')
 
             if png is None:
-                log.info('INVIO', f"{log.graphic_name(data)}: " + (
-                    "anteprima di più di un minuto fa, riscarico la classifica" if stale
-                    else "preparo la grafica da inviare"))
+                log.info('INVIO', f"{log.graphic_name(data)}: {reason}")
                 png = self.renderer.render(data)
                 with self.preview_cache_lock:
                     self.preview_cache = {
@@ -1146,9 +1153,16 @@ def _warm_up_cutout():
         from livescore.graphics import phase_layers
         from PIL import Image
         phase_layers.cutout(Image.new('RGB', (64, 64)))
-        log.info('AVVIO', 'Scontorno pronto')
+        log.info('AVVIO', 'Scontorno veloce pronto (ISNet, editor)')
     except Exception as exc:
         log.warn('AVVIO', f'Scontorno non avviato: {type(exc).__name__}: {exc}')
+        return
+    try:
+        if phase_layers.FINE_MODEL:
+            phase_layers.warm_up_fine()
+            log.info('AVVIO', f'Scontorno fine pronto ({phase_layers.FINE_MODEL}, grafica finale)')
+    except Exception as exc:
+        log.warn('AVVIO', f'Scontorno fine non avviato, uso solo quello veloce: {type(exc).__name__}: {exc}')
 
 
 def main():
