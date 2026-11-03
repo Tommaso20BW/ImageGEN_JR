@@ -96,6 +96,10 @@ h1 + .opts{margin-top:20px}
   font-size:13px;font-weight:650;line-height:1.4;
 }
 
+/* Avviso (non errore): stessa forma dei messaggi di errore, in giallo */
+.error.notice{background:#FFE9A3;color:#3D2E00;border-color:#F2C230}
+html[data-theme="dark"] .error.notice{background:#4A3A08;color:#FFE7A0;border-color:#8A6D12}
+
 /* Options */
 .opts{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
 .opt{

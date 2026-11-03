@@ -466,6 +466,7 @@ async function submitPreviewGraphic() {
       throw new Error(answer.error || `Invio non riuscito (${response.status}).`);
     }
 
+    if (!LIVE && typeof rememberSent === 'function') rememberSent(answer.message_id);
     await finishBusy();
     $('nextButton').textContent = LIVE ? 'Confermata ✓' : 'Inviato ✓';
     $('busyTitle').textContent = LIVE ? 'Confermata ✓' : 'Inviata ✓';

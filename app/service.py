@@ -19,7 +19,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from catalog import Catalog
 from logo_bundle import build_team_bundle
 from render import Renderer
-from telegram import DeliveryUncertain, Telegram, TelegramError
+from telegram import DeliveryUncertain, NotSent, Telegram, TelegramError
 from webapp_payload import parse_webapp_request
 from graphics.common import overlay_preview
 from graphics.starting_xi import MAX_PHOTO_BYTES, check_photo
@@ -54,6 +54,8 @@ TABLE_SEND_REUSE_SECONDS = 60
 DIRECT_PORT = 8765
 # Il pulsante su Telegram parte solo quando il tunnel risponde davvero da internet.
 TUNNEL_READY_SECONDS = 90     # poi il workflow riprova con un tunnel nuovo
+SEND_TRIES = 3                # invio a Telegram: tentativi quando la foto sicuramente non è partita
+HISTORY_SIZE = 10             # ultimi invii mostrati nella Mini App ("Ultimi invii")
 TUNNEL_READY_STREAK = 2       # risposte buone di fila
 TUNNEL_NOT_READY_EXIT = 75    # codice d'uscita: "tunnel non pronto, riprova"
 
@@ -271,6 +273,23 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 return
             self._json(200, {'ok': True, **self.service.session_info()})
             return
+        if parts.path.rstrip('/') in ('/history', '/history/thumb', '/history/image'):
+            # Ultimi invii della sessione (elenco e miniature) per la Mini App.
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            if parts.path.rstrip('/') == '/history':
+                self._json(200, {'ok': True, 'items': self.service.history_list()})
+                return
+            try:
+                if parts.path.rstrip('/') == '/history/image':
+                    self._png(self.service.history_image(query.get('id', '')), 'image/jpeg')
+                    return
+                self._png(self.service.history_thumb(query.get('id', '')), 'image/jpeg')
+            except ValueError as exc:
+                self._json(404, {'ok': False, 'error': str(exc)})
+            return
         if parts.path.rstrip('/') == '/progress':
             token = dict(parse_qsl(parts.query)).get('session', '')
             if token != self.service.session:
@@ -322,7 +341,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
         if path == '/upload':
             self._upload()
             return
-        if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings'):
+        if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -347,6 +366,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/extend':
                 self._json(200, {'ok': True, **self.service.extend(envelope)})
+                return
+
+            if path == '/resend':
+                self._json(200, {'ok': True, 'message_id': self.service.resend(envelope)})
                 return
 
             if path == '/layout':
@@ -379,10 +402,14 @@ class _DirectHandler(BaseHTTPRequestHandler):
         except ValueError as exc:
             log.warn('RICHIESTA', f'{path} respinta: {exc}')
             self._json(400, {'ok': False, 'error': str(exc)})
+        # Niente 502/503: la Mini App li prenderebbe per un problema del tunnel e rimanderebbe da sola.
         except DeliveryUncertain:
-            self._json(502, {'ok': False, 'error': 'Invio incerto: controlla se la foto è arrivata.'})
+            self._json(424, {'ok': False, 'error': 'Telegram non ha risposto: controlla nella chat se la foto è arrivata. '
+                                                   'Se manca, rimandala da “Ultimi invii”.'})
+        except NotSent:
+            self._json(424, {'ok': False, 'error': 'Telegram non ha ricevuto la foto dopo 3 tentativi. Riprova tra poco.'})
         except TelegramError:
-            self._json(502, {'ok': False, 'error': 'Telegram ha rifiutato la foto. Riapri ImageGEN e riprova.'})
+            self._json(424, {'ok': False, 'error': 'Telegram ha rifiutato la foto. Riapri ImageGEN e riprova.'})
         except Exception as exc:  # pragma: no cover - defensive fallback
             log.error('RICHIESTA', f'{path} non riuscita: {log.exc_text(exc)}')
             self._json(500, {'ok': False, 'error': 'Errore interno ImageGEN.'})
@@ -425,6 +452,10 @@ class Service:
         self.ghost_cache = {}
         self.recent_sends = {}
         self.renderer.photos = self.photos
+        # Ultimi invii (dal più recente): rimandabili dalla Mini App senza rifare la grafica.
+        self.history = []
+        self.history_lock = threading.Lock()
+        self.last_resend = None
 
     def store_photo(self, raw):
         width, height = check_photo(raw)
@@ -928,17 +959,11 @@ class Service:
                     return sent[0]
 
             sending = time.time()
-            try:
-                message_id = self.telegram.photo(
-                    png,
-                    f"{data['kind']}-{request_state['id']}.png",
-                )
-            except Exception as exc:
-                log.warn('INVIO', f"{log.graphic_name(data)}: Telegram non ha confermato "
-                                  f'({type(exc).__name__}, {time.time() - sending:.1f} s, {log.kb(len(png))})')
-                raise
+            message_id = self._send_photo(png, f"{data['kind']}-{request_state['id']}.png",
+                                          log.graphic_name(data))
             self.generated_message_ids.append(int(message_id))
             self.recent_sends[fingerprint] = (int(message_id), time.time())
+            self._remember_send(message_id, data, png)
             if data['kind'] == 'xi':
                 threading.Thread(target=self._remember_shirts, args=(data['lineup'],), daemon=True).start()
             took = time.time() - sending
@@ -946,6 +971,92 @@ class Service:
                               + (f' (in coda {waited:.1f} s)' if waited >= 1 else ''))
             log.sent(log.graphic_name(data), f'{log.kb(len(png))} · {took:.1f} s')
             return int(message_id)
+        finally:
+            self.operation_lock.release()
+
+    def _send_photo(self, png, filename, name):
+        """Foto su Telegram. Se Telegram dice che non l'ha ricevuta (troppe richieste,
+        connessione mai aperta) riprova da solo, fino a SEND_TRIES volte. Con esito incerto
+        (risposta persa) non riprova: la foto potrebbe essere già nella chat."""
+        for attempt in range(1, SEND_TRIES + 1):
+            started = time.time()
+            try:
+                return int(self.telegram.photo(png, filename))
+            except NotSent as exc:
+                if attempt >= SEND_TRIES:
+                    log.warn('INVIO', f"{name}: Telegram non l'ha ricevuta dopo {SEND_TRIES} tentativi ({exc})")
+                    raise
+                wait = min(10, exc.retry_after or 2 * attempt)
+                log.warn('INVIO', f"{name}: Telegram non l'ha ricevuta ({exc}), riprovo tra {wait} s "
+                                  f'({attempt + 1}/{SEND_TRIES})')
+                time.sleep(wait)
+            except Exception as exc:
+                log.warn('INVIO', f'{name}: Telegram non ha confermato '
+                                  f'({type(exc).__name__}, {time.time() - started:.1f} s, {log.kb(len(png))})')
+                raise
+
+    def _remember_send(self, message_id, data, png):
+        """Aggiunge l'invio a "Ultimi invii", con una miniatura per la Mini App."""
+        try:
+            from PIL import Image
+            image = Image.open(io.BytesIO(png)).convert('RGB')
+            image.thumbnail((240, 320))
+            out = io.BytesIO()
+            image.save(out, format='JPEG', quality=80)
+            thumb = out.getvalue()
+        except Exception:  # noqa: BLE001 - senza miniatura l'invio resta comunque in elenco
+            thumb = b''
+        entry = {'id': int(message_id), 'name': log.graphic_name(data), **_send_detail(data),
+                 'kind': data.get('kind', ''), 'at': int(time.time() * 1000), 'png': png, 'thumb': thumb}
+        with self.history_lock:
+            self.history.insert(0, entry)
+            del self.history[HISTORY_SIZE:]
+
+    def history_list(self):
+        with self.history_lock:
+            return [{k: v for k, v in e.items() if k not in ('png', 'thumb')} for e in self.history]
+
+    def history_thumb(self, message_id):
+        with self.history_lock:
+            for entry in self.history:
+                if str(entry['id']) == str(message_id) and entry['thumb']:
+                    return entry['thumb']
+        raise ValueError('Miniatura non trovata.')
+
+    def history_image(self, message_id):
+        """Grafica inviata, come JPEG leggero per la pagina "Ultimi invii"."""
+        with self.history_lock:
+            entry = next((e for e in self.history if str(e['id']) == str(message_id)), None)
+        if entry is None:
+            raise ValueError('Grafica non più disponibile.')
+        return self.preview_jpeg(entry['png'])
+
+    def resend(self, envelope):
+        """Rimanda su Telegram una grafica già inviata in questa sessione (stesso PNG)."""
+        try:
+            wanted = int((envelope or {}).get('id'))
+        except (TypeError, ValueError):
+            raise ValueError('Invio non valido.') from None
+        with self.history_lock:
+            entry = next((e for e in self.history if e['id'] == wanted), None)
+        if entry is None:
+            raise ValueError('Grafica non più disponibile: rifalla da capo.')
+        if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
+            raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
+        try:
+            # Doppio tocco o risposta persa: la stessa grafica rimandata da pochi secondi non riparte.
+            last = self.last_resend
+            if last and last[0] == wanted and time.time() - last[2] < 20:
+                log.info('INVIO', f"{entry['name']}: già rimandata poco fa, non la rimando")
+                return last[1]
+            started = time.time()
+            message_id = self._send_photo(entry['png'], f"{entry['kind']}-rimandata.png", entry['name'])
+            self.generated_message_ids.append(message_id)
+            self.last_resend = (wanted, message_id, time.time())
+            took = time.time() - started
+            log.info('INVIO', f"{entry['name']}: rimandata su Telegram in {took:.1f} s")
+            log.sent(f"{entry['name']} (rimandata)", f"{log.kb(len(entry['png']))} · {took:.1f} s")
+            return message_id
         finally:
             self.operation_lock.release()
 
@@ -1125,6 +1236,19 @@ class Service:
             self.cleanup()
             log.info('SESSIONE', 'Sessione chiusa')
             log.write_summary(opened, log.now())
+
+
+def _send_detail(data):
+    """Dati mostrati in "Ultimi invii", separati: la Mini App li mette su due righe
+    (giocatore e minuto; risultato e avversario)."""
+    score = data.get('score')
+    opponent = data.get('opponent')
+    return {
+        'player': str(data.get('player') or ''),
+        'minute': f"{data['minute']}'" if data.get('minute') else '',
+        'score': f'{score[0]}-{score[1]}' if isinstance(score, (list, tuple)) and len(score) == 2 else '',
+        'opponent': str(opponent.get('name') or '') if isinstance(opponent, dict) else '',
+    }
 
 
 def _warm_up_renderer():

@@ -55,6 +55,7 @@
       <div class="stage" id="stage">
         <div class="content">
           <div id="error" class="error"></div>
+          <div id="notice" class="error notice" role="status"></div>
 
           <section class="screen active" data-screen="home">
             <div class="home-big"><h1>Nuova grafica</h1>
@@ -467,6 +468,25 @@
             </div>
           </section>
 
+          <section class="screen" data-screen="sentlist">
+            <div class="eyebrow">Ultimi invii</div>
+            <h1>Ultimi invii</h1>
+            <p class="lead">Le grafiche inviate in questa sessione, dalla più recente. Tocca una grafica per rimandarla o modificarla.</p>
+            <p id="sentEmpty" class="note" hidden>Nessuna grafica inviata in questa sessione.</p>
+            <section id="sentGroup" class="hm-group"><div id="sentList" class="hm-list"></div></section>
+          </section>
+
+          <section class="screen" data-screen="sentitem">
+            <div class="eyebrow">Ultimi invii</div>
+            <h1 id="sentTitle">Grafica</h1>
+            <p id="sentLead" class="lead"></p>
+            <div class="preview-wrap">
+              <img id="sentImage" class="preview-image" alt="Grafica inviata">
+              <div id="sentNote" class="note"></div>
+            </div>
+            <button id="sentEdit" class="btn ghost sent-edit" type="button">Modifica i dati</button>
+          </section>
+
           <section class="screen" data-screen="preview">
             <div class="eyebrow">Anteprima</div>
             <div class="photo-head">
@@ -608,7 +628,7 @@
 <script>
   // Codice della Mini App (webapp/js): file caricati in ordine, con la versione della pagina.
   (function () { var v = (new URLSearchParams(location.search).get('v') || Date.now());
-    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '10-avvio.js'].forEach(function (f) {
+    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '10-avvio.js', '11-invii.js'].forEach(function (f) {
       document.write('<script src="webapp/js/' + f + '?v=' + v + '"><\/script>'); }); })();
 </script>
 </body>

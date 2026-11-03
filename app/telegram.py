@@ -13,6 +13,24 @@ class DeliveryUncertain(TelegramError):
     pass
 
 
+class NotSent(TelegramError):
+    """Telegram non ha ricevuto la foto (troppe richieste o connessione mai aperta):
+    riprovare non crea doppioni. retry_after: secondi da aspettare, se Telegram lo dice."""
+
+    def __init__(self, message, retry_after=0):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+class NotSent(TelegramError):
+    """Telegram non ha ricevuto la foto (troppe richieste o connessione mai aperta):
+    riprovare non crea doppioni. retry_after: secondi da aspettare, se Telegram lo dice."""
+
+    def __init__(self, message, retry_after=0):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
 def authorized(update, chat_id):
     message = update.get('message') or {}
     sender = message.get('from') or {}
@@ -41,6 +59,20 @@ class Telegram:
                 timeout=timeout,
             )
 
+            if response.status_code == 429:
+                try:
+                    wait = int(response.json().get('parameters', {}).get('retry_after', 0))
+                except (ValueError, AttributeError, TypeError):
+                    wait = 0
+                raise NotSent(f'{method}: troppe richieste', retry_after=wait)
+
+            if response.status_code == 429:
+                try:
+                    wait = int(response.json().get('parameters', {}).get('retry_after', 0))
+                except (ValueError, AttributeError, TypeError):
+                    wait = 0
+                raise NotSent(f'{method}: troppe richieste', retry_after=wait)
+
             if response.status_code >= 500 and method in {
                 'sendPhoto',
                 'sendDocument',
@@ -61,6 +93,12 @@ class Telegram:
             raise
         except TelegramError:
             raise
+        except requests.ConnectTimeout:
+            # Connessione mai aperta: la foto non è partita.
+            raise NotSent(f'{method}: connessione non riuscita') from None
+        except requests.ConnectTimeout:
+            # Connessione mai aperta: la foto non è partita.
+            raise NotSent(f'{method}: connessione non riuscita') from None
         except (requests.RequestException, ValueError, KeyError, TypeError):
             if method in {'sendPhoto', 'sendDocument'}:
                 raise DeliveryUncertain(

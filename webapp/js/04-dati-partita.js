@@ -148,6 +148,7 @@ async function nextField(validate=true) {
     if (!validateCurrent()) return;
   }
 
+  if (kind === 'sent') { if (flow[flowIndex] === 'sentitem') resendRecent(); return; }
   if (flowIndex >= flow.length - 1) { previewGraphic(); return; }
   flowIndex += 1;
   renderFlow();
@@ -474,6 +475,8 @@ async function pickMdFixture(id) {
     $('matchStadium').value = m.stadium;
     $('matchTime').value = m.time;
     $('matchDate').value = m.date;
+    // Stessa partita dell'ultimo invio: maglia e risultato già messi (11-invii.js).
+    if (typeof applyLastChoices === 'function') applyLastChoices(id);
   }
   buildFlow();
   renderSteps();

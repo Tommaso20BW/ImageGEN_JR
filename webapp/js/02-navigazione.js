@@ -233,6 +233,7 @@ function buildFlow() {
   if (LIVE) { flow = ['phasephoto']; flowIndex = 0; return; }
   if (nat) { flow = natFlow(); flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1)); return; }
   if (!kind) { flow = ['home']; flowIndex = 0; return; }
+  if (kind === 'sent') { flow = ['sentlist','sentitem']; flowIndex = Math.max(0,Math.min(flowIndex,1)); return; }
   const base = ['competition','side','opponent'];
   // Goal/saved: maglia sempre. Half/end/full: solo con "Italia" (serve per lo sfondo);
   // le UEFA hanno lo sfondo della competizione. Stats: come half/end/full. Kick off: mai.
@@ -539,6 +540,8 @@ function renderFlow() {
       loadSquadSite();
     } else loadMdFixtures();
   }
+  if (screenName === 'sentlist') { renderSentList(); loadRecent(); }
+  if (screenName === 'sentitem') renderSentItem();
   if (screenName === 'calrows') fillCalendarFromFixtures();
   if (screenName === 'calrows') renderCalRows();
   else closeCalSheet();
@@ -552,7 +555,7 @@ function renderFlow() {
   $('backButton').textContent = (!previewMode && flowIndex === 0 && !LIVE) ? '‹ Home' : '‹ Indietro';
   // Calendario compilato da solo: "Modifica" in alto apre l'elenco partite.
   $('previewEdit').hidden = !(previewMode && (kind === 'cal' || kind === 'pxi'));
-  $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? 'Anteprima' : 'Avanti ›');
+  $('nextButton').textContent = previewMode ? SEND_LABEL : kind === 'sent' ? 'Rimanda' : (isLastStep() ? 'Anteprima' : 'Avanti ›');
 
   clearError();
   updateScreenValues();
