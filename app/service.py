@@ -990,6 +990,7 @@ class Service:
             self.generated_message_ids.append(int(message_id))
             self.recent_sends[fingerprint] = (int(message_id), time.time())
             self._remember_send(message_id, data, png)
+            self._remember_ig_name(data)
             if data['kind'] == 'xi':
                 threading.Thread(target=self._remember_shirts, args=(data['lineup'],), daemon=True).start()
             took = time.time() - sending
@@ -1096,10 +1097,24 @@ class Service:
                 avatar = self.store_photo(post['avatar'])['photo_id']
             except ValueError:
                 avatar = None
+        # Instagram dà solo l'username: il nome è quello scritto l'ultima volta per l'account (se c'è).
+        handle = post.get('handle') or ('' if x else post['user'])
+        user = post['user'] if x else sent_store.load_names().get(handle.lower(), handle)
         # Testo già senza emoji (come uscirà nella grafica): nella Mini App si vede quello vero.
-        return {'platform': 'x' if x else 'ig', 'user': ig_quote.clean_name(post['user']),
-                'handle': post.get('handle', ''), 'text': ig_quote.clean_text(post['text']), 'photos': photos,
-                'avatar_id': avatar}
+        return {'platform': 'x' if x else 'ig', 'user': ig_quote.clean_name(user), 'handle': handle,
+                'verified': bool(post.get('verified')), 'text': ig_quote.clean_text(post['text']),
+                'photos': photos, 'avatar_id': avatar}
+
+    def _remember_ig_name(self, data):
+        """Citazione IG inviata con un nome diverso dall'username: la prossima volta arriva già."""
+        handle, name = str(data.get('handle') or '').lower(), str(data.get('name') or '')
+        if data.get('kind') != 'igq' or not handle or not name or name.lower() == handle:
+            return
+        names = sent_store.load_names()
+        if names.get(handle) != name:
+            names[handle] = name
+            sent_store.save_names(names)
+            log.info('SALVATAGGIO', f'Nome per @{handle}: {name}')
 
     def photo_thumb(self, photo_id, big=False):
         """Foto caricata ridotta: miniatura (scelta della foto) o grande (editor della foto)."""

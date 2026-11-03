@@ -89,7 +89,7 @@ window.__ready = (async () => {
 '''
 
 
-def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig', handle='', **_):
+def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig', handle='', verified=False, **_):
     """photo=None: sagoma per l'editor (sfondo trasparente, la foto la mette la Mini App).
     frame = posizione e zoom della foto scelti nell'editor ({'x','y','zoom'}, come la FOTO + JR)."""
     if photo is not None:
@@ -106,8 +106,16 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
                    else f'<div id="av" class="none">{esc(name[:1].upper())}</div>')
     x = platform == 'x'
     handle = clean_name(handle)
-    sub = f'@{esc(handle)}' if x and handle else ('X' if x else 'Instagram')
-    head = (f'<div id="hd">{avatar_html}<div id="who"><b>{esc(name or handle)}</b><span>{sub}</span></div>'
+    # Nome in grassetto, sotto l'@username piccolo (senza username: "Instagram" / "X").
+    sub = f'@{esc(handle)}' if handle else ('X' if x else 'Instagram')
+    tick = (f'<svg class="tick" viewBox="0 0 24 24"><path fill="{"#1D9BF0" if x else "#0095F6"}" d="M22.5 12.5'
+            'c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1.71-4-3.82-4-.47 0-.92.08-1.34.25C14.81 2.42'
+            ' 13.5 1.5 12 1.5s-2.81.92-3.43 2.22c-.42-.17-.87-.25-1.34-.25-2.11 0-3.82 1.79-3.82 4 0 .5.09.98.24 '
+            '1.43-1.27.65-2.15 2.02-2.15 3.6 0 1.5.8 2.8 1.97 3.48-.03.24-.05.48-.05.72 0 2.21 1.71 4 3.82 4 .47 0 '
+            '.92-.08 1.34-.25.62 1.3 1.93 2.22 3.43 2.22s2.81-.92 3.43-2.22c.42.17.87.25 1.34.25 2.11 0 3.82-1.79 '
+            '3.82-4 0-.24-.02-.48-.05-.72 1.17-.68 1.97-1.98 1.97-3.48z"/><path fill="#fff" d="M10.6 16.2 6.9 12.5'
+            'l1.4-1.4 2.3 2.3 5.1-5.1 1.4 1.4z"/></svg>' if verified else '')
+    head = (f'<div id="hd">{avatar_html}<div id="who"><b>{esc(name or handle)}{tick}</b><span>{sub}</span></div>'
             f'<i id="ig">{X_LOGO if x else ICON_IG}</i></div>')
     if x:
         acts = (f'<div id="act"><div>{X_REPLY}{X_REPOST}{ICON_LIKE}{X_VIEWS}</div>'
@@ -134,6 +142,7 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{'#
 #who{{min-width:0}}
 #who b{{display:block;font-weight:500;font-size:34px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 #who span{{display:block;font-size:24px;line-height:1.3;opacity:.65}}
+#who b .tick{{width:30px;height:30px;margin-left:8px;vertical-align:-5px}}
 #ig{{margin-left:auto;flex:none;opacity:.9}}
 #ig svg{{width:{40 if x else 44}px;height:{40 if x else 44}px;display:block}}
 #txt{{width:100%;color:#fff;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;text-wrap:pretty;
@@ -151,9 +160,10 @@ img[style*="left:0"]{{position:absolute}}
 </body></html>'''
 
 
-def render(*, photo, text='', name='', avatar=None, frame=None, ghost=False, platform='ig', handle='', **_):
+def render(*, photo, text='', name='', avatar=None, frame=None, ghost=False, platform='ig', handle='',
+           verified=False, **_):
     return render_html(build_html(photo=None if ghost else photo, text=text, name=name, avatar=avatar,
-                                  frame=frame, platform=platform, handle=handle), ghost=ghost)
+                                  frame=frame, platform=platform, handle=handle, verified=verified), ghost=ghost)
 
 
 def x_background():

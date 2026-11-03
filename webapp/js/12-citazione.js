@@ -23,7 +23,7 @@ async function iqLoad() {
     const body = await response.json().catch(() => ({}));
     if (!response.ok || !body.ok) throw new Error(body.error || 'Post non leggibile.');
     Object.assign(iq, {url, photos:body.photos || [], sel:(body.photos || []).length === 1 ? 0 : -1,
-      avatar:body.avatar_id || ''});
+      avatar:body.avatar_id || '', verified:!!body.verified});
     $('iqText').value = body.text || '';
     $('iqName').value = body.user || '';
     $('iqHandle').value = body.handle || '';
@@ -135,5 +135,5 @@ function iqTexts() {
   $('iqTextLead').textContent = x
     ? 'Testo preso dal post, senza emoji e link finali: puoi cambiarlo.'
     : 'Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.';
-  $('iqHandleRow').hidden = !x;
+  $('iqHandleRow').hidden = false;      // @username: X e Instagram
 }

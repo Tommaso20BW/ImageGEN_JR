@@ -263,6 +263,7 @@ class Renderer:
             return ig_quote.render(photo=None if ghost else self._photo(data), text=data.get('text', ''),
                                    name=data.get('name', ''), frame=data.get('frame'), ghost=ghost,
                                    platform='x' if kind == 'xq' else 'ig', handle=data.get('handle', ''),
+                                   verified=data.get('verified', False),
                                    avatar=self.photos.get(data.get('avatar_id')) if data.get('avatar_id') else None)
 
         if kind == 'igbn':

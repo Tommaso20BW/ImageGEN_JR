@@ -103,4 +103,7 @@ def fetch(url, session=None):
     text = clean_text(data.get('text'))
     log.info('X', f"Post {code} di @{handle or '?'}: {len(photos)} foto, testo {len(text)} caratteri, "
                   f"foto profilo {'sì' if avatar else 'no'}")
-    return {'code': code, 'user': user, 'handle': handle, 'text': text, 'avatar': avatar, 'photos': photos}
+    verified = bool((author.get('verification') or {}).get('verified') or author.get('verified')
+                    or data.get('user_verified'))
+    return {'code': code, 'user': user, 'handle': handle, 'verified': verified, 'text': text, 'avatar': avatar,
+            'photos': photos}

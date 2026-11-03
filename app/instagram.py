@@ -88,6 +88,8 @@ def parse_embed(page):
     # Il carosello ha prima il "padre" (uguale alla prima foto) e poi le foto: i doppioni sono già tolti.
     return {
         'user': html.unescape(user.group(1)).strip() if user else '',
+        # Spunta blu accanto al nome nella pagina embed = account verificato.
+        'verified': 'VerifiedSprite' in page,
         'avatar_url': html.unescape(avatar.group(1)) if avatar else '',
         'text': text,
         'photos': photos[:MAX_PHOTOS],
@@ -137,5 +139,5 @@ def fetch(url, session=None):
         raise ValueError('Foto del post non scaricabili. Carica la foto a mano.')
     log.info('INSTAGRAM', f"Post {code} di {data['user'] or '?'}: {len(photos)} foto, "
                           f"testo {len(data['text'])} caratteri, foto profilo {'sì' if avatar else 'no'}")
-    return {'code': code, 'user': data['user'], 'text': tidy_text(data['text']), 'avatar': avatar,
+    return {'code': code, 'user': data['user'], 'verified': data['verified'], 'text': tidy_text(data['text']), 'avatar': avatar,
             'photos': photos}

@@ -257,8 +257,8 @@ def _build_state(envelope, catalog, now, expected_session):
             raise ValueError('Scrivi il testo della citazione.')
         data = {'kind': kind, 'photo_id': _photo_id(incoming.get('photo_id')), 'text': text,
                 'name': ig_quote.clean_name(incoming.get('name')), 'frame': _frame(incoming.get('frame'))}
-        if kind == 'xq':
-            data['handle'] = ig_quote.clean_name(incoming.get('handle'))
+        data['handle'] = ig_quote.clean_name(incoming.get('handle'))
+        data['verified'] = incoming.get('verified') is True
         if incoming.get('avatar_id'):
             data['avatar_id'] = _photo_id(incoming.get('avatar_id'))
         return {

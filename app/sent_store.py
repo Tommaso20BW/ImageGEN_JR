@@ -18,6 +18,7 @@ import log
 DIRNAME = 'imagegen'
 HISTORY = 'history.json'
 PHRASES = 'ig_phrases.json'
+NAMES = 'ig_names.json'          # Citazione IG: nome scritto a mano per ogni account ({username: nome})
 HISTORY_KEEP = 20
 PHRASES_KEEP = 40
 PHRASE_MAX = 500
@@ -67,6 +68,14 @@ def save_history(entries):
     keep = ('id', 'name', 'player', 'minute', 'score', 'opponent', 'note', 'kind', 'at', 'file_id', 'thumb_id')
     rows = [{k: e.get(k) for k in keep} for e in entries if e.get('file_id')][:HISTORY_KEEP]
     _save(HISTORY, rows, 'ImageGen: ultimi invii')
+
+
+def load_names():
+    return {str(k): str(v) for k, v in _read(NAMES, {}).items() if str(v).strip()}
+
+
+def save_names(names):
+    _save(NAMES, dict(sorted(names.items())), 'ImageGen: nomi degli account Instagram')
 
 
 def save_phrases(phrases):

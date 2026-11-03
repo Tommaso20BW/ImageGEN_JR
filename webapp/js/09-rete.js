@@ -25,7 +25,7 @@ function buildPayload(ghost=false) {
     // Foto del post, o quella caricata a mano nell'editor ("Scegli foto").
     return {v:1, action:'render', session, data:{kind, photo_id:photoState.id || photo.photo_id,
       text:$('iqText').value.trim(), name:$('iqName').value.trim(), ...(iq.avatar ? {avatar_id:iq.avatar} : {}),
-      ...(kind === 'xq' ? {handle:$('iqHandle').value.trim()} : {}),
+      handle:$('iqHandle').value.trim(), verified:!!iq.verified,
       frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}}};
   }
   if (kind === 'igbn') {
