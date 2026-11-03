@@ -1072,15 +1072,22 @@ class Service:
         return self.store_photo(raw)
 
     def ig_post(self, envelope):
-        """CITAZIONE IG: legge il post dal link (instagram.py) e tiene le sue foto come foto caricate."""
+        """CITAZIONE IG / X: legge il post dal link (instagram.py o xpost.py) e tiene le sue foto come
+        foto caricate. Per X in fondo c'è sempre anche lo sfondo di riserva (molti post non hanno foto)."""
         import instagram
-        post = instagram.fetch((envelope or {}).get('url'))
+        import xpost
+        from graphics import ig_quote
+        url = (envelope or {}).get('url')
+        x = xpost.is_x_url(url)
+        post = xpost.fetch(url) if x else instagram.fetch(url)
         photos = []
         for raw in post['photos']:
             try:
                 photos.append(self.store_photo(raw))
             except ValueError:
                 continue
+        if x:
+            photos.append({**self.store_photo(ig_quote.x_background()), 'bg': True})
         if not photos:
             raise ValueError('Foto del post non valide. Carica la foto a mano.')
         avatar = None
@@ -1090,8 +1097,8 @@ class Service:
             except ValueError:
                 avatar = None
         # Testo già senza emoji (come uscirà nella grafica): nella Mini App si vede quello vero.
-        from graphics import ig_quote
-        return {'user': post['user'], 'text': ig_quote.clean_text(post['text']), 'photos': photos,
+        return {'platform': 'x' if x else 'ig', 'user': ig_quote.clean_name(post['user']),
+                'handle': post.get('handle', ''), 'text': ig_quote.clean_text(post['text']), 'photos': photos,
                 'avatar_id': avatar}
 
     def photo_thumb(self, photo_id, big=False):
@@ -1373,7 +1380,7 @@ def _send_detail(data):
     score = data.get('score')
     opponent = data.get('opponent')
     # Storia IG e Citazione IG: account (solo Citazione) e inizio del testo.
-    if data.get('kind') in ('igq', 'igbn'):
+    if data.get('kind') in ('igq', 'xq', 'igbn'):
         text = ' '.join(str(data.get('text') or '').split())
         note = (text[:117] + '…') if len(text) > 120 else text
         if not note and data.get('photo_id'):

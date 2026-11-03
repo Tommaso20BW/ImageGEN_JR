@@ -250,13 +250,15 @@ def _build_state(envelope, catalog, now, expected_session):
         }
 
     # CITAZIONE IG: foto scelta del post, testo (modificabile), nome e foto profilo dell'account.
-    if kind == 'igq':
+    if kind in ('igq', 'xq'):
         from graphics import ig_quote
         text = ig_quote.clean_text(incoming.get('text'))
         if not text:
             raise ValueError('Scrivi il testo della citazione.')
-        data = {'kind': 'igq', 'photo_id': _photo_id(incoming.get('photo_id')), 'text': text,
+        data = {'kind': kind, 'photo_id': _photo_id(incoming.get('photo_id')), 'text': text,
                 'name': ig_quote.clean_name(incoming.get('name')), 'frame': _frame(incoming.get('frame'))}
+        if kind == 'xq':
+            data['handle'] = ig_quote.clean_name(incoming.get('handle'))
         if incoming.get('avatar_id'):
             data['avatar_id'] = _photo_id(incoming.get('avatar_id'))
         return {

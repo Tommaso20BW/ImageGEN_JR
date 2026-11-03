@@ -19,12 +19,13 @@ function buildPayload(ghost=false) {
     return {v:1, action:'render', session, data:{slot:LIVE_SLOT, kind:LIVE_PHASE, ...phasePhotoData(ghost)}};
   }
   const photoId = photoState.id || (ghost ? '0'.repeat(16) : '');
-  if (kind === 'igq') {
+  if (kind === 'igq' || kind === 'xq') {
     const photo = iq.photos[iq.sel];
     if (!photo) throw new Error('Scegli la foto del post.');
     // Foto del post, o quella caricata a mano nell'editor ("Scegli foto").
-    return {v:1, action:'render', session, data:{kind:'igq', photo_id:photoState.id || photo.photo_id,
+    return {v:1, action:'render', session, data:{kind, photo_id:photoState.id || photo.photo_id,
       text:$('iqText').value.trim(), name:$('iqName').value.trim(), ...(iq.avatar ? {avatar_id:iq.avatar} : {}),
+      ...(kind === 'xq' ? {handle:$('iqHandle').value.trim()} : {}),
       frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}}};
   }
   if (kind === 'igbn') {

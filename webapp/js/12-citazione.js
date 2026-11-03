@@ -26,6 +26,7 @@ async function iqLoad() {
       avatar:body.avatar_id || ''});
     $('iqText').value = body.text || '';
     $('iqName').value = body.user || '';
+    $('iqHandle').value = body.handle || '';
     $('iqAvatar').style.backgroundImage = iq.avatar ? `url("${iqThumb(iq.avatar)}")` : '';
     $('iqHint').textContent = '';
     haptic('success');
@@ -50,7 +51,7 @@ function renderIqPick() {
     b.className = 'iq-ph' + (i === iq.sel ? ' on' : '');
     b.style.backgroundImage = `url("${iqThumb(p.photo_id)}")`;
     b.setAttribute('aria-label', `Foto ${i + 1}`);
-    b.innerHTML = `<span>${i + 1}</span>`;
+    b.innerHTML = p.bg ? '<span class="bg">Sfondo X</span>' : `<span>${i + 1}</span>`;
     b.addEventListener('click', () => {
       haptic('select');
       iq.sel = i;
@@ -72,7 +73,7 @@ $('iqUrl').addEventListener('input', () => {
 });
 $('iqUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nextField(true); } });
 // Link incollato nel campo: il post si legge subito, senza "Avanti".
-const looksIg = v => /instagram\.com\/|instagr\.am\//i.test(v);
+const looksIg = v => /instagram\.com\/|instagr\.am\/|(?:^|\/\/|\.)(?:x|twitter)\.com\/[^/\s]+\/status\//i.test(v);
 function iqUseLink(text) {
   const link = (String(text || '').match(/https?:\/\/\S+/) || [String(text || '').trim()])[0];
   $('iqUrl').value = link;
@@ -118,4 +119,21 @@ async function iqGhost(overlay) {
     overlay.src = url;
     overlay.style.visibility = '';
   } catch (_) {}
+}
+
+/* ----- Citazione X: stesse pagine della Citazione IG, testi e campo @account diversi ----- */
+function iqTexts() {
+  const x = kind === 'xq';
+  document.querySelectorAll('[data-screen^="iq"] .eyebrow').forEach(e => { e.textContent = x ? 'Citazione X' : 'Citazione IG'; });
+  $('iqUrlLead').textContent = x
+    ? 'Tieni premuto nel campo e incolla il link di un post di X: testo, nome, account, foto profilo e foto arrivano da soli.'
+    : 'Tieni premuto nel campo e incolla il link di un post Instagram: foto, testo, nome e foto profilo arrivano da soli.';
+  $('iqUrl').placeholder = x ? 'https://x.com/…/status/…' : 'https://www.instagram.com/p/…';
+  $('iqPickLead').textContent = x
+    ? 'Tocca la foto da usare come sfondo, oppure "Sfondo X".'
+    : 'Il post ha più foto: tocca quella da usare come sfondo.';
+  $('iqTextLead').textContent = x
+    ? 'Testo preso dal post, senza emoji e link finali: puoi cambiarlo.'
+    : 'Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.';
+  $('iqHandleRow').hidden = !x;
 }

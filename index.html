@@ -309,7 +309,7 @@
           <section class="screen" data-screen="iqurl">
             <div class="eyebrow">Citazione IG</div>
             <h1>Link del post</h1>
-            <p class="lead">Tieni premuto nel campo e incolla il link di un post Instagram: foto, testo, nome e foto profilo arrivano da soli.</p>
+            <p id="iqUrlLead" class="lead">Tieni premuto nel campo e incolla il link di un post Instagram: foto, testo, nome e foto profilo arrivano da soli.</p>
             <div class="ios-list">
               <label class="ios-row"><input id="iqUrl" class="ios-in iq-url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="https://www.instagram.com/p/…"></label>
             </div>
@@ -319,18 +319,19 @@
           <section class="screen" data-screen="iqpick">
             <div class="eyebrow">Citazione IG</div>
             <h1>Scegli la foto</h1>
-            <p class="lead">Il post ha più foto: tocca quella da usare come sfondo.</p>
+            <p id="iqPickLead" class="lead">Il post ha più foto: tocca quella da usare come sfondo.</p>
             <div id="iqPhotos" class="iq-grid"></div>
           </section>
 
           <section class="screen" data-screen="iqtext">
             <div class="eyebrow">Citazione IG</div>
             <h1>Testo e account</h1>
-            <p class="lead">Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.</p>
+            <p id="iqTextLead" class="lead">Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.</p>
             <textarea id="iqText" class="field-input" style="min-height:170px" spellcheck="true" placeholder="Testo della citazione"></textarea>
             <div class="field-label gap">Account</div>
             <div class="ios-list">
               <label class="ios-row"><span id="iqAvatar" class="iq-av"></span><input id="iqName" class="ios-in" maxlength="40" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="nome account"></label>
+              <label id="iqHandleRow" class="ios-row" hidden><span class="iq-at">@</span><input id="iqHandle" class="ios-in" maxlength="40" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="account"></label>
             </div>
           </section>
 

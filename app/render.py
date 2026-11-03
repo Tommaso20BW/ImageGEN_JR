@@ -257,11 +257,12 @@ class Renderer:
 
             return classifica.render(data['competition'])
 
-        if kind == 'igq':
+        if kind in ('igq', 'xq'):
             from graphics import ig_quote
 
             return ig_quote.render(photo=None if ghost else self._photo(data), text=data.get('text', ''),
                                    name=data.get('name', ''), frame=data.get('frame'), ghost=ghost,
+                                   platform='x' if kind == 'xq' else 'ig', handle=data.get('handle', ''),
                                    avatar=self.photos.get(data.get('avatar_id')) if data.get('avatar_id') else None)
 
         if kind == 'igbn':

@@ -245,6 +245,10 @@ textarea.field-input:focus{box-shadow:none!important;outline:0}
 .iq-ph{position:relative;aspect-ratio:3/4;border:0;padding:0;border-radius:10px;overflow:hidden;background:var(--line) center/cover no-repeat;cursor:pointer}
 .iq-ph.on{box-shadow:0 0 0 3px var(--surface),0 0 0 5.5px var(--tint)}
 .iq-ph span{position:absolute;left:6px;top:6px;min-width:22px;height:22px;border-radius:11px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+.iq-ph span.bg{left:6px;right:auto;padding:0 8px;font-size:11px}
+.iq-at{flex:none;color:var(--muted);font-weight:600}
+#iqHandleRow[hidden]{display:none}
+.hm-item[data-id="xq"] .hm-ico{background:#000}
 .iq-av{flex:none;width:30px;height:30px;border-radius:50%;background:var(--line) center/cover no-repeat}
 .iq-av:not([style*="url"]){display:none}
 /* Storia IG: colore del testo (pallino in alto a destra, tavolozza sopra il testo) */

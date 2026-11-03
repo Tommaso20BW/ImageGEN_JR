@@ -272,7 +272,7 @@ function buildFlow() {
   else if (kind === 'cal') flow = ['calmonth','calrows'];
   else if (kind === 'table') flow = ['tablecomp'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent','igsent'] : ['igcontent'];
-  else if (kind === 'igq') flow = [...(iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'];
+  else if (kind === 'igq' || kind === 'xq') flow = [...(iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'];
   flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
 }
 
@@ -529,7 +529,8 @@ function renderFlow() {
     if (tg && tg.disableVerticalSwipes) editing ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
   } catch (_) {}
   if (screenName === 'phasephoto') { if (LIVE) $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
-  if (screenName === 'photo') { if (kind === 'igq') iqSyncPhoto(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
+  if (screenName === 'iqurl' || screenName === 'iqpick' || screenName === 'iqtext') iqTexts();
+  if (screenName === 'photo') { if (kind === 'igq' || kind === 'xq') iqSyncPhoto(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
   if (screenName === 'jrphotos') renderJrPicker();
   if (screenName === 'jrlayout') { renderJrLayout(true); requestAnimationFrame(() => { fitColBig(); renderJrLayout(); }); }
   if (screenName === 'jrbg') renderJrBg();

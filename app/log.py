@@ -21,7 +21,7 @@ KIND_NAMES = {
     'goal': 'Gol', 'saved': 'Parata', 'stats': 'Statistiche',
     'kick': 'Kick Off', 'half': 'Half Time', 'second': '2nd Half', 'end_of_90': 'End Of 90’', 'full': 'Full Time',
     'md': 'Matchday', 'pxi': 'Probabile XI', 'squad': 'Squad List', 'xi': 'Starting XI',
-    'cal': 'Calendario', 'table': 'Classifica', 'jr': 'Post', 'igbn': 'Storia IG', 'igq': 'Citazione IG',
+    'cal': 'Calendario', 'table': 'Classifica', 'jr': 'Post', 'igbn': 'Storia IG', 'igq': 'Citazione IG', 'xq': 'Citazione X',
 }
 
 _lock = threading.Lock()

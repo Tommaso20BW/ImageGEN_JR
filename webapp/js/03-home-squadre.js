@@ -259,7 +259,7 @@ function resetAllData() {
   $('igText').value = '';
   igColor = 'black';
   Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', loading:false});
-  ['iqUrl','iqText','iqName'].forEach(id => { $(id).value = ''; });
+  ['iqUrl','iqText','iqName','iqHandle'].forEach(id => { $(id).value = ''; });
   igRefresh();
   $('calYear').value = String(new Date().getFullYear());
   $('matchTime').value = '20:45';
