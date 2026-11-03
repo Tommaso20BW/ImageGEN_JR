@@ -260,8 +260,8 @@ class Renderer:
         if kind == 'igq':
             from graphics import ig_quote
 
-            return ig_quote.render(photo=self._photo(data), text=data.get('text', ''),
-                                   name=data.get('name', ''),
+            return ig_quote.render(photo=None if ghost else self._photo(data), text=data.get('text', ''),
+                                   name=data.get('name', ''), frame=data.get('frame'), ghost=ghost,
                                    avatar=self.photos.get(data.get('avatar_id')) if data.get('avatar_id') else None)
 
         if kind == 'igbn':

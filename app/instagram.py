@@ -70,6 +70,21 @@ def parse_embed(page):
             photos.append(url)
     if not photos:      # post con una foto sola: niente JSON, c'è l'immagine nella pagina
         photos = [html.unescape(u) for u in re.findall(r'class="EmbeddedMediaImage"[^>]+src="([^"]+)"', page)]
+    if not photos:
+        # Video (reel): l'anteprima del video fa da foto. Copertina del <video>, miniatura nel JSON
+        # o immagine dentro il riquadro del post, in quest'ordine.
+        found = [html.unescape(u) for u in re.findall(r'<video[^>]+poster="([^"]+)"', page)]
+        for key in ('thumbnail_src', 'thumbnail_url', 'cover_frame_url'):
+            for raw in re.findall(key + BS * 3 + '":' + BS * 3 + '"(.*?)' + BS * 3 + '"', page):
+                try:
+                    found.append(_json_str(raw))
+                except ValueError:
+                    pass
+        found += [html.unescape(u) for u in re.findall(
+            r'class="EmbeddedMedia[^"]*"[^>]*>(?:\s*<[^>]+>){0,6}?\s*<img[^>]+src="([^"]+)"', page)]
+        for url in found:
+            if url.startswith('https://') and url not in photos:
+                photos.append(url)
     # Il carosello ha prima il "padre" (uguale alla prima foto) e poi le foto: i doppioni sono già tolti.
     return {
         'user': html.unescape(user.group(1)).strip() if user else '',
@@ -114,7 +129,7 @@ def fetch(url, session=None):
         raise ValueError(f'Instagram non ha dato il post (HTTP {r.status_code}). Carica la foto a mano.')
     data = parse_embed(r.text)
     if not data['photos']:
-        raise ValueError('Nel post non ci sono foto leggibili (privato o solo video?). Carica la foto a mano.')
+        raise ValueError('Nel post non ci sono foto né anteprime video leggibili (post privato?).')
     with ThreadPoolExecutor(6) as pool:
         photos = [p for p in pool.map(lambda u: _download(session, u), data['photos']) if p]
         avatar = _download(session, data['avatar_url']) if data['avatar_url'] else None

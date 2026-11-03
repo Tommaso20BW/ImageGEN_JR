@@ -298,7 +298,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
                 return
             try:
-                self._png(self.service.photo_thumb(query.get('id', '')), 'image/jpeg')
+                self._png(self.service.photo_thumb(query.get('id', ''), query.get('big') == '1'), 'image/jpeg')
             except ValueError as exc:
                 self._json(404, {'ok': False, 'error': str(exc)})
             return
@@ -1094,13 +1094,14 @@ class Service:
         return {'user': post['user'], 'text': ig_quote.clean_text(post['text']), 'photos': photos,
                 'avatar_id': avatar}
 
-    def photo_thumb(self, photo_id):
+    def photo_thumb(self, photo_id, big=False):
+        """Foto caricata ridotta: miniatura (scelta della foto) o grande (editor della foto)."""
         raw = self.photos.get(str(photo_id or ''))
         if not raw:
             raise ValueError('Foto non trovata.')
-        key = ('thumb', photo_id)
+        key = ('thumb', photo_id, big)
         if key not in self.overlays:
-            self.overlays[key] = _jpeg(raw, (360, 480), 82)
+            self.overlays[key] = _jpeg(raw, (1080, 1920) if big else (360, 480), 85 if big else 82)
         return self.overlays[key]
 
     def phrases(self, envelope):

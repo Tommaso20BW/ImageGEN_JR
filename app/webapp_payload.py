@@ -256,7 +256,7 @@ def _build_state(envelope, catalog, now, expected_session):
         if not text:
             raise ValueError('Scrivi il testo della citazione.')
         data = {'kind': 'igq', 'photo_id': _photo_id(incoming.get('photo_id')), 'text': text,
-                'name': ig_quote.clean_name(incoming.get('name'))}
+                'name': ig_quote.clean_name(incoming.get('name')), 'frame': _frame(incoming.get('frame'))}
         if incoming.get('avatar_id'):
             data['avatar_id'] = _photo_id(incoming.get('avatar_id'))
         return {

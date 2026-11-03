@@ -82,3 +82,40 @@ function iqUseLink(text) {
 $('iqUrl').addEventListener('paste', () => setTimeout(() => {
   if (looksIg($('iqUrl').value)) iqUseLink($('iqUrl').value);
 }, 0));
+
+/* ----- Editor della foto (lo stesso di Matchday / Post): sposta e ingrandisci lo sfondo ----- */
+// La foto scelta del post entra nell'editor; sopra, la sagoma vera (riquadro, testo, account, JR)
+// fatta dal servizio senza foto. Cambiando foto si riparte dal centro.
+function iqSyncPhoto() {
+  const p = iq.photos[iq.sel];
+  if (!p) return;
+  if (photoState.id === p.photo_id) return;
+  // Foto caricata a mano nell'editor: resta quella (non è una del post).
+  if (photoState.id && !iq.photos.some(x => x.photo_id === photoState.id)) return;
+  clearPhoto();
+  Object.assign(photoState, {id:p.photo_id, w:p.width, h:p.height, url:`${iqThumb(p.photo_id)}&big=1`, x:0, y:0, zoom:1});
+  $('photoImg').src = photoState.url;
+  $('photoImg').hidden = false;
+  $('photoEmpty').hidden = true;
+}
+
+let iqGhostKey = '', iqGhostUrl = '';
+async function iqGhost(overlay) {
+  let body;
+  try { body = JSON.stringify(buildPayload(true)); } catch (_) { return; }
+  const key = body.replace(/"frame":\{[^}]*\}/, '');
+  if (key === iqGhostKey && iqGhostUrl) { overlay.src = iqGhostUrl; overlay.style.visibility = ''; return; }
+  iqGhostKey = key;
+  overlay.style.visibility = 'hidden';
+  try {
+    const response = await netFetch(`${directBase}/ghost`, {
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body
+    }, 60000, 2);
+    if (!response.ok || iqGhostKey !== key) return;
+    const url = URL.createObjectURL(await response.blob());
+    if (iqGhostUrl) { try { URL.revokeObjectURL(iqGhostUrl); } catch (_) {} }
+    iqGhostUrl = url;
+    overlay.src = url;
+    overlay.style.visibility = '';
+  } catch (_) {}
+}

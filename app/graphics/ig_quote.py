@@ -12,7 +12,7 @@ Il calcolo della grandezza del testo lo fa Chrome (a-capo reali): il renderer as
 import base64
 import json
 
-from graphics.common import DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html
+from graphics.common import DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, photo_layer, render_html
 from graphics.ig_story import FONT_FILE, tidy
 from graphics.starting_xi import check_photo
 
@@ -23,6 +23,7 @@ ZONE = (110, 250, DESIGN_W - 220, 900)
 FS_MAX, FS_MIN = 64, 16          # testo lungo: si rimpicciolisce fin qui (nessun limite di caratteri)
 AVATAR = 92
 SIGN_LEFT, SIGN_BOTTOM = 96, 92
+CARD_BLUR = 3           # sfocatura della foto dietro il riquadro (px)
 DARKEN = .52            # luminosità della foto di sfondo (1 = com'è)
 
 
@@ -63,8 +64,12 @@ window.__ready = (async () => {
 '''
 
 
-def build_html(*, photo, text='', name='', avatar=None, style='card'):
-    check_photo(photo)
+def build_html(*, photo, text='', name='', avatar=None, style='card', frame=None):
+    """photo=None: sagoma per l'editor (sfondo trasparente, la foto la mette la Mini App).
+    frame = posizione e zoom della foto scelti nell'editor ({'x','y','zoom'}, come la FOTO + JR)."""
+    if photo is not None:
+        check_photo(photo)
+    img, page_bg = photo_layer(photo, frame or {'x': 0, 'y': 0, 'zoom': 1})
     text = clean_text(text)
     name = clean_name(name)
     style = style if style in STYLES else 'card'
@@ -80,16 +85,15 @@ def build_html(*, photo, text='', name='', avatar=None, style='card'):
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 {_font_css()}
 *{{margin:0;padding:0;box-sizing:border-box}}
-html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#000}}
-#bg{{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%;
-  filter:brightness({DARKEN}) saturate(1.05)}}
+html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{'#000' if photo is not None else 'transparent'}}}
+#bg{{position:absolute;inset:0;overflow:hidden;filter:brightness({DARKEN}) saturate(1.05)}}
 #shade{{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28) 0%,rgba(0,0,0,0) 22%,
   rgba(0,0,0,0) 62%,rgba(0,0,0,.55) 100%)}}
 #zone{{position:absolute;left:{zx}px;top:{zy}px;width:{zw}px;height:{zh}px;display:flex;
   align-items:center;justify-content:center}}
 #box{{width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;
   {f"padding:{pad}px;border-radius:30px;background:rgba(8,8,10,.46);border:1.5px solid rgba(255,255,255,.14);"
-   "backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 18px 60px rgba(0,0,0,.35);"
+   f"backdrop-filter:blur({CARD_BLUR}px);-webkit-backdrop-filter:blur({CARD_BLUR}px);box-shadow:0 18px 60px rgba(0,0,0,.35);"
    if card else ""}}}
 #txt{{width:100%;color:#fff;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;text-wrap:balance;
   font-family:'Poppins',sans-serif;font-weight:500;letter-spacing:-0.005em;font-size:60px;
@@ -103,7 +107,7 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#00
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 14px rgba(0,0,0,.5)}}
 img[style*="left:0"]{{position:absolute}}
 </style></head><body>
-<img id="bg" src="{_uri(photo)}">
+<div id="bg">{img}</div>
 <div id="shade"></div>
 <div id="zone">{body}</div>
 {sign}
@@ -112,5 +116,6 @@ img[style*="left:0"]{{position:absolute}}
 </body></html>'''
 
 
-def render(*, photo, text='', name='', avatar=None, style='card'):
-    return render_html(build_html(photo=photo, text=text, name=name, avatar=avatar, style=style))
+def render(*, photo, text='', name='', avatar=None, style='card', frame=None, ghost=False):
+    return render_html(build_html(photo=None if ghost else photo, text=text, name=name, avatar=avatar,
+                                  style=style, frame=frame), ghost=ghost)

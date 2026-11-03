@@ -138,6 +138,7 @@ async function updatePhotoOverlay() {
     jrLogoSrc(overlay,'black');
     return;
   }
+  if (kind === 'igq') { editorShown = ''; frame.style.backgroundImage = ''; iqGhost(overlay); return; }
   const urls = editorImageUrls();
   if (!urls || editorShown === urls.overlay) return;
   const key = editorShown = urls.overlay;

@@ -22,8 +22,10 @@ function buildPayload(ghost=false) {
   if (kind === 'igq') {
     const photo = iq.photos[iq.sel];
     if (!photo) throw new Error('Scegli la foto del post.');
-    return {v:1, action:'render', session, data:{kind:'igq', photo_id:photo.photo_id,
-      text:$('iqText').value.trim(), name:$('iqName').value.trim(), ...(iq.avatar ? {avatar_id:iq.avatar} : {})}};
+    // Foto del post, o quella caricata a mano nell'editor ("Scegli foto").
+    return {v:1, action:'render', session, data:{kind:'igq', photo_id:photoState.id || photo.photo_id,
+      text:$('iqText').value.trim(), name:$('iqName').value.trim(), ...(iq.avatar ? {avatar_id:iq.avatar} : {}),
+      frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}}};
   }
   if (kind === 'igbn') {
     const text = $('igText').value.trim();
