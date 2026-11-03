@@ -71,7 +71,7 @@ $('iqUrl').addEventListener('input', () => {
   }
 });
 $('iqUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nextField(true); } });
-// Link incollato (dal tasto o tenendo premuto nel campo): il post si legge subito, senza "Avanti".
+// Link incollato nel campo: il post si legge subito, senza "Avanti".
 const looksIg = v => /instagram\.com\/|instagr\.am\//i.test(v);
 function iqUseLink(text) {
   const link = (String(text || '').match(/https?:\/\/\S+/) || [String(text || '').trim()])[0];
@@ -82,23 +82,3 @@ function iqUseLink(text) {
 $('iqUrl').addEventListener('paste', () => setTimeout(() => {
   if (looksIg($('iqUrl').value)) iqUseLink($('iqUrl').value);
 }, 0));
-
-// "Incolla": prima Telegram (legge gli appunti senza conferma, dove lo permette), poi il browser.
-// Su iPhone il browser mostra sempre la bolla "Incolla" da toccare: è una protezione di iOS.
-async function iqReadClipboard() {
-  if (tg && typeof tg.readTextFromClipboard === 'function' && tg.isVersionAtLeast && tg.isVersionAtLeast('6.4')) {
-    const text = await new Promise(resolve => {
-      try { tg.readTextFromClipboard(t => resolve(t || '')); } catch (_) { resolve(''); }
-      setTimeout(() => resolve(''), 1500);
-    });
-    if (text) return text;
-  }
-  return navigator.clipboard.readText();
-}
-$('iqPaste').addEventListener('click', async () => {
-  try {
-    const text = await iqReadClipboard();
-    if (text) iqUseLink(text);
-    else showError('Negli appunti non c’è niente: copia il link del post su Instagram.');
-  } catch (_) { showError('Non posso leggere gli appunti: tieni premuto nel campo e scegli Incolla.'); }
-});

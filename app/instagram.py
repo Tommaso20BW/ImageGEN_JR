@@ -53,12 +53,12 @@ def parse_embed(page):
     text = ''
     start = page.find('class="Caption"')
     if start >= 0:
-        block = page[start:]
-        end = min([i for i in (block.find('class="CaptionComments"'), block.find('class="CaptionComments'),
-                               block.find('View all'), block.find('</div>\n</div>')) if i > 0] or [2500])
+        # Dentro la didascalia ci sono solo <a> (nome, menzioni, hashtag) e <br>: finisce al primo
+        # <div> o </div> (commenti "View all…" o, se mancano, il piè di pagina "Add a comment...").
+        block = page[start:].split('>', 1)[-1]
+        end = min([i for i in (block.find('<div'), block.find('</div')) if i >= 0] or [len(block)])
         block = re.sub(r'<br\s*/?>', '\n', block[:end])
         block = re.sub(r'<a [^>]*class="CaptionUsername"[^>]*>.*?</a>', '', block, flags=re.S)
-        block = re.sub(r'<[^>]*$', '', block.split('>', 1)[-1])      # tag tagliato a metà in fondo
         text = html.unescape(re.sub(r'<[^>]+>', '', block)).strip()
     photos = []
     for raw in re.findall('display_url' + BS * 3 + '":' + BS * 3 + '"(.*?)' + BS * 3 + '"', page):
