@@ -252,7 +252,7 @@ def _build_state(envelope, catalog, now, expected_session):
     # CITAZIONE IG: foto scelta del post, testo (modificabile), nome e foto profilo dell'account.
     if kind == 'igq':
         from graphics import ig_quote
-        text = ig_story.clean_text(incoming.get('text'))
+        text = ig_quote.clean_text(incoming.get('text'))
         if not text:
             raise ValueError('Scrivi il testo della citazione.')
         data = {'kind': 'igq', 'photo_id': _photo_id(incoming.get('photo_id')), 'text': text,

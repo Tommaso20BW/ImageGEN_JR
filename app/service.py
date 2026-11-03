@@ -1090,8 +1090,8 @@ class Service:
             except ValueError:
                 avatar = None
         # Testo già senza emoji (come uscirà nella grafica): nella Mini App si vede quello vero.
-        from graphics import ig_story
-        return {'user': post['user'], 'text': ig_story.clean_text(post['text']), 'photos': photos,
+        from graphics import ig_quote
+        return {'user': post['user'], 'text': ig_quote.clean_text(post['text']), 'photos': photos,
                 'avatar_id': avatar}
 
     def photo_thumb(self, photo_id):

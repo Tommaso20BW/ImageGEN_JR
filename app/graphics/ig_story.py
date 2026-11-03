@@ -76,12 +76,16 @@ def strip_emoji(text):
     return _EMOJI.sub('', _SIGNATURE.sub('', text))
 
 
-def clean_text(value):
-    """Testo scelto nella Mini App: niente emoji né firma, a-capo mantenuti, righe vuote di fila
-    ridotte a una."""
+def tidy(value):
+    """Niente emoji né firma, a-capo mantenuti, righe vuote di fila ridotte a una (nessun limite)."""
     text = strip_emoji(str(value or '').replace('\r\n', '\n').replace('\r', '\n'))
     lines = [' '.join(line.split()) for line in text.split('\n')]
-    text = re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()
+    return re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()
+
+
+def clean_text(value):
+    """Testo della Storia IG: come tidy(), al massimo MAX_TEXT caratteri."""
+    text = tidy(value)
     if len(text) > MAX_TEXT:
         raise ValueError(f'Testo troppo lungo (massimo {MAX_TEXT} caratteri).')
     return text

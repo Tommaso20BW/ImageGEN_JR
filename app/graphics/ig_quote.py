@@ -13,15 +13,14 @@ import base64
 import json
 
 from graphics.common import DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html
-from graphics.ig_story import FONT_FILE, clean_text
+from graphics.ig_story import FONT_FILE, tidy
 from graphics.starting_xi import check_photo
 
 STYLES = ('card', 'plain')
-MAX_TEXT = 600
 MAX_NAME = 40
 # Zona del testo (pixel design): tra il logo in alto e la firma in basso.
 ZONE = (110, 250, DESIGN_W - 220, 900)
-FS_MAX, FS_MIN = 64, 26
+FS_MAX, FS_MIN = 64, 16          # testo lungo: si rimpicciolisce fin qui (nessun limite di caratteri)
 AVATAR = 92
 SIGN_LEFT, SIGN_BOTTOM = 96, 92
 DARKEN = .52            # luminosità della foto di sfondo (1 = com'è)
@@ -35,6 +34,11 @@ def _uri(raw):
 def _font_css():
     return (f"@font-face{{font-family:'Poppins';font-weight:500;font-style:normal;"
             f"src:url({data_uri(asset_dir() / 'fonts' / FONT_FILE)})}}")
+
+
+def clean_text(value):
+    """Testo della citazione: senza emoji, a-capo mantenuti, nessun limite di lunghezza."""
+    return tidy(value)
 
 
 def clean_name(value):
@@ -61,7 +65,7 @@ window.__ready = (async () => {
 
 def build_html(*, photo, text='', name='', avatar=None, style='card'):
     check_photo(photo)
-    text = clean_text(text)[:MAX_TEXT]
+    text = clean_text(text)
     name = clean_name(name)
     style = style if style in STYLES else 'card'
     from graphics.photo_jr import _logo
