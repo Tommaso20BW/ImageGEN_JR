@@ -110,7 +110,8 @@ const HOME_GROUPS = [
   {icon:'g-pre', title:'Pre-gara',              ids:['md','pxi','squad','xi']},
   {icon:'g-events', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
   {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
-  {icon:'g-other', title:'Altro',                 ids:['jr','igbn','igq','cal','table','sent']},
+  {icon:'igq', title:'Instagram',                 ids:['igbn','igq']},
+  {icon:'g-other', title:'Altro',                 ids:['jr','cal','table','sent']},
   {icon:'ita', title:'Nazionale',                 ids:['ita']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
