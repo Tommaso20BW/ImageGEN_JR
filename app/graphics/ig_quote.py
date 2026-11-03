@@ -23,7 +23,7 @@ ZONE = (110, 250, DESIGN_W - 220, 900)
 FS_MAX, FS_MIN = 64, 16          # testo lungo: si rimpicciolisce fin qui (nessun limite di caratteri)
 AVATAR = 92
 SIGN_LEFT, SIGN_BOTTOM = 96, 92
-CARD_BLUR = 3           # sfocatura della foto dietro il riquadro (px)
+CARD_BLUR = 5           # sfocatura della foto dietro il riquadro (px)
 DARKEN = .52            # luminosità della foto di sfondo (1 = com'è)
 
 
