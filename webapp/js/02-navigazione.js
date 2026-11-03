@@ -542,7 +542,7 @@ function renderFlow() {
     } else loadMdFixtures();
   }
   if (screenName === 'sentlist') { renderSentList(); loadRecent(); }
-  if (screenName === 'igcontent') { if (igPicking) { igPicking = false; buildFlow(); } loadPhrases(); }
+  if (screenName === 'igcontent') { if (igPicking) { igPicking = false; buildFlow(); } loadPhrases(); renderIgColor(); }
   if (screenName === 'igsent') { renderIgSent(); loadRecent(); }
   if (screenName === 'sentitem') renderSentItem();
   if (screenName === 'calrows') fillCalendarFromFixtures();

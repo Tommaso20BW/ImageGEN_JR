@@ -257,6 +257,7 @@ function resetAllData() {
   clearPhase();
   igClearPhoto();
   $('igText').value = '';
+  igColor = 'black';
   igRefresh();
   $('calYear').value = String(new Date().getFullYear());
   $('matchTime').value = '20:45';

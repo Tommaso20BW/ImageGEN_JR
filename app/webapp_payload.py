@@ -255,7 +255,7 @@ def _build_state(envelope, catalog, now, expected_session):
         photo_id = incoming.get('photo_id')
         if not text and not photo_id:
             raise ValueError('Scrivi un testo o scegli una foto.')
-        data = {'kind': 'igbn', 'text': text}
+        data = {'kind': 'igbn', 'text': text, 'color': ig_story.text_color(incoming.get('color'))}
         if photo_id:
             data['photo_id'] = _photo_id(photo_id)
         return {

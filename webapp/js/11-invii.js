@@ -267,14 +267,15 @@ async function pickIgSent(item) {
 // Elenco sotto il testo: un tocco mette la frase nel testo; "×" la toglie; "Salva il testo
 // come frase pronta" la aggiunge. Le frasi restano nel repo degli asset (sent_store.py).
 let igPhrases = [];
-async function phrasesCall(action, text='') {
+async function phrasesCall(action, text='', color='black') {
   const response = await netFetch(`${directBase}/phrases`, {
     method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-    body:JSON.stringify({v:1, action, session, text})
+    body:JSON.stringify({v:1, action, session, text, color})
   }, 20000, 2);
   const body = await response.json().catch(() => ({}));
   if (!response.ok || !body.ok) throw new Error(body.error || 'Frasi non disponibili.');
-  igPhrases = Array.isArray(body.phrases) ? body.phrases : [];
+  igPhrases = (Array.isArray(body.phrases) ? body.phrases : [])
+    .map(p => typeof p === 'string' ? {text:p, color:'black'} : p).filter(p => p && p.text);
   renderPhrases();
 }
 
@@ -288,30 +289,34 @@ function renderPhrases() {
   const box = $('igPhrases');
   box.querySelectorAll('.ig-phrase').forEach(el => el.remove());
   const save = $('igPhraseSave');
-  igPhrases.forEach(text => {
+  igPhrases.forEach(({text, color}) => {
     const row = document.createElement('div');
     row.className = 'ios-row ig-phrase';
-    row.innerHTML = '<button class="ig-ph-use" type="button"></button>' +
+    row.innerHTML = '<button class="ig-ph-use" type="button"><span class="ig-ph-dot"></span><span class="ig-ph-txt"></span></button>' +
       '<button class="ig-ph-del" type="button" aria-label="Elimina la frase">×</button>';
-    row.querySelector('.ig-ph-use').textContent = text;
+    row.querySelector('.ig-ph-txt').textContent = text;
+    row.querySelector('.ig-ph-dot').style.background = igHex(color);
     row.querySelector('.ig-ph-use').addEventListener('click', () => {
       haptic('select');
       $('igText').value = text;
+      setIgColor(color, false);
       clearError();
       igRefresh();
+      renderPhrases();
     });
     row.querySelector('.ig-ph-del').addEventListener('click', () => deletePhrase(text));
     box.insertBefore(row, save);
   });
-  const current = $('igText').value.trim().replace(/\s+/g, ' ');
-  save.disabled = !current || igPhrases.includes(current);
+  // Già salvata uguale (stesso testo e stesso colore): niente da salvare.
+  const current = cleanPhrase($('igText').value);
+  save.disabled = !current || igPhrases.some(p => p.text === current && p.color === igColor);
   $('igPhrasesEmpty').hidden = igPhrases.length > 0;
 }
 
 async function savePhrase() {
   const text = $('igText').value.trim();
   if (!text) { showError('Scrivi prima il testo da salvare.'); return; }
-  try { await phrasesCall('add', text); haptic('success'); }
+  try { await phrasesCall('add', text, igColor); haptic('success'); }
   catch (error) { showError(error.message || 'Frase non salvata.'); }
 }
 
@@ -327,6 +332,54 @@ function deletePhrase(text) {
   }
   go(window.confirm(msg));
 }
+
+// Come sent_store.clean_phrase: spazi in più tolti riga per riga, a capo conservati.
+const cleanPhrase = v => String(v || '').replace(/\r/g, '').split('\n')
+  .map(l => l.split(/\s+/).filter(Boolean).join(' ')).join('\n').trim();
+
+/* ----- Storia IG: colore del testo ----- */
+// Pallino in alto a destra = colore attuale; un tocco apre la tavolozza sopra il testo.
+// Stessi colori di graphics/ig_story.py (TEXT_COLORS).
+const IG_COLORS = [['black','#1a1612','Nero'],['blue','#3897F0','Blu'],['green','#70C050','Verde'],
+  ['yellow','#FDCB5C','Giallo'],['orange','#FD8D32','Arancione'],['red','#ED4956','Rosso'],
+  ['pink','#D10869','Rosa'],['purple','#A307BA','Viola']];
+const igHex = key => (IG_COLORS.find(c => c[0] === key) || IG_COLORS[0])[1];
+
+function setIgColor(key, close=true) {
+  igColor = IG_COLORS.some(c => c[0] === key) ? key : 'black';
+  renderIgColor();
+  if (close) $('igColors').hidden = true;
+  renderPhrases();
+}
+
+function renderIgColor() {
+  $('igColorDot').style.background = igHex(igColor);
+  // Nel riquadro il testo ha già il colore scelto (il nero resta quello del tema, leggibile anche al buio).
+  $('igText').style.color = igColor === 'black' ? '' : igHex(igColor);
+  $('igColors').querySelectorAll('.ig-sw').forEach(b => {
+    const on = b.dataset.c === igColor;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+}
+
+IG_COLORS.forEach(([key, hex, name]) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'ig-sw';
+  b.dataset.c = key;
+  b.style.background = hex;
+  b.setAttribute('role', 'radio');
+  b.setAttribute('aria-label', name);
+  b.title = name;
+  b.addEventListener('click', () => { haptic('select'); setIgColor(key); });
+  $('igColors').appendChild(b);
+});
+$('igColorBtn').addEventListener('click', () => {
+  haptic('select');
+  $('igColors').hidden = !$('igColors').hidden;
+  renderIgColor();
+});
 
 $('igFromSent').addEventListener('click', openIgSent);
 $('igPhraseSave').addEventListener('click', savePhrase);

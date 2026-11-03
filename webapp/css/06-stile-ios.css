@@ -238,10 +238,17 @@ textarea.field-input:focus{box-shadow:none!important;outline:0}
 /* note sotto i riquadri: allineate al testo delle righe */
 #pxiSummary,#lineupSummary,#squadSummary,.ig-count{margin:0!important;padding:7px 16px 0!important;font-size:13px!important;color:var(--muted)}
 .ig-list{display:block}
+/* Storia IG: colore del testo (pallino in alto a destra, tavolozza sopra il testo) */
+.ig-dot{display:block;width:24px;height:24px;margin:auto;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1.5px var(--line)}
+.ig-colors{display:grid;grid-template-columns:repeat(8,1fr);justify-items:center;gap:4px;margin:0 0 12px;padding:12px 8px;border-radius:12px;background:var(--surface)}
+.ig-colors[hidden]{display:none}
+.ig-sw{width:30px;height:30px;border-radius:50%;border:0;padding:0;cursor:pointer;box-shadow:0 0 0 1.5px var(--line)}
+.ig-sw.on{box-shadow:0 0 0 2.5px var(--surface),0 0 0 4.5px var(--text)}
+.ig-ph-dot{flex:none;width:12px;height:12px;margin-right:10px;border-radius:50%}
 /* Storia IG: frasi pronte (tocco = nel testo, × = elimina) */
 .ig-phrases{display:block}
 .ig-phrase{padding:0 0 0 16px;gap:0}
-.ig-ph-use{flex:1;min-width:0;min-height:50px;padding:12px 8px 12px 0;border:0;background:none;color:var(--text);font:inherit;font-size:15px;font-weight:500;text-align:left;line-height:1.35;cursor:pointer;overflow-wrap:anywhere}
+.ig-ph-use{flex:1;min-width:0;min-height:50px;display:flex;align-items:center;padding:12px 8px 12px 0;border:0;background:none;color:var(--text);font:inherit;font-size:15px;font-weight:500;text-align:left;line-height:1.35;cursor:pointer;overflow-wrap:anywhere;white-space:pre-line}
 .ig-ph-del{flex:none;width:48px;align-self:stretch;border:0;background:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
 .ig-ph-use:active,.ig-ph-del:active{background:var(--accent-soft)}
 .ig-ph-empty{color:var(--muted);font-weight:500;font-size:15px}

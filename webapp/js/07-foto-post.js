@@ -8,6 +8,7 @@ const OVERLAY_NAMES = {xi:'starting_xi', md:'matchday', jr:'jr'};
 const photoState = {id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, uploading:false};
 // STORIE IG: foto facoltativa sotto il testo (nessun editor: il servizio la adatta da solo).
 const igb = {id:'', url:'', uploading:false};
+let igColor = 'black';     // colore del testo (tavolozza in 11-invii.js)
 function igRefresh() {
   $('igThumb').hidden = !igb.url;
   $('igThumb').style.backgroundImage = igb.url ? `url("${igb.url}")` : '';

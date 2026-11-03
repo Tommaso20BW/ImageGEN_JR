@@ -282,8 +282,12 @@
 
           <section class="screen" data-screen="igcontent">
             <div class="eyebrow">Storie IG · Breaking News</div>
-            <h1>Contenuto</h1>
+            <div class="photo-head">
+              <h1>Contenuto</h1>
+              <button id="igColorBtn" class="head-ico" type="button" aria-label="Colore del testo" title="Colore del testo"><span id="igColorDot" class="ig-dot"></span></button>
+            </div>
             <p class="lead">Scrivi il testo, aggiungi una foto, oppure entrambi: testo sopra e foto sotto. Misure e altezze le calcola ImageGEN tra la scritta e il logo.</p>
+            <div id="igColors" class="ig-colors" role="radiogroup" aria-label="Colore del testo" hidden></div>
             <textarea id="igText" class="field-input" maxlength="500" style="min-height:170px" spellcheck="true"
               placeholder="Testo (facoltativo se scegli una foto)"></textarea>
             <div class="hint ig-count"><span id="igHint"></span><span id="igCount">0 / 500</span></div>

@@ -46,8 +46,21 @@ def load_history():
     return rows[:HISTORY_KEEP]
 
 
+def clean_phrase(value):
+    """Spazi in più tolti riga per riga; gli a capo restano (nella storia contano)."""
+    lines = [' '.join(line.split()) for line in str(value or '').replace('\r', '').split('\n')]
+    return '\n'.join(lines).strip()[:PHRASE_MAX]
+
+
 def load_phrases():
-    return [str(p) for p in _read(PHRASES, []) if str(p).strip()][:PHRASES_KEEP]
+    """Frasi pronte: [{'text', 'color'}] (le prime salvate erano solo testo: colore di base)."""
+    out = []
+    for item in _read(PHRASES, []):
+        row = item if isinstance(item, dict) else {'text': item}
+        text = clean_phrase(row.get('text'))
+        if text:
+            out.append({'text': text, 'color': str(row.get('color') or 'black')})
+    return out[:PHRASES_KEEP]
 
 
 def save_history(entries):

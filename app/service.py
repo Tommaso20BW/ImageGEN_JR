@@ -1058,16 +1058,19 @@ class Service:
 
     def phrases(self, envelope):
         """Storia IG: frasi pronte (elenco, aggiungi, togli). Salvate nel repo degli asset."""
+        from graphics import ig_story
         action = (envelope or {}).get('action')
-        text = ' '.join(str((envelope or {}).get('text') or '').split())[:sent_store.PHRASE_MAX]
+        text = sent_store.clean_phrase((envelope or {}).get('text'))
+        color = ig_story.text_color((envelope or {}).get('color'))
         with self.history_lock:
             phrases = list(self.ig_phrases)
             if action == 'add':
                 if not text:
                     raise ValueError('Scrivi prima la frase.')
-                phrases = [text] + [p for p in phrases if p != text]
+                # Stessa frase già salvata: si aggiorna il colore e torna in cima.
+                phrases = [{'text': text, 'color': color}] + [p for p in phrases if p['text'] != text]
             elif action == 'delete':
-                phrases = [p for p in phrases if p != text]
+                phrases = [p for p in phrases if p['text'] != text]
             elif action != 'list':
                 raise ValueError('Richiesta non valida.')
             changed = phrases != self.ig_phrases

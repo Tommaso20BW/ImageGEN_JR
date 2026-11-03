@@ -47,6 +47,17 @@ FS_PHOTO_STEPS = ((40, 58), (90, 52), (160, 46), (10**9, 40))
 # Interlinea in base alla grandezza finale: (da N pixel in su, interlinea)
 LINE_HEIGHTS = ((70, 1.2), (50, 1.26), (0, 1.32))
 TEXT_COLOR = '#1a1612'
+# Colori del testo scelti nella Mini App (tavolozza dei testi di Instagram; il bianco no: lo
+# sfondo è chiaro). 'black' è quello di base.
+TEXT_COLORS = {
+    'black': TEXT_COLOR, 'blue': '#3897F0', 'green': '#70C050', 'yellow': '#FDCB5C',
+    'orange': '#FD8D32', 'red': '#ED4956', 'pink': '#D10869', 'purple': '#A307BA',
+}
+
+
+def text_color(value):
+    """Nome del colore valido ('black' se manca o non è nella tavolozza)."""
+    return value if value in TEXT_COLORS else 'black'
 PHOTO_RADIUS = 22
 MAX_TEXT = 500
 FONT_FILE = 'Poppins-Medium.ttf'
@@ -143,7 +154,7 @@ window.__ready = (async () => {
 '''
 
 
-def build_html(*, text='', photo=None):
+def build_html(*, text='', photo=None, color='black'):
     text = clean_text(text)
     if not text and photo is None:
         raise ValueError('Scrivi un testo o scegli una foto.')
@@ -166,7 +177,7 @@ html,body{{width:{PAGE_W}px;height:{PAGE_H}px;overflow:hidden;background:#f3eee6
   flex-direction:column;align-items:center;justify-content:center;gap:{GAP_MIDDLE}px}}
 #txt{{width:100%;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;text-wrap:balance;
   font-family:'Poppins',sans-serif;font-weight:500;line-height:1.3;letter-spacing:-0.01em;padding:0 14px;
-  color:{TEXT_COLOR};font-size:60px;flex:none}}
+  color:{TEXT_COLORS[text_color(color)]};font-size:60px;flex:none}}
 #pic{{display:block;flex:none;border-radius:{PHOTO_RADIUS}px;box-shadow:0 14px 40px rgba(60,45,20,.22)}}
 </style></head><body>
 <img id="bg" src="{data_uri(asset_dir() / "canva" / BG_NAME)}">
@@ -175,5 +186,5 @@ html,body{{width:{PAGE_W}px;height:{PAGE_H}px;overflow:hidden;background:#f3eee6
 </body></html>'''
 
 
-def render(*, text='', photo=None):
-    return render_html(build_html(text=text, photo=photo), page=(PAGE_W, PAGE_H), out_w=OUT_W)
+def render(*, text='', photo=None, color='black'):
+    return render_html(build_html(text=text, photo=photo, color=color), page=(PAGE_W, PAGE_H), out_w=OUT_W)
