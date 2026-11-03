@@ -1057,7 +1057,7 @@ class Service:
     def history_list(self):
         with self.history_lock:
             return [{k: v for k, v in e.items() if k in ('id', 'name', 'player', 'minute', 'score',
-                                                         'opponent', 'kind', 'at')} for e in self.history]
+                                                         'opponent', 'note', 'kind', 'at')} for e in self.history]
 
     def history_thumb(self, message_id):
         entry = self._history_entry(message_id)
@@ -1371,6 +1371,14 @@ def _send_detail(data):
     (giocatore e minuto; risultato e avversario)."""
     score = data.get('score')
     opponent = data.get('opponent')
+    # Storia IG e Citazione IG: account (solo Citazione) e inizio del testo.
+    if data.get('kind') in ('igq', 'igbn'):
+        text = ' '.join(str(data.get('text') or '').split())
+        note = (text[:117] + '…') if len(text) > 120 else text
+        if not note and data.get('photo_id'):
+            note = 'Solo foto'
+        return {'player': f"@{data['name']}" if data.get('name') else '', 'minute': '', 'score': '',
+                'opponent': '', 'note': note}
     return {
         'player': str(data.get('player') or ''),
         'minute': f"{data['minute']}'" if data.get('minute') else '',

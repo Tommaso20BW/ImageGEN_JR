@@ -64,7 +64,7 @@ def load_phrases():
 
 
 def save_history(entries):
-    keep = ('id', 'name', 'player', 'minute', 'score', 'opponent', 'kind', 'at', 'file_id', 'thumb_id')
+    keep = ('id', 'name', 'player', 'minute', 'score', 'opponent', 'note', 'kind', 'at', 'file_id', 'thumb_id')
     rows = [{k: e.get(k) for k in keep} for e in entries if e.get('file_id')][:HISTORY_KEEP]
     _save(HISTORY, rows, 'ImageGen: ultimi invii')
 

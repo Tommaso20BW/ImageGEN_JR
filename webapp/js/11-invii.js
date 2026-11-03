@@ -75,9 +75,10 @@ const hhmm = ms => {
 };
 // Sempre due righe (tutte le righe dell'elenco alte uguali): giocatore e minuto; risultato e
 // avversario. Senza giocatore (Kick Off, fasi...) "risultato · avversario" sale sulla prima.
+// Storia IG e Citazione IG: account (se c'è) e poi l'inizio del testo (`note`).
 const sentLines = item => {
   const who = [item.player, item.minute].filter(Boolean).join(' · ');
-  const match = [item.score, item.opponent].filter(Boolean).join(' · ');
+  const match = item.note || [item.score, item.opponent].filter(Boolean).join(' · ');
   return who ? [who, match] : [match, ''];
 };
 const sentUrl = (what, id) => `${directBase}/history/${what}?session=${encodeURIComponent(session)}&id=${encodeURIComponent(id)}`;
