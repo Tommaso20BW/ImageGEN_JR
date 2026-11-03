@@ -291,6 +291,17 @@ class _DirectHandler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self._json(404, {'ok': False, 'error': str(exc)})
             return
+        if parts.path.rstrip('/') == '/photothumb':
+            # Miniatura di una foto caricata (scelta della foto del post nella CITAZIONE IG).
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            try:
+                self._png(self.service.photo_thumb(query.get('id', '')), 'image/jpeg')
+            except ValueError as exc:
+                self._json(404, {'ok': False, 'error': str(exc)})
+            return
         if parts.path.rstrip('/') == '/progress':
             token = dict(parse_qsl(parts.query)).get('session', '')
             if token != self.service.session:
@@ -343,7 +354,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases'):
+                        '/usesent', '/phrases', '/igpost'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -380,6 +391,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/phrases':
                 self._json(200, {'ok': True, **self.service.phrases(envelope)})
+                return
+
+            if path == '/igpost':
+                self._json(200, {'ok': True, **self.service.ig_post(envelope)})
                 return
 
             if path == '/layout':
@@ -1055,6 +1070,38 @@ class Service:
         entry = self._history_entry((envelope or {}).get('id'))
         raw = entry.get('png') or self._history_bytes(entry, 'full', 'file_id')
         return self.store_photo(raw)
+
+    def ig_post(self, envelope):
+        """CITAZIONE IG: legge il post dal link (instagram.py) e tiene le sue foto come foto caricate."""
+        import instagram
+        post = instagram.fetch((envelope or {}).get('url'))
+        photos = []
+        for raw in post['photos']:
+            try:
+                photos.append(self.store_photo(raw))
+            except ValueError:
+                continue
+        if not photos:
+            raise ValueError('Foto del post non valide. Carica la foto a mano.')
+        avatar = None
+        if post['avatar']:
+            try:
+                avatar = self.store_photo(post['avatar'])['photo_id']
+            except ValueError:
+                avatar = None
+        # Testo già senza emoji (come uscirà nella grafica): nella Mini App si vede quello vero.
+        from graphics import ig_story
+        return {'user': post['user'], 'text': ig_story.clean_text(post['text']), 'photos': photos,
+                'avatar_id': avatar}
+
+    def photo_thumb(self, photo_id):
+        raw = self.photos.get(str(photo_id or ''))
+        if not raw:
+            raise ValueError('Foto non trovata.')
+        key = ('thumb', photo_id)
+        if key not in self.overlays:
+            self.overlays[key] = _jpeg(raw, (360, 480), 82)
+        return self.overlays[key]
 
     def phrases(self, envelope):
         """Storia IG: frasi pronte (elenco, aggiungi, togli). Salvate nel repo degli asset."""

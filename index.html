@@ -306,6 +306,35 @@
             <input id="igFile" type="file" accept="image/*" hidden>
           </section>
 
+          <section class="screen" data-screen="iqurl">
+            <div class="eyebrow">Citazione IG</div>
+            <h1>Link del post</h1>
+            <p class="lead">Incolla il link di un post Instagram: foto, testo, nome e foto profilo arrivano da soli.</p>
+            <div class="ios-list">
+              <label class="ios-row"><input id="iqUrl" class="ios-in iq-url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="https://www.instagram.com/p/…"></label>
+              <button id="iqPaste" class="ios-row ios-act" type="button">Incolla</button>
+            </div>
+            <p id="iqHint" class="note"></p>
+          </section>
+
+          <section class="screen" data-screen="iqpick">
+            <div class="eyebrow">Citazione IG</div>
+            <h1>Scegli la foto</h1>
+            <p class="lead">Il post ha più foto: tocca quella da usare come sfondo.</p>
+            <div id="iqPhotos" class="iq-grid"></div>
+          </section>
+
+          <section class="screen" data-screen="iqtext">
+            <div class="eyebrow">Citazione IG</div>
+            <h1>Testo e account</h1>
+            <p class="lead">Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.</p>
+            <textarea id="iqText" class="field-input" maxlength="500" style="min-height:170px" spellcheck="true" placeholder="Testo della citazione"></textarea>
+            <div class="field-label gap">Account</div>
+            <div class="ios-list">
+              <label class="ios-row"><span id="iqAvatar" class="iq-av"></span><input id="iqName" class="ios-in" maxlength="40" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="nome account"></label>
+            </div>
+          </section>
+
           <section class="screen" data-screen="igsent">
             <div class="eyebrow">Storie IG · Breaking News</div>
             <h1>Dagli ultimi invii</h1>
@@ -646,7 +675,7 @@
 <script>
   // Codice della Mini App (webapp/js): file caricati in ordine, con la versione della pagina.
   (function () { var v = (new URLSearchParams(location.search).get('v') || Date.now());
-    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '10-avvio.js', '11-invii.js'].forEach(function (f) {
+    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '10-avvio.js', '11-invii.js', '12-citazione.js'].forEach(function (f) {
       document.write('<script src="webapp/js/' + f + '?v=' + v + '"><\/script>'); }); })();
 </script>
 </body>

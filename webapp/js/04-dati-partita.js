@@ -78,6 +78,8 @@ function validateCurrent() {
     if (!ppState.bg) { showError('Scegli una foto.'); return false; }
   }
 
+  if (step === 'iqpick' && iq.sel < 0) { showError('Tocca la foto da usare.'); return false; }
+  if (step === 'iqtext' && !$('iqText').value.trim()) { showError('Scrivi il testo della citazione.'); return false; }
   if (step === 'igcontent') {
     if (igb.uploading) { showError('Attendi il caricamento della foto.'); return false; }
     if (!$('igText').value.trim() && !igb.id) { showError('Scrivi un testo o scegli una foto.'); return false; }
@@ -145,6 +147,7 @@ async function nextField(validate=true) {
       refreshSearchSummaries();
     }
     if (step === 'lineup' && !(await askMissingNumbers())) return;
+    if (step === 'iqurl' && !(await iqLoad())) return;
     if (!validateCurrent()) return;
   }
 

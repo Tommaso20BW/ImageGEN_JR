@@ -249,6 +249,24 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
+    # CITAZIONE IG: foto scelta del post, testo (modificabile), nome e foto profilo dell'account.
+    if kind == 'igq':
+        from graphics import ig_quote
+        text = ig_story.clean_text(incoming.get('text'))
+        if not text:
+            raise ValueError('Scrivi il testo della citazione.')
+        data = {'kind': 'igq', 'photo_id': _photo_id(incoming.get('photo_id')), 'text': text,
+                'name': ig_quote.clean_name(incoming.get('name'))}
+        if incoming.get('avatar_id'):
+            data['avatar_id'] = _photo_id(incoming.get('avatar_id'))
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': data,
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
     # STORIE IG - Breaking News: niente partita, solo testo e/o foto (almeno uno dei due).
     if kind == 'igbn':
         text = ig_story.clean_text(incoming.get('text'))

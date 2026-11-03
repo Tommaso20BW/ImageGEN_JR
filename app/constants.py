@@ -19,6 +19,7 @@ KINDS = [
     ('CLASSIFICA', 'table'),
     ('FOTO + JR', 'jr'),
     ('STORIE IG - BREAKING NEWS', 'igbn'),
+    ('CITAZIONE IG', 'igq'),
 ]
 
 COMPETITIONS = [

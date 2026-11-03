@@ -81,7 +81,8 @@ const ICONS = {
   'g-play':'<circle cx="12" cy="12" r="9"/><path d="M12 8.2l3.4 2.5-1.3 4h-4.2l-1.3-4zM12 8.2V3.1M15.4 10.7l5-1.9M14.1 14.7l3.4 4.4M9.9 14.7l-3.4 4.4M8.6 10.7l-5-1.9"/>',
   'g-other':'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
   'home':'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',
-  'sent':'<path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/>'
+  'sent':'<path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/>',
+  'igq':'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/>'
 };
 const svgIcon = (id, cls) => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[id] || ''}</svg>`;
 const REQUESTS = [
@@ -101,6 +102,7 @@ const REQUESTS = [
   {id:'table',  kind:'table', icon:'table', title:'Classifica',  desc:'Serie A e coppe europee, aggiornata da Diretta.it'},
   {id:'jr',     kind:'jr',    icon:'jr', title:'Post',         desc:'Foto con il logo JR: classica, sfocata o collage'},
   {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia IG',    desc:'Breaking News in formato storia'},
+  {id:'igq',    kind:'igq',   icon:'igq', title:'Citazione IG', desc:'Post Instagram: foto, testo e account'},
   {id:'sent',   kind:'sent',  icon:'sent', title:'Ultimi invii', desc:'Rimanda o modifica le grafiche già inviate'},
   {id:'ita',    kind:'ita',   icon:'ita', title:'Italia',       desc:'Grafiche della Nazionale'}
 ];
@@ -108,7 +110,7 @@ const HOME_GROUPS = [
   {icon:'g-pre', title:'Pre-gara',              ids:['md','pxi','squad','xi']},
   {icon:'g-events', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
   {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
-  {icon:'g-other', title:'Altro',                 ids:['jr','igbn','cal','table','sent']},
+  {icon:'g-other', title:'Altro',                 ids:['jr','igbn','igq','cal','table','sent']},
   {icon:'ita', title:'Nazionale',                 ids:['ita']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
@@ -184,7 +186,7 @@ const STEP_NAMES = {
   competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
   player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
   natkind:'Grafica', natopp:'Avversaria', natplayer:'Giocatore', goaltype:'Tipo di gol',
-  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Classifica', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto'
+  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Classifica', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', iqurl:'Link', iqpick:'Foto', iqtext:'Testo'
 };
 
 const $ = id => document.getElementById(id);

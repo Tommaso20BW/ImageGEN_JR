@@ -238,6 +238,14 @@ textarea.field-input:focus{box-shadow:none!important;outline:0}
 /* note sotto i riquadri: allineate al testo delle righe */
 #pxiSummary,#lineupSummary,#squadSummary,.ig-count{margin:0!important;padding:7px 16px 0!important;font-size:13px!important;color:var(--muted)}
 .ig-list{display:block}
+/* Citazione IG: link, scelta della foto (griglia 3:4), foto profilo accanto al nome */
+.iq-url{width:100%;text-align:left!important}
+.iq-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.iq-ph{position:relative;aspect-ratio:3/4;border:0;padding:0;border-radius:10px;overflow:hidden;background:var(--line) center/cover no-repeat;cursor:pointer}
+.iq-ph.on{box-shadow:0 0 0 3px var(--surface),0 0 0 5.5px var(--tint)}
+.iq-ph span{position:absolute;left:6px;top:6px;min-width:22px;height:22px;border-radius:11px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+.iq-av{flex:none;width:30px;height:30px;border-radius:50%;background:var(--line) center/cover no-repeat}
+.iq-av:not([style*="url"]){display:none}
 /* Storia IG: colore del testo (pallino in alto a destra, tavolozza sopra il testo) */
 .ig-dot{display:block;width:24px;height:24px;margin:auto;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1.5px var(--line)}
 .ig-colors{display:grid;grid-template-columns:repeat(8,1fr);justify-items:center;gap:4px;margin:0 0 12px;padding:12px 8px;border-radius:12px;background:var(--surface)}

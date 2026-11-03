@@ -49,6 +49,8 @@ let calMonth = 0;      // CALENDARIO: mese (1-12)
 const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
 let mdPick = '';       // id partita ESPN scelta, 'manual' o ''
 let igPicking = false; // Storia IG: pagina "Dagli ultimi invii" aperta (11-invii.js)
+// CITAZIONE IG (12-citazione.js): link letto, foto del post, foto scelta, foto profilo.
+const iq = {url:'', photos:[], sel:-1, avatar:'', loading:false};
 let kitFromMatch = false;   // maglia presa da ESPN (partite giocate): niente passaggio "Maglia"
 let fixtureList = [];
 let calRows = [];
@@ -270,6 +272,7 @@ function buildFlow() {
   else if (kind === 'cal') flow = ['calmonth','calrows'];
   else if (kind === 'table') flow = ['tablecomp'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent','igsent'] : ['igcontent'];
+  else if (kind === 'igq') flow = iq.photos.length > 1 ? ['iqurl','iqpick','iqtext'] : ['iqurl','iqtext'];
   flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
 }
 
@@ -329,6 +332,9 @@ function stepValue(step) {
       const m = fixtureList.find(f => f.id === mdPick);
       return mdPick === 'manual' ? 'A mano' : (m ? fixtureLabel(m, true) : '');
     }
+    case 'iqurl': return iq.photos.length ? `${iq.photos.length} foto` : '';
+    case 'iqpick': return iq.sel >= 0 ? `Foto ${iq.sel + 1}` : '';
+    case 'iqtext': return $('iqName').value.trim();
     case 'igcontent': {
       const t = $('igText').value.trim().length;
       return [t ? 'Testo' : '', igb.id ? 'Foto' : ''].filter(Boolean).join(' + ');
@@ -544,6 +550,7 @@ function renderFlow() {
   if (screenName === 'sentlist') { renderSentList(); loadRecent(); }
   if (screenName === 'igcontent') { if (igPicking) { igPicking = false; buildFlow(); } loadPhrases(); renderIgColor(); }
   if (screenName === 'igsent') { renderIgSent(); loadRecent(); }
+  if (screenName === 'iqpick') renderIqPick();
   if (screenName === 'sentitem') renderSentItem();
   if (screenName === 'calrows') fillCalendarFromFixtures();
   if (screenName === 'calrows') renderCalRows();
