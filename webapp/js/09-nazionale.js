@@ -3,7 +3,7 @@
    Voce "Italia" nella sezione "Nazionale" in fondo alla Home: le grafiche LiveScore della Nazionale (senza foto, tema
    azzurro Home o bianco Away, nomi delle squadre al posto degli stemmi). Prima si sceglie la
    grafica, poi competizione, campo, avversaria (scritta a mano) e maglia.
-   Gol (Juventus e Italia): Gol / Rigore / Autogol / Senza foto (Senza foto solo Juventus). */
+   Gol (Juventus e Italia): Gol / Rigore / Autogol / Senza foto (Senza foto solo Juventus, non nelle amichevoli). */
 let nat = false;          // true = voce "Italia"
 let natSel = '';          // grafica scelta: kick, half, second, end_of_90, full, goal, saved, stats
 let goalType = 'goal';    // goal | penalty | own | nophoto
@@ -17,7 +17,9 @@ const NAT_KITS = [['ita_home','Home · azzurra'],['ita_away','Away · bianca']];
 // Gol: con foto (Juventus). Rigore: con foto e “(RIGORE)”. Autogol: giocatore avversario, senza foto.
 // Senza foto: marcatore scritto a mano, card senza foto. L'Italia è sempre senza foto.
 const GOAL_TYPES = [['goal','Gol'],['penalty','Rigore'],['own','Autogol'],['nophoto','Senza foto']];
-const goalTypeOptions = () => nat ? GOAL_TYPES.filter(([v]) => v !== 'nophoto') : GOAL_TYPES;
+// Italia e amichevoli: il gol è già sempre senza foto, "Senza foto" non serve.
+const noPhotoAlways = () => nat || isFriendly();
+const goalTypeOptions = () => noPhotoAlways() ? GOAL_TYPES.filter(([v]) => v !== 'nophoto') : GOAL_TYPES;
 const NAT_PHASES = new Set(['kick','half','second','end_of_90','full']);
 
 const natOppName = () => $('natOpp').value.replace(/\s+/g,' ').trim();
@@ -45,6 +47,7 @@ function natFlow() {
 
 // Gol della Juventus: dopo la maglia si sceglie il tipo; autogol e senza marcatore senza foto (niente posa).
 function juveGoalSteps(friendly) {
+  if (friendly && goalType === 'nophoto') goalType = 'goal';
   if (kind !== 'goal') return friendly ? ['player','minute'] : ['player','minute','pose'];
   if (goalType === 'own' || goalType === 'nophoto') return ['goaltype','natplayer','minute'];
   return ['goaltype','player','minute',...(friendly ? [] : ['pose'])];
@@ -73,7 +76,7 @@ function natRender() {
   // Due gruppi come nella Home: eventi della partita (fasi) e in partita (gol, parata, statistiche).
   renderOptions('natKindOpts',NAT_KINDS.filter(([v]) => NAT_PHASES.has(v)),natSel,natPickKind);
   renderOptions('natPlayOpts',NAT_KINDS.filter(([v]) => !NAT_PHASES.has(v)),natSel,natPickKind);
-  if (nat && goalType === 'nophoto') goalType = 'goal';
+  if (noPhotoAlways() && goalType === 'nophoto') goalType = 'goal';
   renderOptions('goalTypeOpts',goalTypeOptions(),goalType,v => { goalType = v; buildFlow(); });
   $('natPlayerTitle').textContent = kind === 'saved' ? 'Portiere' : goalType === 'own' ? 'Chi ha fatto autogol' : 'Marcatore';
   $('natPlayerLead').textContent = kind === 'saved' ? 'Scrivi nome e cognome del portiere.'
