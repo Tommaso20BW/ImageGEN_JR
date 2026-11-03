@@ -48,6 +48,7 @@ let tableComp = '';    // CLASSIFICA: SA, UCL, UEL o UECL
 let calMonth = 0;      // CALENDARIO: mese (1-12)
 const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
 let mdPick = '';       // id partita ESPN scelta, 'manual' o ''
+let igPicking = false; // Storia IG: pagina "Dagli ultimi invii" aperta (11-invii.js)
 let kitFromMatch = false;   // maglia presa da ESPN (partite giocate): niente passaggio "Maglia"
 let fixtureList = [];
 let calRows = [];
@@ -268,7 +269,7 @@ function buildFlow() {
     : ['jrstyle','jrratio','jrcolor','photo'];
   else if (kind === 'cal') flow = ['calmonth','calrows'];
   else if (kind === 'table') flow = ['tablecomp'];
-  else if (kind === 'igbn') flow = ['igcontent'];
+  else if (kind === 'igbn') flow = igPicking ? ['igcontent','igsent'] : ['igcontent'];
   flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
 }
 
@@ -541,6 +542,8 @@ function renderFlow() {
     } else loadMdFixtures();
   }
   if (screenName === 'sentlist') { renderSentList(); loadRecent(); }
+  if (screenName === 'igcontent') { if (igPicking) { igPicking = false; buildFlow(); } loadPhrases(); }
+  if (screenName === 'igsent') { renderIgSent(); loadRecent(); }
   if (screenName === 'sentitem') renderSentItem();
   if (screenName === 'calrows') fillCalendarFromFixtures();
   if (screenName === 'calrows') renderCalRows();

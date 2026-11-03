@@ -202,29 +202,46 @@ class Telegram:
         return True
 
     def photo(self, png, filename='grafica.png'):
-        """Invia il PNG come foto Telegram, come il Live Score originale."""
-        if not png.startswith(b'\x89PNG\r\n\x1a\n'):
-            raise TelegramError('Il renderer non ha prodotto un PNG')
-
-        result = self.call(
-            'sendPhoto',
-            {'chat_id': self.chat_id},
-            files={
-                'photo': (
-                    filename,
-                    png,
-                    'image/png',
-                )
-            },
-            timeout=60,
-        )
+        """Invia la foto Telegram: PNG (bytes) oppure il file_id di una foto già inviata.
+        In self.last_photo restano i file_id (grande e miniatura) della foto mandata."""
+        if isinstance(png, str):
+            result = self.call('sendPhoto', {'chat_id': self.chat_id, 'photo': png}, timeout=60)
+        else:
+            if not png.startswith(b'\x89PNG\r\n\x1a\n'):
+                raise TelegramError('Il renderer non ha prodotto un PNG')
+            result = self.call(
+                'sendPhoto',
+                {'chat_id': self.chat_id},
+                files={'photo': (filename, png, 'image/png')},
+                timeout=60,
+            )
 
         try:
-            return int(result['message_id'])
+            message_id = int(result['message_id'])
         except (KeyError, TypeError, ValueError):
             raise DeliveryUncertain(
                 'Telegram non ha confermato il messaggio foto'
             ) from None
+        sizes = [s for s in (result.get('photo') or []) if isinstance(s, dict) and s.get('file_id')]
+        sizes.sort(key=lambda s: int(s.get('width') or 0))
+        small = next((s for s in sizes if int(s.get('width') or 0) >= 240), sizes[0] if sizes else {})
+        self.last_photo = {'file_id': sizes[-1]['file_id'] if sizes else '',
+                           'thumb_id': small.get('file_id', '')}
+        return message_id
+
+    def download(self, file_id, limit=20 * 1024 * 1024):
+        """Scarica un file Telegram (foto già inviata) dal suo file_id."""
+        info = self.call('getFile', {'file_id': file_id})
+        path = info.get('file_path') if isinstance(info, dict) else None
+        if not path:
+            raise TelegramError('getFile: file non disponibile')
+        try:
+            response = self.session.get(self.base.replace('/bot', '/file/bot', 1) + path, timeout=30)
+        except requests.RequestException:
+            raise TelegramError('download: connessione non disponibile') from None
+        if response.status_code != 200 or len(response.content) > limit:
+            raise TelegramError(f'download: HTTP {response.status_code}')
+        return response.content
 
     # Lasciato per compatibilità, ma ImageGEN non lo usa più.
     def document(self, png, filename='grafica.png'):

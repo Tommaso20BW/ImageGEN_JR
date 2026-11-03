@@ -5,7 +5,7 @@
      "Modifica i dati" (riapre la grafica compilata, per correggere minuto, risultato o giocatore).
    - Ultime scelte: per la stessa partita la Mini App ricorda risultato e maglia dell'ultimo
      invio. Scegliendo di nuovo quella partita si ritrovano già messi. */
-const SENT_KEY = 'imagegen-jr-sent-v1';       // {session, items:{message_id: dati per "Modifica"}}
+const SENT_KEY = 'imagegen-jr-sent-v2';       // {items:{message_id: dati per "Modifica"}}, tra le sessioni
 const LAST_KEY = 'imagegen-jr-last-v1';       // ultima partita usata: {match, kit, score, at}
 const LAST_TTL = 8 * 3600000;                 // le scelte valgono 8 ore (una partita)
 let recentItems = [];
@@ -27,7 +27,7 @@ function rememberSent(messageId) {
   const sc = [$('homeScore').value, $('awayScore').value];
   if (messageId && editableSnapshot()) {
     const saved = readJson(SENT_KEY);
-    const store = saved && saved.session === session ? saved : {session, items:{}};
+    const store = saved && saved.items ? saved : {items:{}};
     store.items[messageId] = {
       kind, phase, goalType, competition, side, kit, mdPick, kitFromMatch,
       opponent: selectedTeam ? selectedTeam.name : '',
@@ -36,7 +36,7 @@ function rememberSent(messageId) {
       ev, sc, pens: [$('homePens').value, $('awayPens').value], pensOn, etOn,
     };
     const ids = Object.keys(store.items);
-    ids.slice(0, Math.max(0, ids.length - 20)).forEach(id => delete store.items[id]);
+    ids.slice(0, Math.max(0, ids.length - 30)).forEach(id => delete store.items[id]);
     writeJson(SENT_KEY, store);
   }
   // Partita del calendario: si ricordano maglia e risultato (dei gol o della fase).
@@ -65,7 +65,14 @@ function applyLastChoices(id) {
 /* ----- "Ultimi invii" (Home, sezione "Altro"): due pagine come le altre ----- */
 // sentlist: elenco delle grafiche inviate; sentitem: la grafica grande, "Rimanda" in basso
 // (tasto giallo) e "Modifica i dati" sotto l'immagine.
-const hhmm = ms => new Date(ms).toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+// Ora dell'invio; se non è di oggi anche il giorno ("ieri 21:30", "2 nov 21:30").
+const hhmm = ms => {
+  const d = new Date(ms), time = d.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+  const day = n => { const x = new Date(); x.setHours(0,0,0,0); x.setDate(x.getDate() - n); return x.getTime(); };
+  if (ms >= day(0)) return time;
+  if (ms >= day(1)) return `ieri ${time}`;
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${time}`;
+};
 // Sempre due righe (tutte le righe dell'elenco alte uguali): giocatore e minuto; risultato e
 // avversario. Senza giocatore (Kick Off, fasi...) "risultato · avversario" sale sulla prima.
 const sentLines = item => {
@@ -84,13 +91,25 @@ async function loadRecent() {
     recentItems = Array.isArray(body.items) ? body.items : [];
   } catch (_) { return; }
   if (kind === 'sent' && flow[flowIndex] === 'sentlist') renderSentList();
+  if (kind === 'igbn' && flow[flowIndex] === 'igsent') renderIgSent();
 }
 
 function renderSentList() {
-  const list = $('sentList');
+  fillSentRows('sentList', 'sentEmpty', 'sentGroup', item => {
+    haptic('select');
+    recentPick = item;
+    navDir = 1;
+    flowIndex = flow.indexOf('sentitem');
+    renderFlow();
+  });
+}
+
+// Righe dell'elenco (miniatura, nome e ora, due righe di dettagli), con l'azione al tocco.
+function fillSentRows(listId, emptyId, groupId, onPick) {
+  const list = $(listId);
   list.innerHTML = '';
-  $('sentEmpty').hidden = recentItems.length > 0;
-  $('sentGroup').hidden = !recentItems.length;
+  $(emptyId).hidden = recentItems.length > 0;
+  $(groupId).hidden = !recentItems.length;
   recentItems.forEach(item => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -106,13 +125,7 @@ function renderSentList() {
     desc[0].textContent = who || ' ';      // riga vuota: spazio, così l'altezza resta uguale
     desc[1].textContent = match || ' ';
     b.querySelector('.hm-time').textContent = hhmm(item.at);
-    b.addEventListener('click', () => {
-      haptic('select');
-      recentPick = item;
-      navDir = 1;
-      flowIndex = flow.indexOf('sentitem');
-      renderFlow();
-    });
+    b.addEventListener('click', () => onPick(item));
     list.appendChild(b);
   });
 }
@@ -132,7 +145,7 @@ function renderSentItem() {
 
 function sentSnapshot(id) {
   const saved = readJson(SENT_KEY);
-  return saved && saved.session === session && saved.items ? saved.items[id] || null : null;
+  return saved && saved.items ? saved.items[id] || null : null;
 }
 
 // Tasto giallo "Rimanda" (nextField in 04-dati-partita.js).
@@ -206,6 +219,118 @@ async function editRecent() {
   renderFlow();
 }
 $('sentEdit').addEventListener('click', editRecent);
+
+/* ----- Storia IG: foto dagli ultimi invii ----- */
+// "Dagli ultimi invii" apre una pagina con l'elenco; il tocco su una grafica la rende la foto
+// della storia (il servizio la tratta come una foto caricata) e si torna al Contenuto.
+function openIgSent() {
+  haptic('select');
+  igPicking = true;
+  buildFlow();
+  navDir = 1;
+  flowIndex = flow.indexOf('igsent');
+  renderFlow();
+}
+
+function renderIgSent() {
+  fillSentRows('igSentList', 'igSentEmpty', 'igSentGroup', pickIgSent);
+}
+
+async function pickIgSent(item) {
+  haptic('select');
+  clearError();
+  igb.uploading = true;
+  igRefresh();
+  try {
+    const response = await netFetch(`${directBase}/usesent`, {
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify({v:1, action:'usesent', session, id:item.id})
+    }, 60000, 2, true);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.ok) throw new Error(body.error || 'Grafica non disponibile.');
+    if (igb.url && igb.url.startsWith('blob:')) { try { URL.revokeObjectURL(igb.url); } catch (_) {} }
+    igb.id = body.photo_id;
+    igb.url = sentUrl('image', item.id);
+    haptic('success');
+    navDir = -1;
+    flowIndex = 0;
+    renderFlow();            // Contenuto: igPicking torna false e il percorso si accorcia
+  } catch (error) {
+    showError(error && error.name === 'AbortError' ? 'ImageGEN non risponde. Riprova.' : (error.message || 'Grafica non disponibile.'));
+  } finally {
+    igb.uploading = false;
+    igRefresh();
+  }
+}
+
+/* ----- Storia IG: frasi pronte ----- */
+// Elenco sotto il testo: un tocco mette la frase nel testo; "×" la toglie; "Salva il testo
+// come frase pronta" la aggiunge. Le frasi restano nel repo degli asset (sent_store.py).
+let igPhrases = [];
+async function phrasesCall(action, text='') {
+  const response = await netFetch(`${directBase}/phrases`, {
+    method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+    body:JSON.stringify({v:1, action, session, text})
+  }, 20000, 2);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.ok) throw new Error(body.error || 'Frasi non disponibili.');
+  igPhrases = Array.isArray(body.phrases) ? body.phrases : [];
+  renderPhrases();
+}
+
+function loadPhrases() {
+  if (!directBase || !session) return;
+  renderPhrases();
+  phrasesCall('list').catch(() => {});
+}
+
+function renderPhrases() {
+  const box = $('igPhrases');
+  box.querySelectorAll('.ig-phrase').forEach(el => el.remove());
+  const save = $('igPhraseSave');
+  igPhrases.forEach(text => {
+    const row = document.createElement('div');
+    row.className = 'ios-row ig-phrase';
+    row.innerHTML = '<button class="ig-ph-use" type="button"></button>' +
+      '<button class="ig-ph-del" type="button" aria-label="Elimina la frase">×</button>';
+    row.querySelector('.ig-ph-use').textContent = text;
+    row.querySelector('.ig-ph-use').addEventListener('click', () => {
+      haptic('select');
+      $('igText').value = text;
+      clearError();
+      igRefresh();
+    });
+    row.querySelector('.ig-ph-del').addEventListener('click', () => deletePhrase(text));
+    box.insertBefore(row, save);
+  });
+  const current = $('igText').value.trim().replace(/\s+/g, ' ');
+  save.disabled = !current || igPhrases.includes(current);
+  $('igPhrasesEmpty').hidden = igPhrases.length > 0;
+}
+
+async function savePhrase() {
+  const text = $('igText').value.trim();
+  if (!text) { showError('Scrivi prima il testo da salvare.'); return; }
+  try { await phrasesCall('add', text); haptic('success'); }
+  catch (error) { showError(error.message || 'Frase non salvata.'); }
+}
+
+function deletePhrase(text) {
+  const go = async ok => {
+    if (!ok) return;
+    try { await phrasesCall('delete', text); haptic('success'); }
+    catch (error) { showError(error.message || 'Frase non eliminata.'); }
+  };
+  const msg = `Eliminare la frase pronta “${text.length > 60 ? text.slice(0, 60) + '…' : text}”?`;
+  if (tg && typeof tg.showConfirm === 'function') {
+    try { tg.showConfirm(msg, go); return; } catch (_) {}
+  }
+  go(window.confirm(msg));
+}
+
+$('igFromSent').addEventListener('click', openIgSent);
+$('igPhraseSave').addEventListener('click', savePhrase);
+$('igText').addEventListener('input', renderPhrases);
 
 /* ----- ImageGEN sta per spegnersi ----- */
 // Ultimi 5 minuti al limite dei 60 (la sessione non si allunga più): riquadro come quelli di

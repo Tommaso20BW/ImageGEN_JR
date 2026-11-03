@@ -4,6 +4,7 @@ ImageGEN receives Mini App payloads through a temporary HTTPS tunnel instead of
 Telegram getUpdates. This lets it coexist with LiveScore on the same bot token.
 """
 import log
+import sent_store
 import copy
 import hashlib
 import io
@@ -55,7 +56,7 @@ DIRECT_PORT = 8765
 # Il pulsante su Telegram parte solo quando il tunnel risponde davvero da internet.
 TUNNEL_READY_SECONDS = 90     # poi il workflow riprova con un tunnel nuovo
 SEND_TRIES = 3                # invio a Telegram: tentativi quando la foto sicuramente non è partita
-HISTORY_SIZE = 10             # ultimi invii mostrati nella Mini App ("Ultimi invii")
+HISTORY_SIZE = 20             # ultimi invii mostrati nella Mini App (anche delle sessioni passate)
 TUNNEL_READY_STREAK = 2       # risposte buone di fila
 TUNNEL_NOT_READY_EXIT = 75    # codice d'uscita: "tunnel non pronto, riprova"
 
@@ -341,7 +342,8 @@ class _DirectHandler(BaseHTTPRequestHandler):
         if path == '/upload':
             self._upload()
             return
-        if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend'):
+        if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
+                        '/usesent', '/phrases'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -370,6 +372,14 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/resend':
                 self._json(200, {'ok': True, 'message_id': self.service.resend(envelope)})
+                return
+
+            if path == '/usesent':
+                self._json(200, {'ok': True, **self.service.use_sent(envelope)})
+                return
+
+            if path == '/phrases':
+                self._json(200, {'ok': True, **self.service.phrases(envelope)})
                 return
 
             if path == '/layout':
@@ -456,6 +466,7 @@ class Service:
         self.history = []
         self.history_lock = threading.Lock()
         self.last_resend = None
+        self.ig_phrases = []
 
     def store_photo(self, raw):
         width, height = check_photo(raw)
@@ -996,40 +1007,83 @@ class Service:
                 raise
 
     def _remember_send(self, message_id, data, png):
-        """Aggiunge l'invio a "Ultimi invii", con una miniatura per la Mini App."""
-        try:
-            from PIL import Image
-            image = Image.open(io.BytesIO(png)).convert('RGB')
-            image.thumbnail((240, 320))
-            out = io.BytesIO()
-            image.save(out, format='JPEG', quality=80)
-            thumb = out.getvalue()
-        except Exception:  # noqa: BLE001 - senza miniatura l'invio resta comunque in elenco
-            thumb = b''
+        """Aggiunge l'invio a "Ultimi invii", con una miniatura per la Mini App, e lo salva nel
+        repo degli asset (con il file_id Telegram: resta anche per le sessioni dopo)."""
         entry = {'id': int(message_id), 'name': log.graphic_name(data), **_send_detail(data),
-                 'kind': data.get('kind', ''), 'at': int(time.time() * 1000), 'png': png, 'thumb': thumb}
+                 'kind': data.get('kind', ''), 'at': int(time.time() * 1000), 'png': png,
+                 'thumb': _jpeg(png, (240, 320), 80),
+                 **(getattr(self.telegram, 'last_photo', None) or {})}
         with self.history_lock:
             self.history.insert(0, entry)
             del self.history[HISTORY_SIZE:]
+            rows = list(self.history)
+        sent_store.save_history(rows)
 
-    def history_list(self):
-        with self.history_lock:
-            return [{k: v for k, v in e.items() if k not in ('png', 'thumb')} for e in self.history]
-
-    def history_thumb(self, message_id):
-        with self.history_lock:
-            for entry in self.history:
-                if str(entry['id']) == str(message_id) and entry['thumb']:
-                    return entry['thumb']
-        raise ValueError('Miniatura non trovata.')
-
-    def history_image(self, message_id):
-        """Grafica inviata, come JPEG leggero per la pagina "Ultimi invii"."""
+    def _history_entry(self, message_id):
         with self.history_lock:
             entry = next((e for e in self.history if str(e['id']) == str(message_id)), None)
         if entry is None:
             raise ValueError('Grafica non più disponibile.')
-        return self.preview_jpeg(entry['png'])
+        return entry
+
+    def _history_bytes(self, entry, key, file_key):
+        """Immagine dell'invio: in memoria (questa sessione) o scaricata da Telegram (sessioni passate)."""
+        if entry.get(key):
+            return entry[key]
+        if not entry.get(file_key):
+            raise ValueError('Immagine non disponibile.')
+        try:
+            entry[key] = self.telegram.download(entry[file_key])
+        except TelegramError as exc:
+            log.warn('INVII', f"{entry.get('name')}: immagine non scaricata da Telegram ({exc})")
+            raise ValueError('Immagine non disponibile su Telegram.') from None
+        return entry[key]
+
+    def history_list(self):
+        with self.history_lock:
+            return [{k: v for k, v in e.items() if k in ('id', 'name', 'player', 'minute', 'score',
+                                                         'opponent', 'kind', 'at')} for e in self.history]
+
+    def history_thumb(self, message_id):
+        entry = self._history_entry(message_id)
+        if entry.get('thumb'):
+            return entry['thumb']
+        return self._history_bytes(entry, 'thumb', 'thumb_id')
+
+    def use_sent(self, envelope):
+        """Storia IG: una grafica già inviata diventa la foto della storia (come una foto caricata)."""
+        entry = self._history_entry((envelope or {}).get('id'))
+        raw = entry.get('png') or self._history_bytes(entry, 'full', 'file_id')
+        return self.store_photo(raw)
+
+    def phrases(self, envelope):
+        """Storia IG: frasi pronte (elenco, aggiungi, togli). Salvate nel repo degli asset."""
+        action = (envelope or {}).get('action')
+        text = ' '.join(str((envelope or {}).get('text') or '').split())[:sent_store.PHRASE_MAX]
+        with self.history_lock:
+            phrases = list(self.ig_phrases)
+            if action == 'add':
+                if not text:
+                    raise ValueError('Scrivi prima la frase.')
+                phrases = [text] + [p for p in phrases if p != text]
+            elif action == 'delete':
+                phrases = [p for p in phrases if p != text]
+            elif action != 'list':
+                raise ValueError('Richiesta non valida.')
+            changed = phrases != self.ig_phrases
+            self.ig_phrases = phrases[:sent_store.PHRASES_KEEP]
+        if changed:
+            sent_store.save_phrases(self.ig_phrases)
+            log.info('SALVATAGGIO', f"Frasi pronte: {'aggiunta' if action == 'add' else 'tolta'} una frase "
+                                    f'({len(self.ig_phrases)} in tutto)')
+        return {'phrases': self.ig_phrases}
+
+    def history_image(self, message_id):
+        """Grafica inviata, come JPEG leggero per la pagina "Ultimi invii"."""
+        entry = self._history_entry(message_id)
+        if entry.get('png'):
+            return self.preview_jpeg(entry['png'])
+        return self._history_bytes(entry, 'full', 'file_id')      # da Telegram è già un JPEG
 
     def resend(self, envelope):
         """Rimanda su Telegram una grafica già inviata in questa sessione (stesso PNG)."""
@@ -1039,7 +1093,7 @@ class Service:
             raise ValueError('Invio non valido.') from None
         with self.history_lock:
             entry = next((e for e in self.history if e['id'] == wanted), None)
-        if entry is None:
+        if entry is None or not (entry.get('png') or entry.get('file_id')):
             raise ValueError('Grafica non più disponibile: rifalla da capo.')
         if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
             raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
@@ -1050,12 +1104,15 @@ class Service:
                 log.info('INVIO', f"{entry['name']}: già rimandata poco fa, non la rimando")
                 return last[1]
             started = time.time()
-            message_id = self._send_photo(entry['png'], f"{entry['kind']}-rimandata.png", entry['name'])
+            # Di questa sessione: lo stesso PNG. Delle sessioni passate: la foto già su Telegram.
+            message_id = self._send_photo(entry.get('png') or entry['file_id'],
+                                          f"{entry['kind']}-rimandata.png", entry['name'])
             self.generated_message_ids.append(message_id)
             self.last_resend = (wanted, message_id, time.time())
             took = time.time() - started
             log.info('INVIO', f"{entry['name']}: rimandata su Telegram in {took:.1f} s")
-            log.sent(f"{entry['name']} (rimandata)", f"{log.kb(len(entry['png']))} · {took:.1f} s")
+            size = f"{log.kb(len(entry['png']))} · " if entry.get('png') else ''
+            log.sent(f"{entry['name']} (rimandata)", f'{size}{took:.1f} s')
             return message_id
         finally:
             self.operation_lock.release()
@@ -1194,6 +1251,13 @@ class Service:
         except Exception as exc:
             log.warn('AVVIO', f'Pacchetto loghi non disponibile: {type(exc).__name__}: {exc}')
 
+        # Ultimi invii delle sessioni passate e frasi pronte della Storia IG (repo degli asset).
+        with self.history_lock:
+            self.history = sent_store.load_history()
+            self.ig_phrases = sent_store.load_phrases()
+        if self.history or self.ig_phrases:
+            log.info('AVVIO', f'Ultimi invii: {len(self.history)} · frasi pronte: {len(self.ig_phrases)}')
+
         self._start_http_server()
         # Browser per le grafiche acceso subito: la prima anteprima non aspetta l'avvio.
         threading.Thread(target=_warm_up_renderer, daemon=True).start()
@@ -1234,8 +1298,22 @@ class Service:
         finally:
             self._stop_http_server()
             self.cleanup()
+            sent_store.wait()
             log.info('SESSIONE', 'Sessione chiusa')
             log.write_summary(opened, log.now())
+
+
+def _jpeg(raw, size, quality):
+    """Immagine ridotta in JPEG (miniature). b'' se non si riesce."""
+    try:
+        from PIL import Image
+        image = Image.open(io.BytesIO(raw)).convert('RGB')
+        image.thumbnail(size)
+        out = io.BytesIO()
+        image.save(out, format='JPEG', quality=quality)
+        return out.getvalue()
+    except Exception:  # noqa: BLE001 - senza miniatura l'invio resta comunque in elenco
+        return b''
 
 
 def _send_detail(data):

@@ -287,13 +287,27 @@
             <textarea id="igText" class="field-input" maxlength="500" style="min-height:170px" spellcheck="true"
               placeholder="Testo (facoltativo se scegli una foto)"></textarea>
             <div class="hint ig-count"><span id="igHint"></span><span id="igCount">0 / 500</span></div>
+            <div class="field-label gap">Frasi pronte</div>
+            <div id="igPhrases" class="ios-list ig-phrases">
+              <div id="igPhrasesEmpty" class="ios-row ig-ph-empty">Nessuna frase salvata.</div>
+              <button id="igPhraseSave" class="ios-row ios-act" type="button">Salva il testo come frase pronta</button>
+            </div>
             <div class="field-label gap">Foto</div>
             <div class="ios-list ig-list">
               <div id="igThumb" class="ig-thumb" hidden></div>
               <button id="igPick" class="ios-row ios-act" type="button">Scegli foto</button>
+              <button id="igFromSent" class="ios-row ios-act" type="button">Dagli ultimi invii</button>
               <button id="igClear" class="ios-row ios-act danger" type="button" hidden>Rimuovi foto</button>
             </div>
             <input id="igFile" type="file" accept="image/*" hidden>
+          </section>
+
+          <section class="screen" data-screen="igsent">
+            <div class="eyebrow">Storie IG · Breaking News</div>
+            <h1>Dagli ultimi invii</h1>
+            <p class="lead">Tocca una grafica: diventa la foto della storia.</p>
+            <p id="igSentEmpty" class="note" hidden>Nessuna grafica inviata.</p>
+            <section id="igSentGroup" class="hm-group"><div id="igSentList" class="hm-list"></div></section>
           </section>
 
           <section class="screen" data-screen="tablecomp">

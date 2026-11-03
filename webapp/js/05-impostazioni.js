@@ -1,7 +1,7 @@
 /* Mini App ImageGen JR. File caricati in ordine da index.html: l'ordine conta. */
 /* ---------- Barra in alto stile Apple ---------- */
 // Passaggi fatti di una sola scelta: si va avanti toccando la riga, quindi niente "Fine".
-const NAV_AUTO = new Set(['tablecomp','competition','side','kit','jrratio','jrstyle','calmonth','pose','moment','mdpick','sentlist']);
+const NAV_AUTO = new Set(['tablecomp','competition','side','kit','jrratio','jrstyle','calmonth','pose','moment','mdpick','sentlist','igsent']);
 function syncNav() {
   const home = document.body.classList.contains('home-mode');
   const screenName = previewMode ? 'preview' : (home ? 'home' : flow[flowIndex]);
