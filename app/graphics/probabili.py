@@ -33,6 +33,7 @@ GRID_Y.append(round(1228.16 + GRID_STEP_Y, 2))   # un passo sotto il portiere
 # Parte visibile della card rispetto a (centro x, alto etichetta), a misura piena:
 # lastre/etichetta ±117 in larghezza, dalla testa (-175,4) al fondo etichetta (+58,9).
 CARD_EXTENT = (-117.0, 117.0, -175.42, 58.9)
+FRIENDLY_LIFT = 88        # amichevoli (senza foto): i nomi salgono al centro della card
 CARD_MARGIN = 12          # la card resta sempre dentro la pagina, a questa distanza dal bordo
 
 
@@ -195,6 +196,10 @@ def build_html(*, kit, module, players, shirt=None, home_name, home_id, away_nam
     names_only = kit == 'friendly'
     cards, labels, names = [], [], []   # lastre+teste sotto, blocchi coi nomi sempre sopra
     for i, ((cx, top), player) in enumerate(zip(place_cards(layout['cards'], s), players)):
+        if names_only:
+            # Niente foto sopra il nome: l'etichetta sale al centro dello spazio della card,
+            # dove starebbe il giocatore (le posizioni salvate restano quelle di sempre).
+            top -= FRIENDLY_LIFT * s
         px, py, pw, ph = _rect((cx, top), meta['plates_rect'], s)
         hx, hy, hw, hh = _rect((cx, top), meta['head_rect'], s)
         lx, ly, lw, lh = _rect((cx, top), meta['label_rect'], s)
