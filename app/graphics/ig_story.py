@@ -153,6 +153,19 @@ window.__ready = (async () => {
   } else {
     if (text) fit(C.max, C.min, () => H);
   }
+  if (text) {
+    for (const para of text.querySelectorAll('p:not(.blank)')) {
+      para.style.maxWidth = 'none';
+      const full = para.getBoundingClientRect().height, wide = para.getBoundingClientRect().width;
+      let lo = wide * 0.4, hi = wide;
+      for (let i = 0; i < 18; i++) {
+        const mid = (lo + hi) / 2;
+        para.style.maxWidth = mid + 'px';
+        if (para.getBoundingClientRect().height > full + 0.5) lo = mid; else hi = mid;
+      }
+      para.style.maxWidth = Math.ceil(hi) + 'px';
+    }
+  }
   document.body.dataset.ready = '1';
 })();
 '''
@@ -169,7 +182,9 @@ def build_html(*, text='', photo=None, color='black'):
            'max': font_max(text, photo is not None), 'min': FS_MIN, 'lines': [list(x) for x in LINE_HEIGHTS]}
     body = ''
     if text:
-        body += f'<div id="txt">{esc(text)}</div>'
+        paras = ''.join(f'<p>{esc(line)}</p>' if line.strip() else '<p class="blank"><br></p>'
+                        for line in text.split('\n'))
+        body += f'<div id="txt">{paras}</div>'
     if photo is not None:
         body += f'<img id="pic" src="{_uri(photo)}">'
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
@@ -179,10 +194,11 @@ html,body{{width:{PAGE_W}px;height:{PAGE_H}px;overflow:hidden;background:#f3eee6
 #bg{{position:absolute;left:{bx}px;top:{by}px;width:{bw}px;height:{bh}px}}
 #zone{{position:absolute;left:{zx}px;top:{zy}px;width:{zw}px;height:{zh}px;display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:{GAP_MIDDLE}px}}
-#txt{{width:100%;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;text-wrap:balance;
+#txt{{width:100%;text-align:center;overflow-wrap:anywhere;
   font-family:'Poppins',sans-serif;font-weight:500;line-height:1.3;letter-spacing:-0.01em;padding:0 14px;
   color:{TEXT_COLORS[text_color(color)]};font-size:60px;flex:none}}
 #pic{{display:block;flex:none;border-radius:{PHOTO_RADIUS}px;box-shadow:0 14px 40px rgba(60,45,20,.22)}}
+#txt p{{margin:0 auto;max-width:100%}}
 </style></head><body>
 <img id="bg" src="{data_uri(asset_dir() / "canva" / BG_NAME)}">
 <div id="zone">{body}</div>
