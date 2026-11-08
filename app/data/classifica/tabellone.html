@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<title>Tabellone</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Barlow+Semi+Condensed:wght@500;600;700;800&family=Roboto+Slab:wght@600;700;800;900&family=Saira:wght@500;600;700;800&family=Saira+Semi+Condensed:wght@500;600;700;800&family=Sofia+Sans+Semi+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<!-- Tabellone: colori, font e sfondi della classifica (template.html). Niente intestazione:
+     il nome della competizione è in basso. Dagli ottavi alla finale, riquadri grandi. -->
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:900px;height:1200px;overflow:hidden;}
+  body{position:relative;color:var(--ink);font-family:var(--f-body),sans-serif;}
+
+  /* ════ COPPA ITALIA: bordeaux a righe diagonali, pannello più scuro ════ */
+  body.th-CI{
+    background:repeating-linear-gradient(135deg,rgba(0,0,0,.14) 0 3px,transparent 3px 26px),
+               linear-gradient(170deg,#7d0f1a 0%,#5a0a12 55%,#3b060b 100%);
+    --f-display:'Archivo';--f-body:'Archivo';
+    --ink:#fff;--ink-dim:#f0b6bb;--panel:rgba(20,0,3,.55);
+    --box:rgba(255,255,255,.06);--box-line:rgba(255,255,255,.20);--empty:rgba(255,255,255,.04);
+    --line:rgba(255,255,255,.24);--accent:#ff4655;--chip-bg:#2a0408;--chip-ink:#fff;
+  }
+  body.th-CI .box.hl{background:rgba(255,255,255,.14);}
+
+  /* ════ CHAMPIONS ════ */
+  body.th-UCL{
+    background:#050f61 url("bg-ucl.png") -210px -190px / 1200px 1600px no-repeat;
+    --f-display:'Saira Semi Condensed';--f-body:'Saira Semi Condensed';
+    --ink:#f7f9ff;--ink-dim:#a9c8ff;--panel:#071663;
+    --box:#0b2391;--box-line:#2d4fb5;--empty:rgba(255,255,255,.04);
+    --line:#3a5cc2;--accent:#45e9ff;--chip-bg:#071663;--chip-ink:#03123f;--foot:#fff;
+  }
+  /* ════ EUROPA ════ */
+  body.th-UEL{
+    background:#ff6900 url("bg-uel.png") center / cover no-repeat;
+    --f-display:'Roboto Slab';--f-body:'Barlow Semi Condensed';
+    --ink:#fffaf5;--ink-dim:#ffc39c;--panel:#050505;
+    --box:#141414;--box-line:#363636;--empty:rgba(255,255,255,.03);
+    --line:#4a4a4a;--accent:#ff7a2a;--chip-bg:#050505;--chip-ink:#140600;--foot:#050505;
+  }
+  /* ════ CONFERENCE ════ */
+  body.th-UECL{
+    background:#00c91a url("bg-uecl.png") center / cover no-repeat;
+    --f-display:'Sofia Sans Semi Condensed';--f-body:'Sofia Sans Semi Condensed';
+    --ink:#f4fff7;--ink-dim:#a9eabd;--panel:#050505;
+    --box:#141414;--box-line:#363636;--empty:rgba(255,255,255,.03);
+    --line:#4a4a4a;--accent:#21df72;--chip-bg:#050505;--chip-ink:#021208;--foot:#050505;
+  }
+
+  #panel{position:absolute;left:28px;right:28px;top:136px;bottom:26px;background:var(--panel);}
+  #bracket{top:44px !important;bottom:64px !important;}
+  /* Intestazione come la classifica, senza logo */
+  .header{position:absolute;left:40px;right:120px;top:0;height:136px;display:flex;flex-direction:column;justify-content:center;color:#fff;}
+  body.th-UEL .header,body.th-UECL .header{color:#050505;}
+  .header .t{height:62px;line-height:62px;white-space:nowrap;font-family:var(--f-display),sans-serif;text-transform:uppercase;}
+  body.th-CI .header .t{font-weight:900;font-size:3.38rem;letter-spacing:-.035em;}
+  body.th-UCL .header .t{font-size:3.42rem;font-weight:800;letter-spacing:.025em;}
+  body.th-UEL .header .t{font-family:'Roboto Slab',serif;font-size:3.5rem;font-weight:900;letter-spacing:-.005em;}
+  body.th-UECL .header .t{font-size:3.5rem;font-weight:900;letter-spacing:-.005em;}
+  .header .s{margin-top:8px;font-family:var(--f-body),sans-serif;font-size:.88rem;font-weight:700;letter-spacing:.19em;text-transform:uppercase;opacity:.75;}
+  .labels{position:absolute;left:0;right:0;top:0;height:44px;}
+  .labels div{position:absolute;top:0;height:44px;line-height:44px;transform:translateX(-50%);white-space:nowrap;
+    font-family:var(--f-body),sans-serif;font-size:.7rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim);}
+  .labels div.fin{color:var(--accent);}
+  #bracket{position:absolute;inset:0;}
+  #bracket svg{position:absolute;inset:0;overflow:visible;}
+  #bracket svg path{fill:none;stroke-linejoin:round;stroke-linecap:round;}
+
+  .box{position:absolute;display:flex;align-items:center;justify-content:center;
+    background:var(--box);border:1.5px solid var(--box-line);}
+  .box img{width:76%;height:76%;object-fit:contain;}
+  .box.empty{background:var(--empty);border-style:dashed;}
+  .box.win{border:2px solid var(--accent);}
+  .box.out img{opacity:.34;filter:grayscale(.8);}
+  .box.hl{box-shadow:0 0 0 2px var(--accent),0 0 16px color-mix(in srgb,var(--accent) 55%,transparent);}
+
+  .chip{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;gap:1px;
+    font-family:var(--f-body),sans-serif;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;
+    background:var(--chip-bg);color:var(--ink-dim);border:1.5px solid var(--line);}
+  .chip small{font-weight:700;opacity:.85;}
+  .chip.win{background:var(--accent);border-color:var(--accent);color:var(--chip-ink);}
+
+  .trophy{position:absolute;display:flex;align-items:flex-end;justify-content:center;}
+  .trophy img{max-width:100%;max-height:100%;object-fit:contain;}
+  body.th-UEL .trophy img,body.th-UECL .trophy img{filter:brightness(0) invert(1);}
+  .trophy .tint{width:100%;height:100%;background:#fff;-webkit-mask:var(--mark) center bottom / contain no-repeat;mask:var(--mark) center bottom / contain no-repeat;}
+  .final-score{position:absolute;text-align:center;font-family:var(--f-display),sans-serif;font-weight:900;color:var(--ink);
+    font-size:2rem;font-variant-numeric:tabular-nums;}
+  .final-score small{display:block;margin-top:2px;font-family:var(--f-body),sans-serif;font-size:.7rem;font-weight:800;letter-spacing:.14em;color:var(--ink-dim);}
+  .champion{position:absolute;text-align:center;}
+  .champion .lab{font-family:var(--f-body),sans-serif;font-size:.7rem;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);}
+  .champion .who{margin-top:3px;font-family:var(--f-display),sans-serif;font-size:1.45rem;font-weight:900;text-transform:uppercase;color:var(--ink);line-height:1.05;}
+
+  /* ──────── NOME IN BASSO ──────── */
+  .foot{position:absolute;left:0;right:0;bottom:0;height:64px;display:flex;align-items:center;justify-content:center;color:var(--ink);border-top:1px solid var(--line);}
+  .foot .t{font-family:var(--f-display),sans-serif;font-weight:900;font-size:2.15rem;line-height:1;text-transform:uppercase;letter-spacing:.005em;}
+  body.th-UCL .foot .t{font-weight:800;letter-spacing:.025em;}
+  .foot .s{margin-top:6px;font-family:var(--f-body),sans-serif;font-size:.8rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;opacity:.78;}
+  .legend{display:flex;align-items:center;gap:26px;}
+  .legend div{display:flex;align-items:center;gap:7px;font-family:var(--f-body),sans-serif;font-size:.74rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;}
+  .legend i{width:9px;height:9px;border-radius:2px;background:var(--accent);}
+  .legend i.out{background:var(--box-line);}
+</style>
+</head>
+<body>
+  <div class="header"><div class="t" id="title"></div><div class="s" id="sub"></div></div>
+  <div id="panel"><div class="labels" id="labels"></div><div id="bracket"></div>
+  <div class="foot"><div class="legend" id="legend"></div></div></div>
+
+<script>
+const HIGHLIGHT = new Set(['Juventus']);
+const TITLES = {CI:'Coppa Italia', UCL:'Champions League', UEL:'Europa League', UECL:'Conference League'};
+const MARKS = {CI:'coppa-italia-mark.png', UCL:'ucl-mark.png', UEL:'uel-mark.png', UECL:'uecl-mark.png'};
+const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function render(data){
+  const comp = data.competition;
+  document.body.className = 'th-' + (data.theme || comp);
+  document.getElementById('title').textContent = TITLES[comp] || data.competition_name;
+  document.getElementById('sub').textContent = `Tabellone · ${data.stagione || ''}`;
+
+  const rounds = data.rounds, side = rounds.length - 1;          // turni per lato, finale esclusa
+  const area = document.getElementById('bracket');
+  const PADX = 14, PADY = 12, W = area.clientWidth - 2 * PADX, H = area.clientHeight - 2 * PADY;
+  const css = getComputedStyle(document.body);
+  const accent = css.getPropertyValue('--accent').trim(), lineC = css.getPropertyValue('--line').trim();
+
+  // Misure: riquadri grandi, ridotti solo se non ci stanno.
+  const n0 = rounds[0].cells.length;                             // squadre per lato nel primo turno
+  const GAP = 8;                                                 // tra i due riquadri di una sfida
+  const B = Math.min(92, (W - 2 * 28) / (2 * side + 2.3) - 22, (H / (n0 / 2)) / 2.35 - GAP);
+  const FS = B;                                                  // finale: stessi riquadri
+  const colW = (W - (2 * FS + 2 * GAP + 40)) / (2 * side);        // colonne uguali, il resto al centro
+  const colX = (j, dir) => PADX + (dir < 0 ? colW * (j + .5) : W - colW * (j + .5));
+  const inner = (x, dir) => x + (dir < 0 ? B / 2 : -B / 2);
+  const outer = (x, dir) => x + (dir < 0 ? -B / 2 : B / 2);
+
+  let html = '', paths = '', wins = '';
+  const shown = {pens: false};
+  const box = (t, x, y, s, decided, edge) => {
+    const cls = ['box', !t ? 'empty' : '', t && decided && t.winner ? 'win' : '', t && decided && !t.winner ? 'out' : '',
+                 t && HIGHLIGHT.has(t.name) ? 'hl' : ''].join(' ');
+    html += `<div class="${cls}" style="left:${x - s/2}px;top:${y - s/2}px;width:${s}px;height:${s}px;border-radius:${Math.round(s * .16)}px">${t ? `<img src="${esc(t.logo)}" alt="">` : ''}</div>`;
+    if (t && t.goals != null && edge != null){
+      const c = Math.round(s * .3);
+      if (t.pens != null) shown.pens = true;
+      const pens = t.pens != null ? `<small style="font-size:${c * .42}px">(${t.pens})</small>` : '';
+      html += `<div class="chip${decided && t.winner ? ' win' : ''}" style="left:${edge}px;top:${y}px;min-width:${c}px;height:${c}px;padding:0 ${c * .2}px;border-radius:${c * .24}px;font-size:${c * .6}px">${t.goals}${pens}</div>`;
+    }
+  };
+  // Due riquadri (y0, y1) collegati al posto dopo (ty): linee base e strada di chi passa.
+  const link = (xe, y0, y1, xt, ty, decided, teams) => {
+    const xm = (xe + xt) / 2, ym = (y0 + y1) / 2;
+    paths += `M${xe},${y0}H${xm}V${y1}H${xe}M${xm},${ym}V${ty}H${xt}`;
+    teams.forEach((t, i) => { if (decided && t && t.winner) wins += `M${xe},${i ? y1 : y0}H${xm}V${ty}H${xt}`; });
+  };
+
+  const finals = [];
+  for (const dir of [-1, 1]){
+    // Primo turno: le sfide a distanza uguale, i due riquadri di ogni sfida vicini.
+    const ties = n0 / 2, slot = H / ties;
+    let col = [];
+    for (let m = 0; m < ties; m++){
+      const c = PADY + slot * (m + .5);
+      col.push(c - (B + GAP) / 2, c + (B + GAP) / 2);
+    }
+    for (let j = 0; j < side; j++){
+      const r = rounds[j], n = r.cells.length / 2, rc = dir < 0 ? r.cells.slice(0, n) : r.cells.slice(n);
+      const x = colX(j, dir), xe = inner(x, dir), next = [];
+      rc.forEach((c, m) => {
+        const decided = c.teams.some(t => t && t.winner), ya = col[2*m], yb = col[2*m+1];
+        c.teams.forEach((t, i) => box(t, x, i ? yb : ya, B, decided, xe));
+        next.push((ya + yb) / 2);
+        if (j < side - 1) link(xe, ya, yb, outer(colX(j + 1, dir), dir), (ya + yb) / 2, decided, c.teams);
+        else finals.push({dir, xe, ya, yb, decided, teams: c.teams});
+      });
+      // Dopo il primo turno: i riquadri di una sfida restano vicini, centrati tra le due di prima.
+      col = [];
+      for (let m = 0; m < next.length; m += 2){
+        const c = (next[m] + next[m + 1]) / 2;
+        col.push(c - (B + GAP) / 2, c + (B + GAP) / 2);
+      }
+      // ...ma il turno dopo prende la y dalla sfida da cui arriva (linee dritte).
+      col = next.length > 1 ? next : col;
+    }
+  }
+
+  // Finale al centro
+  const cx = PADX + W / 2;
+  const fy = finals.length ? finals.reduce((a, o) => a + (o.ya + o.yb) / 2, 0) / finals.length : PADY + H / 2;
+  finals.forEach(o => link(o.xe, o.ya, o.yb, cx + o.dir * (FS + GAP / 2), fy, o.decided, o.teams));
+  const fc = rounds[side].cells[0], fDecided = fc.teams.some(t => t && t.winner);
+  fc.teams.forEach((t, i) => box(t, cx + (i ? 1 : -1) * (FS + GAP) / 2, fy, FS, fDecided, null));
+  const trophyH = Math.min(240, fy - FS / 2 - 44 - PADY), tw = 2 * FS + 40;
+  html += `<div class="trophy" style="left:${cx - tw/2}px;width:${tw}px;top:${fy - FS/2 - 34 - trophyH}px;height:${trophyH}px">` +
+    (comp === 'CI' ? `<div class="tint" style="--mark:url('${MARKS.CI}')"></div>` : `<img src="${MARKS[comp]}" alt="">`) + '</div>';
+  const [a, b] = fc.teams;
+  if (a && b && a.goals != null && b.goals != null){
+    const pens = a.pens != null && b.pens != null ? `<small>${a.pens}-${b.pens} ai rigori</small>` : '';
+    html += `<div class="final-score" style="left:${cx - 110}px;width:220px;top:${fy + FS/2 + 16}px">${a.goals} - ${b.goals}${pens}</div>`;
+  }
+  const champ = fc.teams.find(t => t && t.winner);
+  if (champ) html += `<div class="champion" style="left:${cx - 120}px;width:240px;top:${fy + FS/2 + 80}px"><div class="lab">Vincitrice</div><div class="who">${esc(champ.name)}</div></div>`;
+
+  const labs = [];
+  for (const dir of [-1, 1]) for (let j = 0; j < side; j++) labs.push([colX(j, dir), rounds[j].label, '']);
+  labs.push([cx, rounds[side].label, 'fin']);
+  document.getElementById('labels').innerHTML = labs.map(([x, t, c]) => `<div class="${c}" style="left:${x}px">${esc(t)}</div>`).join('');
+  area.innerHTML = `<svg width="${area.clientWidth}" height="${area.clientHeight}">
+    <path d="${paths}" stroke="${lineC}" stroke-width="2"/>
+    <path d="${wins}" stroke="${accent}" stroke-width="3"/></svg>` + html;
+  document.getElementById('legend').innerHTML = [
+    '<div><i></i>Passa il turno</div>', '<div><i class="out"></i>Eliminata</div>',
+    ...(shown.pens ? ['<div>(n) Rigori</div>'] : []),
+  ].join('');
+}
+render(window.__TABELLONE__);
+
+/* Titolo e sottotitolo allineati sul disegno della prima lettera (non sulla scatola del testo:
+   le lettere grandi hanno più margine interno). */
+function inkLeft(el){
+  const cs = getComputedStyle(el), ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  return -ctx.measureText(el.textContent.trim().charAt(0)).actualBoundingBoxLeft;
+}
+window.__align = document.fonts.ready.then(() => {
+  const t = document.getElementById('title'), s = document.getElementById('sub');
+  s.style.marginLeft = `${(inkLeft(t) - inkLeft(s)).toFixed(2)}px`;
+});
+</script>
+</body>
+</html>

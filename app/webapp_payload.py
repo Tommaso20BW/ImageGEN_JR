@@ -12,7 +12,8 @@ from graphics import ig_story, photo_jr
 from graphics.calendar import parse_matches
 
 VALID_KINDS = {value for _, value in KINDS}
-TABLE_COMPETITIONS = {'SA', 'UCL', 'UEL', 'UECL'}
+TABLE_COMPETITIONS = {'SA', 'CI', 'UCL', 'UEL', 'UECL'}
+# Serie A solo classifica, Coppa Italia solo tabellone; le coppe europee tutti e due.
 VALID_COMPETITIONS = {value for _, value in COMPETITIONS}
 VALID_KITS = {'home', 'away', 'third'}
 from graphics.uefa import THEMES as UEFA_THEMES, theme_for as uefa_theme_for  # noqa: E402
@@ -237,13 +238,19 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
-    # CLASSIFICA: solo la competizione; i dati si leggono da Diretta.it al momento del render.
+    # CLASSIFICA / TABELLONE: solo competizione e vista; i dati si leggono da Diretta.it al render.
     if kind == 'table':
         if competition not in TABLE_COMPETITIONS:
-            raise ValueError('Scegli Serie A, Champions, Europa o Conference League.')
+            raise ValueError('Scegli Serie A, Coppa Italia, Champions, Europa o Conference League.')
+        view = {'SA': 'table', 'CI': 'bracket'}.get(competition) or str(incoming.get('view') or 'table')
+        if view not in ('table', 'bracket'):
+            raise ValueError('Scegli classifica o tabellone.')
+        data = {'kind': 'table', 'competition': competition}
+        if view == 'bracket':
+            data['view'] = 'bracket'
         return {
             'id': uuid.uuid4().hex[:10],
-            'data': {'kind': 'table', 'competition': competition},
+            'data': data,
             'status': 'ready',
             'updated': now,
             'source': 'webapp-direct',

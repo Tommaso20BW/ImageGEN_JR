@@ -253,6 +253,10 @@ class Renderer:
             return calendar.render(month=data['month'], matches=data['matches'])
 
         if kind == 'table':
+            if data.get('view') == 'bracket':
+                from graphics import tabellone
+
+                return tabellone.render(data['competition'])
             from graphics import classifica
 
             return classifica.render(data['competition'])

@@ -687,8 +687,13 @@ class Service:
         """Classifica: impronta delle righe lette da Diretta.it per l'ultima grafica ('' per le altre)."""
         if data.get('kind') != 'table':
             return ''
+        comp = str(data.get('competition') or '').upper()
+        if data.get('view') == 'bracket':
+            from graphics import tabellone
+            raw = json.dumps((tabellone._last.get(comp) or {}).get('rounds'), sort_keys=True, ensure_ascii=False, default=str)
+            return hashlib.sha256(raw.encode('utf-8')).hexdigest()[:16]
         from graphics import classifica
-        snap = classifica._last.get(str(data.get('competition') or '').upper()) or {}
+        snap = classifica._last.get(comp) or {}
         raw = json.dumps(snap.get('classifica'), sort_keys=True, ensure_ascii=False, default=str)
         return hashlib.sha256(raw.encode('utf-8')).hexdigest()[:16]
 
@@ -746,8 +751,8 @@ class Service:
 
     def table_summary(self, envelope):
         data = envelope.get('data') if isinstance(envelope, dict) else None
-        if not isinstance(data, dict) or data.get('kind') != 'table':
-            return None
+        if not isinstance(data, dict) or data.get('kind') != 'table' or data.get('view') == 'bracket':
+            return None          # TABELLONE: al telefono va l'immagine
         from graphics import classifica
         return classifica.summary(str(data.get('competition') or ''))
 
@@ -1402,6 +1407,11 @@ def _send_detail(data):
             note = 'Solo foto'
         return {'player': f"@{data['name']}" if data.get('name') else '', 'minute': '', 'score': '',
                 'opponent': '', 'note': note}
+    if data.get('kind') == 'table':
+        names = {'SA': 'Serie A', 'CI': 'Coppa Italia', 'UCL': 'Champions League', 'UEL': 'Europa League',
+                 'UECL': 'Conference League'}
+        return {'player': names.get(str(data.get('competition') or ''), ''), 'minute': '', 'score': '',
+                'opponent': '', 'note': ''}
     return {
         'player': str(data.get('player') or ''),
         'minute': f"{data['minute']}'" if data.get('minute') else '',

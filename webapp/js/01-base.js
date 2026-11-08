@@ -100,7 +100,7 @@ const REQUESTS = [
   {id:'squad',  kind:'squad', icon:'squad', title:'Squad List',   desc:'Lista dei convocati'},
   {id:'xi',     kind:'xi',    icon:'xi', title:'Starting XI',  desc:'Formazione ufficiale con foto'},
   {id:'cal',    kind:'cal',   icon:'cal', title:'Calendario',   desc:'Le partite del mese'},
-  {id:'table',  kind:'table', icon:'table', title:'Classifica',  desc:'Serie A e coppe europee, aggiornata da Diretta.it'},
+  {id:'table',  kind:'table', icon:'table', title:'Classifica',  desc:'Classifiche e tabelloni, aggiornati da Diretta.it'},
   {id:'jr',     kind:'jr',    icon:'jr', title:'Post',         desc:'Foto con il logo JR: classica, sfocata o collage'},
   {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia IG',    desc:'Breaking News in formato storia'},
   {id:'igq',    kind:'igq',   icon:'igq', title:'Citazione IG', desc:'Post Instagram: foto, testo e account'},
@@ -164,7 +164,10 @@ let shirt = '';
 // Amichevole: niente foto dei giocatori, quindi nessuna maglia da scegliere.
 const needsShirt = () => kind === 'pxi' && !!UEFA_THEMES[kit] && kit !== 'friendly';
 const JR_COLORS = [['black','Nero'],['white','Bianco'],['gold','Oro']];
-const TABLE_COMPS = [['SA','Serie A'],['UCL','Champions League'],['UEL','Europa League'],['UECL','Conference League']];
+const TABLE_COMPS = [['SA','Serie A'],['CI','Coppa Italia'],['UCL','Champions League'],['UEL','Europa League'],['UECL','Conference League']];
+// Serie A: solo classifica. Coppa Italia: solo tabellone. Coppe europee: si sceglie.
+const TABLE_VIEWS = [['table','Classifica'],['bracket','Tabellone']];
+const tableViewOf = () => tableComp === 'SA' ? 'table' : tableComp === 'CI' ? 'bracket' : tableView;
 const JR_STYLES = [['classic','Classica'],['blur','Sfocata'],['collage','Collage']];
 // Formati della Classica: larghezza fissa 1080, cambia l'altezza (come graphics/photo_jr.py RATIOS).
 // Il logo JR resta in alto a destra, alla stessa distanza dai bordi e della stessa misura del 3:4.
@@ -189,7 +192,7 @@ const STEP_NAMES = {
   competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
   player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
   natkind:'Grafica', natopp:'Avversaria', natplayer:'Giocatore', goaltype:'Tipo di gol',
-  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Classifica', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', iqurl:'Link', iqpick:'Foto', iqtext:'Testo'
+  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', match:'Partita', jrcolor:'Colore JR', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', iqurl:'Link', iqpick:'Foto', iqtext:'Testo'
 };
 
 const $ = id => document.getElementById(id);

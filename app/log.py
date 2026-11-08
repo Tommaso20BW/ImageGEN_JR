@@ -39,7 +39,7 @@ def kind_name(kind):
 
 def graphic_name(data):
     """Nome della grafica per il log: "Half Time", "Italia · Half Time"..."""
-    name = kind_name(data.get('kind'))
+    name = 'Tabellone' if data.get('kind') == 'table' and data.get('view') == 'bracket' else kind_name(data.get('kind'))
     return f'Italia · {name}' if data.get('team') == 'italy' else name
 
 

@@ -44,7 +44,8 @@ const jrLimit = () => JR_LIMITS[jrb.style] || 1;
 const jrMin = () => jrb.style === 'collage' ? 2 : 1;
 const jrb = {style:'', ratio:'3:4', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null};
 let pxiModule = '';    // PROBABILE XI: modulo
-let tableComp = '';    // CLASSIFICA: SA, UCL, UEL o UECL
+let tableComp = '';    // CLASSIFICA: SA, CI, UCL, UEL o UECL
+let tableView = '';    // coppe europee: 'table' (classifica) o 'bracket' (tabellone)
 let calMonth = 0;      // CALENDARIO: mese (1-12)
 const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
 let mdPick = '';       // id partita ESPN scelta, 'manual' o ''
@@ -270,7 +271,7 @@ function buildFlow() {
     : jrb.style === 'collage' ? ['jrstyle','jrphotos','jrcolor','jrlayout']
     : ['jrstyle','jrratio','jrcolor','photo'];
   else if (kind === 'cal') flow = ['calmonth','calrows'];
-  else if (kind === 'table') flow = ['tablecomp'];
+  else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent','igsent'] : ['igcontent'];
   else if (kind === 'igq' || kind === 'xq') flow = [...(iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'];
   flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
@@ -316,6 +317,7 @@ function stepValue(step) {
     case 'jrcolor': return jrColorLabel();
     case 'jrstyle': return labelOf(JR_STYLES,jrb.style);
     case 'tablecomp': return labelOf(TABLE_COMPS,tableComp);
+    case 'tableview': return labelOf(TABLE_VIEWS,tableView);
     case 'jrratio': return jrb.ratio;
     case 'jrphotos': return jrb.cards.length ? `${jrb.cards.length} foto` : '';
     case 'jrbg': { const n = jrb.cards.findIndex(c => c.id === jrb.bg); return n < 0 ? '' : `Foto ${n + 1}`; }
@@ -595,7 +597,7 @@ function isLastStep() {
 /* ---------- Option groups ---------- */
 // Ricostruisce i bottoni solo se cambiano le opzioni; altrimenti sposta la selezione
 // sugli elementi esistenti, così il passaggio radio→radio è animato.
-const AUTO_OPTS = new Set(['natKindOpts','natPlayOpts','goalTypeOpts','tableCompOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts']);
+const AUTO_OPTS = new Set(['natKindOpts','natPlayOpts','goalTypeOpts','tableCompOpts','tableViewOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts']);
 function renderOptions(id, options, value, onSelect) {
   const box = $(id);
   box._options = options;
@@ -675,7 +677,8 @@ function updateScreenValues() {
     buildFlow();
   });
   renderModuleButton();
-  renderOptions('tableCompOpts',TABLE_COMPS,tableComp,v => { tableComp = v; });
+  renderOptions('tableCompOpts',TABLE_COMPS,tableComp,v => { tableComp = v; buildFlow(); });
+  renderOptions('tableViewOpts',TABLE_VIEWS,tableView,v => { tableView = v; });
   renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); autoCalendar(); });
   renderOptions('poseOpts',POSES,pose,v => pose = v);
   natRender();

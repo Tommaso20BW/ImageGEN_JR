@@ -34,8 +34,9 @@ function buildPayload(ghost=false) {
     return {v:1, action:'render', session, data:{kind:'igbn', text, color:igColor, ...(igb.id ? {photo_id:igb.id} : {})}};
   }
   if (kind === 'table') {
-    if (!tableComp) throw new Error('Scegli la classifica.');
-    return {v:1, action:'render', session, data:{kind:'table', competition:tableComp}};
+    if (!tableComp) throw new Error('Scegli la competizione.');
+    if (!tableViewOf()) throw new Error('Scegli classifica o tabellone.');
+    return {v:1, action:'render', session, data:{kind:'table', competition:tableComp, view:tableViewOf()}};
   }
   if (kind === 'cal') {
     return {v:1, action:'render', session, data:{
@@ -407,7 +408,8 @@ async function previewGraphic() {
     $('nextButton').disabled = true;
     $('backButton').disabled = true;
     $('nextButton').textContent = 'Anteprima…';
-    showBusy('Genero l’anteprima…',BUSY_SUB[realKind()] || '',realKind());
+    const bracket = kind === 'table' && tableViewOf() === 'bracket';    // tempi e testo a parte: ci mette di più
+    showBusy('Genero l’anteprima…',bracket ? 'Leggo il tabellone aggiornato da Diretta.it.' : BUSY_SUB[realKind()] || '',bracket ? 'bracket' : realKind());
 
     // Il servizio può aspettare un'altra richiesta (fino a 75 s) e poi fare il render.
     const response = await netFetch(`${directBase}/preview`, {
@@ -420,7 +422,7 @@ async function previewGraphic() {
       throw new Error(answer.error || `Anteprima non riuscita (${response.status}).`);
     }
 
-    const isTable = kind === 'table';
+    const isTable = kind === 'table' && tableViewOf() !== 'bracket';   // il tabellone arriva come immagine
     let blob = null, table = null;
     if (isTable) {
       const answer = await response.json().catch(() => ({}));
