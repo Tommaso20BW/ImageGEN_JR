@@ -171,11 +171,25 @@ jobs:
           CLOUDFLARED="${RUNNER_TEMP}/cloudflared"
           LOG="${RUNNER_TEMP}/cloudflared.log"
 
-          # Se GitHub risponde con un errore temporaneo (es. 504) si riprova invece di fermarsi.
-          curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
+          # cloudflared dalle release di GitHub; se GitHub non le serve (es. 504 per tutte le
+          # versioni) si installa dal repository ufficiale di Cloudflare (pkg.cloudflare.com).
+          if curl -fsSL --retry 2 --retry-all-errors --retry-delay 3 \
             https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
-            -o "$CLOUDFLARED"
-          chmod +x "$CLOUDFLARED"
+            -o "$CLOUDFLARED"; then
+            chmod +x "$CLOUDFLARED"
+          else
+            log WARN TUNNEL "Release GitHub non disponibili · installo cloudflared da pkg.cloudflare.com"
+            sudo mkdir -p --mode=0755 /usr/share/keyrings
+            curl -fsSL --retry 3 --retry-all-errors https://pkg.cloudflare.com/cloudflare-main.gpg \
+              | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+            echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' \
+              | sudo tee /etc/apt/sources.list.d/cloudflared.list >/dev/null
+            sudo apt-get update -qq -o Dir::Etc::sourcelist=sources.list.d/cloudflared.list \
+              -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0
+            sudo apt-get install -y -qq cloudflared
+            CLOUDFLARED="$(command -v cloudflared)"
+          fi
+          "$CLOUDFLARED" --version
 
           TUNNEL_PID=""
           cleanup_tunnel() {
