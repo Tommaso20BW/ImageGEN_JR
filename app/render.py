@@ -206,26 +206,45 @@ class Renderer:
         return phase_layers.clean_background_jpeg(raw, self.cutout(photo_id))
 
     def _trail_photo(self, data):
-        """Foto del MATCHDAY e della STARTING XI con l'effetto movimento (scia a sinistra dal bordo della
-        persona scontornata). Se lo scontorno non riesce, esce la foto normale."""
-        photo = self._photo(data)
-        if data.get('trail') is False:
-            return photo
+        """Foto del MATCHDAY e della STARTING XI: ritocco automatico delle foto di HALF/END/FULL
+        (nitidezza + chiarezza, _look_photo) e poi l'effetto movimento (scia a sinistra dal
+        bordo della persona scontornata). Se lo scontorno non riesce, esce la foto senza scia."""
         key = data['photo_id']
+        trail = data.get('trail') is not False
         with self.cutout_lock:
-            cached = self.trails.get(key)
-        if cached is None:
+            cached = self.trails.get((key, trail))
+        if cached is not None:
+            return cached
+        photo = self._look_photo(self._photo(data))
+        if trail:
             from graphics import motion_trail
             try:
-                cached = motion_trail.apply(photo, self.cutout(key))
+                photo = motion_trail.apply(photo, self.cutout(key))
             except Exception as exc:  # noqa: BLE001 - meglio la foto senza scia che nessuna grafica
                 log.warn('GRAFICA', f'Effetto movimento non riuscito: {type(exc).__name__}: {exc}')
                 return photo
-            with self.cutout_lock:
-                self.trails[key] = cached
-                while len(self.trails) > 6:
-                    self.trails.pop(next(iter(self.trails)))
-        return cached
+        with self.cutout_lock:
+            self.trails[(key, trail)] = photo
+            while len(self.trails) > 6:
+                self.trails.pop(next(iter(self.trails)))
+        return photo
+
+    @staticmethod
+    def _look_photo(raw):
+        """Stesso ritocco delle foto di HALF/END/FULL (phase_layers.look: nitidezza e
+        chiarezza). Foto girata come la mostra il telefono; trasparenza intatta."""
+        from livescore.graphics import phase_layers
+
+        image = phase_layers.open_photo(raw)
+        cut = image.getchannel('A').getextrema()[0] < 250
+        # PNG già scontornato: solo nitidezza, come nelle fasi (la chiarezza fa aloni sul bordo).
+        image = phase_layers.look(image, clarity=not cut)
+        out = io.BytesIO()
+        if cut:
+            image.save(out, 'PNG')
+        else:
+            image.convert('RGB').save(out, 'JPEG', quality=95, subsampling=0)
+        return out.getvalue()
 
     def _photo(self, data):
         photo = self.photos.get(data.get('photo_id'))

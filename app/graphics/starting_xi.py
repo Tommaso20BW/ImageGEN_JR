@@ -9,7 +9,7 @@ import json
 import re
 from functools import lru_cache
 
-from PIL import Image
+from PIL import Image, ImageFont
 
 from graphics.common import canva_layers, photo_layer, logo_fill, page_background
 from graphics.common import (
@@ -23,6 +23,9 @@ NAME_X, NAME_BASE = 174.28, 490.69
 NUMBER_RIGHT, NUMBER_BASE = 157.27, 496.69
 ROW_STEP = 87
 NAME_SIZE, NAME_SPACING = 69.77, -2.444
+# Nomi lunghi: tutti un po' più piccoli (stessa dimensione per gli 11) per non finire
+# sul giocatore; mai sotto NAME_MIN_SIZE.
+NAME_MAX_W, NAME_MIN_SIZE = 360, 50
 NUMBER_SIZE = 91.08
 LOGO_BOXES = ((313.02, 213.2), (427.43, 213.2))
 LOGO_SIZE = 138.09
@@ -105,6 +108,17 @@ def photo_box(size, frame, page=None):
     return left, top, width, height
 
 
+@lru_cache(maxsize=1)
+def _name_font():
+    return ImageFont.truetype(str(asset_dir() / 'fonts' / 'BebasNeue2014-Regular.ttf'), 100)
+
+
+def name_size(names):
+    """Dimensione dei nomi: quella del design, ridotta se il più lungo supera NAME_MAX_W."""
+    widest = max(_name_font().getlength(n) / 100 + NAME_SPACING * len(n) / NAME_SIZE for n in names)
+    return max(NAME_MIN_SIZE, min(NAME_SIZE, NAME_MAX_W / widest))
+
+
 def _text_rows(role, values, style, x, base, anchor, attrs):
     out = []
     for k, value in enumerate(values):
@@ -134,9 +148,11 @@ def build_html(*, kit, lineup, photo, frame, home_name, home_id, away_name, away
         'n', [n for n, _ in lineup], meta['text']['number'], NUMBER_RIGHT, NUMBER_BASE, 'end',
         f'font-family="Allogist" font-style="italic" font-size="{NUMBER_SIZE}"',
     )
+    upper = [name.upper() for _, name in lineup]
+    size = name_size(upper)
     names = _text_rows(
-        'p', [name.upper() for _, name in lineup], meta['text']['name'], NAME_X, NAME_BASE, 'start',
-        f'font-family="Bebas Neue" font-size="{NAME_SIZE}" letter-spacing="{NAME_SPACING}"',
+        'p', upper, meta['text']['name'], NAME_X, NAME_BASE, 'start',
+        f'font-family="Bebas Neue" font-size="{size:.2f}" letter-spacing="{NAME_SPACING * size / NAME_SIZE:.3f}"',
     )
     logos = ''.join(
         f'<div class="logo" style="left:{x}px;top:{y}px;background:{logo_fill(meta, kit)};'

@@ -200,8 +200,32 @@ def page_background(kit, photo, graphic=None):
     path = background(kit, graphic)
     if not path.is_file():
         return ''
-    return (f'<img src="{data_uri(path)}" style="position:absolute;left:0;top:0;'
+    uri = _smooth_bg(str(path)) if graphic in SMOOTH_BG and kit in SMOOTH_BG_KITS else data_uri(path)
+    return (f'<img src="{uri}" style="position:absolute;left:0;top:0;'
             f'width:{DESIGN_W}px;height:{DESIGN_H}px;object-fit:cover">')
+
+
+# Matchday e Starting XI senza grana: sfondi delle maglie lisci (la texture fine di carta
+# e gesso sparisce, le nuvole di colore restano). Gli sfondi delle competizioni hanno
+# linee e disegni: restano come sono.
+SMOOTH_BG = ('matchday', 'starting_xi')
+SMOOTH_BG_KITS = ('home', 'away', 'third')
+BG_SMOOTH = 5.0
+
+
+@lru_cache(maxsize=6)
+def _smooth_bg(path):
+    import io
+
+    import cv2
+    import numpy as np
+    from PIL import Image
+
+    a = np.asarray(Image.open(path).convert('RGB')).astype(np.float32)
+    a = cv2.GaussianBlur(a, (0, 0), BG_SMOOTH)
+    out = io.BytesIO()
+    Image.fromarray(np.clip(a + .5, 0, 255).astype('uint8')).save(out, 'JPEG', quality=95, subsampling=0)
+    return 'data:image/jpeg;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
 
 
 def photo_layer(photo, frame, page=None):
@@ -288,30 +312,51 @@ HOME_FX_COLOR = (237, 231, 221)
 
 
 def canva_layers(meta, photo, frame):
-    """Livelli Canva sopra la foto: sfumature/grana + titolo e JR.
+    """Livelli Canva sopra la foto: sfumature + titolo e JR.
 
     - senza foto (anteprima nell'editor): sfumature, titolo e JR su fondo trasparente;
     - sfumatura chiara (home): ricolorata nel crema dello sfondo delle foto home,
-      così non si vede lo stacco col bianco freddo di Canva (grana intatta).
+      così non si vede lo stacco col bianco freddo di Canva;
+    - la grana di Canva nelle sfumature viene tolta (_fx).
     """
     canva = asset_dir() / 'canva'
     full = f'style="position:absolute;left:0;top:0;width:{DESIGN_W}px;height:{DESIGN_H}px"'
     text = f'<img src="{data_uri(canva / meta["text_overlay"])}" {full}>'
-    fx = _home_fx(meta['fx']) if meta.get('fx_light') else data_uri(canva / meta['fx'])
+    fx = _fx(str(canva / meta['fx']), bool(meta.get('fx_light')))
     return f'<img src="{fx}" {full}>' + text
 
 
-@lru_cache(maxsize=4)
-def _home_fx(name):
+FX_SMOOTH = 6.0      # sfocatura (pixel a 1920) che porta via la grana
+FX_GRAIN = 12.0      # differenze dalla versione sfocata sotto questa soglia (0-255) sono grana;
+                     # sopra (ombre delle scritte, bordi) restano nitide
+
+
+@lru_cache(maxsize=16)
+def _fx(path, light):
+    """Sfumatura Canva senza grana: versione sfocata + solo i dettagli forti
+    dell'originale (contorni), così le ombre delle scritte restano nitide. Colore
+    pre-moltiplicato per la trasparenza: i bordi non si scuriscono.
+    light=True: anche ricolorata nel crema delle foto home."""
     import io
 
+    import cv2
     import numpy as np
     from PIL import Image
 
-    a = np.asarray(Image.open(asset_dir() / 'canva' / name).convert('RGBA')).astype(float)
-    solid = a[..., 3] > 240
-    base = np.median(a[solid][:, :3], axis=0)                   # bianco Canva della sfumatura
-    a[..., :3] = np.clip(a[..., :3] * (np.array(HOME_FX_COLOR) / base), 0, 255)
+    a = np.asarray(Image.open(path).convert('RGBA')).astype(np.float32)
+    if light:
+        solid = a[..., 3] > 240
+        base = np.median(a[solid][:, :3], axis=0)               # bianco Canva della sfumatura
+        a[..., :3] = np.clip(a[..., :3] * (np.array(HOME_FX_COLOR) / base), 0, 255)
+    pre = np.dstack([a[..., :3] * a[..., 3:] / 255, a[..., 3:]])
+    smooth = cv2.GaussianBlur(pre, (0, 0), FX_SMOOTH)
+    detail = pre - smooth
+    strength = np.abs(detail).max(2, keepdims=True)
+    keep = np.clip((strength - FX_GRAIN) / FX_GRAIN, 0, 1)
+    pre = smooth + detail * keep
+    alpha = np.clip(pre[..., 3:], 0, 255)
+    a[..., :3] = np.where(alpha > .3, pre[..., :3] * 255 / np.maximum(alpha, .3), 0)
+    a[..., 3:] = alpha
     out = io.BytesIO()
-    Image.fromarray(a.astype('uint8'), 'RGBA').save(out, format='PNG')
+    Image.fromarray(np.clip(a + .5, 0, 255).astype('uint8'), 'RGBA').save(out, format='PNG')
     return 'data:image/png;base64,' + base64.b64encode(out.getvalue()).decode('ascii')

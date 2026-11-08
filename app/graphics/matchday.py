@@ -11,6 +11,8 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 from functools import lru_cache
 
+from PIL import ImageFont
+
 from constants import COMPETITIONS
 from graphics.common import canva_layers, logo_fill, photo_layer, DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html, team_logo
 from graphics.starting_xi import KITS, check_photo, photo_box
@@ -20,11 +22,11 @@ from graphics.uefa import meta_for
 # Misure dal PDF Canva (pixel 1080x1440).
 LOGO_BOXES = ((7.0, 9.31), (7.0, 143.28))   # casa sopra, trasferta sotto
 LOGO_SIZE = 133.97
-INFO_BASE, INFO_SIZE = 1415.11, 20
+INFO_BASE, INFO_SIZE = 1415.11, 24
+INFO_MIN_SIZE = 16           # se i testi sono lunghi la riga si rimpicciolisce fino a qui
+INFO_MARGIN, INFO_GAP = 42, 60   # bordi pagina e spazio minimo fra due voci (col separatore in mezzo)
 SLOTS = ('stadium', 'competition', 'time', 'date')
 SEPARATORS = ('sep1', 'sep2', 'sep3')
-CENTERS = {'stadium': 132.87, 'sep1': 270.31, 'competition': 404.18, 'sep2': 542.31,
-           'time': 674.18, 'sep3': 816.31, 'date': 948.43}
 
 MONTHS = ('GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO',
           'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE')
@@ -65,12 +67,59 @@ def parse_info(stadium, kickoff, day):
     }
 
 
-def _info_text(slot, value, style):
-    text = (f'<text x="{CENTERS[slot]}" y="{INFO_BASE}" text-anchor="middle" '
-            f'font-family="Matchday Info" font-size="{INFO_SIZE}">{esc(value)}</text>')
+@lru_cache(maxsize=1)
+def _info_font():
+    return ImageFont.truetype(str(asset_dir() / 'fonts' / 'MatchdayInfo.ttf'), 100)
+
+
+def info_layout(values):
+    """(dimensione, {voce o separatore: centro x}). Stessa dimensione per tutte le voci,
+    stesso spazio fra una e l'altra: niente testi fuori pagina o sopra i separatori."""
+    widths = [_info_font().getlength(values[slot]) / 100 for slot in SLOTS]
+    room = DESIGN_W - 2 * INFO_MARGIN
+    size = max(INFO_MIN_SIZE, min(INFO_SIZE, (room - 3 * INFO_GAP) / sum(widths)))
+    gap = (room - size * sum(widths)) / 3
+    centers, x = {}, INFO_MARGIN
+    for k, slot in enumerate(SLOTS):
+        w = size * widths[k]
+        centers[slot] = x + w / 2
+        x += w
+        if k < 3:
+            centers[SEPARATORS[k]] = x + gap / 2
+            x += gap
+    return size, centers
+
+
+@lru_cache(maxsize=32)
+def _plate(path):
+    """Lastra di colore della riga info senza i buchi dell'esportazione Canva (colonne
+    trasparenti: prima il testo non ci cadeva mai sopra, ora le voci si spostano).
+    Ogni colonna vuota prende la colonna piena più vicina."""
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    with Image.open(path) as image:
+        a = np.asarray(image.convert('RGBA'))
+    good = np.flatnonzero((a[..., 3] > 200).mean(0) > .5)
+    if len(good) == 0 or len(good) == a.shape[1]:
+        return data_uri(path)
+    cols = np.arange(a.shape[1])
+    pos = np.clip(np.searchsorted(good, cols), 1, len(good) - 1)
+    left, right = good[pos - 1], good[pos]
+    nearest = np.where(cols - left <= right - cols, left, right)
+    out = io.BytesIO()
+    Image.fromarray(np.ascontiguousarray(a[:, nearest]), 'RGBA').save(out, format='PNG')
+    return 'data:image/png;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
+
+
+def _info_text(slot, value, style, size, center):
+    text = (f'<text x="{center:.2f}" y="{INFO_BASE}" text-anchor="middle" '
+            f'font-family="Matchday Info" font-size="{size:.2f}">{esc(value)}</text>')
     if 'file' in style:
         return (f'<clipPath id="c_{slot}">{text}</clipPath>'
-                f'<image href="{data_uri(asset_dir() / "canva" / style["file"])}" x="{style["x"]}" '
+                f'<image href="{_plate(str(asset_dir() / "canva" / style["file"]))}" x="{style["x"]}" '
                 f'y="{style["y"]}" width="{style["w"]}" height="{style["h"]}" '
                 f'preserveAspectRatio="none" clip-path="url(#c_{slot})"/>')
     return text.replace('<text ', f'<text fill="{style["color"]}" ', 1)
@@ -84,8 +133,9 @@ def build_html(*, kit, photo, frame, info, competition, home_name, home_id, away
     photo_html, page_bg = photo_layer(photo, frame)
 
     values = {**info, 'competition': competition_label(competition)}
-    texts = ''.join(_info_text(slot, values[slot], meta['info'][slot]) for slot in SLOTS)
-    texts += ''.join(_info_text(slot, '|', meta['info'][slot]) for slot in SEPARATORS)
+    size, centers = info_layout(values)
+    texts = ''.join(_info_text(slot, values[slot], meta['info'][slot], size, centers[slot]) for slot in SLOTS)
+    texts += ''.join(_info_text(slot, '|', meta['info'][slot], size, centers[slot]) for slot in SEPARATORS)
     logos = ''.join(
         f'<div class="logo" style="left:{x}px;top:{y}px;background:{logo_fill(meta, kit)};'
         f'--m:url({data_uri(team_logo(name, team_id))})"></div>'
