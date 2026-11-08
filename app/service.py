@@ -411,10 +411,6 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/preview':
                 png = self.service.preview(envelope)
-                table = self.service.table_summary(envelope)
-                if table:          # CLASSIFICA: al telefono va l'elenco; la grafica resta pronta per l'invio
-                    self._json(200, {'ok': True, 'table': table})
-                    return
                 # Al telefono va un JPEG leggero; a Telegram resta il PNG.
                 self._png(self.service.preview_jpeg(png), 'image/jpeg')
                 return
@@ -748,13 +744,6 @@ class Service:
         finally:
             self._set_stage('idle')
             self.operation_lock.release()
-
-    def table_summary(self, envelope):
-        data = envelope.get('data') if isinstance(envelope, dict) else None
-        if not isinstance(data, dict) or data.get('kind') != 'table' or data.get('view') == 'bracket':
-            return None          # TABELLONE: al telefono va l'immagine
-        from graphics import classifica
-        return classifica.summary(str(data.get('competition') or ''))
 
     def ghost(self, envelope):
         """Grafica senza foto, trasparente e leggera: l'editor la mostra sopra la foto.

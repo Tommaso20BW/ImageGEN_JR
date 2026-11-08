@@ -47,7 +47,7 @@ def images_dir():
 
 # Durante una sessione loghi e font restano in memoria: la seconda classifica è più veloce.
 _logos = {}
-_last = {}      # competizione -> ultima classifica letta (per l'elenco dell'anteprima)
+_last = {}      # competizione -> ultima classifica letta (per riconoscere i doppioni)
 _fonts = {}
 
 # Pronto quando tutte le immagini sono caricate; errore se un logo non si vede.
@@ -71,20 +71,6 @@ def render(competition):
     png = render_data(data)
     _last[data['competition']] = data
     return png
-
-
-def summary(competition):
-    """Elenco leggero dell'ultima classifica letta: lo mostra l'anteprima della Mini App."""
-    data = _last.get((competition or '').upper())
-    if not data:
-        return None
-    return {
-        'name': data.get('competition_name', ''),
-        'giornata': data.get('giornata'),
-        'stagione': data.get('stagione', ''),
-        'rows': [{'pos': r['pos'], 'team': r['team'], 'pt': r['pt'], 'dr': r['dr'],
-                  'p': r.get('p'), 'zone': r.get('zone', '')} for r in data['classifica']],
-    }
 
 
 def render_data(data):

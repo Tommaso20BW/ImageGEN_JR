@@ -310,21 +310,6 @@ textarea.field-input{min-height:190px!important;overflow:hidden}
 .sp-tiles.two{grid-template-columns:repeat(2,1fr)}
 .sp-link button{color:var(--tint)!important;font-weight:600!important}
 
-/* CLASSIFICA: anteprima come elenco */
-.ptab[hidden],.preview-wrap[hidden]{display:none!important}
-.ptab-head,.ptab-row{display:grid;grid-template-columns:30px 1fr 44px 36px;align-items:center;gap:6px}
-.ptab-head{padding:4px 16px 6px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
-.ptab-head span:nth-child(n+3){text-align:right}
-.ptab-list{overflow:hidden}
-.ptab-row{position:relative;min-height:42px;padding:0 16px;border-bottom:1px solid var(--line);font-size:15px}
-.ptab-row:last-child{border-bottom:0}
-.ptab-row::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--z,transparent)}
-.ptab-pos{color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
-.ptab-team{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ptab-dr{text-align:right;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
-.ptab-pt{text-align:right;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
-.ptab-row.juve{background:color-mix(in srgb,var(--tint) 12%,transparent)}
-.ptab-row.juve .ptab-team{font-weight:800}
 
 /* cronometro: si tocca per allungare la sessione */
 #sessionTimer{cursor:pointer;-webkit-tap-highlight-color:transparent}

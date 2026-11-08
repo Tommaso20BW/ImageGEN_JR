@@ -422,21 +422,12 @@ async function previewGraphic() {
       throw new Error(answer.error || `Anteprima non riuscita (${response.status}).`);
     }
 
-    const isTable = kind === 'table' && tableViewOf() !== 'bracket';   // il tabellone arriva come immagine
-    let blob = null, table = null;
-    if (isTable) {
-      const answer = await response.json().catch(() => ({}));
-      table = answer.table;
-      if (!table || !Array.isArray(table.rows) || !table.rows.length) throw new Error('Anteprima non valida.');
-    } else {
-      blob = await response.blob();
-      if (!blob || !String(blob.type || '').startsWith('image/')) throw new Error('Anteprima non valida.');
-    }
+    const blob = await response.blob();
+    if (!blob || !String(blob.type || '').startsWith('image/')) throw new Error('Anteprima non valida.');
 
     await finishBusy();
     previewPayloadText = raw;
-    showTablePreview(table);
-    openPreview(isTable ? '' : URL.createObjectURL(blob));
+    openPreview(URL.createObjectURL(blob));
   } catch (error) {
     const message = sessionExpired()
       ? EXPIRED_MESSAGE

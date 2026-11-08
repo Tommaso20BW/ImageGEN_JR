@@ -431,34 +431,6 @@ function openPreview(url) {
   renderFlow();
 }
 
-// CLASSIFICA: l'anteprima è l'elenco delle squadre; per le altre grafiche l'immagine.
-const TABLE_ZONES = {z1:'#1E6BFF', z2:'#FF8A00', z3:'#1DB954', z4:'#E5484D'};
-function showTablePreview(table) {
-  const on = !!table;
-  document.querySelector('[data-screen="preview"] .preview-wrap').hidden = on;
-  $('previewTable').hidden = !on;
-  const lead = $('previewLead');
-  if (lead.dataset.def === undefined) lead.dataset.def = lead.textContent;   // testo normale (anche quello del LIVE)
-  lead.textContent = on
-    ? 'Controlla la classifica. Se è tutto ok, premi “Invia”: arriva la grafica nella chat del bot.'
-    : lead.dataset.def;
-  if (!on) { $('previewTable').innerHTML = ''; return; }
-  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const sub = [table.giornata ? `Giornata ${table.giornata}` : '', table.stagione].filter(Boolean).join(' · ');
-  const rows = table.rows.map(r => {
-    const dr = Number(r.dr) > 0 ? '+' + r.dr : String(r.dr);
-    const zone = TABLE_ZONES[r.zone] ? ` style="--z:${TABLE_ZONES[r.zone]}"` : '';
-    const juve = /juventus/i.test(r.team) ? ' juve' : '';
-    return `<div class="ptab-row${juve}"${zone}><span class="ptab-pos">${esc(r.pos)}</span>` +
-      `<span class="ptab-team">${esc(r.team)}</span><span class="ptab-dr">${esc(dr)}</span>` +
-      `<span class="ptab-pt">${esc(r.pt)}</span></div>`;
-  }).join('');
-  $('previewTable').innerHTML =
-    `<div class="field-label">${esc(table.name)}${sub ? ' · ' + esc(sub) : ''}</div>` +
-    `<div class="ptab-head"><span>Pos</span><span>Squadra</span><span>DR</span><span>PT</span></div>` +
-    `<div class="ios-list ptab-list">${rows}</div>`;
-}
-
 function closePreview() {
   previewMode = false;
   setPreviewError('');
