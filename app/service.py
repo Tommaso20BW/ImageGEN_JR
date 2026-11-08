@@ -1400,6 +1400,10 @@ def _send_detail(data):
             note = 'Solo foto'
         return {'player': f"@{data['name']}" if data.get('name') else '', 'minute': '', 'score': '',
                 'opponent': '', 'note': note}
+    if data.get('kind') == 'conv':
+        n = len(data.get('players') or [])
+        return {'player': f'{n} giocatori', 'minute': '', 'score': '', 'opponent': '',
+                'note': ', '.join(p[3] for p in (data.get('players') or [])[:4]) + ('…' if n > 4 else '')}
     if data.get('kind') == 'table':
         names = {'SA': 'Serie A', 'CI': 'Coppa Italia', 'UCL': 'Champions League', 'UEL': 'Europa League',
                  'UECL': 'Conference League'}

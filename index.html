@@ -374,6 +374,18 @@
             <div id="calSummary" class="hint" style="margin-top:10px"></div>
           </section>
 
+          <section class="screen" data-screen="convlist">
+            <div class="eyebrow">Convocati</div>
+            <h1>Convocati in nazionale</h1>
+            <p class="lead">Una riga per giocatore: nome e nazione tra parentesi, es. Douglas Luiz (Brasile). Il nome resta come lo scrivi.</p>
+            <textarea id="convText" class="field-input paste" maxlength="1500" autocapitalize="words" spellcheck="false"
+              placeholder="Kerim Alajbegovic (Bosnia ed Erzegovina)&#10;Zeki Celik (Turchia)&#10;…"></textarea>
+            <div id="convSummary" class="hint"></div>
+            <div id="convParsed" class="parsed"></div>
+            <div class="field-label" style="margin-top:14px">Riga in basso</div>
+            <input id="convFoot" class="field-input" type="text" maxlength="60" autocomplete="off" spellcheck="false">
+          </section>
+
           <section class="screen" data-screen="xi11">
             <div class="eyebrow">Probabile XI</div>
             <h1>Formazione</h1>
@@ -681,7 +693,7 @@
 <script>
   // Codice della Mini App (webapp/js): file caricati in ordine, con la versione della pagina.
   (function () { var v = (new URLSearchParams(location.search).get('v') || Date.now());
-    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '10-avvio.js', '11-invii.js', '12-citazione.js'].forEach(function (f) {
+    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '10-avvio.js', '11-invii.js', '12-citazione.js', '13-convocati.js'].forEach(function (f) {
       document.write('<script src="webapp/js/' + f + '?v=' + v + '"><\/script>'); }); })();
 </script>
 </body>

@@ -252,6 +252,16 @@ class Renderer:
 
             return calendar.render(month=data['month'], matches=data['matches'])
 
+        if kind == 'conv':
+            from graphics import convocati
+            from livescore.graphics import goal as g
+
+            roster = {p.name: p for p in g.load_players()}
+            return convocati.render(
+                [(roster[name], code, country, shown) for name, code, country, shown in data['players']],
+                footer=data.get('footer'),
+            )
+
         if kind == 'table':
             if data.get('view') == 'bracket':
                 from graphics import tabellone

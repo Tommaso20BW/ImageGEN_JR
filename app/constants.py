@@ -17,6 +17,7 @@ KINDS = [
     ('STARTING XI', 'xi'),
     ('CALENDARIO', 'cal'),
     ('CLASSIFICA', 'table'),
+    ('CONVOCATI', 'conv'),
     ('FOTO + JR', 'jr'),
     ('STORIE IG - BREAKING NEWS', 'igbn'),
     ('CITAZIONE IG', 'igq'),

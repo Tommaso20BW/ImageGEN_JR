@@ -271,6 +271,7 @@ function buildFlow() {
     : jrb.style === 'collage' ? ['jrstyle','jrphotos','jrcolor','jrlayout']
     : ['jrstyle','jrratio','jrcolor','photo'];
   else if (kind === 'cal') flow = ['calmonth','calrows'];
+  else if (kind === 'conv') flow = ['convlist'];
   else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent','igsent'] : ['igcontent'];
   else if (kind === 'igq' || kind === 'xq') flow = [...(iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'];
@@ -318,6 +319,7 @@ function stepValue(step) {
     case 'jrstyle': return labelOf(JR_STYLES,jrb.style);
     case 'tablecomp': return labelOf(TABLE_COMPS,tableComp);
     case 'tableview': return labelOf(TABLE_VIEWS,tableView);
+    case 'convlist': return convRows.length ? `${convRows.length} giocatori` : '';
     case 'jrratio': return jrb.ratio;
     case 'jrphotos': return jrb.cards.length ? `${jrb.cards.length} foto` : '';
     case 'jrbg': { const n = jrb.cards.findIndex(c => c.id === jrb.bg); return n < 0 ? '' : `Foto ${n + 1}`; }
@@ -530,6 +532,7 @@ function renderFlow() {
   if (screenName === 'calrows') fillCalendarFromFixtures();
   if (screenName === 'calrows') renderCalRows();
   else closeCalSheet();
+  if (screenName === 'convlist') { if (!playersLoaded) loadCatalogs().then(readConv); else readConv(); }
   if (screenName === 'xi11') { readPxiText(); loadPxiUpdates(); loadLayouts().then(() => { syncModules(); readPxiText(); }); }
   lastRenderedScreen = screenName || '';
   lastRenderedFlowIndex = flowIndex;

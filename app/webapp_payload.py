@@ -238,6 +238,32 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
+    # CONVOCATI IN NAZIONALE: giocatori della rosa (serve la foto), nazione e nome come scritto.
+    if kind == 'conv':
+        from graphics import convocati
+        rows = incoming.get('players')
+        if not isinstance(rows, list) or not rows:
+            raise ValueError('Incolla i convocati: una riga per giocatore.')
+        if len(rows) > convocati.MAX_PLAYERS:
+            raise ValueError(f'Al massimo {convocati.MAX_PLAYERS} giocatori.')
+        players = []
+        for row in rows:
+            row = row if isinstance(row, dict) else {}
+            name = _canonical_player(catalog, row.get('name'))
+            code, country = convocati.nation(row.get('nation'))
+            players.append([name, code, country, _free_name(row.get('shown')) or name])
+        if len({p[0] for p in players}) != len(players):
+            raise ValueError('Lo stesso giocatore compare due volte.')
+        footer = incoming.get('footer')
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {'kind': 'conv', 'players': players,
+                     'footer': _free_name(footer, 60) if isinstance(footer, str) else None},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
     # CLASSIFICA / TABELLONE: solo competizione e vista; i dati si leggono da Diretta.it al render.
     if kind == 'table':
         if competition not in TABLE_COMPETITIONS:

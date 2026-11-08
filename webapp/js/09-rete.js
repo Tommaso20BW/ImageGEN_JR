@@ -33,6 +33,7 @@ function buildPayload(ghost=false) {
     if (!text && !igb.id) throw new Error('Scrivi un testo o scegli una foto.');
     return {v:1, action:'render', session, data:{kind:'igbn', text, color:igColor, ...(igb.id ? {photo_id:igb.id} : {})}};
   }
+  if (kind === 'conv') return convPayload();
   if (kind === 'table') {
     if (!tableComp) throw new Error('Scegli la competizione.');
     if (!tableViewOf()) throw new Error('Scegli classifica o tabellone.');

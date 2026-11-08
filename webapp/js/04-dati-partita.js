@@ -98,6 +98,8 @@ function validateCurrent() {
     if (bad) { showError(`Completa ogni partita: giorno da 1 a ${last} e avversario.`); return false; }
   }
 
+  if (step === 'convlist' && !convValidate()) return false;
+
   if (step === 'xi11') {
     const n = pxiRead.length;
     if (n !== 11) { showError(`Servono 11 giocatori (ora ${n}).`); return false; }
@@ -141,7 +143,7 @@ async function nextField(validate=true) {
 
   if (validate) {
     const step = flow[flowIndex];
-    if ((step === 'opponent' && !teamsLoaded) || (step === 'player' && !playersLoaded) ||
+    if ((step === 'opponent' && !teamsLoaded) || ((step === 'player' || step === 'convlist') && !playersLoaded) ||
         (step === 'calmonth' && !teamsLoaded)) {
       await loadCatalogs();
       refreshSearchSummaries();
