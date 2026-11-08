@@ -287,7 +287,7 @@ def _build_state(envelope, catalog, now, expected_session):
         }
 
     # CITAZIONE IG: foto scelta del post, testo (modificabile), nome e foto profilo dell'account.
-    if kind in ('igq', 'xq'):
+    if kind in ('igq', 'xq', 'thq'):
         from graphics import ig_quote
         text = ig_quote.clean_text(incoming.get('text'))
         if not text:

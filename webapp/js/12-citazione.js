@@ -8,7 +8,7 @@ const iqThumb = id => `${directBase}/photothumb?session=${encodeURIComponent(ses
 // "Avanti" sul link: legge il post (una volta per link). false = resta sulla pagina.
 async function iqLoad() {
   const url = $('iqUrl').value.trim();
-  if (!url) { showError('Incolla il link del post Instagram.'); return false; }
+  if (!url) { showError(`Incolla il link del post ${kind === 'xq' ? 'di X' : kind === 'thq' ? 'di Threads' : 'Instagram'}.`); return false; }
   if (iq.url === url && iq.photos.length) return true;
   if (iq.loading) return false;          // già in lettura (incolla + Avanti insieme)
   if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return false; }
@@ -34,7 +34,7 @@ async function iqLoad() {
     return true;
   } catch (error) {
     $('iqHint').textContent = '';
-    showError(error && error.name === 'AbortError' ? 'Instagram non risponde. Riprova tra poco.' : (error.message || 'Post non leggibile.'));
+    showError(error && error.name === 'AbortError' ? `${kind === 'xq' ? 'X' : kind === 'thq' ? 'Threads' : 'Instagram'} non risponde. Riprova tra poco.` : (error.message || 'Post non leggibile.'));
     return false;
   } finally {
     iq.loading = false;
@@ -51,7 +51,7 @@ function renderIqPick() {
     b.className = 'iq-ph' + (i === iq.sel ? ' on' : '');
     b.style.backgroundImage = `url("${iqThumb(p.photo_id)}")`;
     b.setAttribute('aria-label', `Foto ${i + 1}`);
-    b.innerHTML = p.bg ? '<span class="bg">Sfondo X</span>' : `<span>${i + 1}</span>`;
+    b.innerHTML = p.bg ? '<span class="bg">Sfondo</span>' : `<span>${i + 1}</span>`;
     b.addEventListener('click', () => {
       haptic('select');
       iq.sel = i;
@@ -73,7 +73,7 @@ $('iqUrl').addEventListener('input', () => {
 });
 $('iqUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nextField(true); } });
 // Link incollato nel campo: il post si legge subito, senza "Avanti".
-const looksIg = v => /instagram\.com\/|instagr\.am\/|(?:^|\/\/|\.)(?:x|twitter)\.com\/[^/\s]+\/status\//i.test(v);
+const looksIg = v => /instagram\.com\/|instagr\.am\/|(?:^|\/\/|\.)(?:x|twitter)\.com\/[^/\s]+\/status\/|threads\.(?:com|net)\/(?:@[\w.]+\/post|share)\//i.test(v);
 function iqUseLink(text) {
   const link = (String(text || '').match(/https?:\/\/\S+/) || [String(text || '').trim()])[0];
   $('iqUrl').value = link;
@@ -123,16 +123,17 @@ async function iqGhost(overlay) {
 
 /* ----- Citazione X: stesse pagine della Citazione IG, testi e campo @account diversi ----- */
 function iqTexts() {
-  const x = kind === 'xq';
-  document.querySelectorAll('[data-screen^="iq"] .eyebrow').forEach(e => { e.textContent = x ? 'Citazione X' : 'Citazione IG'; });
-  $('iqUrlLead').textContent = x
-    ? 'Tieni premuto nel campo e incolla il link di un post di X: testo, nome, account, foto profilo e foto arrivano da soli.'
+  const x = kind === 'xq', th = kind === 'thq';
+  const net = x ? 'X' : th ? 'Threads' : 'IG';
+  document.querySelectorAll('[data-screen^="iq"] .eyebrow').forEach(e => { e.textContent = `Citazione ${net}`; });
+  $('iqUrlLead').textContent = x || th
+    ? `Tieni premuto nel campo e incolla il link di un post di ${x ? 'X' : 'Threads'}: testo, nome, account, foto profilo e foto arrivano da soli.`
     : 'Tieni premuto nel campo e incolla il link di un post Instagram: foto, testo, nome e foto profilo arrivano da soli.';
-  $('iqUrl').placeholder = x ? 'https://x.com/…/status/…' : 'https://www.instagram.com/p/…';
-  $('iqPickLead').textContent = x
-    ? 'Tocca la foto da usare come sfondo, oppure "Sfondo X".'
+  $('iqUrl').placeholder = x ? 'https://x.com/…/status/…' : th ? 'https://www.threads.com/@…/post/…' : 'https://www.instagram.com/p/…';
+  $('iqPickLead').textContent = x || th
+    ? 'Tocca la foto da usare come sfondo, oppure "Sfondo".'
     : 'Il post ha più foto: tocca quella da usare come sfondo.';
-  $('iqTextLead').textContent = x
+  $('iqTextLead').textContent = x || th
     ? 'Testo preso dal post, senza emoji e link finali: puoi cambiarlo.'
     : 'Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.';
   $('iqHandleRow').hidden = false;      // @username: X e Instagram

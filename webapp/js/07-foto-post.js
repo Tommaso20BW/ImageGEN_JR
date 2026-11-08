@@ -138,7 +138,7 @@ async function updatePhotoOverlay() {
     jrLogoSrc(overlay,'black');
     return;
   }
-  if (kind === 'igq' || kind === 'xq') { editorShown = ''; frame.style.backgroundImage = ''; iqGhost(overlay); return; }
+  if (isQuoteKind(kind)) { editorShown = ''; frame.style.backgroundImage = ''; iqGhost(overlay); return; }
   const urls = editorImageUrls();
   if (!urls || editorShown === urls.overlay) return;
   const key = editorShown = urls.overlay;

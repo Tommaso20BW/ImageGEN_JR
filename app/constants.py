@@ -22,6 +22,7 @@ KINDS = [
     ('STORIE IG - BREAKING NEWS', 'igbn'),
     ('CITAZIONE IG', 'igq'),
     ('CITAZIONE X', 'xq'),
+    ('CITAZIONE THREADS', 'thq'),
 ]
 
 COMPETITIONS = [

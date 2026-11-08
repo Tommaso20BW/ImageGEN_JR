@@ -1,4 +1,4 @@
-"""CITAZIONE IG / X: post Instagram o X in formato 3:4 (1080x1440 design, uscita 1920x2560).
+"""CITAZIONE IG / X / THREADS: post Instagram o X in formato 3:4 (1080x1440 design, uscita 1920x2560).
 
 - sfondo: una foto del post (scelta nella Mini App se sono più di una), a tutta pagina e scurita,
   posizione e zoom scelti nell'editor;
@@ -11,6 +11,8 @@
 - X (platform='x'): stesso riquadro; sotto il nome l'@account, logo X, icone di X
   (rispondi, ripubblica, mi piace, visualizzazioni; salva e condividi a destra). Se il post non ha
   foto lo sfondo è canva/x_quote_bg.jpg (lo aggiunge il servizio come foto da scegliere).
+- Threads (platform='threads'): come X, logo Threads, icone mi piace, commenta, ripubblica, condividi;
+  stesso sfondo di riserva per i post senza foto.
 
 Il calcolo della grandezza del testo lo fa Chrome (a-capo reali): il renderer aspetta `window.__ready`.
 """
@@ -48,6 +50,19 @@ X_REPOST = (f'<svg viewBox="0 0 24 24" {_S}><path d="M4 9V7a3 3 0 0 1 3-3h11M15 
 X_VIEWS = f'<svg viewBox="0 0 24 24" {_S}><path d="M5 20V12M10 20V5M15 20v-9M20 20V8"/></svg>'
 X_LOGO = ('<svg viewBox="0 0 24 24"><path fill="#fff" d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4'
           'l7.17-8.2L2 3h6.33l4.37 5.77L17.75 3zm-1.08 16.17h1.7L7.4 4.73H5.58l11.09 14.44z"/></svg>')
+# Threads: logo (simple-icons, CC0) e icona ripubblica a due frecce
+TH_LOGO = ('<svg viewBox="0 0 24 24"><path fill="#fff" d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 '
+           '15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 '
+           '6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936'
+           '-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 '
+           '2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 '
+           '1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685'
+           '-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142'
+           'c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847'
+           'c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.216.094.321.142 1.49.7 2.58 '
+           '1.761 3.154 3.07.797 1.82.871 4.79-1.548 7.158-1.85 1.81-4.094 2.628-7.277 2.65Zm1.003-11.69c-.242 0-.487.007'
+           '-.739.021-1.836.103-2.98.946-2.916 2.143.067 1.256 1.452 1.839 2.784 1.767 1.224-.065 2.818-.543 3.086-3.71a10.5 '
+           '10.5 0 0 0-2.215-.221z"/></svg>')
 ICON_SAVE = f'<svg viewBox="0 0 24 24" {_S}><path d="M19 21l-7-5-7 5V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1z"/></svg>'
 
 
@@ -96,7 +111,7 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
         check_photo(photo)
     img, _page_bg = photo_layer(photo, frame or {'x': 0, 'y': 0, 'zoom': 1})
     # Sfondo di X (già scuro, con i graffi): non si scurisce come le foto.
-    darken = 1 if photo is not None and platform == 'x' and photo == x_background() else DARKEN
+    darken = 1 if photo is not None and platform in ('x', 'threads') and photo == x_background() else DARKEN
     text = clean_text(text)
     name = clean_name(name)
     from graphics.photo_jr import _logo
@@ -105,9 +120,10 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
     avatar_html = (f'<img id="av" src="{_uri(avatar)}">' if avatar
                    else f'<div id="av" class="none">{esc(name[:1].upper())}</div>')
     x = platform == 'x'
+    th = platform == 'threads'
     handle = clean_name(handle)
-    # Nome in grassetto, sotto l'@username piccolo (senza username: "Instagram" / "X").
-    sub = f'@{esc(handle)}' if handle else ('X' if x else 'Instagram')
+    # Nome in grassetto, sotto l'@username piccolo (senza username: "Instagram" / "X" / "Threads").
+    sub = f'@{esc(handle)}' if handle else ('X' if x else 'Threads' if th else 'Instagram')
     tick = (f'<svg class="tick" viewBox="0 0 24 24"><path fill="{"#1D9BF0" if x else "#0095F6"}" d="M22.5 12.5'
             'c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1.71-4-3.82-4-.47 0-.92.08-1.34.25C14.81 2.42'
             ' 13.5 1.5 12 1.5s-2.81.92-3.43 2.22c-.42-.17-.87-.25-1.34-.25-2.11 0-3.82 1.79-3.82 4 0 .5.09.98.24 '
@@ -116,8 +132,10 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
             '3.82-4 0-.24-.02-.48-.05-.72 1.17-.68 1.97-1.98 1.97-3.48z"/><path fill="#fff" d="M10.6 16.2 6.9 12.5'
             'l1.4-1.4 2.3 2.3 5.1-5.1 1.4 1.4z"/></svg>' if verified else '')
     head = (f'<div id="hd">{avatar_html}<div id="who"><b>{esc(name or handle)}{tick}</b><span>{sub}</span></div>'
-            f'<i id="ig">{X_LOGO if x else ICON_IG}</i></div>')
-    if x:
+            f'<i id="ig">{X_LOGO if x else TH_LOGO if th else ICON_IG}</i></div>')
+    if th:      # Threads: mi piace, commenta, ripubblica, condividi
+        acts = f'<div id="act"><div>{ICON_LIKE}{ICON_COMMENT}{X_REPOST}{ICON_SHARE}</div><div></div></div>'
+    elif x:
         acts = (f'<div id="act"><div>{X_REPLY}{X_REPOST}{ICON_LIKE}{X_VIEWS}</div>'
                 f'<div>{ICON_SAVE}{X_SHARE}</div></div>')
     else:
@@ -137,7 +155,7 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{'#
   backdrop-filter:blur({CARD_BLUR}px);-webkit-backdrop-filter:blur({CARD_BLUR}px);box-shadow:0 18px 60px rgba(0,0,0,.35)}}
 #hd{{display:flex;align-items:center;gap:20px;color:#fff;font-family:'Poppins',sans-serif;flex:none}}
 #av{{width:{AVATAR}px;height:{AVATAR}px;flex:none;border-radius:50%;object-fit:cover;
-  {"border:3px solid rgba(255,255,255,.9)" if x else f"padding:4px;background:{IG_GRADIENT};background-clip:padding-box"}}}
+  {"border:3px solid rgba(255,255,255,.9)" if x or th else f"padding:4px;background:{IG_GRADIENT};background-clip:padding-box"}}}
 #av.none{{display:grid;place-items:center;color:#fff;font:500 36px Poppins}}
 #who{{min-width:0}}
 #who b{{display:block;font-weight:500;font-size:34px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}

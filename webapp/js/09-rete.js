@@ -19,7 +19,7 @@ function buildPayload(ghost=false) {
     return {v:1, action:'render', session, data:{slot:LIVE_SLOT, kind:LIVE_PHASE, ...phasePhotoData(ghost)}};
   }
   const photoId = photoState.id || (ghost ? '0'.repeat(16) : '');
-  if (kind === 'igq' || kind === 'xq') {
+  if (isQuoteKind(kind)) {
     const photo = iq.photos[iq.sel];
     if (!photo) throw new Error('Scegli la foto del post.');
     // Foto del post, o quella caricata a mano nell'editor ("Scegli foto").

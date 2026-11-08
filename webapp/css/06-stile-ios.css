@@ -250,6 +250,7 @@ textarea.field-input:focus{box-shadow:none!important;outline:0}
 .iq-at{flex:none;color:var(--muted);font-weight:600}
 #iqHandleRow[hidden]{display:none}
 .hm-item[data-id="xq"] .hm-ico{background:#000}
+.hm-item[data-id="thq"] .hm-ico{background:#000}
 .iq-av{flex:none;width:30px;height:30px;border-radius:50%;background:var(--line) center/cover no-repeat}
 .iq-av:not([style*="url"]){display:none}
 /* Storia IG: colore del testo (pallino in alto a destra, tavolozza sopra il testo) */

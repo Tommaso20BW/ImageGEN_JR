@@ -1071,14 +1071,17 @@ class Service:
         return self.store_photo(raw)
 
     def ig_post(self, envelope):
-        """CITAZIONE IG / X: legge il post dal link (instagram.py o xpost.py) e tiene le sue foto come
-        foto caricate. Per X in fondo c'è sempre anche lo sfondo di riserva (molti post non hanno foto)."""
+        """CITAZIONE IG / X / THREADS: legge il post dal link (instagram.py, xpost.py o threadspost.py) e
+        tiene le sue foto come foto caricate. Per X e Threads in fondo c'è sempre anche lo sfondo di
+        riserva (molti post non hanno foto)."""
         import instagram
+        import threadspost
         import xpost
         from graphics import ig_quote
         url = (envelope or {}).get('url')
-        x = xpost.is_x_url(url)
-        post = xpost.fetch(url) if x else instagram.fetch(url)
+        th = threadspost.is_threads_url(url)
+        x = th or xpost.is_x_url(url)          # X e Threads: nome e @account arrivano entrambi dal post
+        post = threadspost.fetch(url) if th else xpost.fetch(url) if x else instagram.fetch(url)
         photos = []
         for raw in post['photos']:
             try:
@@ -1099,7 +1102,7 @@ class Service:
         handle = post.get('handle') or ('' if x else post['user'])
         user = post['user'] if x else sent_store.load_names().get(handle.lower(), handle)
         # Testo già senza emoji (come uscirà nella grafica): nella Mini App si vede quello vero.
-        return {'platform': 'x' if x else 'ig', 'user': ig_quote.clean_name(user), 'handle': handle,
+        return {'platform': 'threads' if th else 'x' if x else 'ig', 'user': ig_quote.clean_name(user), 'handle': handle,
                 'verified': bool(post.get('verified')), 'text': ig_quote.clean_text(post['text']),
                 'photos': photos, 'avatar_id': avatar}
 
@@ -1393,7 +1396,7 @@ def _send_detail(data):
     score = data.get('score')
     opponent = data.get('opponent')
     # Storia IG e Citazione IG: account (solo Citazione) e inizio del testo.
-    if data.get('kind') in ('igq', 'xq', 'igbn'):
+    if data.get('kind') in ('igq', 'xq', 'thq', 'igbn'):
         text = ' '.join(str(data.get('text') or '').split())
         note = (text[:117] + '…') if len(text) > 120 else text
         if not note and data.get('photo_id'):
