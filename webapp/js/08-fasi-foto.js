@@ -397,7 +397,7 @@ function initPhaseEditor() {
   frame.addEventListener('touchmove',e => e.preventDefault(),{passive:false});
 }
 
-// Stessa pulizia di ImageGEN: via numeri e simboli, righe vuote e doppioni.
+// Nomi per il conteggio (il servizio tiene anche i numeri di maglia): via numeri e simboli, righe vuote e doppioni.
 function squadNames() {
   const seen = new Set();
   return $('squadText').value.split(/\r?\n/)
