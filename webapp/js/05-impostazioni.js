@@ -707,11 +707,14 @@ function nmPage() {
     <div class="sp-lbl">Hashtag</div>
     <div class="sp-list"><label class="sp-item"><span>#</span><input id="nmTag" class="sp-field sp-inline" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" value="${setEsc(D.tag)}" placeholder="${setEsc(baseTag)}"></label></div>
     ${R ? `<p class="sp-note">Originale: <b>${setEsc(R.base_name)}</b> · #${setEsc(R.base_tag)}. Campo vuoto = originale.</p>` : ''}
-    ${R ? `<div class="sp-list"><button type="button" class="sp-item sp-act" data-sp="nm-logo">Aggiungi logo</button></div>` : ''}
+    ${R && !NO_LOGO_TEAMS.has(String(T.nm.espn || '').toLowerCase()) ? `<div class="sp-list"><button type="button" class="sp-item sp-act" data-sp="nm-logo">Aggiungi logo</button></div>` : ''}
     ${R && R.custom ? `<button type="button" class="sp-danger" data-sp="nm-reset">${T.confirmReset ? 'Tocca di nuovo per confermare' : R.added ? 'Elimina questo nome' : 'Ripristina originale'}</button>` : ''}
     <p class="sp-note sp-bottom">Vale per le grafiche e per i messaggi di LiveScore (dalla partita successiva se una è in corso).</p>
     <div id="setErr" class="sp-err"></div></div>`;
 }
+
+// Squadre senza stemma nelle grafiche: Juventus (le grafiche sono sue) e Italia (al posto dello stemma il nome).
+const NO_LOGO_TEAMS = new Set(['juventus','italy']);
 
 async function nmSave(reset) {
   const T = setTeam, D = setDraft;

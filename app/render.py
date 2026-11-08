@@ -445,6 +445,18 @@ class Renderer:
                 layers=None,
             )
 
+        if kind == 'xi' and data.get('team') == 'italy':
+            # Italia: la STARTING XI del LiveScore (campo delle probabili, solo nomi, colori della maglia).
+            from livescore.graphics import lineup as italy_xi
+
+            rows = italy_xi.FORMATIONS[data['formation']]
+            places = [1] + [place for row in rows for place in row]
+            players = [{'place': place, 'pos': '', 'last': name, 'first': ''}
+                       for place, name in zip(places, data['players'])]
+            names = teams(data)
+            return italy_xi.render_png(kit=data['kit'], formation=data['formation'], players=players,
+                                       home_name=names['home_name'], away_name=names['away_name'])
+
         if kind == 'xi':
             from graphics import starting_xi
 

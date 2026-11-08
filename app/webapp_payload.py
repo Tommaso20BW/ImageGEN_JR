@@ -18,7 +18,7 @@ VALID_COMPETITIONS = {value for _, value in COMPETITIONS}
 VALID_KITS = {'home', 'away', 'third'}
 from graphics.uefa import THEMES as UEFA_THEMES, theme_for as uefa_theme_for  # noqa: E402
 VALID_SIDES = {'home', 'away'}
-ITALY_KINDS = {'kick', 'second', 'half', 'end_of_90', 'full', 'goal', 'saved', 'stats'}
+ITALY_KINDS = {'kick', 'second', 'half', 'end_of_90', 'full', 'goal', 'saved', 'stats', 'xi'}
 ITALY_KITS = {'ita_home', 'ita_away'}
 GOAL_TYPES = {'goal', 'penalty', 'own', 'nophoto'}   # gol, rigore, autogol, senza foto
 VALID_POSES = {'arms_crossed', 'pointing'}
@@ -107,6 +107,20 @@ def _italy_state(incoming, kind, competition, kit, side, now):
             data['shootout'] = _score(incoming.get('shootout'), optional=True, shootout=True)
     elif kind == 'stats':
         data.update(_stats_fields(incoming))
+    elif kind == 'xi':
+        # STARTING XI dell'Italia (stessa grafica del LiveScore): modulo e 11 cognomi scritti a
+        # mano, in ordine: portiere, poi ogni linea dalla difesa all'attacco, da sinistra a destra.
+        from livescore.graphics import lineup as italy_xi
+        formation = str(incoming.get('formation') or '')
+        if formation not in italy_xi.FORMATIONS:
+            raise ValueError('Modulo non valido.')
+        names = incoming.get('players')
+        if not isinstance(names, list) or len(names) != 11:
+            raise ValueError('Scrivi gli 11 titolari.')
+        names = [_free_name(n, 30) for n in names]
+        if not all(names):
+            raise ValueError('Scrivi gli 11 titolari.')
+        data.update(formation=formation, players=names)
     return {'id': uuid.uuid4().hex[:10], 'data': data, 'status': 'ready', 'updated': now,
             'source': 'webapp-direct'}
 
