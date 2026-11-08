@@ -387,16 +387,22 @@ $('igPhraseSave').addEventListener('click', savePhrase);
 $('igText').addEventListener('input', renderPhrases);
 
 /* ----- ImageGEN sta per spegnersi ----- */
-// Ultimi 5 minuti al limite dei 60 (la sessione non si allunga più): riquadro come quelli di
-// errore ma neutro, in alto su ogni pagina, fino alla chiusura. Niente messaggi su Telegram.
+// Ultimi 5 minuti: riquadro come quelli di errore ma neutro, in alto su ogni pagina, fino alla
+// chiusura. Se c'è ancora margine, ricorda che dal cronometro si arriva a 60 minuti.
+// Niente messaggi su Telegram.
 function updateEndNotice() {
   const box = $('notice');
   const left = sessionExpiresAt - Date.now();
-  const show = !LIVE && sessionExpiresAt && sessionMaxAt && left > 0 && left <= 300000
-    && sessionExpiresAt >= sessionMaxAt - 60000;
+  const show = !LIVE && sessionExpiresAt && left > 0 && left <= 300000;
   if (!show) { box.style.display = 'none'; return; }
-  const text = `ImageGEN si spegne alle ${clock(sessionExpiresAt)}: è il limite di 60 minuti. ` +
-    'Invia le ultime grafiche; per continuare dopo, riavvia il workflow.';
+  const atMax = sessionMaxAt && sessionExpiresAt >= sessionMaxAt - 60000;
+  const text = !sessionMaxAt
+    ? `ImageGEN si spegne alle ${clock(sessionExpiresAt)}. Invia le ultime grafiche.`
+    : atMax
+    ? `ImageGEN si spegne alle ${clock(sessionExpiresAt)}: è il limite di 60 minuti. ` +
+      'Invia le ultime grafiche; per continuare dopo, riavvia il workflow.'
+    : `ImageGEN si spegne alle ${clock(sessionExpiresAt)}. ` +
+      `Per arrivare alle ${clock(sessionMaxAt)} tocca il cronometro in alto.`;
   if (box.textContent !== text) box.textContent = text;
   box.style.display = 'block';
 }

@@ -27,9 +27,7 @@ from graphics.starting_xi import MAX_PHOTO_BYTES, check_photo
 
 
 SESSION_DURATION_SECONDS = 30 * 60
-# Ultimi 5 minuti: un tocco nella Mini App allunga la sessione di 5 minuti, ogni volta.
-EXTEND_WHEN_LEFT_SECONDS = 300
-EXTEND_BY_SECONDS = 300
+# Più tempo solo a richiesta: tocco sul cronometro nella Mini App e conferma (fino al massimo).
 # Il job GitHub si ferma a 65 minuti (timeout-minutes in imagegen.yml): margine per
 # avvio e pulizia, la sessione non va oltre 60 minuti in tutto.
 SESSION_MAX_SECONDS = 60 * 60
@@ -496,8 +494,8 @@ class Service:
                 'max': int((time.time() + (self.started_at + SESSION_MAX_SECONDS - time.monotonic())) * 1000)}
 
     def extend(self, envelope=None):
-        """Ultimi 5 minuti + tocco nella Mini App: +5 minuti (fino a 60 minuti in tutto).
-        Con "to_max" (tocco sul cronometro e conferma): subito al massimo, 60 minuti dall'avvio."""
+        """Con "to_max" (tocco sul cronometro e conferma): subito al massimo, 60 minuti
+        dall'avvio. Senza, nessun allungamento: risponde solo con la scadenza attuale."""
         to_max = isinstance(envelope, dict) and envelope.get('to_max') is True
         with self.deadline_lock:
             now = time.monotonic()
@@ -507,11 +505,7 @@ class Service:
             if to_max and left > 0 and self.deadline < limit and not self.stopped:
                 self.deadline = limit
                 extended = True
-                log.info('SESSIONE', f'Sessione già al massimo · restano {(self.deadline - now) / 60:.0f} min')
-            elif 0 < left <= EXTEND_WHEN_LEFT_SECONDS + 5 and self.deadline < limit and not self.stopped:
-                self.deadline = min(self.deadline + EXTEND_BY_SECONDS, limit)
-                extended = True
-                log.info('SESSIONE', f'Sessione allungata · restano {(self.deadline - now) / 60:.0f} min')
+                log.info('SESSIONE', f'Sessione portata al massimo · restano {(self.deadline - now) / 60:.0f} min')
         return {**self.session_info(), 'extended': extended}
 
     def layouts(self):
@@ -1366,7 +1360,7 @@ class Service:
         log.info('SESSIONE', f'Pulsante inviato su Telegram · sessione aperta per {session_seconds / 60:.0f} min')
 
         try:
-            # self.deadline può spostarsi in avanti (extend) mentre la sessione è aperta.
+            # self.deadline può spostarsi in avanti (cronometro → massimo) mentre la sessione è aperta.
             while not self.stopped and time.monotonic() < self.deadline:
                 time.sleep(0.15)
         finally:

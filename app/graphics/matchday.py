@@ -2,12 +2,13 @@
 
 Livelli dal basso: foto caricata dall'utente, livello fisso Canva (sfumature,
 grana, titolo "matchday", JR), loghi casa/trasferta in alto a sinistra e la
-riga info in basso: STADIO | COMPETIZIONE | ORARIO CET | DATA.
+riga info in basso: STADIO | COMPETIZIONE | ORARIO CET/CEST | DATA.
 """
 import base64
 import json
 import re
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from functools import lru_cache
 
 from constants import COMPETITIONS
@@ -28,6 +29,7 @@ CENTERS = {'stadium': 132.87, 'sep1': 270.31, 'competition': 404.18, 'sep2': 542
 MONTHS = ('GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO',
           'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE')
 MAX_STADIUM = 28
+ROME = ZoneInfo('Europe/Rome')
 
 
 @lru_cache(maxsize=1)
@@ -53,9 +55,12 @@ def parse_info(stadium, kickoff, day):
         day = date.fromisoformat(str(day or ''))
     except ValueError:
         raise ValueError('Data non valida.') from None
+    hour, minute = int(match[1]), int(match[2])
+    # Ora legale (fine marzo - fine ottobre): CEST, altrimenti CET; decide la data della partita.
+    zone = datetime(day.year, day.month, day.day, hour, minute, tzinfo=ROME).tzname()
     return {
         'stadium': stadium,
-        'time': f'{int(match[1]):02d}:{match[2]} CET',
+        'time': f'{hour:02d}:{minute:02d} {zone}',
         'date': f'{day.day} {MONTHS[day.month - 1]} {day.year}',
     }
 

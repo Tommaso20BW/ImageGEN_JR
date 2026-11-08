@@ -782,10 +782,8 @@ async function closeWorkflow() {
 let timerHandle = null;
 let expiredShown = false;
 
-/* Ultimi 5 minuti: un tocco nella Mini App allunga la sessione di 5 minuti (servizio:
-   Service.extend, fino a 60 minuti in tutto per il limite del workflow GitHub). */
-let extending = false;
-let limitShown = false;
+/* Più tempo solo a richiesta: tocco sul cronometro e conferma (Service.extend con to_max,
+   fino a 60 minuti in tutto per il limite del workflow GitHub). */
 let sessionMaxAt = 0;     // ora massima della sessione (60 minuti dall'avvio)
 // La scadenza nel link è quella iniziale (30 minuti): se la sessione è stata allungata e la
 // Mini App si riapre dopo, quella vera arriva dal servizio. Finché non arriva, niente
@@ -803,29 +801,6 @@ function applySessionInfo(info) {
   }
   updateSessionTimer();
   if (!timerHandle && !sessionExpired()) timerHandle = setInterval(updateSessionTimer,1000);
-}
-async function maybeExtendSession() {
-  if (!sessionExpiresAt || !directBase || !session || extending) return;
-  const left = sessionExpiresAt - Date.now();
-  if (left <= 0 || left > 300000) return;
-  extending = true;
-  try {
-    const response = await netFetch(`${directBase}/extend`,{
-      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-      body:JSON.stringify({v:1, action:'extend', session})
-    }, 20000);
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok || !body.ok) return;
-    applySessionInfo(body);
-    if (body.extended) haptic('success');
-    else if (!limitShown && body.max && body.expires >= body.max - 1000) {
-      limitShown = true;
-      showError('Limite di 60 minuti raggiunto: dopo la scadenza riavvia ImageGen dal workflow.');
-    }
-  } catch (_) {
-  } finally {
-    extending = false;
-  }
 }
 // Tocco sul cronometro: popup per portare subito la sessione al massimo.
 const clock = ms => new Date(ms).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
@@ -869,10 +844,6 @@ document.addEventListener('click', e => {
   else if (e.target.closest('#tmGo')) extendToMax();
   else if (e.target.id === 'tmOv') closeTimeSheet();
 });
-
-// Qualsiasi tocco o tasto negli ultimi 5 minuti conta.
-document.addEventListener('pointerdown',() => { maybeExtendSession(); },{capture:true, passive:true});
-document.addEventListener('keydown',() => { maybeExtendSession(); },{capture:true});
 
 function updateSessionTimer() {
   const box = $('sessionTimer');
