@@ -31,6 +31,16 @@ class NotSent(TelegramError):
         self.retry_after = retry_after
 
 
+def _jpeg(png):
+    """PNG -> JPEG qualità 95 senza sottocampionamento del colore. Telegram ricomprime comunque
+    ogni foto in JPEG: a parità di risultato il file da caricare pesa meno della metà."""
+    import io
+    from PIL import Image
+    out = io.BytesIO()
+    Image.open(io.BytesIO(png)).convert('RGB').save(out, 'JPEG', quality=95, subsampling=0, optimize=True)
+    return out.getvalue()
+
+
 def authorized(update, chat_id):
     message = update.get('message') or {}
     sender = message.get('from') or {}
@@ -50,9 +60,12 @@ class Telegram:
         self.chat_id = str(chat_id)
         self.session = session or requests.Session()
 
-    def call(self, method, data=None, files=None, timeout=25):
+    def call(self, method, data=None, files=None, timeout=25, fresh=False):
+        """fresh: connessione nuova, chiusa subito dopo. Per l'invio delle foto: una connessione
+        rimasta aperta da tempo e chiusa da Telegram faceva restare l'invio appeso fino al timeout."""
+        session = requests.Session() if fresh else self.session
         try:
-            response = self.session.post(
+            response = session.post(
                 self.base + method,
                 data=data,
                 files=files,
@@ -108,6 +121,9 @@ class Telegram:
             raise TelegramError(
                 f'{method}: connessione non disponibile'
             ) from None
+        finally:
+            if fresh:
+                session.close()
 
     def validate_private_chat(self):
         chat = self.call('getChat', {'chat_id': self.chat_id})
@@ -204,16 +220,18 @@ class Telegram:
     def photo(self, png, filename='grafica.png'):
         """Invia la foto Telegram: PNG (bytes) oppure il file_id di una foto già inviata.
         In self.last_photo restano i file_id (grande e miniatura) della foto mandata."""
+        # Connessione: 10 s per aprirla; poi fino a 45 s per caricare la foto e avere la risposta.
         if isinstance(png, str):
-            result = self.call('sendPhoto', {'chat_id': self.chat_id, 'photo': png}, timeout=60)
+            result = self.call('sendPhoto', {'chat_id': self.chat_id, 'photo': png}, timeout=(10, 45), fresh=True)
         else:
             if not png.startswith(b'\x89PNG\r\n\x1a\n'):
                 raise TelegramError('Il renderer non ha prodotto un PNG')
             result = self.call(
                 'sendPhoto',
                 {'chat_id': self.chat_id},
-                files={'photo': (filename, png, 'image/png')},
-                timeout=60,
+                files={'photo': (filename.rsplit('.', 1)[0] + '.jpg', _jpeg(png), 'image/jpeg')},
+                timeout=(10, 45),
+                fresh=True,
             )
 
         try:
