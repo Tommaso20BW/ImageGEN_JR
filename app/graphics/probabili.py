@@ -122,8 +122,23 @@ def plain(text):
     return ''.join(c for c in unicodedata.normalize('NFKD', text) if not unicodedata.combining(c))
 
 
+PARTICLES = {'de', 'di', 'da', 'del', 'della', 'dei', 'van', 'von', 'dos', 'das', 'do', 'la', 'le', 'mc', 'mac', 'el', 'al'}
+
+
+def guest_surname(name):
+    """Amichevoli, giocatore fuori rosa: cognome da quello che è stato scritto.
+    Si toglie solo il nome di battesimo ("Kevin De Santis" -> "De Santis"); se il testo
+    comincia già con il cognome ("De Santis", "Rossi") resta com'è."""
+    words = name.split()
+    if len(words) < 2 or words[0].casefold() in PARTICLES:
+        return name
+    return ' '.join(words[1:])
+
+
 def label_name(player):
     """Nome sull'etichetta: cognome come su Canva, senza accenti."""
+    if not getattr(player, 'slug', ''):          # fuori rosa (amichevoli)
+        return plain(guest_surname(player.name)).upper()
     if player.slug in SHORT_NAMES:
         return SHORT_NAMES[player.slug].upper()
     singles = [a for a in player.aliases if '.' not in a and ' ' not in a.strip()]

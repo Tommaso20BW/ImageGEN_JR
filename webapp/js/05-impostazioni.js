@@ -119,6 +119,7 @@ function updateSetBadge() {
 function openSettings() {
   haptic('select');
   $('setQ').value = '';
+  loadTeamNames();
   $('setOv').classList.add('open');
   renderSetList();
   markSetSeen();
@@ -143,7 +144,8 @@ const customAliases = team => (team.override && team.override.aliases) || [];
 function changesText(team) {
   if (team.manual) return 'Aggiunta da te';
   const n = customAliases(team).length;
-  return [team.logo_custom ? 'Logo' : '', team.display_name ? 'Nome' : '', n ? `${n} nome ESPN${n > 1 ? ' in più' : ''}` : '']
+  return [team.logo_custom ? 'Logo' : '', team.display_name ? 'Nome' : '', team.override && team.override.tag ? 'Hashtag' : '',
+    n ? `${n} nome ESPN${n > 1 ? ' in più' : ''}` : '']
     .filter(Boolean).join(' · ');
 }
 
@@ -162,6 +164,9 @@ function renderSetList() {
     r.addEventListener('click', () => openFixSheet(x.name));
     box.appendChild(r);
   });
+  // Squadre senza logo (solo nome e hashtag di LiveScore): si trovano solo cercando.
+  const noLogo = () => (teamNames || []).filter(r => !findTeamByName(r.espn));
+  const addNames = list => list.forEach(r => box.appendChild(nmRow(r)));
   const addTeams = list => list.forEach(team => {
     const r = setRow(team, displayTeamName(team.name), team.override_key ? changesText(team) : (customAliases(team)[0] || ''));
     r.addEventListener('click', () => openTeamSheet(team));
@@ -169,15 +174,27 @@ function renderSetList() {
   });
   if (qn) {
     const found = searchTeams(teams, q);
+    const names = noLogo().filter(r => [r.espn, r.name, r.tag].some(v => norm(v).includes(qn))).slice(0, 40);
     if (missing.length) { grp('Da sistemare'); addMissing(); }
     if (found.length) { grp('Squadre'); addTeams(found); }
-    if (!missing.length && !found.length) empty('Nessuna squadra trovata.');
+    if (names.length) { grp('Senza logo'); addNames(names); }
+    if (!missing.length && !found.length && !names.length) {
+      empty(teamNamesJob ? 'Cerco…' : 'Nessuna squadra trovata.');
+      if (!teamNamesJob) {
+        const b = setRow(null, `Aggiungi “${q.trim()}”`, 'Nome ESPN nuovo: nome mostrato e hashtag');
+        b.classList.add('nm');
+        b.addEventListener('click', () => openNameSheet(null, q.trim()));
+        box.appendChild(b);
+      }
+    }
     return;
   }
+  const namesMine = noLogo().filter(r => r.custom);
   if (missing.length) { grp('Da sistemare'); addMissing(); }
   else if (espnTeamsJob) empty('Controllo il calendario ESPN…');
-  if (modified.length) { grp('Modificate'); addTeams(modified); }
-  if (!missing.length && !modified.length && !espnTeamsJob) empty('Tutto a posto. Cerca una squadra per cambiarne logo o nome.');
+  if (modified.length || namesMine.length) { grp('Modificate'); addTeams(modified); addNames(namesMine); }
+  if (!missing.length && !modified.length && !namesMine.length && !espnTeamsJob)
+    empty('Tutto a posto. Cerca una squadra per cambiarne logo, nome o hashtag.');
 }
 
 /* --- pannello: modifica squadra --- */
@@ -292,6 +309,7 @@ function teamState(team) {
     custom:team.display_name || '', nameOrig:team.manual ? team.name : baseDisplayName(team.name),
     locked:team.manual ? [] : [...new Set([team.name, ...(team.aliases_fclogo || team.aliases || [])])],
     aliases:customAliases(team).slice(), hasCustom:!!team.logo_custom,
+    tag:(team.override && team.override.tag) || '', tagOrig:baseTagOf(team),
     current:team.logo || '', fclogo:team.logo_custom ? (team.logo_fclogo || '') : (team.manual ? '' : (team.logo || ''))
   };
 }
@@ -331,6 +349,7 @@ function spPush(page) {
   if (page === 'logo') setDraft = {logo:'keep', preview:'', aspect:1, frame:null, repos:false, moved:false,
     ...(T.isNew && T.pending ? {logo:T.pending.logo, preview:T.pending.preview, aspect:T.pending.aspect, frame:{...T.pending.frame}} : {})};
   if (page === 'name') setDraft = {name:setShownName(T)};
+  if (page === 'tag') setDraft = {tag:T.tag || ''};
   if (page === 'espn') setDraft = {aliases:T.aliases.slice(), adding:false};
   if (page === 'link') setDraft = {q:''};
   setStack.push(page);
@@ -373,6 +392,7 @@ function renderSetPage() {
       <div class="sp-list">
         ${spRow('Logo', isNew ? (T.pending ? 'Pronto' : 'Da aggiungere') : (T.hasCustom ? 'Tuo' : 'fclogo'), 'logo', isNew && !T.pending)}
         ${spRow('Nome', setEsc(setShownName(T)), 'name')}
+        ${spRow('Hashtag', '#' + setEsc(T.tag || T.tagOrig || ''), 'tag')}
         ${spRow('Nomi ESPN', String(nEspn), 'espn')}
       </div>
       ${isNew ? `<button type="button" class="sp-cta" data-sp="create" ${T.pending && !setBusy ? '' : 'disabled'}>${setBusy ? 'Creo…' : 'Crea squadra'}</button>`
@@ -404,6 +424,13 @@ function renderSetPage() {
       <div class="sp-list"><button type="button" class="sp-item sp-act" data-sp="name-orig">Ripristina originale</button></div>`}
       <p class="sp-note sp-bottom">Vale per la mini app, le grafiche e LiveScore.</p>
       <div id="setErr" class="sp-err"></div></div>`;
+  } else if (page === 'tag') {
+    html = spNav('Hashtag', {save:true, cancel:true, saveLabel:T.isNew ? 'Fine' : 'Salva'}) + `<div class="sp-body">
+      <div class="sp-lbl">Hashtag</div>
+      <div class="sp-list"><label class="sp-item"><span>#</span><input id="spTag" class="sp-field sp-inline" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" value="${setEsc(D.tag)}" placeholder="${setEsc(T.tagOrig || '')}"></label></div>
+      ${T.tagOrig ? `<p class="sp-note">Originale: <b>#${setEsc(T.tagOrig)}</b>. Campo vuoto = originale.</p>` : ''}
+      <p class="sp-note sp-bottom">Nei messaggi di LiveScore, es. #Juve${setEsc(D.tag || T.tagOrig || '')}.</p>
+      <div id="setErr" class="sp-err"></div></div>`;
   } else if (page === 'espn') {
     html = spNav('Nomi ESPN', {save:true, cancel:true, saveLabel:T.isNew ? 'Fine' : 'Salva'}) + `<div class="sp-body">
       ${T.locked && T.locked.length ? `<div class="sp-lbl">Dal catalogo</div><div class="sp-list">${T.locked.map(a => `<div class="sp-item"><span>${setEsc(a)}</span><span class="sp-v">${spIco('lock', 16)}</span></div>`).join('')}</div>` : ''}
@@ -414,6 +441,10 @@ function renderSetPage() {
           : `<button type="button" class="sp-item sp-act" data-sp="add">Aggiungi nome</button>`}</div>
       <p class="sp-note">Se ESPN scrive la squadra con uno di questi nomi, si usano questo logo e questo nome.</p>
       <div id="setErr" class="sp-err"></div></div>`;
+  } else if (page === 'nm') {
+    box.innerHTML = nmPage();
+    ['nmEspn', 'nmName', 'nmTag'].forEach(id => { const el = $(id); if (el) el.addEventListener('input', () => { D[id.slice(2).toLowerCase()] = el.value; }); });
+    return;
   } else if (page === 'fix') {
     html = spNav('') + `<div class="sp-body">
       <div class="sp-hero">${spLogo('', 92)}<h2>${setEsc(T.espn)}</h2><p>Nel calendario ESPN, senza logo</p></div>
@@ -451,6 +482,7 @@ function renderSetPage() {
     input.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); spUseFclogo(); } });
   }
   if (page === 'name') $('spName').addEventListener('input', ev => { D.name = ev.target.value; });
+  if (page === 'tag') $('spTag').addEventListener('input', ev => { D.tag = ev.target.value.replace(/^#+/, ''); });
   if (page === 'espn' && D.adding) setTimeout(() => $('spAlias') && $('spAlias').focus(), 30);
 }
 
@@ -546,6 +578,7 @@ async function spUpload(file) {
 
 async function spOnSave() {
   const page = setStack[setStack.length - 1], T = setTeam, D = setDraft;
+  if (page === 'nm') { nmSave(false); return; }
   if (page === 'logo') {
     if (T.isNew) {      // bozza: il logo si salva con "Crea squadra"
       if (D.preview) T.pending = {logo:D.logo, preview:D.preview, aspect:D.aspect, frame:{...D.frame}};
@@ -557,6 +590,9 @@ async function spOnSave() {
     const name = String(D.name || '').trim();
     if (T.isNew) { T.custom = name || T.espn; spPop(); return; }
     spAfterSave(await spSave({name:norm(name) === norm(T.nameOrig) ? '' : name}));
+  } else if (page === 'tag') {
+    if (T.isNew) { T.tag = D.tag; spPop(); return; }
+    spAfterSave(await spSave({tag:D.tag}));
   } else if (page === 'espn') {
     if (T.isNew) { T.aliases = D.aliases.slice(); spPop(); return; }
     spAfterSave(await spSave({aliases:D.aliases}));
@@ -592,13 +628,18 @@ function initSettings() {
     }
     else if (act === 'rm') { D.aliases.splice(Number(btn.dataset.i), 1); renderSetPage(); }
     else if (act === 'to-new') {
-      setTeam = {isNew:true, espn:T.espn, custom:'', aliases:[T.espn], locked:[], pending:null};
+      setTeam = {isNew:true, espn:T.espn, custom:'', aliases:[T.espn], locked:[], pending:null, tag:'', tagOrig:baseTagOf({name:T.espn})};
       setStack = ['fix', 'new']; renderSetPage();
     }
     else if (act === 'create') {
       const p = T.pending;
-      const body = await spSave({base:null, key:'', name:T.custom || T.espn, aliases:T.aliases, logo:p.logo, logo_frame:p.frame});
+      const body = await spSave({base:null, key:'', name:T.custom || T.espn, aliases:T.aliases, tag:T.tag || '', logo:p.logo, logo_frame:p.frame});
       if (body) spAfterSave(body);
+    }
+    else if (act === 'nm-logo') { openFixSheet(T.nm.espn); }
+    else if (act === 'nm-reset') {
+      if (!T.confirmReset) { T.confirmReset = true; renderSetPage(); return; }
+      nmSave(true);
     }
     else if (act === 'reset') {
       if (!T.confirmReset) { T.confirmReset = true; renderSetPage(); return; }
@@ -608,4 +649,84 @@ function initSettings() {
   $('setPage').addEventListener('keydown', ev => {
     if (ev.key === 'Enter' && ev.target.id === 'spAlias') { ev.preventDefault(); $('setPage').querySelector('[data-sp="add-ok"]').click(); }
   });
+}
+
+
+/* ---------- Impostazioni › Squadre senza logo: nome mostrato e hashtag ----------
+   Elenco di LiveScore (data/teams.json) con le modifiche salvate dal servizio in
+   team_overrides/names.json (repo degli asset). Le squadre con logo tengono nome e hashtag
+   nelle loro correzioni (overrides.json). Valgono per le grafiche e per i messaggi LiveScore. */
+
+// Hashtag originale di una squadra con logo: quello di LiveScore per uno dei suoi nomi ESPN.
+function baseTagOf(team) {
+  const names = [team.name, ...(team.aliases_fclogo || team.aliases || [])].filter(Boolean).map(norm);
+  const row = (teamNames || []).find(r => names.includes(norm(r.espn)));
+  return row ? row.base_tag : String(displayTeamName(team.name) || team.name || '').replace(/\s+/g, '');
+}
+let teamNames = null, teamNamesJob = null;
+
+function loadTeamNames(force = false) {
+  if (!directBase || !session) return null;
+  if ((teamNames && !force) || teamNamesJob) return teamNamesJob;
+  teamNamesJob = setPost({action:'names_list'})
+    .then(body => { teamNames = body.teams || []; })
+    .catch(err => setToast(err.message || 'Nomi non caricati.', true))
+    .finally(() => { teamNamesJob = null; if ($('setOv').classList.contains('open') && !setStack.length) renderSetList(); });
+  return teamNamesJob;
+}
+
+function nmRow(row) {
+  const r = setRow(null, row.name, `${row.espn} · #${row.tag}`);
+  r.classList.add('nm');
+  r.addEventListener('click', () => openNameSheet(row));
+  return r;
+}
+
+function openNameSheet(row, espn = '') {
+  haptic('select');
+  setTeam = {nm:row, isNew:!row};
+  // Campo vuoto = originale.
+  setDraft = {espn:row ? row.espn : espn,
+    name:row && row.custom && row.name !== row.base_name ? row.name : '',
+    tag:row && row.custom && row.tag !== row.base_tag ? row.tag : ''};
+  setStack = ['nm'];
+  renderSetPage();
+}
+
+function nmPage() {
+  const T = setTeam, D = setDraft, R = T.nm;
+  const baseName = R ? R.base_name : (D.espn || 'Nome mostrato'), baseTag = R ? R.base_tag : 'Hashtag';
+  return spNav(T.isNew ? 'Nuovo nome' : '', {save:true, cancel:true}) + `<div class="sp-body">
+    ${T.isNew ? '' : `<div class="sp-hero"><h2>${setEsc(R.name)}</h2><p>#${setEsc(R.tag)}</p></div>`}
+    <div class="sp-lbl">Nome ESPN</div>
+    <div class="sp-list">${T.isNew
+      ? `<input id="nmEspn" class="sp-field" type="text" maxlength="60" autocomplete="off" spellcheck="false" value="${setEsc(D.espn)}" placeholder="Come lo scrive ESPN">`
+      : `<div class="sp-item"><span>${setEsc(R.espn)}</span><span class="sp-v">${spIco('lock', 16)}</span></div>`}</div>
+    <div class="sp-lbl">Nome mostrato</div>
+    <div class="sp-list"><input id="nmName" class="sp-field" type="text" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false" value="${setEsc(D.name)}" placeholder="${setEsc(baseName)}"></div>
+    <div class="sp-lbl">Hashtag</div>
+    <div class="sp-list"><label class="sp-item"><span>#</span><input id="nmTag" class="sp-field sp-inline" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" value="${setEsc(D.tag)}" placeholder="${setEsc(baseTag)}"></label></div>
+    ${R ? `<p class="sp-note">Originale: <b>${setEsc(R.base_name)}</b> · #${setEsc(R.base_tag)}. Campo vuoto = originale.</p>` : ''}
+    ${R ? `<div class="sp-list"><button type="button" class="sp-item sp-act" data-sp="nm-logo">Aggiungi logo</button></div>` : ''}
+    ${R && R.custom ? `<button type="button" class="sp-danger" data-sp="nm-reset">${T.confirmReset ? 'Tocca di nuovo per confermare' : R.added ? 'Elimina questo nome' : 'Ripristina originale'}</button>` : ''}
+    <p class="sp-note sp-bottom">Vale per le grafiche e per i messaggi di LiveScore (dalla partita successiva se una è in corso).</p>
+    <div id="setErr" class="sp-err"></div></div>`;
+}
+
+async function nmSave(reset) {
+  const T = setTeam, D = setDraft;
+  const team = reset ? {espn:T.nm.espn, reset:true}
+    : {espn:T.isNew ? D.espn : T.nm.espn, name:D.name, tag:String(D.tag || '').replace(/^#+/, '')};
+  if (!String(team.espn || '').trim()) { $('setErr').textContent = 'Scrivi il nome ESPN.'; return; }
+  setBusy = true; renderSetPage();
+  try {
+    const body = await setPost({action:'name_save', team});
+    setBusy = false;
+    await loadTeamNames(true);
+    closeSetSheet(); renderSetList();
+    if (body.remote) setToast(reset ? 'Ripristinato' : 'Salvato'); else setToast(`Salvato solo per questa sessione (${body.warning})`, true);
+  } catch (err) {
+    setBusy = false; renderSetPage();
+    $('setErr').textContent = err.message || 'Salvataggio non riuscito.';
+  }
 }

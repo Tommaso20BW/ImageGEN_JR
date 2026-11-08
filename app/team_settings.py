@@ -237,8 +237,13 @@ def build_change(request, manifest_rows, current, photos, assets=None):
                     normalize_team_name(n) for n in [other.get('name'), *(other.get('aliases') or [])] if n}:
                 raise ValueError(f'«{alias}» è già collegato a {other.get("name") or other.get("base")}.')
 
-    logo, png = request.get('logo', 'keep'), None
     old = current.get(key) or {}
+    # Hashtag (senza #): se la richiesta non lo porta resta quello salvato.
+    tag = re.sub(r'[\s#]+', '', str(request['tag'] if 'tag' in request else old.get('tag') or ''))[:TAG_MAX]
+    if tag and not re.fullmatch(r'\w+', tag, re.U):
+        raise ValueError("L'hashtag può avere solo lettere e numeri (senza spazi né simboli).")
+
+    logo, png = request.get('logo', 'keep'), None
     frame = request.get('logo_frame')
     if logo == 'keep':
         logo = old.get('logo')
@@ -258,7 +263,7 @@ def build_change(request, manifest_rows, current, photos, assets=None):
         logo = f'logos/{_slug(base or name or key)}-{hashlib.sha256(png).hexdigest()[:8]}.png'
     if not base and not (name and logo):
         raise ValueError('Per una squadra nuova servono nome e logo.')
-    entry = team_overrides.clean_entry({'base': base, 'name': name, 'aliases': aliases, 'logo': logo})
+    entry = team_overrides.clean_entry({'base': base, 'name': name, 'aliases': aliases, 'logo': logo, 'tag': tag})
     return key, entry, png
 
 
@@ -337,3 +342,90 @@ def save(request, assets, manifest_rows, photos, env=None):
     else:
         log.info('SALVATAGGIO', f'Correzione squadra pubblicata | {key}')
     return {'key': key, 'entry': entry, 'remote': ok, 'warning': '' if ok else why}
+
+
+# ---------- Impostazioni › Nomi: nome italiano e hashtag per ogni nome ESPN ----------
+# Base: data/teams.json di LiveScore ({nome ESPN: [nome, hashtag]}). Le modifiche vanno in
+# team_overrides/names.json nel repo degli asset (lette da LiveScore e da ImageGen).
+NAME_MAX = 40
+TAG_MAX = 30
+
+
+def _names_file(assets):
+    return Path(assets) / team_overrides.DIRNAME / team_overrides.NAMES_FILE
+
+
+def _read_names(assets):
+    try:
+        return json.loads(_names_file(assets).read_text(encoding='utf-8')).get('teams') or {}
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+def names_list(assets):
+    """Tutti i nomi ESPN: [{espn, name, tag, base_name, base_tag, custom, added}] in ordine di nome."""
+    from livescore.core.team_names import TEAM_MAP
+    custom = _read_names(assets)
+    out = {}
+    for espn, value in TEAM_MAP.items():
+        name, tag = (list(value) + ['', ''])[:2] if isinstance(value, (list, tuple)) else (str(value), '')
+        out[espn] = {'espn': espn, 'base_name': name, 'base_tag': tag or name.replace(' ', ''), 'added': False}
+    for espn, entry in custom.items():
+        row = out.setdefault(espn, {'espn': espn, 'base_name': espn, 'base_tag': espn.replace(' ', ''), 'added': True})
+        row['custom'] = {k: v for k, v in (entry or {}).items() if k in ('name', 'tag') and v}
+    for row in out.values():
+        c = row.get('custom') or {}
+        row['name'] = c.get('name') or row['base_name']
+        row['tag'] = c.get('tag') or row['base_tag']
+        row['custom'] = bool(c)
+    return sorted(out.values(), key=lambda r: r['name'].casefold())
+
+
+def save_name(request, assets, env=None):
+    """{espn, name?, tag?, reset?} -> salva nome/hashtag di un nome ESPN. Ritorna {row, remote, warning}."""
+    from livescore.core.team_names import TEAM_MAP
+    env = os.environ if env is None else env
+    espn = ' '.join(str(request.get('espn') or '').split())
+    if not espn or len(espn) > 60:
+        raise ValueError('Scrivi il nome ESPN della squadra.')
+    known = next((k for k in TEAM_MAP if k.casefold() == espn.casefold()), None)
+    with _lock:
+        current = _read_names(assets)
+        key = known or next((k for k in current if k.casefold() == espn.casefold()), espn)
+        new = dict(current)
+        if request.get('reset'):
+            new.pop(key, None)
+        else:
+            name = ' '.join(str(request.get('name') or '').split())[:NAME_MAX]
+            tag = re.sub(r'[\s#]+', '', str(request.get('tag') or ''))[:TAG_MAX]
+            if tag and not re.fullmatch(r'[\w]+', tag, re.U):
+                raise ValueError("L'hashtag può avere solo lettere e numeri (senza spazi né simboli).")
+            base = TEAM_MAP.get(key) if known else None
+            base_name, base_tag = (list(base) + ['', ''])[:2] if base else ('', '')
+            entry = {}
+            if name and name != base_name:
+                entry['name'] = name
+            if tag and tag != (base_tag or base_name.replace(' ', '')):
+                entry['tag'] = tag
+            if not known and not name:
+                raise ValueError('Scrivi il nome da mostrare.')
+            if not known and 'name' not in entry:
+                entry['name'] = name
+            if entry:
+                new[key] = entry
+            else:
+                new.pop(key, None)
+        text = json.dumps({'version': 1, 'teams': dict(sorted(new.items(), key=lambda kv: kv[0].casefold()))},
+                          ensure_ascii=False, indent=2) + '\n'
+        path = _names_file(assets)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding='utf-8')
+        what = 'ripristinato' if key not in new else 'aggiornato'
+        ok, why = _commit({f'{team_overrides.DIRNAME}/{team_overrides.NAMES_FILE}': text.encode('utf-8')},
+                          f'Nomi squadre: {what} {key} (mini app ImageGen)', env)
+    if not ok:
+        log.warn('SALVATAGGIO', f'Nome squadra salvato solo per questa sessione ({why})')
+    else:
+        log.info('SALVATAGGIO', f'Nome squadra pubblicato | {key}')
+    row = next((r for r in names_list(assets) if r['espn'] == key), None)
+    return {'row': row, 'remote': ok, 'warning': '' if ok else why}

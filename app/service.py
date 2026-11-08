@@ -792,7 +792,7 @@ class Service:
             return []
 
     def settings(self, envelope):
-        """Impostazioni › Squadre e loghi: anteprima logo e salvataggio di una squadra."""
+        """Impostazioni › Loghi (anteprima e salvataggio) e › Nomi (nome italiano e hashtag)."""
         import logo_bundle
         import team_settings
         from graphics.common import _logo_rows, _manifest_rows, asset_dir
@@ -843,6 +843,10 @@ class Service:
                 return {'preview': team_settings.preview_uri(mono, 480), 'aspect': w / h, 'frame': frame, 'photo_id': photo_id}
             w, h = Image.open(io.BytesIO(mono)).size
             return {'preview': team_settings.preview_uri(mono, 480), 'aspect': w / h, 'frame': frame}
+        if action == 'names_list':       # Impostazioni › Nomi: nome ESPN -> nome italiano e hashtag
+            return {'teams': team_settings.names_list(asset_dir())}
+        if action == 'name_save':
+            return team_settings.save_name(envelope.get('team') or {}, asset_dir())
         if action != 'team_save':
             raise ValueError('Richiesta non valida.')
         assets = str(asset_dir())

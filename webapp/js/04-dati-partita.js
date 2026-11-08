@@ -101,12 +101,12 @@ function validateCurrent() {
   if (step === 'xi11') {
     const n = pxiRead.length;
     if (n !== 11) { showError(`Servono 11 giocatori (ora ${n}).`); return false; }
-    const unknown = pxiRead.find(r => !r.player);
+    const unknown = isFriendly() ? null : pxiRead.find(r => !r.player);   // amichevoli: chiunque
     if (unknown) { showError(`${unknown.label} non è nella rosa: serve la sua foto.`); return false; }
     if (new Set(pxiPicks).size !== 11) { showError('Lo stesso giocatore compare due volte.'); return false; }
     if (!pxiModule) { showError('Scegli il modulo.'); return false; }
     const keeper = pxiRead[0].player;
-    if (keeper.role !== 'goalkeeper') { showError(`Il primo deve essere il portiere (ora ${keeper.name}).`); return false; }
+    if (keeper && keeper.role !== 'goalkeeper') { showError(`Il primo deve essere il portiere (ora ${keeper.name}).`); return false; }
   }
 
   if (step === 'squad') {

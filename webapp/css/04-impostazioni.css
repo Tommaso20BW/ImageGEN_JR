@@ -12,6 +12,7 @@
 .set-search{background:var(--surface);box-shadow:var(--shadow-soft);margin-top:14px}
 .set-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;font-weight:600;font-size:16px}
 .set-grp{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:18px 2px 8px}
+.set-row.nm .set-ph{display:none}
 .set-row{display:flex;align-items:center;gap:12px;width:100%;min-height:62px;padding:10px 14px;margin-bottom:8px;border:0;border-radius:14px;
   background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer;box-shadow:var(--shadow-soft)}
 .set-row .logo,.set-row .logo img,.set-row .logo.fallback{width:36px;height:36px}

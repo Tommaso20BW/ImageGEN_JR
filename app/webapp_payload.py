@@ -436,7 +436,8 @@ def _build_state(envelope, catalog, now, expected_session):
         names = incoming.get('players')
         if not isinstance(names, list) or len(names) != 11:
             raise ValueError('Scegli 11 giocatori.')
-        players = [_canonical_player(catalog, n) for n in names]
+        # Amichevoli: solo nomi, niente foto, quindi va bene anche chi non è in rosa.
+        players = [(_lineup_name if friendly else _canonical_player)(catalog, n) for n in names]
         if len(set(players)) != 11:
             raise ValueError('Lo stesso giocatore è stato scelto due volte.')
         data['module'] = module

@@ -452,13 +452,16 @@ class Renderer:
             from graphics import probabili
             from livescore.graphics import goal as g
 
+            from types import SimpleNamespace
             roster = {p.name: p for p in g.load_players()}
+            # Amichevoli: chi non è in rosa ha solo il nome scritto (niente foto nella grafica).
+            guest = lambda name: SimpleNamespace(name=name, slug='', aliases=[], role='')
             return probabili.render(
                 **teams(data),
                 kit=data['kit'],
                 shirt=data.get('shirt'),
                 module=data['module'],
-                players=[roster[name] for name in data['players']],
+                players=[roster.get(name) or guest(name) for name in data['players']],
                 layout=data.get('layout'),
             )
 

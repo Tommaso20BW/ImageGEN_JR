@@ -490,18 +490,19 @@ function readPxiText() {
     const player = findPlayer(label);
     return {player, label:player ? surnameOf(player) : cleanName(label)};
   });
-  pxiPicks = pxiRead.map(r => r.player ? r.player.name : '');
+  // Amichevoli: chi non è in rosa va bene lo stesso (solo nomi, nessuna foto).
+  pxiPicks = pxiRead.map(r => r.player ? r.player.name : isFriendly() ? r.label : '');
   renderModuleButton();
   const roles = rolesOf(pxiModule);
   const box = $('pxiParsed');
   box.innerHTML = '';
   pxiRead.forEach((r,i) => {
     const row = document.createElement('div');
-    row.className = 'parsed-row' + (r.player ? '' : ' new');
+    row.className = 'parsed-row' + (r.player || isFriendly() ? '' : ' new');
     row.innerHTML = '<span class="pr-num pr-role"></span><span class="pr-name"></span><span class="pr-role"></span>';
     row.children[0].textContent = roles[i] || '';
     row.children[1].textContent = r.label.toUpperCase();
-    row.children[2].textContent = r.player ? '' : 'non in rosa';
+    row.children[2].textContent = r.player || isFriendly() ? '' : 'non in rosa';
     box.appendChild(row);
   });
   $('pxiSummary').textContent = `${pxiRead.length} / 11 giocatori`;
