@@ -111,17 +111,23 @@ def _mark(file):
     return 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode(), out.width / out.height
 
 
+# Logo sulla pagina sinistra: dell'inquadratura si vede solo la metà verso la piega
+# (da circa 575 px a 1080). Stessa regola per tutti: bordo destro a LOGO_RIGHT (non entra
+# nella piega), altezza al massimo LOGO_MAX_H (margine sopra e sotto), larghezza al massimo
+# LOGO_MAX_W: così ogni logo è tagliato a sinistra più o meno della stessa parte.
+LOGO_RIGHT, LOGO_MAX_W, LOGO_MAX_H, LOGO_CY = 1000, 680, 1050, 756
+
+
 def left_page(competition):
-    """Logo grande della competizione: stessa area per tutti (uno quadrato non sembra più piccolo),
-    un po' verso la piega così l'inquadratura ne mostra di più. Amichevoli: pagina senza logo."""
+    """Logo grande della competizione, tagliato a sinistra dall'inquadratura in modo uguale
+    per tutti (LOGO_*). Amichevoli: pagina senza logo."""
     light, base, dark, _table, mark, _name = PALETTES[competition]
     logo = ''
     if mark:
         uri, ratio = _mark(mark)
-        h = min((1_000_000 / ratio) ** .5, 1400)
+        h = min(LOGO_MAX_H, LOGO_MAX_W / ratio)
         w = h * ratio
-        cx, cy = 615, 790
-        logo = (f'<img src="{uri}" style="position:absolute;left:{cx - w / 2}px;top:{cy - h / 2}px;'
+        logo = (f'<img src="{uri}" style="position:absolute;left:{LOGO_RIGHT - w}px;top:{LOGO_CY - h / 2}px;'
                 f'width:{w}px;height:{h}px;opacity:.94">')
     return (f'<!doctype html><html><head><meta charset="utf-8"><style>{_page_css(light, base, dark)}</style></head>'
             f'<body>{logo}{READY}</body></html>')
