@@ -127,14 +127,18 @@ def _canonical_player(catalog, value, *, goalkeeper=False):
 
 
 def _lineup_name(catalog, value):
-    """Starting XI: nome del catalogo se il giocatore è in rosa, altrimenti il nome scritto."""
-    try:
-        return _canonical_player(catalog, value)
-    except ValueError:
-        name = ' '.join(str(value or '').split())
-        if not name or len(name) > 30:
-            raise ValueError('Nome giocatore non valido.')
-        return name
+    """Amichevoli: nome del catalogo se il giocatore è in rosa, altrimenti il nome scritto.
+    In rosa solo se il nome (o un alias, es. "McKennie") corrisponde per intero: con la ricerca
+    per parte del nome un nome inventato ("Wes", "Kennie") diventava un giocatore della rosa."""
+    name = ' '.join(str(value or '').split())
+    if not name or len(name) > 30:
+        raise ValueError('Nome giocatore non valido.')
+    from livescore.graphics import goal as g
+    key = g.normalize_name(name)
+    for player in g.load_players():
+        if key in {g.normalize_name(n) for n in [player.name, *player.aliases]}:
+            return player.name
+    return name
 
 
 def _photo_id(value):
