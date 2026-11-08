@@ -171,7 +171,8 @@ jobs:
           CLOUDFLARED="${RUNNER_TEMP}/cloudflared"
           LOG="${RUNNER_TEMP}/cloudflared.log"
 
-          curl -fsSL \
+          # Se GitHub risponde con un errore temporaneo (es. 504) si riprova invece di fermarsi.
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
             https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
             -o "$CLOUDFLARED"
           chmod +x "$CLOUDFLARED"
