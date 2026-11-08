@@ -3,7 +3,7 @@
 Foto: canva/squad_list_rivista.jpg negli asset (rivista aperta con pagine bianche, tavolo e
 riviste grigi). Si disegnano due pagine piatte in HTML:
 - sinistra: logo della competizione grande, centrato e tagliato dall'inquadratura;
-- destra: "THE SQUAD" verticale lungo la piega, loghi delle due squadre, nomi su due colonne
+- destra: loghi delle due squadre, nomi su due colonne uguali e simmetriche
   (in ordine alfabetico, grandezza adattiva), competizione e numero di giocatori.
 Poi si "stampano" sulle pagine della foto seguendo la curvatura della carta (patch di Coons
 dai quattro bordi), con le ombre e la piega della foto sopra; tavolo e riviste prendono il
@@ -30,7 +30,7 @@ PW, PH = 1080, 1512                      # pagina piatta (design)
 VIEW = dict(cx=1150, cy=1210, width=1230, angle=3.9)
 CURVE = 1.0                              # quanto il disegno segue la curvatura della carta (1 = tutta)
 TEXTURE = .045                           # grana della carta
-VERTICAL = 'THE SQUAD'                   # scritta verticale lungo la piega ('' = nessuna: contenuto centrato)
+VERTICAL = ''                            # scritta verticale lungo la piega (es. 'THE SQUAD'; '' = nessuna, contenuto centrato)
 
 # pagina (chiaro, base, scuro), colore del tavolo, logo competizione, nome
 PALETTES = {
@@ -42,7 +42,7 @@ PALETTES = {
     'ita.super_cup': ('#2f86e8', '#1258b8', '#082c66', (12, 50, 110), 'supercoppa-mark.png', 'SUPERCOPPA ITALIANA'),
     'uefa.super_cup': ('#2f7fe0', '#14479e', '#081f55', (14, 40, 100), 'usc-mark.png', 'SUPERCOPPA UEFA'),
     'fifa.cwc': ('#4a4232', '#2a251b', '#100e0a', (60, 48, 22), 'cwc-mark.png', 'MONDIALE PER CLUB'),
-    # amichevoli (e competizioni senza tema): grigio, logo JR
+    # amichevoli (e competizioni senza tema): grigio, pagina sinistra senza logo
     'club.friendly': ('#5d6672', '#363c45', '#16191e', (40, 44, 52), None, 'AMICHEVOLE'),
 }
 
@@ -113,51 +113,63 @@ def _mark(file):
 
 def left_page(competition):
     """Logo grande della competizione: stessa area per tutti (uno quadrato non sembra più piccolo),
-    un po' verso la piega così l'inquadratura ne mostra di più."""
+    un po' verso la piega così l'inquadratura ne mostra di più. Amichevoli: pagina senza logo."""
     light, base, dark, _table, mark, _name = PALETTES[competition]
-    uri, ratio = _mark(mark)
-    h = min((1_000_000 / ratio) ** .5, 1400)
-    w = h * ratio
-    cx, cy = 615, 790
-    return (f'<!doctype html><html><head><meta charset="utf-8"><style>{_page_css(light, base, dark)}'
-            f'.mark{{position:absolute;left:{cx - w / 2}px;top:{cy - h / 2}px;width:{w}px;height:{h}px;opacity:.94}}'
-            f'</style></head><body><img class="mark" src="{uri}">{READY}</body></html>')
+    logo = ''
+    if mark:
+        uri, ratio = _mark(mark)
+        h = min((1_000_000 / ratio) ** .5, 1400)
+        w = h * ratio
+        cx, cy = 615, 790
+        logo = (f'<img src="{uri}" style="position:absolute;left:{cx - w / 2}px;top:{cy - h / 2}px;'
+                f'width:{w}px;height:{h}px;opacity:.94">')
+    return (f'<!doctype html><html><head><meta charset="utf-8"><style>{_page_css(light, base, dark)}</style></head>'
+            f'<body>{logo}{READY}</body></html>')
 
 
 def right_page(competition, names, home, away):
-    """Tutto il più grande possibile: la lista cresce finché sta nella pagina e, con pochi nomi,
-    le righe si allargano per riempire lo spazio."""
+    """Pagina destra impaginata su due colonne uguali, simmetriche rispetto al centro: loghi delle
+    squadre, nomi e riga finale stanno ognuno al centro della sua colonna. La lista è grande quanto
+    può e, con pochi nomi, le righe si allargano: il blocco resta centrato in verticale."""
     light, base, dark, _table, _mark_file, comp_name = PALETTES[competition]
     half = (len(names) + 1) // 2
     col = lambda rows: ''.join(f'<p>{esc(n)}</p>' for n in rows)
-    logos = ''.join(f'<img src="{data_uri(team_logo(name, team_id))}">' for name, team_id in (home, away))
+    logos = ''.join(f'<div><img src="{data_uri(team_logo(name, team_id))}"></div>' for name, team_id in (home, away))
+    left, right = (372, 40) if VERTICAL else (90, 90)
+    vertical = f'<div class="vt"><span>{esc(VERTICAL)}</span></div>' if VERTICAL else ''
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>{_page_css(light, base, dark)}
 .vt{{position:absolute;left:24px;top:0;width:300px;height:{PH}px;display:flex;align-items:center;justify-content:center}}
 .vt span{{transform:rotate(-90deg);font-family:'Dharma';font-size:420px;line-height:1;white-space:nowrap}}
-.c{{position:absolute;left:{372 if VERTICAL else 70}px;right:{40 if VERTICAL else 70}px;top:96px;bottom:92px;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly}}
-.head{{display:flex;align-items:center;gap:56px}}
-.head img{{width:150px;height:150px;object-fit:contain;filter:brightness(0) invert(1)}}
-.lab{{font-family:'Poppins';font-weight:500;font-size:26px;letter-spacing:.38em;opacity:.85}}
-.list{{display:flex;gap:.7em;font-size:100px}}
-.list div{{text-align:center}}
+.c{{position:absolute;left:{left}px;right:{right}px;top:110px;bottom:104px;display:flex;flex-direction:column;justify-content:center}}
+.two{{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:80px;text-align:center}}
+.head{{display:flex;justify-content:center;align-items:center;gap:56px}}
+.head img{{display:block;width:150px;height:150px;object-fit:contain;filter:brightness(0) invert(1)}}
+.lab{{margin:38px 0 26px;text-align:center;font-family:'Poppins';font-weight:500;font-size:26px;letter-spacing:.38em;text-indent:.38em;opacity:.85}}
+.list{{font-size:100px}}
 p{{line-height:1.42;font-family:'Poppins';font-weight:500;text-transform:uppercase;white-space:nowrap}}
-.foot{{width:100%;display:flex;justify-content:space-between;align-items:flex-end;font-family:'Poppins';font-weight:500}}
-.foot small{{display:block;font-size:24px;letter-spacing:.32em;opacity:.8}}
-.foot strong{{display:block;margin-top:6px;font-size:42px;white-space:nowrap;-webkit-text-stroke:1.8px #fff}}
-.foot .r{{text-align:right}}
-</style></head><body>{f'<div class="vt"><span>{esc(VERTICAL)}</span></div>' if VERTICAL else ''}
+.foot{{margin-top:56px;font-family:'Poppins';font-weight:500}}
+.foot small{{display:block;font-size:22px;letter-spacing:.32em;text-indent:.32em;opacity:.8}}
+.foot strong{{display:block;margin-top:8px;font-size:40px;white-space:nowrap;-webkit-text-stroke:1.6px #fff}}
+</style></head><body>{vertical}
 <div class="c"><div class="head">{logos}</div>
-<div class="lab">CONVOCATI</div><div class="list" id="list"><div>{col(names[:half])}</div><div>{col(names[half:])}</div></div>
-<div class="foot"><div><small>COMPETIZIONE</small><strong>{comp_name}</strong></div><div class="r"><small>GIOCATORI</small><strong>{len(names)}</strong></div></div></div>
+<div class="lab">CONVOCATI</div>
+<div class="two list" id="list"><div>{col(names[:half])}</div><div>{col(names[half:])}</div></div>
+<div class="two foot"><div><small>COMPETIZIONE</small><strong id="comp">{comp_name}</strong></div><div><small>GIOCATORI</small><strong>{len(names)}</strong></div></div></div>
 <script>
 const box = document.querySelector('.c'), list = document.getElementById('list');
+const fits = () => [...list.querySelectorAll('p')].every(p => p.scrollWidth <= p.parentElement.clientWidth) && box.scrollHeight <= box.clientHeight;
 window.__ready = document.fonts.ready.then(() => {{
+  // nome della competizione lungo: più piccolo finché sta nella sua colonna
+  const comp = document.getElementById('comp');
+  let c = parseFloat(getComputedStyle(comp).fontSize);
+  while (comp.scrollWidth > comp.parentElement.clientWidth && c > 16) {{ c -= 1; comp.style.fontSize = c + 'px'; }}
+  // lista: la più grande che sta in larghezza (colonna) e in altezza
   let s = parseFloat(getComputedStyle(list).fontSize);
-  while (s > 10 && !(list.scrollWidth <= box.clientWidth && box.scrollHeight <= box.clientHeight
-                     && list.offsetHeight <= box.clientHeight - 420)) {{ s -= 1; list.style.fontSize = s + 'px'; }}
-  const free = box.clientHeight - [...box.children].reduce((h, el) => h + el.offsetHeight, 0) - 3 * 46;
+  while (s > 10 && !fits()) {{ s -= 1; list.style.fontSize = s + 'px'; }}
+  // pochi nomi: righe più larghe fino a riempire, con un massimo
   const lines = Math.max(...[...list.children].map(c => c.children.length));
-  const lh = Math.min(2.1, 1.42 + Math.max(0, free) / (lines * s));
+  const free = box.clientHeight - box.scrollHeight;
+  const lh = Math.min(2.3, 1.42 + Math.max(0, free - 10) / (lines * s));
   list.querySelectorAll('p').forEach(p => p.style.lineHeight = lh);
   return Promise.all([...document.images].map(i => i.decode().catch(() => {{}})));
 }});
