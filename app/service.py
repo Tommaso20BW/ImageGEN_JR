@@ -1427,6 +1427,11 @@ def _warm_up_renderer():
         log.info('AVVIO', 'Browser grafiche pronto')
     except Exception as exc:
         log.warn('AVVIO', f'Browser grafiche non avviato: {type(exc).__name__}: {exc}')
+    try:
+        from graphics.classifica import warm_up_fonts
+        warm_up_fonts()
+    except Exception as exc:  # noqa: BLE001 - si riprova alla prima classifica
+        log.warn('AVVIO', f'Font della classifica non preparati: {type(exc).__name__}: {exc}')
 
 
 def _lower_priority():

@@ -159,24 +159,44 @@ def _embed_logos(data):
                 row[f] = found[row[f]]
 
 
+FONT_SUBSETS = ('latin', 'latin-ext')   # basta per i nomi delle squadre (ç, ø, ü, ł...)
+
+
 def _font_css(css_url):
-    """Font di Google incorporati (stessi del template). Se non si scaricano, font di sistema."""
+    """Font di Google incorporati (stessi del template). Se non si scaricano, font di sistema.
+    Solo alfabeto latino ed esteso (Google ne dà anche cirillico, greco, vietnamita: 99 file
+    invece di 50) e scaricati in parallelo: da circa 33 secondi a pochi."""
     if css_url in _fonts:
         return _fonts[css_url]
     try:
         css = requests.get(css_url, headers={'User-Agent': UA}, timeout=20)
         css.raise_for_status()
-        text = css.text
-        for url in re.findall(r'url\((https://[^)]+)\)', text):
+        parts = re.split(r'(?=/\* [\w-]+ \*/)', css.text)
+        text = ''.join(p for p in parts if not p.startswith('/*')
+                       or re.match(r'/\* ([\w-]+) \*/', p).group(1) in FONT_SUBSETS)
+        urls = sorted(set(re.findall(r'url\((https://[^)]+)\)', text)))
+
+        def get(url):
             font = requests.get(url, headers={'User-Agent': UA}, timeout=20)
             font.raise_for_status()
+            return font.content
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            files = dict(zip(urls, pool.map(get, urls)))
+        for url, content in files.items():
             fmt = 'woff2' if 'woff2' in url else 'woff' if 'woff' in url else 'truetype'
-            text = text.replace(url, f'data:font/{fmt};base64,' + base64.b64encode(font.content).decode('ascii'))
+            text = text.replace(url, f'data:font/{fmt};base64,' + base64.b64encode(content).decode('ascii'))
         _fonts[css_url] = text
     except Exception as exc:  # noqa: BLE001 - meglio i font di sistema che nessuna grafica
         log.warn('DATI', f'Font della classifica non scaricati: {exc}')
         return ''
     return text
+
+
+def warm_up_fonts():
+    """All'avvio del servizio: font pronti prima della prima classifica o tabellone."""
+    match = re.search(r'href="(https://fonts\.googleapis\.com/css2[^"]+)"', TEMPLATE.read_text(encoding='utf-8'))
+    if match and _font_css(match.group(1)):
+        log.info('AVVIO', 'Font di classifica e tabellone pronti')
 
 
 def _texture(png, name):

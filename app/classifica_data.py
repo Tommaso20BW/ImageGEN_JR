@@ -368,6 +368,11 @@ def scrape_standings_diretta(
                         "Chrome/140.0.0.0 Safari/537.36"
                     ),
                 )
+                # Servono solo testi e link (gli indirizzi dei loghi restano nella pagina):
+                # niente immagini, font e video, la pagina arriva prima.
+                context.route("**/*", lambda route: route.abort()
+                              if route.request.resource_type in ("image", "media", "font")
+                              else route.continue_())
                 page = context.new_page()
                 page.goto(url, wait_until="domcontentloaded", timeout=45_000)
 
