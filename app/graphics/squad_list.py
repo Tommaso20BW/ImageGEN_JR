@@ -1,179 +1,340 @@
-"""SQUAD LIST: sfondo e titolo delle pagine Canva 17 (Serie A), 18 (Coppa Italia), 19 (Europa League).
+"""SQUAD LIST "rivista": i convocati stampati su una rivista aperta, foto vera (mockup).
 
-Champions League e Conference League non sono su Canva: stesso stile, con
-sfondo e colori della competizione (vedi tools/canva_templates.py).
+Foto: canva/squad_list_rivista.jpg negli asset (rivista aperta con pagine bianche, tavolo e
+riviste grigi). Si disegnano due pagine piatte in HTML:
+- sinistra: logo della competizione grande, centrato e tagliato dall'inquadratura;
+- destra: "THE SQUAD" verticale lungo la piega, loghi delle due squadre, nomi su due colonne
+  (in ordine alfabetico, grandezza adattiva), competizione e numero di giocatori.
+Poi si "stampano" sulle pagine della foto seguendo la curvatura della carta (patch di Coons
+dai quattro bordi), con le ombre e la piega della foto sopra; tavolo e riviste prendono il
+colore della competizione; grana di carta leggera su tutto.
 
-I giocatori sono in griglia per numero di maglia: numero grande (Dharma Gothic) solo contornato,
-con un velo di colore dentro, che si dissolve verso il cognome sotto. Sul foglio una luce al centro
-e i bordi più scuri; grana su tutta l'immagine.
+La geometria (dove finisce ogni pixel delle pagine) non dipende né dalla competizione né dai
+nomi: si calcola una volta sola, direttamente a 1920x2560, e resta in memoria.
 """
-import math
+import base64
+import functools
+import io
 import re
 
-from graphics.common import (
-    BASE_CSS, asset_dir, data_uri, esc, font_face, normalize, render_html, team_logo,
-)
+import numpy as np
+from PIL import Image
 
-BACKGROUNDS = {
-    'ita.1': 'squad_list_serie_a.png',
-    'ita.coppa_italia': 'squad_list_coppa_italia.png',
-    'uefa.europa': 'squad_list_europa_league.png',
-    'uefa.champions': 'squad_list_champions_league.png',
-    'uefa.europa.conf': 'squad_list_conference_league.png',
-    'ita.super_cup': 'squad_list_supercoppa_italiana.png',
-    'uefa.super_cup': 'squad_list_supercoppa_uefa.png',
-    'fifa.cwc': 'squad_list_mondiale_per_club.png',
-    'club.friendly': 'squad_list_amichevole.png',
+from graphics.common import asset_dir, data_uri, esc, font_face, normalize, render_html, team_logo
+
+PHOTO = 'squad_list_rivista.jpg'
+OUT_W, OUT_H = 1920, 2560
+PW, PH = 1080, 1512                      # pagina piatta (design)
+# Inquadratura in pixel della foto originale: centro, larghezza del ritaglio 3:4, rotazione
+# (3.9 gradi = piega verticale, libro dritto).
+VIEW = dict(cx=1150, cy=1210, width=1230, angle=3.9)
+CURVE = 1.0                              # quanto il disegno segue la curvatura della carta (1 = tutta)
+TEXTURE = .045                           # grana della carta
+VERTICAL = 'THE SQUAD'                   # scritta verticale lungo la piega ('' = nessuna: contenuto centrato)
+
+# pagina (chiaro, base, scuro), colore del tavolo, logo competizione, nome
+PALETTES = {
+    'ita.1': ('#2c66cf', '#1442a0', '#0a2668', (16, 44, 110), 'serie-a-scudetto.png', 'SERIE A'),
+    'ita.coppa_italia': ('#e0313f', '#b5121f', '#6c0711', (120, 10, 22), 'coppa-italia-mark.png', 'COPPA ITALIA'),
+    'uefa.champions': ('#30479f', '#18286f', '#0a1240', (16, 26, 80), 'ucl-mark.png', 'CHAMPIONS LEAGUE'),
+    'uefa.europa': ('#f08a36', '#d2620f', '#7a3104', (150, 60, 8), 'uel-mark.png', 'EUROPA LEAGUE'),
+    'uefa.europa.conf': ('#34b856', '#148333', '#06451a', (12, 90, 34), 'uecl-mark.png', 'CONFERENCE LEAGUE'),
+    'ita.super_cup': ('#2f86e8', '#1258b8', '#082c66', (12, 50, 110), 'supercoppa-mark.png', 'SUPERCOPPA ITALIANA'),
+    'uefa.super_cup': ('#2f7fe0', '#14479e', '#081f55', (14, 40, 100), 'usc-mark.png', 'SUPERCOPPA UEFA'),
+    'fifa.cwc': ('#4a4232', '#2a251b', '#100e0a', (60, 48, 22), 'cwc-mark.png', 'MONDIALE PER CLUB'),
+    # amichevoli (e competizioni senza tema): grigio, logo JR
+    'club.friendly': ('#5d6672', '#363c45', '#16191e', (40, 44, 52), None, 'AMICHEVOLE'),
 }
-
-# Titolo "squad list" (Allogist Italic, misure Canva), tutto minuscolo: "list" nel colore della competizione.
-TITLE_SIZE, TITLE_BASE, TITLE_X = 206.7, 324.75, 540.0
-TITLE_LIFT = 26          # titolo un po' più in alto del design Canva
-TITLE_ACCENT = {
-    'ita.1': '#ffffff', 'ita.coppa_italia': '#ffffff', 'uefa.europa': '#fa6c08',
-    'uefa.champions': '#73aabf', 'uefa.europa.conf': '#11b913', 'club.friendly': '#d9dde3',
-    'ita.super_cup': '#2ea8ff', 'uefa.super_cup': '#2f9bff', 'fifa.cwc': '#e2bc62',
-}
-# Numeri: colore della competizione, tranne dove sul foglio si leggerebbero poco (Conference: verde su verde).
-NUMBER_COLOR = {**TITLE_ACCENT, 'uefa.europa.conf': '#ffffff'}
-NO_LIGATURES = "font-variant-ligatures:none;font-feature-settings:'liga' 0,'clig' 0,'dlig' 0"
-
-# Loghi come su Canva (pixel 1080x1440).
-LOGO_Y, LOGO_SIZE = 1210.4, 94.67
-OPACITY = 0.85  # testi e loghi su Canva hanno trasparenza 85%
-LOGO_X = (453.3, 532.0)
-# Foglio dello sfondo (per la luce) e griglia dei giocatori, tra il titolo e i loghi.
-SHEET = (62, 126, 956, 1206)
-GRID_LEFT, GRID_TOP, GRID_WIDTH, GRID_BOTTOM = 120, 368, 840, 248
-CELL_MAX_H = 170
 
 MAX_PLAYERS = 30
 # "3 Bremer", "3. Bremer", "Bremer 3", "#3 Bremer"
 LINE_RE = re.compile(r'^\s*(?:#?\s*(\d{1,2})(?:[\s.)\-–—:]+))?(.*?)(?:\s+[#(]?(\d{1,2})\)?)?\s*$')
 
 
-def _known_numbers():
-    """{nome normalizzato: numero}: rosa (nome, alias, cognome dell'etichetta) e numeri salvati."""
-    try:
-        import shirt_numbers
-        from graphics.probabili import label_name
-        from livescore.graphics import goal
-        numbers = shirt_numbers.load()
-        players = goal.load_players()
-    except Exception:
-        return {}
-    known = {}
-    for player in players:
-        number = numbers.get(player.slug)
-        if number:
-            for name in [player.name, *player.aliases, label_name(player)]:
-                known.setdefault(normalize(name), int(number))
-    return known
-
-
 def parse_squad(text):
-    """[[nome, numero]] in ordine di numero di maglia; chi non ha numero va in fondo (alfabetico).
-    Vince il numero scritto nella riga ("3 Bremer", come nei convocati di juventus.com); se manca,
-    quello salvato per quel giocatore (data/shirt_numbers.json). Niente doppioni."""
+    """[[nome, numero]] in ordine alfabetico. Il numero scritto nella riga ("3 Bremer", come nei
+    convocati di juventus.com) si tiene ma la grafica mostra solo i nomi. Niente doppioni."""
     rows = {}
-    known = None
     for line in str(text or '').splitlines():
         match = LINE_RE.match(line)
         name = ' '.join(re.sub(r'[\s#.\-–—()]+$|^[\s#.\-–—)]+', '', match.group(2)).split())
         if not name or name.endswith(':') or not re.search(r'[^\W\d_]', name):
             continue
         number = match.group(1) or match.group(3)
-        if not number:
-            known = _known_numbers() if known is None else known
-            number = known.get(normalize(name))
         rows.setdefault(normalize(name), [name, int(number) if number else None])
     if not rows:
         raise ValueError('Elenco vuoto: incolla almeno un giocatore.')
     if len(rows) > MAX_PLAYERS:
         raise ValueError(f'Troppi giocatori ({len(rows)}): massimo {MAX_PLAYERS}.')
-    return sorted(rows.values(), key=lambda r: (r[1] is None, r[1] or 0, normalize(r[0])))
+    return sorted(rows.values(), key=lambda r: normalize(r[0]))
 
 
-def _columns(n):
-    return 3 if n <= 12 else 4 if n <= 20 else 5
+# ---------------- pagine piatte (HTML) ----------------
+
+def _fonts():
+    a = asset_dir() / 'fonts'
+    return (f"@font-face{{font-family:'Dharma';src:url({data_uri(a / 'DharmaGothicEBold.otf')})}}"
+            f"@font-face{{font-family:'Poppins';font-weight:500;src:url({data_uri(a / 'Poppins-Medium.ttf')})}}")
 
 
-def _grid(players):
-    """Griglia: righe bilanciate e centrate, le più lunghe in fondo (21 = 4-4-4-4-5)."""
-    rows = [(p, None) if isinstance(p, str) else (p[0], p[1]) for p in players]
-    n = len(rows)
-    cols = _columns(n)
-    lines = math.ceil(n / cols)
-    height = 1440 - GRID_TOP - GRID_BOTTOM
-    cell_h = min(height / lines, CELL_MAX_H)
-    cell_w = GRID_WIDTH / cols
-    number_size = min(cell_h, cell_w)                      # mai più largo della cella
-    longest = max(len(name) for name, _ in rows)
-    name_size = min(cell_h * .22, (cell_w - 14) / (longest * .41))   # cognomi tutti uguali, il più lungo ci sta
-    sizes = [n // lines + (1 if i >= lines - n % lines else 0) for i in range(lines)]
-    html, at = [], 0
-    for k in sizes:
-        html.append('<div class="row">' + ''.join(
-            f'<div class="c"><b>{num if num else ""}</b><span>{esc(name)}</span></div>' for name, num in rows[at:at + k]) + '</div>')
-        at += k
-    fade = 'linear-gradient(180deg,#000 8%,rgba(0,0,0,.45) 45%,transparent 74%)'
-    css = f'''.g{{position:absolute;left:{GRID_LEFT}px;top:{GRID_TOP}px;width:{GRID_WIDTH}px;height:{height}px;display:flex;flex-direction:column;justify-content:center}}
-.row{{display:flex;justify-content:center}}
-.c{{position:relative;width:{cell_w}px;height:{cell_h}px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:{cell_h * .1}px}}
-/* numero: contorno esterno + velo di colore (filtro #num), bagliore, si dissolve verso il cognome */
-.c b{{position:absolute;left:0;right:0;bottom:{-cell_h * .04}px;text-align:center;font-family:'Dharma';font-weight:400;font-size:{number_size}px;line-height:1.15;
-  color:var(--num);filter:url(#num) drop-shadow(0 0 12px rgba(255,255,255,.28));-webkit-mask:{fade};mask:{fade}}}
-/* cognome in grassetto: il Bebas ha un solo peso, si ispessisce con un contorno dello stesso colore */
-.c span{{position:relative;font-family:'Bebas Neue';font-size:{name_size}px;letter-spacing:.05em;color:#fff;white-space:nowrap;text-transform:uppercase;
-  -webkit-text-stroke:{name_size * .045}px #fff;filter:drop-shadow(0 4px 6px rgba(0,0,0,.6))}}'''
-    return ''.join(html), css
+def _page_css(light, base, dark):
+    return (f'*{{margin:0;padding:0;box-sizing:border-box}}html,body{{width:{PW}px;height:{PH}px;overflow:hidden}}'
+            f'body{{position:relative;color:#fff;background:radial-gradient(ellipse 70% 55% at 60% 32%,{light},transparent 72%),'
+            f'radial-gradient(ellipse 120% 100% at 50% 45%,{base} 45%,{dark} 100%)}}{_fonts()}')
 
 
-def build_html(*, players, competition, home_name, home_id, away_name, away_id, title_word='list', **_):
-    # Le altre competizioni (Supercoppe, Mondiale per Club...) usano la grafica delle amichevoli.
-    if competition not in BACKGROUNDS:
+READY = ('<script>window.__ready=document.fonts.ready.then(()=>Promise.all([...document.images]'
+         '.map(i=>i.decode().catch(()=>{}))));</script>')
+
+
+@functools.lru_cache(maxsize=16)
+def _mark(file):
+    """Logo della competizione bianco, senza margini e con bordo liscio (i loghi piccoli si
+    ingrandiscono molto): (data uri, larghezza/altezza)."""
+    import cv2
+    if file:
+        im = Image.open(asset_dir() / 'canva' / 'classifica' / file).convert('RGBA')
+    else:
+        im = Image.open(asset_dir() / 'canva' / 'jr_white_overlay.png').convert('RGBA')
+    im = im.crop(im.getchannel('A').point(lambda v: 255 if v > 30 else 0).getbbox())
+    pad = max(4, im.height // 40)                 # la punta del logo non tocca il bordo dell'immagine
+    padded = Image.new('RGBA', (im.width + 2 * pad, im.height + 2 * pad), (255, 255, 255, 0))
+    padded.paste(im, (pad, pad))
+    k = max(1, 2400 // padded.height)
+    alpha = np.asarray(padded.getchannel('A').resize((padded.width * k, padded.height * k), Image.Resampling.LANCZOS))
+    alpha = cv2.GaussianBlur(alpha.astype(np.float32) / 255, (0, 0), 1.6 * k)
+    alpha = np.clip((alpha - .5) * 3.2 + .5, 0, 1)
+    out = Image.new('RGBA', (alpha.shape[1], alpha.shape[0]), (255, 255, 255, 0))
+    out.putalpha(Image.fromarray((alpha * 255).astype(np.uint8)))
+    buf = io.BytesIO()
+    out.save(buf, 'PNG')
+    return 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode(), out.width / out.height
+
+
+def left_page(competition):
+    """Logo grande della competizione: stessa area per tutti (uno quadrato non sembra più piccolo),
+    un po' verso la piega così l'inquadratura ne mostra di più."""
+    light, base, dark, _table, mark, _name = PALETTES[competition]
+    uri, ratio = _mark(mark)
+    h = min((1_000_000 / ratio) ** .5, 1400)
+    w = h * ratio
+    cx, cy = 615, 790
+    return (f'<!doctype html><html><head><meta charset="utf-8"><style>{_page_css(light, base, dark)}'
+            f'.mark{{position:absolute;left:{cx - w / 2}px;top:{cy - h / 2}px;width:{w}px;height:{h}px;opacity:.94}}'
+            f'</style></head><body><img class="mark" src="{uri}">{READY}</body></html>')
+
+
+def right_page(competition, names, home, away):
+    """Tutto il più grande possibile: la lista cresce finché sta nella pagina e, con pochi nomi,
+    le righe si allargano per riempire lo spazio."""
+    light, base, dark, _table, _mark_file, comp_name = PALETTES[competition]
+    half = (len(names) + 1) // 2
+    col = lambda rows: ''.join(f'<p>{esc(n)}</p>' for n in rows)
+    logos = ''.join(f'<img src="{data_uri(team_logo(name, team_id))}">' for name, team_id in (home, away))
+    return f"""<!doctype html><html><head><meta charset="utf-8"><style>{_page_css(light, base, dark)}
+.vt{{position:absolute;left:24px;top:0;width:300px;height:{PH}px;display:flex;align-items:center;justify-content:center}}
+.vt span{{transform:rotate(-90deg);font-family:'Dharma';font-size:420px;line-height:1;white-space:nowrap}}
+.c{{position:absolute;left:{372 if VERTICAL else 70}px;right:{40 if VERTICAL else 70}px;top:96px;bottom:92px;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly}}
+.head{{display:flex;align-items:center;gap:56px}}
+.head img{{width:150px;height:150px;object-fit:contain;filter:brightness(0) invert(1)}}
+.lab{{font-family:'Poppins';font-weight:500;font-size:26px;letter-spacing:.38em;opacity:.85}}
+.list{{display:flex;gap:.7em;font-size:100px}}
+.list div{{text-align:center}}
+p{{line-height:1.42;font-family:'Poppins';font-weight:500;text-transform:uppercase;white-space:nowrap}}
+.foot{{width:100%;display:flex;justify-content:space-between;align-items:flex-end;font-family:'Poppins';font-weight:500}}
+.foot small{{display:block;font-size:24px;letter-spacing:.32em;opacity:.8}}
+.foot strong{{display:block;margin-top:6px;font-size:42px;white-space:nowrap;-webkit-text-stroke:1.8px #fff}}
+.foot .r{{text-align:right}}
+</style></head><body>{f'<div class="vt"><span>{esc(VERTICAL)}</span></div>' if VERTICAL else ''}
+<div class="c"><div class="head">{logos}</div>
+<div class="lab">CONVOCATI</div><div class="list" id="list"><div>{col(names[:half])}</div><div>{col(names[half:])}</div></div>
+<div class="foot"><div><small>COMPETIZIONE</small><strong>{comp_name}</strong></div><div class="r"><small>GIOCATORI</small><strong>{len(names)}</strong></div></div></div>
+<script>
+const box = document.querySelector('.c'), list = document.getElementById('list');
+window.__ready = document.fonts.ready.then(() => {{
+  let s = parseFloat(getComputedStyle(list).fontSize);
+  while (s > 10 && !(list.scrollWidth <= box.clientWidth && box.scrollHeight <= box.clientHeight
+                     && list.offsetHeight <= box.clientHeight - 420)) {{ s -= 1; list.style.fontSize = s + 'px'; }}
+  const free = box.clientHeight - [...box.children].reduce((h, el) => h + el.offsetHeight, 0) - 3 * 46;
+  const lines = Math.max(...[...list.children].map(c => c.children.length));
+  const lh = Math.min(2.1, 1.42 + Math.max(0, free) / (lines * s));
+  list.querySelectorAll('p').forEach(p => p.style.lineHeight = lh);
+  return Promise.all([...document.images].map(i => i.decode().catch(() => {{}})));
+}});
+</script></body></html>"""
+
+
+# ---------------- geometria della foto (una volta sola) ----------------
+
+def _pages_mask(gray):
+    """Le due pagine: le due aree chiare più grandi, da sinistra a destra."""
+    import cv2
+    m = (gray > 125).astype(np.uint8)
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    n, lab, st, _ = cv2.connectedComponentsWithStats(m, 8)
+    big = sorted(range(1, n), key=lambda k: -st[k, cv2.CC_STAT_AREA])[:2]
+    big.sort(key=lambda k: st[k, cv2.CC_STAT_LEFT])
+    return [cv2.morphologyEx((lab == k).astype(np.uint8), cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8)).astype(bool) for k in big]
+
+
+def _fit(t, vals, deg):
+    med = np.array([np.median(vals[max(0, i - 25):i + 26]) for i in range(len(vals))])
+    keep = np.abs(vals - med) < 5
+    return np.poly1d(np.polyfit(t[keep], vals[keep], deg))
+
+
+def _surface(mask):
+    """P(u, v) -> punto della foto per un punto della pagina piatta (u, v in 0..1): patch di
+    Coons dai quattro bordi curvi della pagina, mescolata con la prospettiva piatta (CURVE)."""
+    import cv2
+    ys, xs = np.nonzero(mask)
+    pick = lambda i: np.array([xs[i], ys[i]], float)
+    tl, br = pick(np.argmin(xs + ys)), pick(np.argmax(xs + ys))
+    tr, bl = pick(np.argmax(xs - ys)), pick(np.argmax(ys - xs))
+    m = 12
+
+    def cols(a, b, first):
+        xx = np.arange(int(a) + m, int(b) - m)
+        yy = np.array([(np.nonzero(mask[:, x])[0].min() if first else np.nonzero(mask[:, x])[0].max()) for x in xx], float)
+        return _fit(xx.astype(float), yy, 3)
+
+    def rows(a, b, first):
+        yy = np.arange(int(a) + m, int(b) - m)
+        xx = np.array([(np.nonzero(mask[y])[0].min() if first else np.nonzero(mask[y])[0].max()) for y in yy], float)
+        return _fit(yy.astype(float), xx, 2)
+    top, bot = cols(tl[0], tr[0], True), cols(bl[0], br[0], False)
+    lft, rgt = rows(tl[1], bl[1], True), rows(tr[1], br[1], False)
+    T = lambda u: np.stack([tl[0] + u * (tr[0] - tl[0]), top(tl[0] + u * (tr[0] - tl[0]))], -1)
+    B = lambda u: np.stack([bl[0] + u * (br[0] - bl[0]), bot(bl[0] + u * (br[0] - bl[0]))], -1)
+    c00, c10, c01, c11 = T(np.array(0.)), T(np.array(1.)), B(np.array(0.)), B(np.array(1.))
+
+    def side(fit, p0, p1):
+        r0, r1 = np.array([fit(p0[1]), p0[1]]), np.array([fit(p1[1]), p1[1]])
+
+        def f(v):
+            y = p0[1] + v * (p1[1] - p0[1])
+            return np.stack([fit(y), y], -1) + (1 - v)[..., None] * (p0 - r0) + v[..., None] * (p1 - r1)
+        return f
+    L, R = side(lft, c00, c01), side(rgt, c10, c11)
+    corners = np.float32([c00, c10, c01, c11])
+    Hp = cv2.getPerspectiveTransform(np.float32([[0, 0], [1, 0], [0, 1], [1, 1]]), corners)
+
+    def P(u, v):
+        uu, vv = u[..., None], v[..., None]
+        curved = ((1 - vv) * T(u) + vv * B(u) + (1 - uu) * L(v) + uu * R(v)
+                  - ((1 - uu) * (1 - vv) * c00 + uu * (1 - vv) * c10 + (1 - uu) * vv * c01 + uu * vv * c11))
+        w = Hp[2, 0] * u + Hp[2, 1] * v + Hp[2, 2]
+        flat = np.stack([(Hp[0, 0] * u + Hp[0, 1] * v + Hp[0, 2]) / w, (Hp[1, 0] * u + Hp[1, 1] * v + Hp[1, 2]) / w], -1)
+        return CURVE * curved + (1 - CURVE) * flat
+    return P, corners
+
+
+def _invert(P, corners, pts):
+    """(u, v) per ogni punto della foto (Newton, partendo dalla prospettiva dei quattro angoli)."""
+    import cv2
+    H = cv2.getPerspectiveTransform(corners, np.float32([[0, 0], [1, 0], [0, 1], [1, 1]]))
+    uv = cv2.perspectiveTransform(pts[None].astype(np.float32), H)[0].astype(float)
+    u, v = uv[:, 0], uv[:, 1]
+    e = 1e-3
+    for _ in range(6):
+        p = P(u, v)
+        du, dv = (P(u + e, v) - p) / e, (P(u, v + e) - p) / e
+        r = pts - p
+        det = du[:, 0] * dv[:, 1] - du[:, 1] * dv[:, 0]
+        u = u + (r[:, 0] * dv[:, 1] - r[:, 1] * dv[:, 0]) / det
+        v = v + (du[:, 0] * r[:, 1] - du[:, 1] * r[:, 0]) / det
+    return np.clip(u, 0, 1), np.clip(v, 0, 1)
+
+
+@functools.lru_cache(maxsize=1)
+def _geometry(path_key):
+    """Per ogni pixel dell'immagine finale (1920x2560): grigio della foto (luce e ombre),
+    quanto è pagina sinistra/destra e il punto (u, v) della pagina piatta da mostrare."""
+    import cv2
+    photo = np.asarray(Image.open(path_key).convert('L'))
+    left, right = _pages_mask(photo)
+    # pixel finale -> pixel della foto: inquadratura ruotata e ritagliata (3:4)
+    s = VIEW['width'] / OUT_W
+    a = np.deg2rad(VIEW['angle'])
+    X, Y = np.meshgrid(np.arange(OUT_W, dtype=np.float32), np.arange(OUT_H, dtype=np.float32))
+    dx, dy = (X - OUT_W / 2) * s, (Y - OUT_H / 2) * s
+    # rotazione inversa di quella usata per inquadrare (cv2: angolo positivo = antiorario)
+    px = (VIEW['cx'] + np.cos(a) * dx - np.sin(a) * dy).astype(np.float32)
+    py = (VIEW['cy'] + np.sin(a) * dx + np.cos(a) * dy).astype(np.float32)
+    gray = cv2.remap(photo.astype(np.float32), px, py, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
+    gray = np.clip(gray, 0, 255)                     # il bicubico può uscire di poco da 0..255
+    white = np.percentile(photo[right], 97)
+    pages = []
+    for mask in (left, right):
+        alpha = cv2.remap(mask.astype(np.float32), px, py, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+        alpha = cv2.GaussianBlur(alpha, (0, 0), 1.5)
+        inside = alpha > .002
+        P, corners = _surface(mask)
+        pts = np.stack([px[inside], py[inside]], -1).astype(float)
+        u, v = _invert(P, corners, pts)
+        uu = np.full((OUT_H, OUT_W), -1, np.float32); vv = np.full((OUT_H, OUT_W), -1, np.float32)
+        uu[inside], vv[inside] = u, v
+        pages.append((alpha.astype(np.float32), uu, vv))
+    return gray.astype(np.float32), float(white), pages
+
+
+def _photo_path():
+    return str(asset_dir() / 'canva' / PHOTO)
+
+
+def warm_up():
+    """Calcola la geometria della foto in anticipo (all'avvio del servizio)."""
+    _geometry(_photo_path())
+
+
+def _texture(h, w, seed=7):
+    import cv2
+    rng = np.random.default_rng(seed)
+    fine = cv2.GaussianBlur(rng.standard_normal((h, w)).astype(np.float32), (0, 0), sigmaX=1.6, sigmaY=.7)
+    fine /= fine.std() + 1e-6
+    blot = cv2.GaussianBlur(rng.standard_normal((h // 8, w // 8)).astype(np.float32), (0, 0), 6)
+    blot = cv2.resize(blot / (blot.std() + 1e-6), (w, h), interpolation=cv2.INTER_CUBIC)
+    return 1 + TEXTURE * (.65 * fine + .35 * blot)
+
+
+_TEXTURE = None
+
+
+def _render_page(html):
+    png = render_html(html, page=(PW, PH))
+    return np.asarray(Image.open(io.BytesIO(png)).convert('RGB')).astype(np.float32)
+
+
+def build_pages(*, players, competition, home_name, home_id, away_name, away_id, **_):
+    if competition not in PALETTES:
         competition = 'club.friendly'
-    assets = asset_dir()
-    grid, grid_css = _grid(players)
-    accent = TITLE_ACCENT[competition]
-    sx, sy, sw, sh = SHEET
-    # Loghi nel colore della competizione (come "list"): sagoma del logo come maschera.
-    logos = ''.join(
-        f'<div class="abs logo" style="left:{x}px;top:{LOGO_Y}px;width:{LOGO_SIZE}px;height:{LOGO_SIZE}px;'
-        f'--m:url({data_uri(team_logo(name, team_id))})"></div>'
-        for x, (name, team_id) in zip(LOGO_X, ((home_name, home_id), (away_name, away_id)))
-    )
-
-    return f'''<!doctype html><html><head><meta charset="utf-8"><style>
-{BASE_CSS}
-{font_face('Bebas Neue', 'BebasNeue2014-Regular.ttf')}
-@font-face{{font-family:'Dharma';src:url({data_uri(assets / 'fonts' / 'DharmaGothicEBold.otf')})}}
-@font-face{{font-family:'Allogist';font-style:italic;src:url({data_uri(assets / 'fonts' / 'AllogistItalic.ttf')})}}
-:root{{--num:{NUMBER_COLOR[competition]}}}
-svg{{position:absolute;left:0;top:0}}
-.logo{{opacity:{OPACITY};background:{accent};-webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}}
-/* luce dall'alto sul foglio e bordi più scuri: profondità */
-.light{{position:absolute;left:{sx}px;top:{sy}px;width:{sw}px;height:{sh}px;pointer-events:none;
-  background:radial-gradient(ellipse 70% 55% at 50% 40%,rgba(255,255,255,.10),transparent 70%),radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.35) 100%)}}
-.grain{{mix-blend-mode:overlay;opacity:.32;pointer-events:none}}
-{grid_css}
-</style></head><body>
-<svg width="0" height="0"><defs><filter id="num" x="-5%" y="-5%" width="110%" height="110%">
- <feMorphology in="SourceAlpha" operator="dilate" radius="2" result="d"/><feComposite in="d" in2="SourceAlpha" operator="out" result="o"/>
- <feFlood flood-color="{NUMBER_COLOR[competition]}"/><feComposite in2="o" operator="in" result="line"/>
- <feComponentTransfer in="SourceGraphic" result="soft"><feFuncA type="linear" slope=".3"/></feComponentTransfer>
- <feMerge><feMergeNode in="soft"/><feMergeNode in="line"/></feMerge></filter></defs></svg>
-<img class="abs" src="{data_uri(assets / 'canva' / BACKGROUNDS[competition])}" style="left:0;top:0;width:1080px;height:1440px">
-<div class="light"></div>
-<svg width="1080" height="1440" viewBox="0 0 1080 1440"><text x="{TITLE_X}" y="{TITLE_BASE - TITLE_LIFT}" text-anchor="middle"
- font-family="Allogist" font-style="italic" font-size="{TITLE_SIZE}" style="{NO_LIGATURES}" fill="#fff" opacity="{OPACITY}">squad <tspan
- fill="{accent}">{esc(title_word)}</tspan></text></svg>
-<div class="g">{grid}</div>{logos}
-<svg class="grain" width="1080" height="1440" viewBox="0 0 1080 1440"><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4" stitchTiles="stitch"/>
- <feColorMatrix type="saturate" values="0"/></filter><rect width="1080" height="1440" filter="url(#grain)"/></svg>
-<script>window.__ready = document.fonts.ready.then(() => Promise.all([...document.images].map(i => i.decode().catch(() => {{}}))));</script>
-</body></html>'''
+    names = sorted((p if isinstance(p, str) else p[0] for p in players), key=normalize)
+    return (left_page(competition),
+            right_page(competition, names, (home_name, home_id), (away_name, away_id)), competition)
 
 
 def render(**kwargs):
-    return render_html(build_html(**kwargs))
+    """PNG 1920x2560."""
+    import cv2
+    global _TEXTURE
+    left_html, right_html, competition = build_pages(**kwargs)
+    gray, white, pages = _geometry(_photo_path())
+    # tavolo e riviste: chiari e scuri della foto nel colore della competizione
+    tint = np.array(PALETTES[competition][3], np.float32)
+    out = np.clip(tint * 1.6 * (gray[..., None] / 150.0) ** 1.5, 0, 255)
+    shade = np.clip(gray / white, 0, 1.08)[..., None]           # luce della carta: ombre, piega, curvatura
+    for (alpha, uu, vv), html in zip(pages, (left_html, right_html)):
+        design = _render_page(html)
+        dh, dw = design.shape[:2]
+        page = cv2.remap(design, uu * (dw - 1), vv * (dh - 1), cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+        a = alpha[..., None]
+        out = out * (1 - a) + np.clip(page * shade, 0, 255) * a
+    if _TEXTURE is None:
+        _TEXTURE = _texture(OUT_H, OUT_W)
+    out = np.clip(out * _TEXTURE[..., None], 0, 255).astype(np.uint8)
+    img = Image.fromarray(out).convert('RGBA')
+    jr = Image.open(asset_dir() / 'canva' / 'jr_white_overlay.png').convert('RGBA').resize((OUT_W, OUT_H))
+    img.alpha_composite(jr)
+    buf = io.BytesIO()
+    img.convert('RGB').save(buf, 'PNG')
+    return buf.getvalue()

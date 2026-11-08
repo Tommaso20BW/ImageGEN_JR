@@ -1432,6 +1432,12 @@ def _warm_up_renderer():
         warm_up_fonts()
     except Exception as exc:  # noqa: BLE001 - si riprova alla prima classifica
         log.warn('AVVIO', f'Font della classifica non preparati: {type(exc).__name__}: {exc}')
+    try:
+        from graphics.squad_list import warm_up as squad_warm_up
+        squad_warm_up()          # geometria della foto della rivista (circa 30 s, una volta sola)
+        log.info('AVVIO', 'Squad List pronta')
+    except Exception as exc:  # noqa: BLE001 - si calcola alla prima Squad List
+        log.warn('AVVIO', f'Squad List non preparata: {type(exc).__name__}: {exc}')
 
 
 def _lower_priority():
