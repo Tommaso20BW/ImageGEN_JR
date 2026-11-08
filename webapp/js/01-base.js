@@ -74,7 +74,7 @@ const ICONS = {
   'cal':'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
   'ita':'<path fill="currentColor" stroke-width="1.2" stroke-linejoin="round" d="M7.30 3.50 8.33 6.18 11.20 6.33 8.96 8.14 9.71 10.92 7.30 9.35 4.89 10.92 5.64 8.14 3.40 6.33 6.27 6.18ZM16.70 3.50 17.73 6.18 20.60 6.33 18.36 8.14 19.11 10.92 16.70 9.35 14.29 10.92 15.04 8.14 12.80 6.33 15.67 6.18ZM7.30 12.80 8.33 15.48 11.20 15.63 8.96 17.44 9.71 20.22 7.30 18.65 4.89 20.22 5.64 17.44 3.40 15.63 6.27 15.48ZM16.70 12.80 17.73 15.48 20.60 15.63 18.36 17.44 19.11 20.22 16.70 18.65 14.29 20.22 15.04 17.44 12.80 15.63 15.67 15.48Z"/>',
   'table':'<path d="M3 20h18M4.5 20v-6h5v6M9.5 20V8h5v12M14.5 20v-4h5v4"/>',
-  'conv':'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+  'conv':'<path d="M5.5 12.5l4.2 4.2L18.5 7.5" stroke-width="2.8"/>',
   'jr':'<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="1.8"/><path d="M21 16l-5-5-9 10"/>',
   'igbn':'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
   'g-pre':'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/>',
@@ -115,8 +115,8 @@ const HOME_GROUPS = [
   {icon:'g-events', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
   {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
   {icon:'igq', title:'Social',                    ids:['igbn','igq','xq']},
-  {icon:'g-other', title:'Altro',                 ids:['jr','cal','table','conv','sent']},
-  {icon:'ita', title:'Nazionale',                 ids:['ita']}
+  {icon:'g-other', title:'Altro',                 ids:['jr','cal','table','sent']},
+  {icon:'ita', title:'Nazionale',                 ids:['ita','conv']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
 const COMPETITIONS_UEFA = [
