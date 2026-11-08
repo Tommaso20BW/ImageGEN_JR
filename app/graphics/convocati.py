@@ -15,7 +15,7 @@ from graphics.common import asset_dir, data_uri, render_html
 NATIONS_FILE = Path(__file__).resolve().parent.parent / 'data' / 'convocati' / 'nazioni.json'
 MAX_PLAYERS = 20
 TITLE_DEFAULT = 'Convocati in nazionale'
-KICKER_DEFAULT = 'I giocatori bianconeri'
+KICKER_DEFAULT = 'I bianconeri'
 
 _nations = None
 
@@ -163,7 +163,7 @@ def build_html(players, title=TITLE_DEFAULT, kicker=KICKER_DEFAULT, footer=None)
     fonts = (f"@font-face{{font-family:'Poppins';font-weight:500;src:url({data_uri(assets / 'fonts' / 'Poppins-Medium.ttf')})}}"
              f"@font-face{{font-family:'Dharma';src:url({data_uri(assets / 'fonts' / 'DharmaGothicEBold.otf')})}}")
     canva = assets / 'canva'
-    bg, ink = data_uri(canva / 'bg_third.jpg'), data_uri(canva / 'probabili_third_ink.png')   # come la grafica third
+    bg, ink = data_uri(canva / 'bg_convocati.jpg'), data_uri(canva / 'probabili_third_ink.png')   # sfondo nero con fascio di luce; oro come la grafica third
     logo, (lx0, ly0, lx1, ly1) = _logo()
     flags, cards = {}, []
     for player, code, country, *shown in players:
@@ -199,7 +199,7 @@ body{{position:relative;background:#0b0b0b url({bg}) center / cover no-repeat;co
 .top{{position:absolute;top:84px;left:70px;right:70px;text-align:center;transform:skewX(-8deg)}}
 .kick{{font-size:19px;letter-spacing:.3em;text-transform:uppercase}}
 .title{{margin-top:4px;font-family:'Dharma';font-size:128px;line-height:.9;letter-spacing:.01em;white-space:nowrap}}
-.grid{{position:absolute;top:300px;bottom:120px;left:50px;right:50px;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:var(--gy) var(--gx)}}
+.grid{{position:absolute;top:262px;bottom:96px;left:50px;right:50px;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:var(--gy) var(--gx)}}
 .p{{width:var(--u)}}
 .card{{position:relative;width:var(--u);height:calc(var(--u) * {PANEL_H})}}
 .pan{{position:absolute;inset:0;clip-path:polygon({100 - cut}% 0,100% 0,{cut}% 100%,0 100%);overflow:hidden}}
@@ -227,7 +227,11 @@ const u = Math.min((W - gx * (cols - 1)) / cols, (H - gy * (rows - 1)) / rows / 
 // Larghezza esatta per le colonne scelte (senza, con pannelli piccoli ne entrerebbero di più per riga).
 const side = (W - (cols * u + (cols - 1) * gx)) / 2;
 grid.style.paddingLeft = grid.style.paddingRight = Math.max(0, side - 1) + 'px';
-grid.style.setProperty('--u', u + 'px'); grid.style.setProperty('--gx', gx + 'px'); grid.style.setProperty('--gy', gy + 'px');
+// Spazio tra le righe: quasi tutto lo spazio verticale che avanza (resta un margine di 15 px sopra e sotto),
+// al massimo un pannello in più
+const free = H - rows * u * 1.36 - gy * (rows - 1) - 30;
+const gyFit = rows > 1 ? Math.min(gy + Math.max(0, free) / (rows - 1), gy + u) : gy;
+grid.style.setProperty('--u', u + 'px'); grid.style.setProperty('--gx', gx + 'px'); grid.style.setProperty('--gy', gyFit + 'px');
 const width = el => {{ const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().width; }};
 const fit = (el, max) => {{ let s = parseFloat(getComputedStyle(el).fontSize); while (width(el) > max && s > 8) {{ s -= .5; el.style.fontSize = s + 'px'; }} }};
 window.__ready = document.fonts.ready.then(() => {{
