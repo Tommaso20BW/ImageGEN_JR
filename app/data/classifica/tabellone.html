@@ -217,7 +217,7 @@ function render(data){
 render(window.__TABELLONE__);
 
 /* Titolo e sottotitolo allineati sul disegno della prima lettera (non sulla scatola del testo:
-   le lettere grandi hanno più margine interno). */
+   le lettere grandi hanno più margine interno), con correzione ottica per le lettere tonde. */
 function inkLeft(el){
   const cs = getComputedStyle(el), ctx = document.createElement('canvas').getContext('2d');
   ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
@@ -225,7 +225,10 @@ function inkLeft(el){
 }
 window.__align = document.fonts.ready.then(() => {
   const t = document.getElementById('title'), s = document.getElementById('sub');
-  s.style.marginLeft = `${(inkLeft(t) - inkLeft(s)).toFixed(2)}px`;
+  // Correzione ottica: una lettera tonda (C, O, G, Q, S) tocca il bordo in un punto solo e
+  // all'occhio sembra più a destra; la T dritta sotto va spostata un po' verso di lei.
+  const round = /^[COGQS]/i.test(t.textContent.trim()) ? parseFloat(getComputedStyle(t).fontSize) * .045 : 0;
+  s.style.marginLeft = `${(inkLeft(t) - inkLeft(s) + round).toFixed(2)}px`;
 });
 </script>
 </body>
