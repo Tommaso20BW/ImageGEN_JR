@@ -498,7 +498,7 @@ function renderFlow() {
   });
   if (screen) screen.classList.add('active');
   document.body.classList.toggle('home-mode',screenName === 'home');
-  itaTint(nat && screenName !== 'home');
+  itaTint((nat || kind === 'conv') && screenName !== 'home');   // sezione Nazionale: Italia e Convocati
   const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur' || screenName === 'jrlayout';
   $('stage').classList.toggle('photo-mode', editing);
   if (editing) $('stage').scrollTop = 0;
@@ -869,13 +869,21 @@ function updateSessionTimer() {
   }
 }
 
-// Voce "Italia": tutta la Mini App diventa azzurra (chiara o scura come il tema),
+// Sezione "Nazionale" (Italia e Convocati): tutta la Mini App diventa azzurra (chiara o scura come il tema),
 // anche la barra di Telegram; uscendo torna ai colori di sempre.
 let itaOn = false;
 function itaTint(on) {
   if (on === itaOn) return;
   itaOn = on;
-  document.documentElement.classList.toggle('ita-mode', on);
+  const root = document.documentElement;
+  // Dissolvenza dei colori solo durante il cambio (poi niente transizioni sempre accese).
+  clearTimeout(itaTint.timer);
+  if (!reduceMotion.matches) {                     // eccezione voluta: le altre animazioni restano spente
+    root.classList.add('theme-fade');
+    getComputedStyle(root).backgroundColor;          // applica la transizione prima del cambio
+    itaTint.timer = setTimeout(() => root.classList.remove('theme-fade'), 600);
+  }
+  root.classList.toggle('ita-mode', on);
   const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
   if (on) metaTheme.setAttribute('content', bg); else applyTheme();
   try {

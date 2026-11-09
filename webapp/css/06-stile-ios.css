@@ -391,4 +391,6 @@ html.ita-mode[data-theme="dark"]{--bg:#061A38;--bg-grad-a:#061A38;--bg-grad-b:#0
   --text:#EAF2FF;--muted:#93AFD6;--tint:#5AA2FF;--accent:#EAF2FF;--accent-ink:#061A38;--accent-soft:rgba(234,242,255,.08);
   --cta:#2F7BE0;--cta-hover:#4A8CE6;--cta-ink:#FFFFFF}
 html.ita-mode[data-theme="dark"] #modSh{background:#0D2A55}
-html.ita-mode body{transition:background-color .35s ease}
+/* cambio di colori (entrata/uscita da "Italia"): sfumano invece di cambiare di colpo */
+html.theme-fade,html.theme-fade *,html.theme-fade *::before,html.theme-fade *::after{
+  transition:background-color .5s ease,color .5s ease,border-color .5s ease,fill .5s ease,stroke .5s ease,box-shadow .5s ease!important}
