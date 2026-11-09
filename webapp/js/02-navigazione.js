@@ -869,7 +869,7 @@ function updateSessionTimer() {
   }
 }
 
-// Sezione "Nazionale" (Italia e Convocati): tutta la Mini App diventa azzurra (chiara o scura come il tema),
+// Sezione "Nazionale" (Italia e Convocati): tutta la Mini App diventa azzurra (stesso azzurro col tema chiaro e scuro),
 // anche la barra di Telegram; uscendo torna ai colori di sempre.
 let itaOn = false;
 function itaTint(on) {
