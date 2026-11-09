@@ -75,10 +75,15 @@ const hhmm = ms => {
 };
 // Sempre due righe (tutte le righe dell'elenco alte uguali): giocatore e minuto; risultato e
 // avversario. Senza giocatore (Kick Off, fasi...) "risultato · avversario" sale sulla prima.
-// Storia IG e Citazione IG: account (se c'è) e poi l'inizio del testo (`note`).
+// Storia e Citazioni: account (se c'è) e poi l'inizio del testo (`note`).
+// Avversario col nome italiano (come nel resto della Mini App); negli invii salvati prima:
+// "IG" -> "Instagram" e niente "@" davanti al nome di una persona ("@Alessandro Del Piero").
+const sentName = item => String(item.name || '').replace(/ IG$/, ' Instagram');
 const sentLines = item => {
-  const who = [item.player, item.minute].filter(Boolean).join(' · ');
-  const match = item.note || [item.score, item.opponent].filter(Boolean).join(' · ');
+  const player = /^@\S+\s/.test(item.player || '') ? item.player.slice(1) : item.player;
+  const who = [player, item.minute].filter(Boolean).join(' · ');
+  const vs = item.opponent ? displayTeamName(item.opponent) : '';
+  const match = item.note || [item.score, vs].filter(Boolean).join(' · ');
   return who ? [who, match] : [match, ''];
 };
 const sentUrl = (what, id) => `${directBase}/history/${what}?session=${encodeURIComponent(session)}&id=${encodeURIComponent(id)}`;
@@ -120,7 +125,7 @@ function fillSentRows(listId, emptyId, groupId, onPick) {
       '<span class="hm-desc"></span><span class="hm-desc"></span></span>' +
       '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
     b.querySelector('.hm-thumb').src = sentUrl('thumb', item.id);
-    b.querySelector('.hm-name').textContent = item.name;
+    b.querySelector('.hm-name').textContent = sentName(item);
     const [who, match] = sentLines(item);
     const desc = b.querySelectorAll('.hm-desc');
     desc[0].textContent = who || ' ';      // riga vuota: spazio, così l'altezza resta uguale
@@ -134,7 +139,7 @@ function fillSentRows(listId, emptyId, groupId, onPick) {
 function renderSentItem() {
   const item = recentPick;
   if (!item) return;
-  $('sentTitle').textContent = item.name;
+  $('sentTitle').textContent = sentName(item);
   const [who, match] = sentLines(item);
   $('sentLead').textContent = [who, match, `inviata alle ${hhmm(item.at)}`].filter(Boolean).join(' · ');
   $('sentImage').src = sentUrl('image', item.id);

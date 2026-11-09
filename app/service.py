@@ -1401,31 +1401,60 @@ def _jpeg(raw, size, quality):
 
 def _send_detail(data):
     """Dati mostrati in "Ultimi invii", separati: la Mini App li mette su due righe
-    (giocatore e minuto; risultato e avversario)."""
+    (giocatore e minuto; risultato e avversario, oppure `note`). Il nome dell'avversario è
+    quello del catalogo: la Mini App lo mostra col nome italiano (Impostazioni › Nomi)."""
+    kind = data.get('kind')
     score = data.get('score')
     opponent = data.get('opponent')
-    # Storia IG e Citazione IG: account (solo Citazione) e inizio del testo.
-    if data.get('kind') in ('igq', 'xq', 'thq', 'igbn'):
+    empty = {'player': '', 'minute': '', 'score': '', 'opponent': '', 'note': ''}
+    # Storia e Citazioni: nome dell'account (con @account se c'è) e inizio del testo.
+    if kind in ('igq', 'xq', 'thq', 'igbn'):
         text = ' '.join(str(data.get('text') or '').split())
         note = (text[:117] + '…') if len(text) > 120 else text
         if not note and data.get('photo_id'):
             note = 'Solo foto'
-        return {'player': f"@{data['name']}" if data.get('name') else '', 'minute': '', 'score': '',
-                'opponent': '', 'note': note}
-    if data.get('kind') == 'conv':
+        who = ' · '.join(v for v in (str(data.get('name') or ''),
+                                     f"@{data['handle']}" if data.get('handle') else '') if v)
+        return {**empty, 'player': who, 'note': note}
+    if kind == 'conv':
         n = len(data.get('players') or [])
-        return {'player': f'{n} giocatori', 'minute': '', 'score': '', 'opponent': '',
+        return {**empty, 'player': f'{n} giocatori',
                 'note': ', '.join(p[3] for p in (data.get('players') or [])[:4]) + ('…' if n > 4 else '')}
-    if data.get('kind') == 'table':
+    if kind == 'table':
         names = {'SA': 'Serie A', 'CI': 'Coppa Italia', 'UCL': 'Champions League', 'UEL': 'Europa League',
                  'UECL': 'Conference League'}
-        return {'player': names.get(str(data.get('competition') or ''), ''), 'minute': '', 'score': '',
-                'opponent': '', 'note': ''}
+        return {**empty, 'player': names.get(str(data.get('competition') or ''), '')}
+    if kind == 'jr':
+        style = {'classic': 'Classica', 'blur': 'Sfocata', 'collage': 'Collage'}.get(data.get('style'), '')
+        extra = (data.get('ratio') if data.get('style') == 'classic'
+                 else f"{len(data.get('cards') or data.get('cells') or [])} foto")
+        return {**empty, 'player': ' · '.join(v for v in (style, extra) if v)}
+    if kind == 'cal':
+        from graphics.calendar import MONTHS
+        n = len(data.get('matches') or [])
+        return {**empty, 'player': f"{MONTHS[int(data['month']) - 1].capitalize()} {data.get('year', '')}".strip(),
+                'note': f"{n} partit{'a' if n == 1 else 'e'}"}
+    team = str(opponent.get('name') or '') if isinstance(opponent, dict) else ''
+    if kind == 'squad':
+        return {**empty, 'player': f"{len(data.get('players') or [])} convocati", 'opponent': team}
+    if kind == 'md':
+        info = data.get('info') or {}
+        when = (info.get('date', '').title(), info.get('time', '').split(' ')[0])     # senza CET/CEST
+        return {**empty, 'player': ' · '.join(v for v in when if v),
+                'opponent': team}
+    if kind == 'pxi':
+        return {**empty, 'player': str(data.get('module') or ''), 'opponent': team}
+    if kind == 'stats':
+        moment = {'HT': 'Primo tempo', '2H_END': 'Fine 90’', 'FT': 'Finale'}.get(data.get('moment'), '')
+        return {**empty, 'player': moment, 'opponent': team}
+    pens = data.get('shootout')
+    if isinstance(pens, (list, tuple)) and len(pens) == 2 and isinstance(score, (list, tuple)) and len(score) == 2:
+        score = (f'{score[0]}', f'{score[1]} ({pens[0]}-{pens[1]} rig.)')
     return {
         'player': str(data.get('player') or ''),
         'minute': f"{data['minute']}'" if data.get('minute') else '',
         'score': f'{score[0]}-{score[1]}' if isinstance(score, (list, tuple)) and len(score) == 2 else '',
-        'opponent': str(opponent.get('name') or '') if isinstance(opponent, dict) else '',
+        'opponent': team,
     }
 
 
