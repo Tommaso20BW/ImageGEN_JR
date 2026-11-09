@@ -20,6 +20,8 @@ from livescore.graphics import goal as g
 from shirt_numbers import load as _load_shirts
 
 SHIRT_NUMBERS = _load_shirts()
+from name_splits import load as _load_splits
+NAME_SPLITS = _load_splits()                # convocati: parole del nome (data/name_splits.json)
 
 LOGO_SIZE = 96
 MANIFEST_RELATIVE = Path('data/fclogo_manifest.json')
@@ -120,5 +122,6 @@ def build_team_bundle(assets=g.DEFAULT_ASSET_DIR):
         players = []
     log.info('AVVIO', f'Calciatori nel pacchetto: {len(players)}')
     return json.dumps(
-        {**manifest, 'teams': rows, 'players': players, 'shirts': dict(SHIRT_NUMBERS)}, ensure_ascii=False
+        {**manifest, 'teams': rows, 'players': players, 'shirts': dict(SHIRT_NUMBERS),
+         'name_splits': dict(NAME_SPLITS)}, ensure_ascii=False
     ).encode('utf-8')

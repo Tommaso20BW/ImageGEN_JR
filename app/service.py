@@ -769,6 +769,19 @@ class Service:
         except Exception as exc:
             log.warn('SALVATAGGIO', f'Numeri di maglia non salvati: {type(exc).__name__}: {exc}')
 
+    def _remember_names(self, players):
+        """Nome/cognome scelti per i convocati inviati -> repository (data/name_splits.json)."""
+        try:
+            import logo_bundle
+            import name_splits
+            chosen = [(row[3], row[4]) for row in players if len(row) > 4]
+            updates = name_splits.changes(chosen, name_splits.load())
+            if updates:
+                logo_bundle.NAME_SPLITS.update(updates)
+                name_splits.save(updates)
+        except Exception as exc:
+            log.warn('SALVATAGGIO', f'Nome e cognome non salvati: {type(exc).__name__}: {exc}')
+
     def fixtures(self, start, end):
         """Partite Juventus fra due date (AAAA-MM-GG, ora italiana), dal calendario ESPN."""
         try:
@@ -985,6 +998,8 @@ class Service:
             self._remember_ig_name(data)
             if data['kind'] == 'xi':
                 threading.Thread(target=self._remember_shirts, args=(data['lineup'],), daemon=True).start()
+            if data['kind'] == 'conv':
+                threading.Thread(target=self._remember_names, args=(data['players'],), daemon=True).start()
             took = time.time() - sending
             log.info('INVIO', f"{log.graphic_name(data)}: inviata su Telegram · {log.kb(len(png))} in {took:.1f} s"
                               + (f' (in coda {waited:.1f} s)' if waited >= 1 else ''))

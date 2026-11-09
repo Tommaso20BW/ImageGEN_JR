@@ -264,14 +264,21 @@ def _build_state(envelope, catalog, now, expected_session):
             raise ValueError('Incolla i convocati: una riga per giocatore.')
         if len(rows) > convocati.MAX_PLAYERS:
             raise ValueError(f'Al massimo {convocati.MAX_PLAYERS} giocatori.')
-        players = []
+        players, order = [], []
         for row in rows:
             row = row if isinstance(row, dict) else {}
             name = _canonical_player(catalog, row.get('name'))
-            code, country = convocati.nation(row.get('nation'))
-            players.append([name, code, country, _free_name(row.get('shown')) or name])
+            base, under = convocati.split_under(row.get('nation'))
+            code, country = convocati.nation(base)
+            shown = _free_name(row.get('shown')) or name
+            first = row.get('first')      # parole del nome scelte nella Mini App (None: salvate o la prima)
+            first = first if isinstance(first, int) and 1 <= first < len(shown.split()) else None
+            players.append([name, code, f'{country} U{under}' if under else country, shown, first])
+            order.append((convocati._key(country), under or 0, convocati._key(shown)))
         if len({p[0] for p in players}) != len(players):
             raise ValueError('Lo stesso giocatore compare due volte.')
+        # In ordine di nazionale (poi le giovanili della stessa nazione, poi il nome).
+        players = [p for _o, p in sorted(zip(order, players), key=lambda t: t[0])]
         footer = incoming.get('footer')
         return {
             'id': uuid.uuid4().hex[:10],

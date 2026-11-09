@@ -614,6 +614,8 @@ async function loadCatalogs() {
     if (playersResult.status === 'fulfilled') {
       const book = playersResult.value.shirts;
       if (book && typeof book === 'object') Object.assign(shirtBook, book);
+      const splits = playersResult.value.name_splits;      // convocati: nome/cognome salvati
+      if (splits && typeof splits === 'object') Object.assign(nameSplitBook, splits);
       const rows = Array.isArray(playersResult.value.players) ? playersResult.value.players : [];
       if (rows.length) normalizeCatalogs(rows,null);
     }

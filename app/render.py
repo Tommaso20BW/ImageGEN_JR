@@ -277,7 +277,7 @@ class Renderer:
 
             roster = {p.name: p for p in g.load_players()}
             return convocati.render(
-                [(roster[name], code, country, shown) for name, code, country, shown in data['players']],
+                [(roster[name], code, country, *rest) for name, code, country, *rest in data['players']],
                 footer=data.get('footer'),
             )
 

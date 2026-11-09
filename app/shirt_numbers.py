@@ -49,41 +49,47 @@ def changes(lineup, players, known):
 
 def save(updates, env=None, session=None):
     """Aggiorna il file nel repository (e la copia locale). Ritorna True se salvato."""
+    return save_json(PATH, LOCAL, updates, 'Numeri di maglia', env=env, session=session)
+
+
+def save_json(path, local, updates, what, env=None, session=None):
+    """Unisce `updates` al file JSON `path` del repository (commit via API GitHub) e alla
+    copia locale `local`. `what`: nome dei dati nei log e nel messaggio del commit."""
     if not updates:
         return False
     env = os.environ if env is None else env
     token, repo = env.get('IMAGEGEN_GH_PAT', '').strip(), env.get('GITHUB_REPOSITORY', '').strip()
     with _lock:
-        data = json.loads(LOCAL.read_text(encoding='utf-8'))
+        data = json.loads(local.read_text(encoding='utf-8'))
         data.update(updates)
         text = json.dumps(data, ensure_ascii=False, indent=1) + '\n'
-        LOCAL.write_text(text, encoding='utf-8')
+        local.write_text(text, encoding='utf-8')
         if not token or not repo:
-            log.warn('SALVATAGGIO', 'Numeri di maglia salvati solo per questa sessione (token mancante)')
+            log.warn('SALVATAGGIO', f'{what}: salvati solo per questa sessione (token mancante)')
             return False
         http = session or requests
         headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json',
                    'X-GitHub-Api-Version': '2022-11-28'}
-        url = f'https://api.github.com/repos/{repo}/contents/{PATH}'
+        url = f'https://api.github.com/repos/{repo}/contents/{path}'
         for _attempt in range(2):
             current = http.get(url, headers=headers, params={'ref': 'main'}, timeout=20)
             if current.status_code != 200:
-                log.warn('SALVATAGGIO', f'Numeri di maglia non salvati (lettura HTTP {current.status_code})')
+                log.warn('SALVATAGGIO', f'{what}: non salvati (lettura HTTP {current.status_code})')
                 return False
             remote = json.loads(base64.b64decode(current.json()['content']).decode('utf-8'))
             remote.update(updates)
             body = {
-                'message': 'Numeri di maglia: ' + ', '.join(f'{k} {v}' for k, v in sorted(updates.items())),
+                'message': f'{what}: ' + ', '.join(f'{k} {v}' for k, v in sorted(updates.items())),
                 'content': base64.b64encode((json.dumps(remote, ensure_ascii=False, indent=1) + '\n').encode()).decode(),
                 'sha': current.json()['sha'],
                 'branch': 'main',
             }
             put = http.put(url, headers=headers, json=body, timeout=20)
             if put.status_code in (200, 201):
-                log.info('SALVATAGGIO', f'Numeri di maglia salvati nel repository | {updates}')
+                log.info('SALVATAGGIO', f'{what}: salvati nel repository | {updates}')
                 return True
             if put.status_code != 409:              # 409 = file cambiato nel frattempo: riprova
                 break
-        log.warn('SALVATAGGIO', f'Numeri di maglia non salvati (scrittura HTTP {put.status_code}); '
+        log.warn('SALVATAGGIO', f'{what}: non salvati (scrittura HTTP {put.status_code}); '
               'serve contents: write nel workflow imagegen.yml')
         return False

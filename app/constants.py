@@ -19,8 +19,8 @@ KINDS = [
     ('CLASSIFICA', 'table'),
     ('CONVOCATI', 'conv'),
     ('FOTO + JR', 'jr'),
-    ('STORIE IG - BREAKING NEWS', 'igbn'),
-    ('CITAZIONE IG', 'igq'),
+    ('STORIE INSTAGRAM - BREAKING NEWS', 'igbn'),
+    ('CITAZIONE INSTAGRAM', 'igq'),
     ('CITAZIONE X', 'xq'),
     ('CITAZIONE THREADS', 'thq'),
 ]

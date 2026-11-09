@@ -124,6 +124,7 @@ function initCalendarSheet() {
 // Cognomi sulla grafica e nella ricerca; il nome completo serve solo per la rosa.
 const SHORT_NAMES = {nicolas_gonzalez:'Nico Gonzalez', douglas_luiz:'Douglas Luiz', randal_kolo_muani:'Kolo Muani',
   khephren_thuram_ulien:'Thuram', neto_murara:'Neto', lloyd_casius_kelly:'Kelly', pape_matar_sarr:'Sarr', juan_david_cabal:'Cabal'};
+const nameSplitBook = {};          // convocati: nome -> parole del nome (data/name_splits.json)
 const shirtBook = {};              // slug -> numero (data/shirt_numbers.json, anche giocatori fuori rosa)
 let xiPicks = [];                  // [{name, label, number, player}]
 let pxiRead = [];

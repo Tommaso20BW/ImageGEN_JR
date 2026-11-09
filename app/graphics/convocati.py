@@ -39,9 +39,26 @@ def nations():
     return _nations
 
 
+# "Italia Under 21", "Italia U21", "Italia U-21": nazionale giovanile.
+UNDER_RE = re.compile(r'\b(?:under|u)\s*[-.]?\s*(\d{2})\b', re.I)
+
+
+def split_under(text):
+    """('Italia', 21) per "Italia Under 21"; (testo, None) se non è una giovanile."""
+    text = str(text or '')
+    match = UNDER_RE.search(text)
+    if not match:
+        return text.strip(), None
+    rest = (text[:match.start()] + ' ' + text[match.end():]).strip(' -–—,')
+    return ' '.join(rest.split()), int(match.group(1))
+
+
 def nation(name):
-    """('it', 'Italia') per un nome di nazione scritto in qualunque variante; ValueError se sconosciuta."""
+    """('it', 'Italia') per un nome di nazione scritto in qualunque variante (o per il codice
+    della bandierina, es. 'ba'); ValueError se sconosciuta."""
     hit = nations().get(_key(name))
+    if not hit and len(_key(name)) == 2:
+        hit = next(((c, n) for c, n in nations().values() if c == _key(name)), None)
     if not hit:
         raise ValueError(f'Nazione non riconosciuta: «{name}». Scrivila in italiano (es. Olanda, Brasile).')
     return hit
@@ -124,10 +141,13 @@ def _grid(n):
     return 5
 
 
-def _split(text):
-    """('NICO', 'GONZALEZ'): nome in bianco, il resto (cognome) in oro."""
+def _split(text, first=None):
+    """('NICO', 'GONZALEZ'): nome in bianco, il resto (cognome) in oro. `first`: parole del
+    nome scelte nella Mini App; altrimenti quelle salvate (data/name_splits.json) o la prima."""
+    import name_splits
     words = _plain(text).upper().split()
-    return (words[0], ' '.join(words[1:])) if len(words) > 1 else ('', words[0] if words else '')
+    k = name_splits.first_words(text, first)
+    return (' '.join(words[:k]), ' '.join(words[k:])) if len(words) > 1 else ('', words[0] if words else '')
 
 
 def _logo():
@@ -155,7 +175,7 @@ def footer_default():
 
 
 def build_html(players, title=TITLE_DEFAULT, kicker=KICKER_DEFAULT, footer=None):
-    """players: [(Player del catalogo, codice bandiera, nome nazione[, nome da scrivere])].
+    """players: [(Player del catalogo, codice bandiera, nome nazione[, nome da scrivere[, parole del nome]])].
 
     Pannelli inclinati con la bandiera, il giocatore davanti con la testa che esce sopra, filo oro
     sotto; nome (bianco) e cognome (oro) in Dharma Gothic, nazione piccola."""
@@ -166,7 +186,8 @@ def build_html(players, title=TITLE_DEFAULT, kicker=KICKER_DEFAULT, footer=None)
     bg, ink = data_uri(canva / 'bg_convocati.jpg'), data_uri(canva / 'probabili_third_ink.png')   # sfondo nero con fascio di luce; oro come la grafica third
     logo, (lx0, ly0, lx1, ly1) = _logo()
     flags, cards = {}, []
-    for player, code, country, *shown in players:
+    for player, code, country, *extra in players:
+        shown, first = (list(extra) + [None, None])[:2]
         if code not in flags:
             path = assets / 'flags' / f'{code}.svg'
             if not path.is_file():
@@ -175,7 +196,7 @@ def build_html(players, title=TITLE_DEFAULT, kicker=KICKER_DEFAULT, footer=None)
         path = _photo(player)
         top, cx, _hw = head_box(str(path))
         pos = f'--pl:{.5 - cx * PHOTO_W:.4f};--pt:{HEAD_TOP - top * PHOTO_W:.4f}'
-        first, last = _split((shown and shown[0]) or player.name)
+        first, last = _split(shown or player.name, first)
         cards.append(
             f'<div class="p"><div class="card"><div class="pan"><img src="{flags[code]}" alt=""></div>'
             f'<div class="pw"><img class="ph" style="{pos}" src="{data_uri(path)}" alt=""></div><div class="bar"></div></div>'

@@ -149,6 +149,7 @@ async function nextField(validate=true) {
       refreshSearchSummaries();
     }
     if (step === 'lineup' && !(await askMissingNumbers())) return;
+    if (step === 'convlist' && !(await askConvNames())) return;
     if (step === 'iqurl' && !(await iqLoad())) return;
     if (!validateCurrent()) return;
   }

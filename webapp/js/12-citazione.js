@@ -124,7 +124,7 @@ async function iqGhost(overlay) {
 /* ----- Citazione X: stesse pagine della Citazione IG, testi e campo @account diversi ----- */
 function iqTexts() {
   const x = kind === 'xq', th = kind === 'thq';
-  const net = x ? 'X' : th ? 'Threads' : 'IG';
+  const net = x ? 'X' : th ? 'Threads' : 'Instagram';
   document.querySelectorAll('[data-screen^="iq"] .eyebrow').forEach(e => { e.textContent = `Citazione ${net}`; });
   $('iqUrlLead').textContent = x || th
     ? `Tieni premuto nel campo e incolla il link di un post di ${x ? 'X' : 'Threads'}: testo, nome, account, foto profilo e foto arrivano da soli.`
