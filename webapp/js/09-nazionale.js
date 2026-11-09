@@ -8,9 +8,10 @@ let nat = false;          // true = voce "Italia"
 let natSel = '';          // grafica scelta: kick, half, second, end_of_90, full, goal, saved, stats
 let goalType = 'goal';    // goal | penalty | own | nophoto
 // Starting XI dell'Italia: modulo e 11 cognomi (portiere, poi le linee dalla difesa all'attacco).
+// Si incolla come la Probabile XI dei club: il modulo si trova dal testo (o si sceglie dal pannello).
 let natModule = '';
+let natModuleManual = false;
 let natXi = Array(11).fill('');
-let natXiBuilt = '';
 // Moduli della grafica (stessi di livescore/graphics/lineup.py FORMATIONS).
 const NAT_MODULES = ['4-3-3','4-2-3-1','4-4-2','4-1-4-1','4-5-1','4-4-1-1','3-4-2-1','3-4-3','3-4-1-2',
   '3-5-2','3-1-4-2','5-4-1','5-3-2'];
@@ -88,8 +89,7 @@ function natRender() {
   renderOptions('natPreOpts',NAT_KINDS.filter(([v]) => v === 'natxi'),natSel,natPickKind);
   renderOptions('natKindOpts',NAT_KINDS.filter(([v]) => NAT_PHASES.has(v)),natSel,natPickKind);
   renderOptions('natPlayOpts',NAT_KINDS.filter(([v]) => !NAT_PHASES.has(v) && v !== 'natxi'),natSel,natPickKind);
-  if ($('natModule').value !== natModule) $('natModule').value = natModule;
-  natXiRender();
+  natModuleButton();
   if (noPhotoAlways() && goalType === 'nophoto') goalType = 'goal';
   renderOptions('goalTypeOpts',goalTypeOptions(),goalType,v => { goalType = v; buildFlow(); });
   $('natPlayerTitle').textContent = kind === 'saved' ? 'Portiere' : goalType === 'own' ? 'Chi ha fatto autogol' : 'Marcatore';
@@ -101,7 +101,8 @@ function natRender() {
 
 function natReset() {
   natSel = ''; goalType = 'goal';
-  natModule = ''; natXi = Array(11).fill(''); natXiBuilt = ''; $('natXiRows').innerHTML = '';
+  natModule = ''; natModuleManual = false; natXi = Array(11).fill('');
+  $('natXiText').value = ''; natReadXi(false);
   $('natOpp').value = ''; $('natPlayer').value = '';
 }
 
@@ -125,49 +126,71 @@ function natPayload() {
   return data;
 }
 
-// Campi dei titolari: rifatti solo quando cambia il modulo (i nomi già scritti restano al loro posto).
-function natXiRender() {
-  const box = $('natXiRows');
-  if (!natModule || natXiBuilt === natModule) return;
-  natXiBuilt = natModule;
-  const rows = natModule.split('-').map(Number);
-  const middle = rows.length === 3 ? ['Centrocampo'] : rows.length === 4 ? ['Centrocampo','Trequarti'] : ['Centrocampo'];
-  const names = ['Difesa',...middle,'Attacco'];
-  const lines = [['Portiere',1],...rows.map((n,i) => [names[Math.min(i,names.length - 1)] + (i > 0 && i < rows.length - 1 && rows.length > 4 ? ` ${i}` : ''),n])];
+// Reparto di ogni posto (portiere, poi le linee del modulo dalla difesa all'attacco).
+function natRoles(module) {
+  if (!module) return [];
+  const rows = module.split('-').map(Number);
+  const middle = rows.length === 4 ? ['CEN','TRQ'] : Array(Math.max(0, rows.length - 2)).fill('CEN');
+  const names = ['DIF',...middle,'ATT'];
+  return ['POR',...rows.flatMap((n,i) => Array(n).fill(names[i]))];
+}
+
+// Testo incollato -> modulo e 11 cognomi (portiere, poi ogni linea da sinistra a destra).
+function natReadXi(render = true) {
+  const {module, groups} = parseFormation($('natXiText').value);
+  const flat = groups.flat().slice(0,11);
+  if (!natModuleManual) {
+    const fromLines = groups.length > 2 ? groups.slice(1).map(g => g.length).join('-') : '';
+    natModule = NAT_MODULES.includes(module) ? module : NAT_MODULES.includes(fromLines) ? fromLines : natModule;
+  }
+  // I giornali scrivono ogni reparto da destra a sinistra: come nella Probabile XI, si gira.
+  const sizes = natModule ? [1, ...natModule.split('-').map(Number)] : [];
+  let ordered = flat;
+  if (sizes.length > 1) {
+    ordered = [];
+    let at = 0;
+    sizes.forEach(n => { ordered.push(...flat.slice(at, at + n).reverse()); at += n; });
+    ordered.push(...flat.slice(at));
+  }
+  natXi = Array.from({length:11},(_,i) => ordered[i] ? cleanName(ordered[i].label) : '');
+  natModuleButton();
+  const roles = natRoles(natModule);
+  const box = $('natXiParsed');
   box.innerHTML = '';
-  let idx = 0;
-  lines.forEach(([label,count]) => {
-    const head = document.createElement('div');
-    head.className = 'field-label gap';
-    head.textContent = count > 1 ? `${label} · da sinistra a destra` : label;
-    const list = document.createElement('div');
-    list.className = 'ios-list';
-    for (let k = 0; k < count; k++, idx++) {
-      const i = idx;
-      const row = document.createElement('label');
-      row.className = 'ios-row';
-      row.innerHTML = '<span></span><input class="ios-in" maxlength="30" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="next" placeholder="Cognome">';
-      row.querySelector('span').textContent = count > 1 ? String(k + 1) : 'GK';
-      const input = row.querySelector('input');
-      input.value = natXi[i];
-      input.addEventListener('input',() => { natXi[i] = input.value; renderSteps(); });
-      input.addEventListener('keydown',e => {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        const all = [...box.querySelectorAll('input')];
-        const next = all[all.indexOf(input) + 1];
-        if (next) next.focus(); else nextField(true);
-      });
-      list.appendChild(row);
-    }
-    box.append(head,list);
+  if (flat.length) natXi.forEach((name,i) => {
+    const row = document.createElement('div');
+    row.className = 'parsed-row' + (name ? '' : ' miss');
+    row.innerHTML = '<span class="pr-num pr-role"></span><span class="pr-name"></span><span class="pr-role"></span>';
+    row.children[0].textContent = roles[i] || '';
+    row.children[1].textContent = name ? name.toUpperCase() : '—';
+    row.children[2].textContent = name ? '' : 'manca';
+    box.appendChild(row);
   });
+  $('natXiSummary').textContent = `${flat.length} / 11 giocatori`;
+  if (render) renderSteps();
+}
+
+// Pulsante e pannello del modulo: come la Probabile XI dei club, con i moduli della grafica Italia.
+function natModuleButton() {
+  const box = $('natModOpts');
+  if (!box) return;
+  box.innerHTML = `<button type="button" class="mod-btn">${natModule ? modPitch(natModule) : ''}<span><b>${natModule ? 'Modulo' : 'Scegli il modulo'}</b></span><em>${natModule}</em><i>›</i></button>`;
+  box.firstChild.addEventListener('click',natOpenModSheet);
+}
+
+function natOpenModSheet() {
+  haptic('select');
+  const sh = $('modSh');
+  sh.innerHTML = `<div class="mod-bar"></div><div class="mod-top"><b>Modulo</b></div>`
+    + `<div class="mod-grid">${NAT_MODULES.map(m => `<button type="button" class="mod-tile${m === natModule ? ' on' : ''}" data-m="${m}">${modPitch(m)}<span>${m}</span></button>`).join('')}</div>`;
+  sh.querySelectorAll('.mod-tile[data-m]').forEach(b => b.addEventListener('click',() => {
+    natModule = b.dataset.m; natModuleManual = true; haptic('select'); closeModSheet(); natReadXi();
+  }));
+  $('modOv').classList.add('open');
 }
 
 function natInit() {
-  const sel = $('natModule');
-  NAT_MODULES.forEach(m => sel.add(new Option(m,m)));
-  sel.addEventListener('change',() => { natModule = sel.value; natXiRender(); renderSteps(); });
+  $('natXiText').addEventListener('input',() => natReadXi());
   ['natOpp','natPlayer'].forEach(id => $(id).addEventListener('input',() => renderSteps()));
   ['natOpp','natPlayer'].forEach(id => $(id).addEventListener('keydown',e => { if (e.key === 'Enter') { e.preventDefault(); nextField(true); } }));
 }

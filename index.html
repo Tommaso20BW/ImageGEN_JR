@@ -133,9 +133,12 @@
           <section class="screen" data-screen="natxi">
             <div class="eyebrow">Italia</div>
             <h1>Formazione</h1>
-            <p class="lead">Scegli il modulo, poi scrivi i cognomi come devono comparire: linea per linea, da sinistra a destra (l’Italia attacca verso l’alto).</p>
-            <div class="ios-list"><label class="ios-row"><span>Modulo</span><select id="natModule" class="ios-in" aria-label="Modulo"><option value="">Scegli…</option></select></label></div>
-            <div id="natXiRows"></div>
+            <p class="lead">Incollala come la scrivono i giornali (ogni reparto da destra a sinistra), oppure scrivi un cognome per riga partendo dal portiere. Il modulo lo trovo da solo.</p>
+            <textarea id="natXiText" class="field-input paste" maxlength="600" autocapitalize="words" spellcheck="false"
+              placeholder="Inserisci formazione"></textarea>
+            <div id="natXiSummary" class="hint">0 / 11 giocatori</div>
+            <div id="natModOpts"></div>
+            <div id="natXiParsed" class="parsed"></div>
           </section>
 
           <section class="screen" data-screen="goaltype">

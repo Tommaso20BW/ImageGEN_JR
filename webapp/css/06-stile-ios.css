@@ -382,3 +382,13 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .opt-group{margin:24px 0 8px}
 .lead + .opt-group{margin-top:18px}
 
+
+/* Voce "Italia": colori azzurri (chiaro o scuro come il tema). */
+html.ita-mode{--bg:#DDEBFB;--bg-grad-a:#DDEBFB;--bg-grad-b:#DDEBFB;--surface:#FFFFFF;--line:#C7DAF1;--chev:#9BB5D6;
+  --text:#0B2A55;--muted:#4E6D96;--tint:#1F5FB4;--accent:#1F5FB4;--accent-ink:#FFFFFF;--accent-soft:rgba(31,95,180,.10);
+  --cta:#1F5FB4;--cta-hover:#174E96;--cta-ink:#FFFFFF}
+html.ita-mode[data-theme="dark"]{--bg:#061A38;--bg-grad-a:#061A38;--bg-grad-b:#061A38;--surface:#0D2A55;--surface2:#143A72;--line:#1E4278;--chev:#4E70A3;
+  --text:#EAF2FF;--muted:#93AFD6;--tint:#5AA2FF;--accent:#EAF2FF;--accent-ink:#061A38;--accent-soft:rgba(234,242,255,.08);
+  --cta:#2F7BE0;--cta-hover:#4A8CE6;--cta-ink:#FFFFFF}
+html.ita-mode[data-theme="dark"] #modSh{background:#0D2A55}
+html.ita-mode body{transition:background-color .35s ease}

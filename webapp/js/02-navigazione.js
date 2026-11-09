@@ -498,6 +498,7 @@ function renderFlow() {
   });
   if (screen) screen.classList.add('active');
   document.body.classList.toggle('home-mode',screenName === 'home');
+  itaTint(nat && screenName !== 'home');
   const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur' || screenName === 'jrlayout';
   $('stage').classList.toggle('photo-mode', editing);
   if (editing) $('stage').scrollTop = 0;
@@ -866,4 +867,19 @@ function updateSessionTimer() {
       else showError(EXPIRED_MESSAGE);
     }
   }
+}
+
+// Voce "Italia": tutta la Mini App diventa azzurra (chiara o scura come il tema),
+// anche la barra di Telegram; uscendo torna ai colori di sempre.
+let itaOn = false;
+function itaTint(on) {
+  if (on === itaOn) return;
+  itaOn = on;
+  document.documentElement.classList.toggle('ita-mode', on);
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  if (on) metaTheme.setAttribute('content', bg); else applyTheme();
+  try {
+    if (tg && tg.setHeaderColor) tg.setHeaderColor(on ? bg : 'bg_color');
+    if (tg && tg.setBackgroundColor) tg.setBackgroundColor(on ? bg : 'bg_color');
+  } catch (_) {}
 }
