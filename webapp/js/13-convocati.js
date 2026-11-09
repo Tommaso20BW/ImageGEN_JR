@@ -92,6 +92,16 @@ function convPlayer(text) {
   return bySurname.length === 1 ? bySurname[0] : null;
 }
 
+// Più giocatori sulla stessa riga, con la stessa nazione: "Federico Gatti e Guglielmo Vicario",
+// "Cabal, Lucumi". Si divide solo se ogni parte è un giocatore della rosa (un nome con "e" dentro
+// resta intero); con la rosa non ancora caricata si divide comunque.
+function convNames(text, list) {
+  const parts = text.split(list ? /\s*(?:,|&|\+|\b(?:e|ed|and)\b)\s*/i : /\s+(?:e|ed|&)\s+/i)
+    .map(p => p.trim()).filter(Boolean);
+  if (parts.length < 2) return [text];
+  return !playersLoaded || parts.every(p => convPlayer(p)) ? parts : [text];
+}
+
 function readConv() {
   const lines = $('convText').value.split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
   convRows = lines.map(line => {
@@ -104,12 +114,14 @@ function readConv() {
       line = before && after && !after.includes('(') ? `${before} (${after})` : `${before} ${after}`.trim();
       line = line.replace(new RegExp(CONV_FLAG.source, 'gu'), '').trim();
     }
-    const m = line.match(/^(.+?)\s*(?:\(([^)]*)\)?|\s[-–—]\s|,)\s*(.*)$/);
-    const name = (m ? m[1] : line).replace(/^[\d.\-•*\s]+/, '').trim();
+    // Nazione tra parentesi in fondo: prima ci possono essere più giocatori ("A e B (Colombia)").
+    const paren = line.match(/^(.+?)\s*\(([^)]*)\)\s*$/);
+    const m = paren || line.match(/^(.+?)\s*(?:\(([^)]*)\)?|\s[-–—]\s|,)\s*(.*)$/);
+    const names = convNames((m ? m[1] : line).replace(/^[\d.\-•*\s]+/, '').trim(), !!paren);
     let nation = m ? (m[2] !== undefined ? m[2] : m[3]).trim() : '';
     if (flag && !nation.replace(CONV_UNDER, '').trim()) nation = `${flag} ${nation}`.trim();
-    return {name, nation, first: convFirst(name), player: playersLoaded ? convPlayer(name) : null};
-  });
+    return names.map(name => ({name, nation, first: convFirst(name), player: playersLoaded ? convPlayer(name) : null}));
+  }).flat();
   // In ordine di nazionale, come sulla grafica.
   convRows.sort((a, b) => norm(convNationLabel(a.nation)).localeCompare(norm(convNationLabel(b.nation))));
   const box = $('convParsed');
