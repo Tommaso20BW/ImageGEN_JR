@@ -54,6 +54,8 @@ jobs:
           if [ -d _private_assets/team_overrides ]; then cp -a _private_assets/team_overrides _graphics_core/assets/goal_graphics/; fi
           # Bandiere delle nazionali (grafica Convocati): flag-icons, licenza MIT.
           if [ -d _private_assets/flags ]; then cp -a _private_assets/flags _graphics_core/assets/goal_graphics/; fi
+          # Bandiere tonde (grafiche dell'Italia del motore LiveScore).
+          if [ -d _private_assets/flags_round ]; then cp -a _private_assets/flags_round _graphics_core/assets/goal_graphics/; fi
           # Foto ufficiali dei giocatori dal sito della Lega Serie A (app/foto_lega.py).
           if [ -d _private_assets/players_lega ]; then cp -a _private_assets/players_lega _graphics_core/assets/goal_graphics/; fi
           # Ultimi invii e frasi pronte della Storia IG (salvati dalla mini app, app/sent_store.py).
