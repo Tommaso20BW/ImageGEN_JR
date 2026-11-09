@@ -1,0 +1,102 @@
+name: Prova grafiche
+
+# Genera tutte le grafiche con dati d'esempio (app/tools/smoke_graphics.py) e segnala
+# quelle che si rompono. Niente Telegram e niente salvataggi.
+# - a ogni modifica al codice delle grafiche (non ai dati salvati dalla Mini App: app/data/);
+# - a mano da Actions › Prova grafiche › Run workflow.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '!app/data/**'
+      - 'requirements.txt'
+      - '.github/workflows/prova-grafiche.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prova-grafiche
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Tutte le grafiche
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout ImageGEN JR
+        uses: actions/checkout@v6
+
+      - name: Checkout motore grafico LiveScore JR
+        uses: actions/checkout@v6
+        with:
+          repository: Tommaso20BW/LiveScore_JR
+          path: _graphics_core
+          sparse-checkout: |
+            /livescore/
+            /data/
+          sparse-checkout-cone-mode: false
+
+      - name: Checkout asset privati (foto, font, loghi)
+        uses: actions/checkout@v6
+        with:
+          repository: Tommaso20BW/LiveScore_Assets_JR
+          token: ${{ secrets.ASSETS_PAT }}
+          path: _private_assets
+
+      - name: Installa asset privati
+        shell: bash
+        run: |
+          mkdir -p _graphics_core/assets/goal_graphics
+          cp -a _private_assets/players _private_assets/fonts _private_assets/team_logos _private_assets/overlays _private_assets/portrait _private_assets/word_textures _private_assets/canva _graphics_core/assets/goal_graphics/
+          for d in team_overrides flags players_lega imagegen; do
+            if [ -d "_private_assets/$d" ]; then cp -a "_private_assets/$d" _graphics_core/assets/goal_graphics/; fi
+          done
+
+      - name: Configura Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Installa dipendenze Python
+        run: python -m pip install --disable-pip-version-check -q -r requirements.txt
+
+      - name: Prepara Chrome per le grafiche
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          if [ -n "$CHROME" ]; then
+            echo "IMAGEGEN_CHROME=$CHROME" >> "$GITHUB_ENV"
+            # Statistiche (motore LiveScore): stesso Chrome di sistema, come nel workflow ImageGen.
+            sed -i "s|browser = playwright.chromium.launch()|browser = playwright.chromium.launch(executable_path='$CHROME')|" _graphics_core/livescore/graphics/stats.py
+          else
+            playwright install --with-deps chromium
+          fi
+
+      - name: Test
+        working-directory: app
+        env:
+          PYTHONPATH: ${{ github.workspace }}/app:${{ github.workspace }}/_graphics_core
+        run: python -m unittest discover -s tests -q
+
+      - name: Genera tutte le grafiche
+        working-directory: app
+        env:
+          PYTHONPATH: ${{ github.workspace }}/app:${{ github.workspace }}/_graphics_core
+        run: python -u tools/smoke_graphics.py ../anteprime
+
+      - name: Anteprime
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anteprime-grafiche
+          path: anteprime/
+          retention-days: 7
+          if-no-files-found: ignore
