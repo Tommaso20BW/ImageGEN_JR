@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+import _percorsi  # noqa: F401 - prima degli import del servizio
 import webapp_payload
 from graphics import classifica
 

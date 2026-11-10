@@ -1,10 +1,11 @@
-"""Lettura dei convocati da juventus.com (casi visti sul sito vero). Avvio: python -m unittest tests.test_convocati"""
+"""Lettura dei convocati da juventus.com (casi visti sul sito vero). Avvio (da app/): python -m unittest discover -s tests"""
 import json
 import unittest
 from unittest import mock
 
 import requests
 
+import _percorsi  # noqa: F401 - prima degli import del servizio
 import juventus_convocati as jc
 
 

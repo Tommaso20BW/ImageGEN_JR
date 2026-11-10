@@ -74,8 +74,6 @@ jobs:
           CHROME="$(command -v google-chrome || command -v google-chrome-stable || true)"
           if [ -n "$CHROME" ]; then
             echo "IMAGEGEN_CHROME=$CHROME" >> "$GITHUB_ENV"
-            # Statistiche (motore LiveScore): stesso Chrome di sistema, come nel workflow ImageGen.
-            sed -i "s|browser = playwright.chromium.launch()|browser = playwright.chromium.launch(executable_path='$CHROME')|" _graphics_core/livescore/graphics/stats.py
           else
             playwright install --with-deps chromium
           fi
@@ -94,7 +92,7 @@ jobs:
 
       - name: Anteprime
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: anteprime-grafiche
           path: anteprime/
