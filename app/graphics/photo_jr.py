@@ -54,7 +54,7 @@ TITLE_TEXTURE_W = 480          # lato della texture sulla pagina: puntini fini c
 # contrasto, luce, grana aggiunta (quanto è fitta, quanto scurisce, grandezza dei pori) e tono caldo.
 # Valori scelti confrontando la scritta con quella fatta da Gemini ("RIPRESSA"): cemento liscio, grigio chiaro,
 # puntini fini e zone più chiare a macchie larghe (light_px = grandezza delle macchie, light = quanto schiariscono).
-TITLE_TEXTURE_LOOK = {'contrast': .38, 'brightness': .93, 'grain_sigma': 70, 'grain_cut': 38, 'grain_dark': .72,
+TITLE_TEXTURE_LOOK = {'contrast': .38, 'brightness': 1.32, 'grain_sigma': 70, 'grain_cut': 38, 'grain_dark': .72,
                       'grain_px': 2, 'tint': '#f4f0ea', 'light_px': 220, 'light': .9}
 TITLE_W = 982
 TITLE_BOTTOM = -2              # il riquadro del font ha spazio sotto le lettere: così la base sta a 27 px dal fondo
@@ -64,7 +64,9 @@ TITLE_SKEW = -9                # gradi: scritta inclinata
 TITLE_SQUEEZE = .89             # lettere un po' più strette del font
 # Fondo della foto scurito verso il basso (come nella grafica d'esempio): il titolo si legge sempre.
 TITLE_SHADE = 'linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(0,0,0,.45) 72%,rgba(0,0,0,.82) 100%)'
-TITLE_OPACITY = .85            # appena trasparente: la foto si intravede, come nell'esempio
+# Luce sulla scritta (come in quella di Gemini): più chiara al centro e in alto, più scura in basso e ai lati.
+TITLE_LIGHT = 'radial-gradient(ellipse 62% 150% at 50% 0%,#fff 0%,#fff 22%,#999 100%)'
+TITLE_OPACITY = .9            # appena trasparente: la foto si intravede, come nell'esempio
 MAX_CARDS = 4                  # foto nitide nello stile Sfocata
 MAX_COLLAGE = 9                # foto nel collage
 # Pagina 26 Canva (misure sulla pagina 1080x1440): sfondo ingrandito del 6% per
@@ -245,7 +247,7 @@ def _fill(color):
     texture = asset_dir() / TITLE_TEXTURE
     if texture.is_file():
         uri = _texture(str(texture), tuple(sorted(TITLE_TEXTURE_LOOK.items())))
-        return f'url({uri}) 50% 50%/{TITLE_TEXTURE_W}px auto,{color};background-blend-mode:multiply'
+        return f'{TITLE_LIGHT},url({uri}) 50% 50%/{TITLE_TEXTURE_W}px auto,{color};background-blend-mode:multiply'
     return f'url({_grain()}) 0 0/240px 240px,{color}'
 
 
