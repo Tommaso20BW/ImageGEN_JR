@@ -381,13 +381,3 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 /* Elenco con gruppi (Italia · Grafica): titoli come nella Home */
 .opt-group{margin:24px 0 8px}
 .lead + .opt-group{margin-top:18px}
-
-
-/* Sezione "Nazionale" (Italia e Convocati): azzurro pieno, uguale col tema chiaro e scuro. */
-html.ita-mode,html.ita-mode[data-theme="dark"]{--bg:#1E6CC4;--bg-grad-a:#1E6CC4;--bg-grad-b:#1E6CC4;--surface:#2E7FD6;--surface2:#3D8BDD;--line:#4C95E2;--chev:#A9CDF5;
-  --text:#FFFFFF;--muted:#D3E6FB;--tint:#FFFFFF;--accent:#FFFFFF;--accent-ink:#1E6CC4;--accent-soft:rgba(255,255,255,.12);
-  --cta:#FFFFFF;--cta-hover:#E6F1FD;--cta-ink:#1E6CC4}
-html.ita-mode #modSh{background:#1E6CC4}
-/* cambio di colori (entrata/uscita da "Italia"): sfumano invece di cambiare di colpo */
-html.theme-fade,html.theme-fade *,html.theme-fade *::before,html.theme-fade *::after{
-  transition:background-color .5s ease,color .5s ease,border-color .5s ease,fill .5s ease,stroke .5s ease,box-shadow .5s ease!important}

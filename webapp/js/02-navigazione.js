@@ -1,6 +1,5 @@
 /* Mini App ImageGen JR. File caricati in ordine da index.html: l'ordine conta. */
 /* ---------- Motion ---------- */
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 // Animazioni disattivate in tutta l'app: le pagine e i controlli cambiano subito.
 const motionOK = () => false;
 const EASE_OUT = 'cubic-bezier(.2,.8,.2,1)';
@@ -498,7 +497,6 @@ function renderFlow() {
   });
   if (screen) screen.classList.add('active');
   document.body.classList.toggle('home-mode',screenName === 'home');
-  itaTint((nat || kind === 'conv') && screenName !== 'home');   // sezione Nazionale: Italia e Convocati
   const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur' || screenName === 'jrlayout';
   $('stage').classList.toggle('photo-mode', editing);
   if (editing) $('stage').scrollTop = 0;
@@ -867,27 +865,4 @@ function updateSessionTimer() {
       else showError(EXPIRED_MESSAGE);
     }
   }
-}
-
-// Sezione "Nazionale" (Italia e Convocati): tutta la Mini App diventa azzurra (stesso azzurro col tema chiaro e scuro),
-// anche la barra di Telegram; uscendo torna ai colori di sempre.
-let itaOn = false;
-function itaTint(on) {
-  if (on === itaOn) return;
-  itaOn = on;
-  const root = document.documentElement;
-  // Dissolvenza dei colori solo durante il cambio (poi niente transizioni sempre accese).
-  clearTimeout(itaTint.timer);
-  if (!reduceMotion.matches) {                     // eccezione voluta: le altre animazioni restano spente
-    root.classList.add('theme-fade');
-    getComputedStyle(root).backgroundColor;          // applica la transizione prima del cambio
-    itaTint.timer = setTimeout(() => root.classList.remove('theme-fade'), 600);
-  }
-  root.classList.toggle('ita-mode', on);
-  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
-  if (on) metaTheme.setAttribute('content', bg); else applyTheme();
-  try {
-    if (tg && tg.setHeaderColor) tg.setHeaderColor(on ? bg : 'bg_color');
-    if (tg && tg.setBackgroundColor) tg.setBackgroundColor(on ? bg : 'bg_color');
-  } catch (_) {}
 }
