@@ -50,6 +50,11 @@ TITLE_MAX = 30
 TITLE_COLOR = '#ffffff'        # bianco: il grigio sporco lo dà la texture
 TITLE_TEXTURE = 'word_textures/titolo.jpg'   # cemento chiaro (asset privato); manca -> grana disegnata qui
 TITLE_TEXTURE_W = 480          # lato della texture sulla pagina: puntini fini come nell'esempio
+# Texture ritoccata per un cemento più grigio e poroso (fitta di micro-puntini, macchie scure più morbide):
+# contrasto, luce, grana aggiunta (quanto è fitta, quanto scurisce, grandezza dei pori) e tono caldo.
+# Valori scelti confrontando la scritta con quella fatta da Gemini ("RIPRESSA"): stessa luce media delle lettere.
+TITLE_TEXTURE_LOOK = {'contrast': .8, 'brightness': .98, 'grain_sigma': 70, 'grain_cut': 72, 'grain_dark': .7,
+                      'grain_px': 2, 'tint': '#fbf6ee'}
 TITLE_W = 982
 TITLE_BOTTOM = -2              # il riquadro del font ha spazio sotto le lettere: così la base sta a 27 px dal fondo
 TITLE_SIZE = (120, 420)
@@ -201,12 +206,38 @@ def _grain():
     return 'data:image/png;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
 
 
+@lru_cache(maxsize=4)
+def _texture(path, look):
+    """Texture del titolo pronta (JPEG): contrasto e luce ritoccati, più una grana fine sempre uguale (seme fisso)."""
+    import io
+    import random
+    from PIL import Image, ImageChops, ImageEnhance
+
+    look = dict(look)
+    with Image.open(path) as source:
+        tex = source.convert('RGB')
+    tex = ImageEnhance.Brightness(ImageEnhance.Contrast(tex).enhance(look['contrast'])).enhance(look['brightness'])
+    random.seed(7)
+    step = look.get('grain_px', 1)             # grandezza dei pori (pixel della texture)
+    noise = Image.effect_noise((tex.width // step, tex.height // step), look['grain_sigma'])
+    noise = noise.resize(tex.size, Image.Resampling.BILINEAR)
+    cut, dark = look['grain_cut'], round(255 * look['grain_dark'])
+    mask = noise.point(lambda v: dark if v < cut else 255).convert('RGB')
+    tex = ImageChops.multiply(tex, mask)
+    if look.get('tint'):                        # tono caldo leggero (cemento, non grigio freddo)
+        tex = ImageChops.multiply(tex, Image.new('RGB', tex.size, look['tint']))
+    out = io.BytesIO()
+    tex.save(out, 'JPEG', quality=90)
+    return 'data:image/jpeg;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
+
+
 def _fill(color):
     """Riempimento della scritta: la texture di cemento moltiplicata per il colore scelto (bianco = la texture
     com'è), oppure, senza texture, il colore con la grana disegnata."""
     texture = asset_dir() / TITLE_TEXTURE
     if texture.is_file():
-        return f'url({data_uri(texture)}) 50% 50%/{TITLE_TEXTURE_W}px auto,{color};background-blend-mode:multiply'
+        uri = _texture(str(texture), tuple(sorted(TITLE_TEXTURE_LOOK.items())))
+        return f'url({uri}) 50% 50%/{TITLE_TEXTURE_W}px auto,{color};background-blend-mode:multiply'
     return f'url({_grain()}) 0 0/240px 240px,{color}'
 
 
