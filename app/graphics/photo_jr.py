@@ -1,6 +1,6 @@
 """FOTO + JR: foto caricate dall'utente con il solo logo JR (compleanni, MOTM...).
 
-Tre stili:
+Quattro stili:
 - classic: la foto a tutta pagina (design Canva delle pagine 6/11/16), in vari formati (3:4, 1:1, 16:9...);
 - blur: come la pagina 26 Canva. Sfondo = una delle foto, a tutta pagina, sfocata e un
   po' scurita; sopra, fino a 4 foto nitide con le loro proporzioni, angoli arrotondati e
@@ -9,6 +9,9 @@ Tre stili:
   sceglie la Mini App (layout automatici) e arrivano qui già pronti: fondo bianco con linee
   sottili, ogni foto riempie il suo riquadro (ritaglio al centro, un po' verso l'alto per non
   tagliare i volti).
+- title: come la Classica (3:4, foto spostabile), con un titolo grande in basso (es. "INFORTUNIO"):
+  Dharma Gothic inclinato, con una grana tipo cemento; la scritta si allarga o si stringe da sola
+  per riempire la larghezza, colore scelto dall'utente.
 
 Il logo ha posizione e misura del design Canva; il colore lo sceglie l'utente.
 """
@@ -39,7 +42,21 @@ def page_size(ratio=DEFAULT_RATIO):
     rw, rh = RATIOS[ratio]
     out_h = round(OUT_W * rh / rw)
     return DESIGN_W, out_h * DESIGN_W / OUT_W
-STYLES = ('classic', 'blur', 'collage')
+STYLES = ('classic', 'blur', 'collage', 'title')
+# Titolo (misure sulla pagina 1080x1440, ricavate dalla grafica "INFORTUNIO"): lettere larghe 936 px in tutto,
+# base a 27 px dal fondo; si adatta alla larghezza tra TITLE_SIZE (corpo del font in px). TITLE_W è il riquadro del testo.
+TITLE_FONT = 'DharmaGothicEBold.otf'
+TITLE_MAX = 30
+TITLE_COLOR = '#ffffff'        # bianco: il grigio sporco lo dà la texture
+TITLE_TEXTURE = 'word_textures/titolo.jpg'   # cemento chiaro (asset privato); manca -> grana disegnata qui
+TITLE_TEXTURE_W = 480          # lato della texture sulla pagina: puntini fini come nell'esempio
+TITLE_W = 982
+TITLE_BOTTOM = -2              # il riquadro del font ha spazio sotto le lettere: così la base sta a 27 px dal fondo
+TITLE_SIZE = (120, 420)
+TITLE_BASE = 340               # corpo di partenza (poi la pagina lo adatta)
+TITLE_SKEW = -9                # gradi: scritta inclinata
+TITLE_SQUEEZE = .89             # lettere un po' più strette del font
+TITLE_OPACITY = .88            # appena trasparente: la foto si intravede, come nell'esempio
 MAX_CARDS = 4                  # foto nitide nello stile Sfocata
 MAX_COLLAGE = 9                # foto nel collage
 # Pagina 26 Canva (misure sulla pagina 1080x1440): sfondo ingrandito del 6% per
@@ -139,6 +156,77 @@ def _logo(color):
     return (f'<div style="position:absolute;left:{left:.2f}px;top:{top:.2f}px;width:{right - left:.2f}px;'
             f'height:{bottom - top:.2f}px;background:{logo_fill(color)};--m:url({uri});'
             f'-webkit-mask:{mask};mask:{mask}"></div>')
+
+
+def clean_title(value):
+    """Testo del titolo: una riga, spazi ripuliti, da 1 a TITLE_MAX caratteri (maiuscolo lo fa la grafica)."""
+    text = ' '.join(str(value or '').split())
+    if not text:
+        raise ValueError('Scrivi il titolo.')
+    if len(text) > TITLE_MAX:
+        raise ValueError(f'Titolo troppo lungo (massimo {TITLE_MAX} caratteri).')
+    return text
+
+
+def clean_title_color(value):
+    value = str(value or TITLE_COLOR).strip().lower()
+    if not HEX_RE.fullmatch(value):
+        raise ValueError('Colore del titolo non valido.')
+    return value
+
+
+@lru_cache(maxsize=1)
+def _grain():
+    """Grana del titolo (PNG trasparente, ripetuto): puntini scuri sparsi e macchie leggere,
+    sempre uguale (seme fisso)."""
+    import io
+    import random
+    from PIL import Image, ImageDraw, ImageFilter
+
+    size, rnd = 480, random.Random(26)
+    layer = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    mottle = Image.new('L', (24, 24))
+    mottle.putdata([rnd.randint(0, 255) for _ in range(24 * 24)])
+    mottle = mottle.resize((size, size), Image.Resampling.BICUBIC).point(lambda v: v * 34 // 255)
+    layer.putalpha(mottle)
+    draw = ImageDraw.Draw(layer)
+    for _ in range(1400):
+        x, y, r = rnd.uniform(0, size), rnd.uniform(0, size), rnd.choice((.6, .8, 1, 1.2, 1.6, 2.2))
+        draw.ellipse((x - r, y - r, x + r, y + r), fill=(48, 44, 40, rnd.randint(110, 215)))
+    layer = layer.filter(ImageFilter.GaussianBlur(.35))
+    out = io.BytesIO()
+    layer.save(out, 'PNG')
+    return 'data:image/png;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
+
+
+def _fill(color):
+    """Riempimento della scritta: la texture di cemento moltiplicata per il colore scelto (bianco = la texture
+    com'è), oppure, senza texture, il colore con la grana disegnata."""
+    texture = asset_dir() / TITLE_TEXTURE
+    if texture.is_file():
+        return f'url({data_uri(texture)}) 50% 50%/{TITLE_TEXTURE_W}px auto,{color};background-blend-mode:multiply'
+    return f'url({_grain()}) 0 0/240px 240px,{color}'
+
+
+def _title(text, color):
+    """Titolo in basso, centrato; uno script lo porta alla larghezza TITLE_W (tra TITLE_SIZE)."""
+    from html import escape
+    font = data_uri(asset_dir() / 'fonts' / TITLE_FONT)
+    css = f'''@font-face{{font-family:JRTitle;src:url({font})}}
+.ttl{{position:absolute;left:0;right:0;bottom:{TITLE_BOTTOM}px;text-align:center;white-space:nowrap;line-height:0}}
+.ttl span{{display:inline-block;font-family:JRTitle;font-size:{TITLE_BASE}px;line-height:.8;letter-spacing:.012em;
+  padding-top:.3em;text-transform:uppercase;white-space:pre;transform:skewX({TITLE_SKEW}deg) scaleX({TITLE_SQUEEZE});
+  transform-origin:50% calc(100% - .4em);
+  background:{_fill(color)};-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;opacity:{TITLE_OPACITY}}}'''
+    script = f'''<script>
+window.__ready = document.fonts.ready.then(() => {{
+  const el = document.querySelector('.ttl span');
+  const w = el.getBoundingClientRect().width;
+  if (w > 0) el.style.fontSize = Math.max({TITLE_SIZE[0]}, Math.min({TITLE_SIZE[1]}, {TITLE_BASE} * {TITLE_W} / w)) + 'px';
+}});
+</script>'''
+    return f'<div class="ttl"><span>{escape(text)}</span></div>{script}', css
 
 
 def clean_card(value):
@@ -243,7 +331,7 @@ def _blur(background, cards):
 
 
 def build_html(*, color, photo=None, frame=None, style='classic', background=None, cards=(), cells=(),
-               ratio=DEFAULT_RATIO, **_):
+               ratio=DEFAULT_RATIO, title='', title_color=TITLE_COLOR, **_):
     if style != 'classic':
         ratio = DEFAULT_RATIO          # Sfocata e Collage restano 3:4
     page = page_size(ratio)
@@ -256,6 +344,9 @@ def build_html(*, color, photo=None, frame=None, style='classic', background=Non
         body, page_bg, css = _blur(background, cards)
     else:
         body, page_bg, css = _classic(photo, frame, page)
+    if style == 'title':
+        title_html, title_css = _title(clean_title(title), clean_title_color(title_color))
+        body, css = body + title_html, css + title_css
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 *{{margin:0;padding:0}}
 html,body{{width:{page[0]}px;height:{page[1]}px;overflow:hidden;background:{page_bg}}}

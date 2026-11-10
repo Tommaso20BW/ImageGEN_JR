@@ -369,6 +369,13 @@ def _build_state(envelope, catalog, now, expected_session):
             # Collage: da 2 a 9 riquadri già calcolati dalla Mini App, ognuno con la sua foto.
             jr_data = {'kind': 'jr', 'style': 'collage', 'color': color,
                        'cells': photo_jr.clean_cells(incoming.get('cells'), _photo_id)}
+        elif style == 'title':
+            # Titolo: foto 3:4 spostabile, titolo in basso con il suo colore.
+            jr_data = {'kind': 'jr', 'style': 'title', 'color': color,
+                       'title': photo_jr.clean_title(incoming.get('title')),
+                       'title_color': photo_jr.clean_title_color(incoming.get('title_color')),
+                       'photo_id': _photo_id(incoming.get('photo_id')),
+                       'frame': _frame(incoming.get('frame'))}
         else:
             ratio = str(incoming.get('ratio') or photo_jr.DEFAULT_RATIO)
             if ratio not in photo_jr.RATIOS:

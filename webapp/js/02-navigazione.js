@@ -41,7 +41,7 @@ let jrColor = '';      // FOTO + JR: colore del logo
 const JR_LIMITS = {blur:4, collage:9};      // foto massime per stile
 const jrLimit = () => JR_LIMITS[jrb.style] || 1;
 const jrMin = () => jrb.style === 'collage' ? 2 : 1;
-const jrb = {style:'', ratio:'3:4', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null};
+const jrb = {style:'', ratio:'3:4', title:'', tcolor:'#ffffff', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null};
 let pxiModule = '';    // PROBABILE XI: modulo
 let tableComp = '';    // CLASSIFICA: SA, CI, UCL, UEL o UECL
 let tableView = '';    // coppe europee: 'table' (classifica) o 'bracket' (tabellone)
@@ -268,6 +268,7 @@ function buildFlow() {
   else if (kind === 'jr') flow = jrb.style === 'blur'
     ? ['jrstyle','jrphotos',...(jrb.cards.length > 1 ? ['jrbg'] : []),'jrcolor','jrblur']
     : jrb.style === 'collage' ? ['jrstyle','jrphotos','jrcolor','jrlayout']
+    : jrb.style === 'title' ? ['jrstyle','jrtitle','jrcolor','photo']
     : ['jrstyle','jrratio','jrcolor','photo'];
   else if (kind === 'cal') flow = ['calmonth','calrows'];
   else if (kind === 'conv') flow = ['convlist'];
@@ -320,6 +321,7 @@ function stepValue(step) {
     case 'tableview': return labelOf(TABLE_VIEWS,tableView);
     case 'convlist': return convRows.length ? `${convRows.length} giocatori` : '';
     case 'jrratio': return jrb.ratio;
+    case 'jrtitle': return jrb.title.trim().toUpperCase();
     case 'jrphotos': return jrb.cards.length ? `${jrb.cards.length} foto` : '';
     case 'jrbg': { const n = jrb.cards.findIndex(c => c.id === jrb.bg); return n < 0 ? '' : `Foto ${n + 1}`; }
     case 'jrblur': return jrb.cards.length ? 'Pronta' : '';
@@ -639,6 +641,7 @@ function updateScreenValues() {
     renderOptions('kitOpts',KITS,kit,v => { kit = v; kitAuto = false; updatePhotoOverlay(); });
   }
   renderJrColor();
+  renderJrTitle();
   renderOptions('jrRatioOpts',JR_RATIOS,jrb.ratio,v => { jrb.ratio = v; photoState.x = 0; photoState.y = 0; });
   renderOptions('jrStyleOpts',JR_STYLES,jrb.style,v => {
     jrb.style = v;

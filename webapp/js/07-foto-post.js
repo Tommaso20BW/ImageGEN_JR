@@ -131,6 +131,7 @@ async function updatePhotoOverlay() {
   // La sagoma è sempre 3:4, larga come la pagina e ancorata in alto: in un altro formato viene
   // tagliata (o lascia vuoto sotto) e il logo resta in alto a destra senza deformarsi.
   overlay.style.height = kind === 'jr' ? 'auto' : '';
+  if (kind === 'jr' && jrb.style === 'title') { editorShown = ''; frame.style.backgroundImage = ''; jrTitleGhost(overlay); return; }
   if (kind === 'jr') {
     editorShown = '';
     frame.style.backgroundImage = '';
@@ -1181,4 +1182,67 @@ function initJrCollage() {
   });
 
   window.addEventListener('resize',() => { if ($('colBig').offsetParent) { fitColBig(); renderJrLayout(); } });
+}
+
+/* ---------- POST · TITOLO: testo e colore della scritta in basso (graphics/photo_jr.py, stile 'title') ----------
+   Il titolo si adatta da solo alla larghezza (lo fa il servizio). Nell'editor della foto la sagoma
+   (titolo + logo JR, senza foto) arriva dal servizio, come per le citazioni. */
+const JRT_COLORS = [['#ffffff','Bianco'],['#c9c9c9','Grigio'],['#111113','Nero'],['#d7a92f','Oro'],
+  ['#e11d2e','Rosso'],['#ffd60a','Giallo'],['#2aa8ff','Azzurro'],['#ff3d9a','Rosa']];
+let jrtGhostKey = '', jrtGhostUrl = '';
+
+function renderJrTitle() {
+  if ($('jrTitle').value !== jrb.title) $('jrTitle').value = jrb.title;
+  const preset = JRT_COLORS.some(c => c[0] === jrb.tcolor);
+  $('jrtColors').querySelectorAll('.ig-sw').forEach(b => {
+    const on = b.dataset.c === 'custom' ? !preset : b.dataset.c === jrb.tcolor;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+    if (b.dataset.c === 'custom' && !preset) b.style.background = jrb.tcolor;
+  });
+}
+
+function setJrTitleColor(hex) {
+  jrb.tcolor = /^#[0-9a-f]{6}$/i.test(hex) ? hex.toLowerCase() : '#ffffff';
+  renderJrTitle();
+}
+
+[...JRT_COLORS, ['custom','Personalizzato']].forEach(([hex, name]) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'ig-sw';
+  b.dataset.c = hex;
+  b.style.background = hex === 'custom' ? 'conic-gradient(#e11d2e,#ffd60a,#16c172,#2aa8ff,#8b3dff,#ff3d9a,#e11d2e)' : hex;
+  b.setAttribute('role','radio');
+  b.setAttribute('aria-label', name);
+  b.title = name;
+  b.addEventListener('click',() => {
+    haptic('select');
+    if (hex === 'custom') { $('jrtCustom').value = jrb.tcolor; $('jrtCustom').click(); return; }
+    setJrTitleColor(hex);
+  });
+  $('jrtColors').appendChild(b);
+});
+$('jrtCustom').addEventListener('input',e => setJrTitleColor(e.target.value));
+$('jrTitle').addEventListener('input',e => { jrb.title = e.target.value; clearError(); });
+renderJrTitle();
+
+async function jrTitleGhost(overlay) {
+  let body;
+  try { body = JSON.stringify(buildPayload(true)); } catch (_) { overlay.style.visibility = 'hidden'; return; }
+  const key = body.replace(/"frame":\{[^}]*\}/, '');
+  if (key === jrtGhostKey && jrtGhostUrl) { overlay.src = jrtGhostUrl; overlay.style.visibility = ''; return; }
+  jrtGhostKey = key;
+  overlay.style.visibility = 'hidden';
+  try {
+    const response = await netFetch(`${directBase}/ghost`, {
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body
+    }, 60000, 2);
+    if (!response.ok || jrtGhostKey !== key) return;
+    const url = URL.createObjectURL(await response.blob());
+    if (jrtGhostUrl) { try { URL.revokeObjectURL(jrtGhostUrl); } catch (_) {} }
+    jrtGhostUrl = url;
+    overlay.src = url;
+    overlay.style.visibility = '';
+  } catch (_) {}
 }

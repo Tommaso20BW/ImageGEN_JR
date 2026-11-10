@@ -1425,8 +1425,10 @@ def _send_detail(data):
                  'UECL': 'Conference League'}
         return {**empty, 'player': names.get(str(data.get('competition') or ''), '')}
     if kind == 'jr':
-        style = {'classic': 'Classica', 'blur': 'Sfocata', 'collage': 'Collage'}.get(data.get('style'), '')
+        style = {'classic': 'Classica', 'blur': 'Sfocata', 'collage': 'Collage',
+                 'title': 'Titolo'}.get(data.get('style'), '')
         extra = (data.get('ratio') if data.get('style') == 'classic'
+                 else str(data.get('title') or '').upper() if data.get('style') == 'title'
                  else f"{len(data.get('cards') or data.get('cells') or [])} foto")
         return {**empty, 'player': ' · '.join(v for v in (style, extra) if v)}
     if kind == 'cal':

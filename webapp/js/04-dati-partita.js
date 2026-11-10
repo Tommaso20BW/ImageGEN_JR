@@ -78,6 +78,7 @@ function validateCurrent() {
     if (!ppState.bg) { showError('Scegli una foto.'); return false; }
   }
 
+  if (step === 'jrtitle' && !jrb.title.trim()) { showError('Scrivi il titolo.'); return false; }
   if (step === 'iqpick' && iq.sel < 0) { showError('Tocca la foto da usare.'); return false; }
   if (step === 'iqtext' && !$('iqText').value.trim()) { showError('Scrivi il testo della citazione.'); return false; }
   if (step === 'igcontent') {

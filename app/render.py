@@ -325,6 +325,10 @@ class Renderer:
                     background=None if ghost else photo(data['background_id']),
                     cards=[] if ghost else [(photo(c['photo_id']), c) for c in data['cards']],
                 )
+            if data.get('style') == 'title':
+                return photo_jr.render(color=data['color'], style='title', photo=None if ghost else self._photo(data),
+                                       frame=data['frame'], title=data['title'], title_color=data['title_color'],
+                                       ghost=ghost)
             return photo_jr.render(color=data['color'], photo=None if ghost else self._photo(data),
                                    frame=data['frame'], ratio=data.get('ratio', photo_jr.DEFAULT_RATIO), ghost=ghost)
 

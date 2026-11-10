@@ -58,6 +58,14 @@ function buildPayload(ghost=false) {
       cards:jrb.cards.map(c => ({photo_id:c.id, x:+c.x.toFixed(5), y:+c.y.toFixed(5), w:+c.w.toFixed(5)}))
     }};
   }
+  if (kind === 'jr' && jrb.style === 'title') {
+    if (!photoId) throw new Error('Scegli una foto.');
+    if (!jrb.title.trim()) throw new Error('Scrivi il titolo.');
+    return {v:1, action:'render', session, data:{
+      kind:'jr', style:'title', color:jrColor, title:jrb.title.trim(), title_color:jrb.tcolor,
+      photo_id:photoId, frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}
+    }};
+  }
   if (kind === 'jr') {
     if (!photoId) throw new Error('Scegli una foto.');
     return {v:1, action:'render', session, data:{

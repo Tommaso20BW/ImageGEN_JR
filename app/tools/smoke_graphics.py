@@ -90,6 +90,7 @@ def _cases(roster):
         {'name': outfield[1], 'shown': outfield[1], 'nation': 'Francia Under 21'},
         {'name': keeper, 'shown': keeper, 'nation': 'it'}]}
     yield 'Post (classica)', {'kind': 'jr', 'style': 'classic', 'color': 'white', 'ratio': '4:5', **photo}
+    yield 'Post (titolo)', {'kind': 'jr', 'style': 'title', 'color': 'white', 'title': 'Infortunio', 'title_color': '#e7e4df', **photo}
     yield 'Post (sfocata)', {'kind': 'jr', 'style': 'blur', 'color': 'gold', 'background_id': 'a' * 16,
                              'cards': [{'photo_id': 'a' * 16, 'x': .5, 'y': .5, 'w': .7}]}
     yield 'Post (collage)', {'kind': 'jr', 'style': 'collage', 'color': 'black', 'cells': [
