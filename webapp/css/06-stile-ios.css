@@ -385,3 +385,9 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 /* Post: colori della scritta (Titolo) e del JR a pallini, più distanziati, + per aggiungerne */
 .jrt-colors{row-gap:16px;padding:16px 8px}
 .ig-sw.jrt-add{display:flex;align-items:center;justify-content:center;background:var(--surface2);color:var(--text)}
+/* Sfumatura del JR: righe dei colori (fino a 7) con la × per toglierli */
+#jrcStops .jrc-it{cursor:pointer}
+#jrcStops .jrc-it span{flex:1}
+#jrcStops .jrc-it.on::after{order:2;margin-left:0}
+.jrc-del{order:3;width:36px;height:36px;margin:0 -8px 0 4px;border:0;background:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
+#jrcAddStop[hidden]{display:none}

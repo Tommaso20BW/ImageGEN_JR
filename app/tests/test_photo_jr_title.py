@@ -99,5 +99,14 @@ class SavedColorsTests(unittest.TestCase):
                 self.call(**envelope)
 
 
+class GradientStopsTests(unittest.TestCase):
+    def test_up_to_seven_colours(self):
+        stops = lambda n: [{'c': '#%02x0000' % (i * 30), 'p': i * 100 / max(1, n - 1)} for i in range(n)]
+        self.assertEqual(len(photo_jr.clean_color({'type': 'gradient', 'angle': 90, 'stops': stops(7)})['stops']), 7)
+        for n in (1, 8):
+            with self.assertRaises(ValueError):
+                photo_jr.clean_color({'type': 'gradient', 'angle': 90, 'stops': stops(n)})
+
+
 if __name__ == '__main__':
     unittest.main()

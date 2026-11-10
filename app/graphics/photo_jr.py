@@ -26,7 +26,7 @@ from graphics.starting_xi import check_photo
 
 COLORS = ('black', 'white', 'gold')      # i tre loghi già pronti (PNG Canva, l'oro ha la sua texture)
 HEX_RE = re.compile(r'#[0-9a-fA-F]{6}')
-MAX_STOPS = 6
+MAX_STOPS = 7                  # colori di una sfumatura del JR (2-7)
 # Formati della Classica (larghezza:altezza). La pagina resta larga 1080 px design (uscita 1920 px):
 # cambia solo l'altezza. Il logo JR sta sempre in alto a destra, alla stessa distanza dal bordo alto e
 # destro e con la stessa misura che ha nel 3:4: l'overlay Canva (1080x1440) è ancorato in alto a sinistra

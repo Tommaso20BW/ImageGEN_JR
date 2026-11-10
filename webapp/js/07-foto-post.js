@@ -691,14 +691,53 @@ function jrcFromHex(hex) {
   if (sat && v) jrc.h = h;
   jrc.t = v < .999 ? v / 2 : .5 + (1 - sat) / 2;
 }
+// Sfumatura: da 2 a JRC_MAX_STOPS colori, distribuiti alla stessa distanza (stesso limite di graphics/photo_jr.py).
+const JRC_MAX_STOPS = 7;
 const jrcSpec = () => jrc.mode === 'solid' ? {type:'solid', hex:jrc.c[0]}
-  : {type:'gradient', angle:jrc.a, stops:[{c:jrc.c[0],p:0},{c:jrc.c[1],p:100}]};
+  : {type:'gradient', angle:jrc.a, stops:jrc.c.map((c,i) => ({c, p:Math.round(i * 10000 / (jrc.c.length - 1)) / 100}))};
 
 let jrcRaf = 0;
 function jrcChanged() {                  // un ritocco al colore personalizzato: applica e ridisegna
   jrColor = jrcSpec();
   jrcPaint(); jrcRenderCar();
   if (!jrcRaf) jrcRaf = requestAnimationFrame(() => { jrcRaf = 0; jrcPreview(); renderSteps(); });
+}
+
+function jrcNextTint(hex) {
+  const [h,sat] = jrcRgbToHsv(...jrcRgb(hex));
+  return jrcHsvHex((h + 40) % 360,jrcClamp(sat,.35,1),1);
+}
+
+// Elenco dei colori della sfumatura: tocco = lo ritocchi con i cursori, × = lo togli (ne restano almeno 2).
+function jrcPaintStops() {
+  const box = $('jrcStops');
+  if (jrc.sel >= jrc.c.length) jrc.sel = jrc.c.length - 1;
+  box.innerHTML = '';
+  jrc.c.forEach((c,i) => {
+    const row = document.createElement('div');
+    row.className = 'jrc-it jrc-end' + (i === jrc.sel ? ' on' : '');
+    row.setAttribute('role','button');
+    row.tabIndex = 0;
+    row.innerHTML = '<i class="jrc-dot"></i><span></span>';
+    row.querySelector('i').style.background = c;
+    row.querySelector('span').textContent = `Colore ${i + 1}`;
+    row.addEventListener('click',() => { jrc.sel = i; jrcFromHex(jrc.c[i]); jrcPaint(); });
+    if (jrc.c.length > 2) {
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'jrc-del'; del.textContent = '×';
+      del.setAttribute('aria-label',`Togli il colore ${i + 1}`);
+      del.addEventListener('click',e => {
+        e.stopPropagation();
+        haptic('select');
+        jrc.c.splice(i,1);
+        if (jrc.sel >= i && jrc.sel > 0) jrc.sel -= 1;
+        jrcFromHex(jrc.c[jrc.sel]); jrcChanged();
+      });
+      row.appendChild(del);
+    }
+    box.appendChild(row);
+  });
+  $('jrcAddStop').hidden = jrc.c.length >= JRC_MAX_STOPS;
 }
 
 function jrcPaint() {                    // aggiorna il popup Personalizzato
@@ -709,11 +748,7 @@ function jrcPaint() {                    // aggiorna il popup Personalizzato
   if (document.activeElement !== $('jrcHex')) { $('jrcHex').value = cur.slice(1).toUpperCase(); $('jrcHexBox').classList.remove('bad'); }
   $('jrcSolid').classList.toggle('on',!grad); $('jrcGradBtn').classList.toggle('on',grad);
   $('jrcEnds').hidden = !grad;
-  document.querySelectorAll('.jrc-end').forEach(b => {
-    const i = Number(b.dataset.e);
-    b.classList.toggle('on',i === jrc.sel);
-    b.querySelector('i').style.background = jrc.c[i];
-  });
+  jrcPaintStops();
 }
 
 async function jrcPreview() {
@@ -802,7 +837,7 @@ function jrcOpenSheet() {                // si parte dal colore in uso: lo si ri
   const spec = jrcIsRaster(jrColor) ? (JRC_PRESETS.find(p => p.id === jrColor) || {}).seed : jrColor ? jrcSpecOf(jrColor) : null;
   if (spec) {
     if (spec.type === 'solid') { jrc.mode = 'solid'; jrc.c[0] = spec.hex; }
-    else { const st = jrcSorted(spec.stops); jrc.mode = 'gradient'; jrc.a = spec.angle; jrc.c = [st[0].c, st[st.length - 1].c]; }
+    else { const st = jrcSorted(spec.stops); jrc.mode = 'gradient'; jrc.a = spec.angle; jrc.c = st.slice(0,JRC_MAX_STOPS).map(s => s.c); }
     jrc.sel = 0;
   }
   jrcFromHex(jrc.c[jrc.sel]);
@@ -858,13 +893,15 @@ function initJrColor() {
   $('jrcGradBtn').addEventListener('click',() => {
     if (jrc.mode === 'gradient') return;
     haptic('select');
-    const [h,sat] = jrcRgbToHsv(...jrcRgb(jrc.c[0]));     // seconda tinta: stesso colore, tono spostato
-    jrc.c[1] = jrcHsvHex((h + 40) % 360,jrcClamp(sat,.35,1),1);
+    jrc.c = [jrc.c[0], jrcNextTint(jrc.c[0])];             // seconda tinta: stesso colore, tono spostato
     jrc.mode = 'gradient'; jrc.sel = 0; jrcFromHex(jrc.c[0]); jrcChanged();
   });
-  document.querySelectorAll('.jrc-end').forEach(b => b.addEventListener('click',() => {
-    jrc.sel = Number(b.dataset.e); jrcFromHex(jrc.c[jrc.sel]); jrcPaint();
-  }));
+  $('jrcAddStop').addEventListener('click',() => {
+    if (jrc.c.length >= JRC_MAX_STOPS) return;
+    haptic('select');
+    jrc.c.push(jrcNextTint(jrc.c[jrc.c.length - 1]));
+    jrc.sel = jrc.c.length - 1; jrcFromHex(jrc.c[jrc.sel]); jrcChanged();
+  });
   $('jrcRev').addEventListener('click',() => {
     haptic('select');
     jrc.c.reverse(); jrcFromHex(jrc.c[jrc.sel]); jrcChanged();
