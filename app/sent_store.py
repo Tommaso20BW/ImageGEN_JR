@@ -4,6 +4,7 @@
                           di ogni grafica inviata. Le immagini restano su Telegram: con il
                           file_id si rimandano e si riscaricano anche dopo la sessione.
 - imagegen/ig_phrases.json Storia IG: frasi pronte.
+- imagegen/colors.json     Post: colori aggiunti con il + ({'title': ['#rrggbb'], 'jr': [colore JR]}).
 
 Il workflow copia la cartella imagegen/ nella cartella asset all'avvio (lettura subito, senza
 rete); ogni modifica si scrive in locale e poi con un commit (team_settings._commit), in un
@@ -18,6 +19,8 @@ import log
 DIRNAME = 'imagegen'
 HISTORY = 'history.json'
 PHRASES = 'ig_phrases.json'
+COLORS = 'colors.json'
+COLORS_KEEP = 24
 NAMES = 'ig_names.json'          # Citazione IG: nome scritto a mano per ogni account ({username: nome})
 HISTORY_KEEP = 20
 PHRASES_KEEP = 40
@@ -62,6 +65,30 @@ def load_phrases():
         if text:
             out.append({'text': text, 'color': str(row.get('color') or 'black')})
     return out[:PHRASES_KEEP]
+
+
+def load_colors():
+    """Colori salvati: titolo = esadecimali, jr = colori liberi del logo (tinta unita o sfumatura)."""
+    from graphics import photo_jr
+    raw = _read(COLORS, {})
+    out = {'title': [], 'jr': []}
+    for value in raw.get('title') or []:
+        try:
+            out['title'].append(photo_jr.clean_title_color(value))
+        except ValueError:
+            pass
+    for value in raw.get('jr') or []:
+        try:
+            color = photo_jr.clean_color(value)
+        except ValueError:
+            continue
+        if isinstance(color, dict):
+            out['jr'].append(color)
+    return {k: v[:COLORS_KEEP] for k, v in out.items()}
+
+
+def save_colors(colors):
+    _save(COLORS, colors, 'ImageGen: colori salvati del Post')
 
 
 def save_history(entries):

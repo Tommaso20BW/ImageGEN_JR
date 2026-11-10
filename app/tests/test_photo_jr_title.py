@@ -45,5 +45,59 @@ class TitlePageTests(unittest.TestCase):
         self.assertNotIn('class="ttl"', photo_jr.build_html(color='white', style='classic'))
 
 
+class TitleShadeTests(unittest.TestCase):
+    def test_title_page_is_darker_at_the_bottom(self):
+        html = photo_jr.build_html(color='white', style='title', title='Infortunio')
+        self.assertIn(photo_jr.TITLE_SHADE, html)
+        self.assertNotIn(photo_jr.TITLE_SHADE, photo_jr.build_html(color='white', style='classic'))
+
+
+class SavedColorsTests(unittest.TestCase):
+    """Colori aggiunti con il +: servizio /colors e file imagegen/colors.json degli asset."""
+
+    def setUp(self):
+        import tempfile
+        import threading
+        from types import SimpleNamespace
+        from unittest import mock
+        import sent_store
+        import service
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        env = mock.patch.dict('os.environ', {'IMAGEGEN_ASSETS': self.tmp.name})
+        env.start(); self.addCleanup(env.stop)
+        save = mock.patch.object(sent_store, '_flush', lambda: None)       # niente commit nel repo
+        save.start(); self.addCleanup(save.stop)
+        self.sent_store = sent_store
+        self.svc = SimpleNamespace(history_lock=threading.Lock(), saved_colors={'title': [], 'jr': []})
+        self.call = lambda **e: service.Service.colors(self.svc, {'v': 1, **e})
+
+    def test_add_list_delete_and_reload(self):
+        self.call(action='add', target='title', color='#AA0011')
+        self.call(action='add', target='jr', color={'type': 'solid', 'hex': '#00FF00'})
+        grad = {'type': 'gradient', 'angle': 90, 'stops': [{'c': '#ffffff', 'p': 100}, {'c': '#000000', 'p': 0}]}
+        out = self.call(action='add', target='jr', color=grad)['colors']
+        self.assertEqual(out['title'], ['#aa0011'])
+        self.assertEqual(out['jr'][1], {'type': 'solid', 'hex': '#00ff00'})
+        self.assertEqual(out['jr'][0]['stops'][0], {'c': '#000000', 'p': 0.0})      # ordinato come il servizio
+        self.assertEqual(self.sent_store.load_colors(), out)                          # resta nel file
+        out = self.call(action='delete', target='title', color='#aa0011')['colors']
+        self.assertEqual(out['title'], [])
+        self.assertEqual(self.call(action='list')['colors'], out)
+
+    def test_same_colour_is_not_doubled(self):
+        for _ in range(3):
+            out = self.call(action='add', target='title', color='#123456')['colors']
+        self.assertEqual(out['title'], ['#123456'])
+
+    def test_bad_requests(self):
+        for envelope in ({'action': 'add', 'target': 'title', 'color': 'rosso'},
+                         {'action': 'add', 'target': 'jr', 'color': 'white'},
+                         {'action': 'add', 'target': 'altro', 'color': '#ffffff'},
+                         {'action': 'boh', 'target': 'title', 'color': '#ffffff'}):
+            with self.assertRaises(ValueError):
+                self.call(**envelope)
+
+
 if __name__ == '__main__':
     unittest.main()

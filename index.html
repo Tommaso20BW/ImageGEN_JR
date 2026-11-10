@@ -475,10 +475,10 @@
           <section class="screen" data-screen="jrtitle">
             <div class="eyebrow">Post · Titolo</div>
             <h1>Titolo</h1>
-            <p class="lead">Scrivi il titolo: in basso, grande, si allarga o si stringe da solo per occupare tutta la larghezza.</p>
+            <p class="lead">Scrivi il titolo: in basso, grande, si allarga o si stringe da solo per occupare tutta la larghezza. Con + aggiungi un colore ai tuoi; tocca di nuovo un tuo colore per toglierlo.</p>
             <div class="ios-list"><label class="ios-row"><span>Titolo</span><input id="jrTitle" class="ios-in" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" placeholder="INFORTUNIO"></label></div>
             <div class="field-label gap">Colore della scritta</div>
-            <div id="jrtColors" class="ig-colors" role="radiogroup" aria-label="Colore della scritta"></div>
+            <div id="jrtColors" class="ig-colors jrt-colors" role="radiogroup" aria-label="Colore della scritta"></div>
             <input id="jrtCustom" type="color" value="#ffffff" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
           </section>
 
@@ -486,14 +486,8 @@
             <div class="eyebrow">Post</div>
             <h1>Colore del JR</h1>
             <div id="jrcPrev" class="jrc-pv" aria-hidden="true"><div class="jrc-tile"></div></div>
-            <div class="field-label">Classici</div>
-            <div id="jrcListA" class="ios-list" role="radiogroup" aria-label="Colori classici"></div>
-            <div class="field-label">Colori</div>
-            <div id="jrcListB" class="ios-list" role="radiogroup" aria-label="Colori"></div>
-            <div class="field-label">Su misura</div>
-            <div class="ios-list">
-              <button id="jrcCu" class="ios-row jrc-it" type="button"><i id="jrcCuSw" class="jrc-dot jrc-rainbow"></i><span>Personalizzato</span><em id="jrcCuV" class="jrc-val"></em><span class="ios-chev">›</span></button>
-            </div>
+            <p class="lead">Con + aggiungi un colore (anche sfumato) ai tuoi; tocca di nuovo un tuo colore per toglierlo.</p>
+            <div id="jrcGrid" class="ig-colors jrt-colors" role="radiogroup" aria-label="Colore del JR"></div>
           </section>
 
           <section class="screen" data-screen="photo">

@@ -352,7 +352,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost'):
+                        '/usesent', '/phrases', '/igpost', '/colors'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -389,6 +389,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/phrases':
                 self._json(200, {'ok': True, **self.service.phrases(envelope)})
+                return
+
+            if path == '/colors':
+                self._json(200, {'ok': True, **self.service.colors(envelope)})
                 return
 
             if path == '/igpost':
@@ -476,6 +480,7 @@ class Service:
         self.history_lock = threading.Lock()
         self.last_resend = None
         self.ig_phrases = []
+        self.saved_colors = {'title': [], 'jr': []}
 
     def store_photo(self, raw):
         width, height = check_photo(raw)
@@ -1161,6 +1166,37 @@ class Service:
                                     f'({len(self.ig_phrases)} in tutto)')
         return {'phrases': self.ig_phrases}
 
+    def colors(self, envelope):
+        """Post: colori aggiunti con il + (titolo e logo JR). Elenco, aggiungi, togli; nel repo degli asset."""
+        from graphics import photo_jr
+        envelope = envelope or {}
+        action, target = envelope.get('action'), envelope.get('target')
+        if action != 'list':
+            if target not in ('title', 'jr'):
+                raise ValueError('Richiesta non valida.')
+            if target == 'title':
+                color = photo_jr.clean_title_color(envelope.get('color'))
+            else:
+                color = photo_jr.clean_color(envelope.get('color'))
+                if not isinstance(color, dict):
+                    raise ValueError('Nero, bianco e oro sono già tra i classici.')
+        with self.history_lock:
+            saved = {k: list(v) for k, v in self.saved_colors.items()}
+            if action == 'add':
+                saved[target] = [color] + [c for c in saved[target] if c != color]
+            elif action == 'delete':
+                saved[target] = [c for c in saved[target] if c != color]
+            elif action != 'list':
+                raise ValueError('Richiesta non valida.')
+            saved = {k: v[:sent_store.COLORS_KEEP] for k, v in saved.items()}
+            changed = saved != self.saved_colors
+            self.saved_colors = saved
+        if changed:
+            sent_store.save_colors(saved)
+            log.info('SALVATAGGIO', f"Colori del Post: {'aggiunto' if action == 'add' else 'tolto'} un colore "
+                                    f"({len(saved['title'])} titolo · {len(saved['jr'])} JR)")
+        return {'colors': self.saved_colors}
+
     def history_image(self, message_id):
         """Grafica inviata, come JPEG leggero per la pagina "Ultimi invii"."""
         entry = self._history_entry(message_id)
@@ -1338,6 +1374,7 @@ class Service:
         with self.history_lock:
             self.history = sent_store.load_history()
             self.ig_phrases = sent_store.load_phrases()
+            self.saved_colors = sent_store.load_colors()
         if self.history or self.ig_phrases:
             log.info('AVVIO', f'Ultimi invii: {len(self.history)} · frasi pronte: {len(self.ig_phrases)}')
 

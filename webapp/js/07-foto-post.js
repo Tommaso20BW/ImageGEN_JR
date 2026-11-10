@@ -731,34 +731,57 @@ async function jrcPreview() {
 }
 
 const jrcCur = () => jrcIsRaster(jrColor) ? jrColor : jrColor && jrColor.id || '';
-const JRC_CLASSIC = 5;                   // Nero, Bianco, Oro, Argento, Bronzo; poi i colori
+// Pallini come i colori del titolo, senza nomi: i pronti, i tuoi (salvati) e il + per aggiungerne.
+function jrcSwatch(bg, name, onClick, extra='') {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'ig-sw' + extra;
+  b.style.background = bg;
+  b.setAttribute('role','radio');
+  b.setAttribute('aria-label',name);
+  b.title = name;
+  b.addEventListener('click',onClick);
+  return b;
+}
 
 function jrcRenderCar() {
-  const cur = jrcCur(), custom = jrcIsCustom(jrColor);
-  const lists = [$('jrcListA'), $('jrcListB')];
-  if (lists[0].dataset.built !== '1') {
-    lists[0].dataset.built = '1';
-    lists.forEach(l => { l.innerHTML = ''; });
-    JRC_PRESETS.forEach((p,i) => {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'ios-row jrc-it'; b.dataset.id = p.id;
-      b.setAttribute('role','radio');
-      b.innerHTML = '<i class="jrc-dot"></i><span></span>';
-      b.firstChild.style.background = p.css || jrcCss(p.spec || p.seed,135);
-      b.lastChild.textContent = p.label;
-      b.addEventListener('click',() => jrcPick(p));
-      lists[i < JRC_CLASSIC ? 0 : 1].appendChild(b);
+  const box = $('jrcGrid');
+  const key = JSON.stringify(savedColors.jr);
+  if (box.dataset.key !== key) {
+    box.dataset.key = key;
+    box.innerHTML = '';
+    JRC_PRESETS.forEach(p => {
+      const b = jrcSwatch(p.css || jrcCss(p.spec || p.seed,135), p.label, () => jrcPick(p));
+      b.dataset.id = p.id;
+      box.appendChild(b);
     });
+    savedColors.jr.forEach((spec,i) => {
+      const b = jrcSwatch(jrcCss(spec,135), spec.type === 'solid' ? spec.hex.toUpperCase() : 'Sfumatura', () => {
+        haptic('select');
+        if (jrcSavedIdx(jrColor) === i) {
+          askConfirm('Togliere questo colore dai tuoi colori?', () => {
+            colorsCall('delete','jr',spec).catch(err => showError(err.message));
+          });
+          return;
+        }
+        jrColor = {...spec};
+        renderJrColor(); renderSteps();
+      });
+      b.dataset.saved = String(i);
+      box.appendChild(b);
+    });
+    const add = jrcSwatch('', 'Aggiungi un colore', () => { haptic('select'); jrc.adding = true; jrcOpenSheet(); }, ' jrt-add');
+    add.setAttribute('role','button');
+    add.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    box.appendChild(add);
   }
-  lists.forEach(l => [...l.children].forEach(b => {
-    const on = b.dataset.id === cur;
+  const cur = jrcCur(), saved = jrcSavedIdx(jrColor);
+  box.querySelectorAll('.ig-sw').forEach(b => {
+    if (b.classList.contains('jrt-add')) return;
+    const on = b.dataset.saved != null ? Number(b.dataset.saved) === saved : !jrcIsCustom(jrColor) && b.dataset.id === cur;
     b.classList.toggle('on',on);
     b.setAttribute('aria-checked',on ? 'true' : 'false');
-  }));
-  $('jrcCu').classList.toggle('on',custom);
-  $('jrcCuSw').classList.toggle('jrc-rainbow',!custom);
-  $('jrcCuSw').style.background = custom ? jrcCss(jrColor,135) : '';
-  $('jrcCuV').textContent = custom ? jrColorLabel() : '';
+  });
 }
 
 function jrcPick(p) {                    // un colore pronto
@@ -789,10 +812,10 @@ function jrcOpenSheet() {                // si parte dal colore in uso: lo si ri
 function jrcCloseSheet() { $('jrcOv').classList.remove('open'); }
 
 function initJrColor() {
-  $('jrcCu').addEventListener('click',jrcOpenSheet);
-  $('jrcDone').addEventListener('click',jrcCloseSheet);
-  $('jrcOv').addEventListener('click',e => { if (e.target.id === 'jrcOv') jrcCloseSheet(); });
-  document.addEventListener('keydown',e => { if (e.key === 'Escape') jrcCloseSheet(); });
+  // Chiuso il popup aperto dal + (Fine, tocco fuori o Esc): il colore va tra i tuoi colori.
+  $('jrcDone').addEventListener('click',jrcDoneClick);
+  $('jrcOv').addEventListener('click',e => { if (e.target.id === 'jrcOv') jrcDoneClick(); });
+  document.addEventListener('keydown',e => { if (e.key === 'Escape' && $('jrcOv').classList.contains('open')) jrcDoneClick(); });
 
   // cursori Colore e Luce
   const drag = (el, fn) => {
@@ -1186,19 +1209,79 @@ function initJrCollage() {
 
 /* ---------- POST · TITOLO: testo e colore della scritta in basso (graphics/photo_jr.py, stile 'title') ----------
    Il titolo si adatta da solo alla larghezza (lo fa il servizio). Nell'editor della foto la sagoma
-   (titolo + logo JR, senza foto) arriva dal servizio, come per le citazioni. */
+   (titolo + logo JR, senza foto) arriva dal servizio, come per le citazioni.
+   Colori: quelli pronti, quelli aggiunti con il + (salvati nel repo degli asset, servizio /colors) e il +.
+   Un colore aggiunto si toglie toccandolo quando è già scelto. */
 const JRT_COLORS = [['#ffffff','Bianco'],['#c9c9c9','Grigio'],['#111113','Nero'],['#d7a92f','Oro'],
   ['#e11d2e','Rosso'],['#ffd60a','Giallo'],['#2aa8ff','Azzurro'],['#ff3d9a','Rosa']];
 let jrtGhostKey = '', jrtGhostUrl = '';
+let savedColors = {title:[], jr:[]};
+
+async function colorsCall(action, target='', color=null) {
+  const response = await netFetch(`${directBase}/colors`, {
+    method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+    body:JSON.stringify({v:1, action, session, target, color})
+  }, 20000, 2);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.ok) throw new Error(body.error || 'Colori non disponibili.');
+  const c = body.colors || {};
+  savedColors = {title:Array.isArray(c.title) ? c.title : [], jr:Array.isArray(c.jr) ? c.jr : []};
+  renderJrTitle(); jrcRenderCar();
+}
+
+function loadSavedColors() {
+  if (!directBase || !session) return;
+  colorsCall('list').catch(() => {});
+}
+
+function askConfirm(message, onYes) {
+  if (tg && typeof tg.showConfirm === 'function') {
+    try { tg.showConfirm(message, ok => { if (ok) onYes(); }); return; } catch (_) {}
+  }
+  if (window.confirm(message)) onYes();
+}
+
+function jrtSwatch(hex, name, kind) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'ig-sw' + (kind === 'add' ? ' jrt-add' : '');
+  b.dataset.c = hex;
+  b.dataset.kind = kind;
+  if (kind === 'add') b.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  else b.style.background = hex;
+  b.setAttribute('role', kind === 'add' ? 'button' : 'radio');
+  b.setAttribute('aria-label', name);
+  b.title = name;
+  b.addEventListener('click',() => {
+    haptic('select');
+    if (kind === 'add') { $('jrtCustom').value = jrb.tcolor; $('jrtCustom').click(); return; }
+    if (kind === 'saved' && jrb.tcolor === hex) {
+      askConfirm('Togliere questo colore dai tuoi colori?', () => {
+        colorsCall('delete','title',hex).catch(err => showError(err.message));
+      });
+      return;
+    }
+    setJrTitleColor(hex);
+  });
+  return b;
+}
 
 function renderJrTitle() {
   if ($('jrTitle').value !== jrb.title) $('jrTitle').value = jrb.title;
-  const preset = JRT_COLORS.some(c => c[0] === jrb.tcolor);
-  $('jrtColors').querySelectorAll('.ig-sw').forEach(b => {
-    const on = b.dataset.c === 'custom' ? !preset : b.dataset.c === jrb.tcolor;
+  const box = $('jrtColors');
+  const key = JSON.stringify(savedColors.title);
+  if (box.dataset.key !== key) {
+    box.dataset.key = key;
+    box.innerHTML = '';
+    JRT_COLORS.forEach(([hex, name]) => box.appendChild(jrtSwatch(hex, name, 'preset')));
+    savedColors.title.filter(hex => !JRT_COLORS.some(c => c[0] === hex))
+      .forEach(hex => box.appendChild(jrtSwatch(hex, hex.toUpperCase(), 'saved')));
+    box.appendChild(jrtSwatch('add', 'Aggiungi un colore', 'add'));
+  }
+  box.querySelectorAll('.ig-sw').forEach(b => {
+    const on = b.dataset.c === jrb.tcolor;
     b.classList.toggle('on', on);
-    b.setAttribute('aria-checked', on ? 'true' : 'false');
-    if (b.dataset.c === 'custom' && !preset) b.style.background = jrb.tcolor;
+    if (b.dataset.kind !== 'add') b.setAttribute('aria-checked', on ? 'true' : 'false');
   });
 }
 
@@ -1207,25 +1290,33 @@ function setJrTitleColor(hex) {
   renderJrTitle();
 }
 
-[...JRT_COLORS, ['custom','Personalizzato']].forEach(([hex, name]) => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'ig-sw';
-  b.dataset.c = hex;
-  b.style.background = hex === 'custom' ? 'conic-gradient(#e11d2e,#ffd60a,#16c172,#2aa8ff,#8b3dff,#ff3d9a,#e11d2e)' : hex;
-  b.setAttribute('role','radio');
-  b.setAttribute('aria-label', name);
-  b.title = name;
-  b.addEventListener('click',() => {
-    haptic('select');
-    if (hex === 'custom') { $('jrtCustom').value = jrb.tcolor; $('jrtCustom').click(); return; }
-    setJrTitleColor(hex);
-  });
-  $('jrtColors').appendChild(b);
+// "+": il colore scelto diventa uno dei tuoi colori (salvato) e viene usato subito.
+$('jrtCustom').addEventListener('change',e => {
+  const hex = String(e.target.value || '').toLowerCase();
+  if (!/^#[0-9a-f]{6}$/.test(hex)) return;
+  setJrTitleColor(hex);
+  colorsCall('add','title',hex).catch(err => showError(err.message));
 });
-$('jrtCustom').addEventListener('input',e => setJrTitleColor(e.target.value));
 $('jrTitle').addEventListener('input',e => { jrb.title = e.target.value; clearError(); });
 renderJrTitle();
+
+/* --- Colore del JR: i tuoi colori (aggiunti con il +, salvati) --- */
+const jrcKey = c => {
+  const s = jrcSpecOf(c);
+  if (!s) return '';
+  const r = v => Math.round(Number(v) * 100) / 100;
+  return s.type === 'solid' ? `s${String(s.hex).toLowerCase()}`
+    : `g${r(s.angle)}|` + jrcSorted(s.stops).map(x => `${String(x.c).toLowerCase()}@${r(x.p)}`).join(',');
+};
+const jrcSavedIdx = c => jrcIsCustom(c) ? savedColors.jr.findIndex(s => jrcKey(s) === jrcKey(c)) : -1;
+
+// Chiuso il popup aperto dal +: il colore va tra i tuoi colori.
+function jrcDoneClick() {
+  const adding = jrc.adding;
+  jrc.adding = false;
+  jrcCloseSheet();
+  if (adding && jrcIsCustom(jrColor)) colorsCall('add','jr',jrcSpecOf(jrColor)).catch(err => showError(err.message));
+}
 
 async function jrTitleGhost(overlay) {
   let body;

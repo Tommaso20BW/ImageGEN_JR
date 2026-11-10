@@ -381,3 +381,7 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 /* Elenco con gruppi (Italia · Grafica): titoli come nella Home */
 .opt-group{margin:24px 0 8px}
 .lead + .opt-group{margin-top:18px}
+
+/* Post: colori della scritta (Titolo) e del JR a pallini, più distanziati, + per aggiungerne */
+.jrt-colors{row-gap:16px;padding:16px 8px}
+.ig-sw.jrt-add{display:flex;align-items:center;justify-content:center;background:var(--surface2);color:var(--text)}

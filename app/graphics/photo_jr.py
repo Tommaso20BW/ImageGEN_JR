@@ -56,6 +56,8 @@ TITLE_SIZE = (120, 420)
 TITLE_BASE = 340               # corpo di partenza (poi la pagina lo adatta)
 TITLE_SKEW = -9                # gradi: scritta inclinata
 TITLE_SQUEEZE = .89             # lettere un po' più strette del font
+# Fondo della foto scurito verso il basso (come nella grafica d'esempio): il titolo si legge sempre.
+TITLE_SHADE = 'linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(0,0,0,.45) 72%,rgba(0,0,0,.82) 100%)'
 TITLE_OPACITY = .88            # appena trasparente: la foto si intravede, come nell'esempio
 MAX_CARDS = 4                  # foto nitide nello stile Sfocata
 MAX_COLLAGE = 9                # foto nel collage
@@ -346,7 +348,8 @@ def build_html(*, color, photo=None, frame=None, style='classic', background=Non
         body, page_bg, css = _classic(photo, frame, page)
     if style == 'title':
         title_html, title_css = _title(clean_title(title), clean_title_color(title_color))
-        body, css = body + title_html, css + title_css
+        shade = f'<div style="position:absolute;inset:0;background:{TITLE_SHADE}"></div>'
+        body, css = body + shade + title_html, css + title_css
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 *{{margin:0;padding:0}}
 html,body{{width:{page[0]}px;height:{page[1]}px;overflow:hidden;background:{page_bg}}}

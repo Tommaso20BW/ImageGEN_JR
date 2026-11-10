@@ -526,6 +526,7 @@ function renderFlow() {
     } else loadMdFixtures();
   }
   if (screenName === 'sentlist') { renderSentList(); loadRecent(); }
+  if (screenName === 'jrcolor' || screenName === 'jrtitle') loadSavedColors();
   if (screenName === 'igcontent') { if (igPicking) { igPicking = false; buildFlow(); } loadPhrases(); renderIgColor(); }
   if (screenName === 'igsent') { renderIgSent(); loadRecent(); }
   if (screenName === 'iqpick') renderIqPick();
