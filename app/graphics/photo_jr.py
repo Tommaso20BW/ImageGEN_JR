@@ -52,9 +52,10 @@ TITLE_TEXTURE = 'word_textures/titolo.jpg'   # cemento chiaro (asset privato); m
 TITLE_TEXTURE_W = 480          # lato della texture sulla pagina: puntini fini come nell'esempio
 # Texture ritoccata per un cemento più grigio e poroso (fitta di micro-puntini, macchie scure più morbide):
 # contrasto, luce, grana aggiunta (quanto è fitta, quanto scurisce, grandezza dei pori) e tono caldo.
-# Valori scelti confrontando la scritta con quella fatta da Gemini ("RIPRESSA"): stessa luce media delle lettere.
-TITLE_TEXTURE_LOOK = {'contrast': .8, 'brightness': .98, 'grain_sigma': 70, 'grain_cut': 72, 'grain_dark': .7,
-                      'grain_px': 2, 'tint': '#fbf6ee'}
+# Valori scelti confrontando la scritta con quella fatta da Gemini ("RIPRESSA"): cemento liscio, grigio chiaro,
+# puntini fini e zone più chiare a macchie larghe (light_px = grandezza delle macchie, light = quanto schiariscono).
+TITLE_TEXTURE_LOOK = {'contrast': .38, 'brightness': .93, 'grain_sigma': 70, 'grain_cut': 38, 'grain_dark': .72,
+                      'grain_px': 2, 'tint': '#f4f0ea', 'light_px': 220, 'light': .9}
 TITLE_W = 982
 TITLE_BOTTOM = -2              # il riquadro del font ha spazio sotto le lettere: così la base sta a 27 px dal fondo
 TITLE_SIZE = (120, 420)
@@ -63,7 +64,7 @@ TITLE_SKEW = -9                # gradi: scritta inclinata
 TITLE_SQUEEZE = .89             # lettere un po' più strette del font
 # Fondo della foto scurito verso il basso (come nella grafica d'esempio): il titolo si legge sempre.
 TITLE_SHADE = 'linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(0,0,0,.45) 72%,rgba(0,0,0,.82) 100%)'
-TITLE_OPACITY = .88            # appena trasparente: la foto si intravede, come nell'esempio
+TITLE_OPACITY = .85            # appena trasparente: la foto si intravede, come nell'esempio
 MAX_CARDS = 4                  # foto nitide nello stile Sfocata
 MAX_COLLAGE = 9                # foto nel collage
 # Pagina 26 Canva (misure sulla pagina 1080x1440): sfondo ingrandito del 6% per
@@ -224,6 +225,13 @@ def _texture(path, look):
     cut, dark = look['grain_cut'], round(255 * look['grain_dark'])
     mask = noise.point(lambda v: dark if v < cut else 255).convert('RGB')
     tex = ImageChops.multiply(tex, mask)
+    if look.get('light'):                       # zone più chiare a macchie larghe, sempre uguali (seme fisso)
+        size = max(2, tex.width // look['light_px'])
+        blobs = Image.new('L', (size, size))
+        blobs.putdata([random.randint(0, 255) for _ in range(size * size)])
+        blobs = blobs.resize(tex.size, Image.Resampling.BICUBIC)
+        veil = Image.new('RGB', tex.size, (255, 255, 255))
+        tex = Image.composite(veil, tex, blobs.point(lambda v: round(max(0, v - 128) * 2 * look['light'])))
     if look.get('tint'):                        # tono caldo leggero (cemento, non grigio freddo)
         tex = ImageChops.multiply(tex, Image.new('RGB', tex.size, look['tint']))
     out = io.BytesIO()
