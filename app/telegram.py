@@ -217,22 +217,34 @@ class Telegram:
             )
         return True
 
-    def photo(self, png, filename='grafica.png'):
+    def photo(self, png, filename='grafica.png', caption=None):
         """Invia la foto Telegram: PNG (bytes) oppure il file_id di una foto già inviata.
+        caption: testo HTML sotto la foto. Se Telegram lo rifiuta (HTTP 400: la foto non è
+        partita) la foto riparte senza testo e self.caption_dropped diventa True.
         In self.last_photo restano i file_id (grande e miniatura) della foto mandata."""
-        # Connessione: 10 s per aprirla; poi fino a 45 s per caricare la foto e avere la risposta.
-        if isinstance(png, str):
-            result = self.call('sendPhoto', {'chat_id': self.chat_id, 'photo': png}, timeout=(10, 45), fresh=True)
-        else:
-            if not png.startswith(b'\x89PNG\r\n\x1a\n'):
-                raise TelegramError('Il renderer non ha prodotto un PNG')
-            result = self.call(
-                'sendPhoto',
-                {'chat_id': self.chat_id},
-                files={'photo': (filename.rsplit('.', 1)[0] + '.jpg', _jpeg(png), 'image/jpeg')},
-                timeout=(10, 45),
-                fresh=True,
-            )
+        if not isinstance(png, str) and not png.startswith(b'\x89PNG\r\n\x1a\n'):
+            raise TelegramError('Il renderer non ha prodotto un PNG')
+        jpeg = None if isinstance(png, str) else _jpeg(png)
+
+        def send(text):
+            data = {'chat_id': self.chat_id}
+            if text:
+                data.update(caption=text, parse_mode='HTML')
+            # Connessione: 10 s per aprirla; poi fino a 45 s per caricare la foto e avere la risposta.
+            if jpeg is None:
+                return self.call('sendPhoto', {**data, 'photo': png}, timeout=(10, 45), fresh=True)
+            return self.call('sendPhoto', data,
+                             files={'photo': (filename.rsplit('.', 1)[0] + '.jpg', jpeg, 'image/jpeg')},
+                             timeout=(10, 45), fresh=True)
+
+        self.caption_dropped = False
+        try:
+            result = send(caption)
+        except TelegramError as exc:
+            if not caption or type(exc) is not TelegramError or 'HTTP 400' not in str(exc):
+                raise
+            self.caption_dropped = True
+            result = send(None)
 
         try:
             message_id = int(result['message_id'])

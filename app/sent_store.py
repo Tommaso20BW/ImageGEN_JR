@@ -92,7 +92,7 @@ def save_colors(colors):
 
 
 def save_history(entries):
-    keep = ('id', 'name', 'player', 'minute', 'score', 'opponent', 'note', 'kind', 'at', 'file_id', 'thumb_id')
+    keep = ('id', 'name', 'player', 'minute', 'score', 'opponent', 'note', 'kind', 'at', 'file_id', 'thumb_id', 'caption')
     rows = [{k: e.get(k) for k in keep} for e in entries if e.get('file_id')][:HISTORY_KEEP]
     _save(HISTORY, rows, 'ImageGen: ultimi invii')
 

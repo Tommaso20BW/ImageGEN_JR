@@ -3,6 +3,7 @@
 ImageGEN receives Mini App payloads through a temporary HTTPS tunnel instead of
 Telegram getUpdates. This lets it coexist with LiveScore on the same bot token.
 """
+import caption
 import log
 import sent_store
 import copy
@@ -995,11 +996,12 @@ class Service:
                     return sent[0]
 
             sending = time.time()
+            text = caption.safe_build(data)
             message_id = self._send_photo(png, f"{data['kind']}-{request_state['id']}.png",
-                                          log.graphic_name(data))
+                                          log.graphic_name(data), text)
             self.generated_message_ids.append(int(message_id))
             self.recent_sends[fingerprint] = (int(message_id), time.time())
-            self._remember_send(message_id, data, png)
+            self._remember_send(message_id, data, png, text)
             self._remember_ig_name(data)
             if data['kind'] == 'xi':
                 threading.Thread(target=self._remember_shirts, args=(data['lineup'],), daemon=True).start()
@@ -1013,14 +1015,17 @@ class Service:
         finally:
             self.operation_lock.release()
 
-    def _send_photo(self, png, filename, name):
+    def _send_photo(self, png, filename, name, text=None):
         """Foto su Telegram. Se Telegram dice che non l'ha ricevuta (troppe richieste,
         connessione mai aperta) riprova da solo, fino a SEND_TRIES volte. Con esito incerto
         (risposta persa) non riprova: la foto potrebbe essere già nella chat."""
         for attempt in range(1, SEND_TRIES + 1):
             started = time.time()
             try:
-                return int(self.telegram.photo(png, filename))
+                message_id = int(self.telegram.photo(png, filename, text))
+                if getattr(self.telegram, 'caption_dropped', False):
+                    log.warn('INVIO', f'{name}: Telegram ha rifiutato la didascalia, foto inviata senza testo')
+                return message_id
             except NotSent as exc:
                 if attempt >= SEND_TRIES:
                     log.warn('INVIO', f"{name}: Telegram non l'ha ricevuta dopo {SEND_TRIES} tentativi ({exc})")
@@ -1034,11 +1039,11 @@ class Service:
                                   f'({type(exc).__name__}, {time.time() - started:.1f} s, {log.kb(len(png))})')
                 raise
 
-    def _remember_send(self, message_id, data, png):
+    def _remember_send(self, message_id, data, png, text=None):
         """Aggiunge l'invio a "Ultimi invii", con una miniatura per la Mini App, e lo salva nel
         repo degli asset (con il file_id Telegram: resta anche per le sessioni dopo)."""
         entry = {'id': int(message_id), 'name': log.graphic_name(data), **_send_detail(data),
-                 'kind': data.get('kind', ''), 'at': int(time.time() * 1000), 'png': png,
+                 'kind': data.get('kind', ''), 'at': int(time.time() * 1000), 'png': png, 'caption': text or '',
                  'thumb': _jpeg(png, (240, 320), 80),
                  **(getattr(self.telegram, 'last_photo', None) or {})}
         with self.history_lock:
@@ -1225,7 +1230,7 @@ class Service:
             started = time.time()
             # Di questa sessione: lo stesso PNG. Delle sessioni passate: la foto già su Telegram.
             message_id = self._send_photo(entry.get('png') or entry['file_id'],
-                                          f"{entry['kind']}-rimandata.png", entry['name'])
+                                          f"{entry['kind']}-rimandata.png", entry['name'], entry.get('caption'))
             self.generated_message_ids.append(message_id)
             self.last_resend = (wanted, message_id, time.time())
             took = time.time() - started
