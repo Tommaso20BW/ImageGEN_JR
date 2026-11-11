@@ -59,22 +59,6 @@ MD_COMPETITION = {'ita.1': E_ITA, 'ita.coppa_italia': E_CI, 'uefa.europa': E_UEF
 MD_TV = {'ita.1': 'DAZN', 'ita.coppa_italia': 'Mediaset', 'ita.super_cup': 'Mediaset',
          'uefa.champions': 'Sky Sport', 'uefa.europa': 'Sky Sport', 'uefa.europa.conf': 'Sky Sport',
          'uefa.super_cup': 'Sky Sport', 'club.friendly': 'Juventus.com'}
-# Matchday: emoji personalizzata di ogni avversaria (nome italiano minuscolo), dai post del canale.
-TEAM_EMOJI = {
-    'atalanta': ('5809830487824277376', '🇮🇹'), 'cagliari': ('5913307249396158963', '🇮🇹'),
-    'fiorentina': ('5913639563900752614', '🇮🇹'), 'frosinone': ('5911181365138690645', '🇮🇹'),
-    'genoa': ('5911268059053560883', '🇮🇹'), 'inter': ('5911036032035329229', '🇮🇹'),
-    'lazio': ('5911295933391312208', '🇮🇹'), 'lecce': ('5911196788366251729', '🇮🇹'),
-    'milan': ('5911391075506852997', '🇮🇹'), 'napoli': ('5832408070042428655', '🇮🇹'),
-    'palermo': ('5911464631116765226', '🇮🇹'), 'parma': ('5913350542666503216', '🇮🇹'),
-    'sassuolo': ('5911488085933169181', '🇮🇹'), 'next gen': ('6033087367521244085', '🧒'),
-    'basilea': ('5190496525863654450', '🇨🇭'), 'standard liegi': ('5384130857206316449', '🇧🇪'),
-    'nizza': ('5249262570509966779', '🇫🇷'), 'rennes': ('5341671489122885275', '🇫🇷'),
-    'chelsea': ('6019419613354269178', '🏴󠁧󠁢󠁥󠁮󠁧󠁿'), 'nec nijmegen': ('5195220903989901039', '🇳🇱'),
-    'nec': ('5195220903989901039', '🇳🇱'), 'celta vigo': ('5404664116595950240', '🇪🇸'),
-    'celta': ('5404664116595950240', '🇪🇸'), 'az alkmaar': ('5197389875359288686', '🇳🇱'),
-    'az': ('5197389875359288686', '🇳🇱'),
-}
 MONTHS = ('GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO', 'AGOSTO',
           'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE')
 _SMALL = {'di', 'del', 'della', 'dei', 'degli', 'delle', 'de', 'da', 'la', 'le', 'il', 'lo', 'e'}
@@ -213,12 +197,10 @@ def _match_caption(data):
         competition = str(data.get('competition') or '')
         comp_emoji = MD_COMPETITION.get(competition, m['comp'])
         opponent = m['away'] if m['juve_home'] else m['home']
-        known = TEAM_EMOJI.get(html.unescape(opponent).casefold())
-        opp_emoji = emoji(*known) if known else '🇮🇹' if competition.startswith('ita.') else '🆚'
         info = data.get('info') or {}
         place = E_HOME if m['juve_home'] else E_AWAY
         rows = [f"{comp_emoji} {esc(COMPETITION_NAMES.get(competition, ''))}",
-                f"{opp_emoji} {opponent}",
+                f"🆚 {opponent}",
                 f"{place} {esc(_stadium(info.get('stadium')))}",
                 f"{E_TV} {esc(MD_TV.get(competition, ''))}",
                 f"{E_TIME} {esc(str(info.get('time') or '').split(' ')[0])}",

@@ -35,11 +35,8 @@ class CaptionTest(unittest.TestCase):
             'kind': 'md', 'competition': 'ita.1', 'side': 'away',
             'opponent': {'name': 'US Lecce', 'aliases': ['US Lecce', 'Lecce']},
             'info': {'stadium': 'STADIO VIA DEL MARE', 'time': '18:00 CEST', 'date': '25 OTTOBRE 2026'}}))
-        self.assertIn('<i>🇮🇹 Serie A</i>\n<i>🇮🇹 Lecce</i>\n<i>✈️ Stadio Via del Mare</i>\n<i>📺 DAZN</i>\n'
+        self.assertIn('<i>🇮🇹 Serie A</i>\n<i>🆚 Lecce</i>\n<i>✈️ Stadio Via del Mare</i>\n<i>📺 DAZN</i>\n'
                       '<i>⏰ 18:00</i>\n<i>📲 #LecceJuve</i>', text)
-        self.assertIn('emoji-id="5911196788366251729">🇮🇹</tg-emoji> Lecce', caption.build({
-            'kind': 'md', 'competition': 'ita.1', 'side': 'away',
-            'opponent': {'name': 'US Lecce', 'aliases': ['US Lecce', 'Lecce']}, 'info': {}}))
 
     def test_matchday_home_friendly(self):
         text = caption.build({'kind': 'md', 'competition': 'club.friendly', 'side': 'home', 'opponent': FIO,
