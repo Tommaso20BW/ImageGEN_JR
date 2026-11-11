@@ -36,6 +36,52 @@ def parse_url(url):
     return m.group(2)
 
 
+STORY = re.compile(r'^/stories/([\w.]+)(?:/(\d+))?')
+
+
+def story_user(url):
+    """Username da un link di una storia (instagram.com/stories/<account>/<id>), None se non è una storia."""
+    url = str(url or '').strip()
+    if not re.match(r'^https?://', url, re.I):
+        url = 'https://' + url
+    parts = urlsplit(url)
+    m = STORY.match(parts.path) if parts.hostname in HOSTS else None
+    return m.group(1) if m and m.group(1) != 'highlights' else None
+
+
+def fetch_story(url, session=None):
+    """STORIA: Instagram mostra foto e testo delle storie solo a chi ha fatto l'accesso. Dalla pagina
+    pubblica arrivano nome, username e foto profilo; foto e testo li mette chi fa la grafica."""
+    handle = story_user(url)
+    if not handle:
+        raise ValueError('Link non valido: serve il link di una storia (instagram.com/stories/…).')
+    session = session or requests.Session()
+    name, avatar = '', None
+    try:
+        r = session.get(f'https://www.instagram.com/stories/{handle}/', headers={'User-Agent': UA}, timeout=25)
+        page = r.text if r.status_code == 200 else ''
+    except requests.RequestException:
+        page = ''
+    title = re.search(r'<meta property="og:title" content="([^"]*)"', page)
+    if title:
+        m = re.match(r'^Watch this story by (.+?) on Instagram', html.unescape(title.group(1)))
+        name = m.group(1).strip() if m else ''
+    pic = re.search(r'"profile_pic_url":"(.*?)"', page)
+    if pic:
+        try:
+            avatar = _download(session, _json_str(pic.group(1)).replace(BS + '/', '/'))
+        except ValueError:
+            avatar = None
+    if not avatar:
+        og = re.search(r'<meta property="og:image" content="([^"]+)"', page)
+        avatar = _download(session, html.unescape(og.group(1))) if og else None
+    import unicodedata
+    name = unicodedata.normalize('NFC', name)
+    log.info('INSTAGRAM', f"Storia di @{handle}: nome {'sì' if name else 'no'}, foto profilo {'sì' if avatar else 'no'}")
+    return {'code': '', 'user': handle, 'name': name, 'verified': False, 'text': '', 'avatar': avatar,
+            'photos': [], 'story': True}
+
+
 def _json_str(raw):
     """Stringa JSON annidata (anche doppia) -> testo."""
     value = raw

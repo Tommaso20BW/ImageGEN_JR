@@ -9,7 +9,7 @@ const iqThumb = id => `${directBase}/photothumb?session=${encodeURIComponent(ses
 async function iqLoad() {
   const url = $('iqUrl').value.trim();
   if (!url) { showError(`Incolla il link del post ${kind === 'xq' ? 'di X' : kind === 'thq' ? 'di Threads' : 'Instagram'}.`); return false; }
-  if (iq.url === url && iq.photos.length) return true;
+  if (iq.url === url && (iq.photos.length || iq.story)) return true;
   if (iq.loading) return false;          // già in lettura (incolla + Avanti insieme)
   if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return false; }
   iq.loading = true;
@@ -23,7 +23,8 @@ async function iqLoad() {
     const body = await response.json().catch(() => ({}));
     if (!response.ok || !body.ok) throw new Error(body.error || 'Post non leggibile.');
     Object.assign(iq, {url, photos:body.photos || [], sel:(body.photos || []).length === 1 ? 0 : -1,
-      avatar:body.avatar_id || '', verified:!!body.verified});
+      avatar:body.avatar_id || '', verified:!!body.verified, story:!!body.story});
+    if (iq.story) clearPhoto();           // storia: la foto la carichi tu nell'editor
     $('iqText').value = body.text || '';
     $('iqName').value = body.user || '';
     $('iqHandle').value = body.handle || '';
@@ -66,7 +67,7 @@ function renderIqPick() {
 $('iqUrl').addEventListener('input', () => {
   clearError();
   if (iq.url && $('iqUrl').value.trim() !== iq.url) {
-    Object.assign(iq, {url:'', photos:[], sel:-1, avatar:''});
+    Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', story:false});
     buildFlow();
     renderSteps();
   }
@@ -128,13 +129,15 @@ function iqTexts() {
   document.querySelectorAll('[data-screen^="iq"] .eyebrow').forEach(e => { e.textContent = `Citazione ${net}`; });
   $('iqUrlLead').textContent = x || th
     ? `Tieni premuto nel campo e incolla il link di un post di ${x ? 'X' : 'Threads'}: testo, nome, account, foto profilo e foto arrivano da soli.`
-    : 'Tieni premuto nel campo e incolla il link di un post Instagram: foto, testo, nome e foto profilo arrivano da soli.';
+    : 'Tieni premuto nel campo e incolla il link di un post o di una storia Instagram: foto, testo, nome e foto profilo arrivano da soli (dalle storie solo nome e foto profilo).';
   $('iqUrl').placeholder = x ? 'https://x.com/…/status/…' : th ? 'https://www.threads.com/@…/post/…' : 'https://www.instagram.com/p/…';
   $('iqPickLead').textContent = x || th
     ? 'Tocca la foto da usare come sfondo, oppure "Sfondo".'
     : 'Il post ha più foto: tocca quella da usare come sfondo.';
   $('iqTextLead').textContent = x || th
     ? 'Testo preso dal post, senza emoji e link finali: puoi cambiarlo.'
+    : iq.story ? 'Storia: Instagram non dà il testo. Scrivilo tu, oppure lascia vuoto per la sola foto (dopo la carichi nell’editor).'
     : 'Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.';
+  $('iqText').placeholder = iq.story ? 'Testo della storia (facoltativo)' : 'Testo della citazione';
   $('iqHandleRow').hidden = false;      // @username: X e Instagram
 }

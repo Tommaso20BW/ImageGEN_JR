@@ -1107,7 +1107,9 @@ class Service:
         url = (envelope or {}).get('url')
         th = threadspost.is_threads_url(url)
         x = th or xpost.is_x_url(url)          # X e Threads: nome e @account arrivano entrambi dal post
-        post = threadspost.fetch(url) if th else xpost.fetch(url) if x else instagram.fetch(url)
+        story = not x and instagram.story_user(url) is not None     # storia: niente foto, la carichi tu
+        post = (threadspost.fetch(url) if th else xpost.fetch(url) if x
+                else instagram.fetch_story(url) if story else instagram.fetch(url))
         photos = []
         for raw in post['photos']:
             try:
@@ -1116,7 +1118,7 @@ class Service:
                 continue
         if x:
             photos.append({**self.store_photo(ig_quote.x_background()), 'bg': True})
-        if not photos:
+        if not photos and not story:
             raise ValueError('Foto del post non valide. Carica la foto a mano.')
         avatar = None
         if post['avatar']:
@@ -1126,11 +1128,11 @@ class Service:
                 avatar = None
         # Instagram dà solo l'username: il nome è quello scritto l'ultima volta per l'account (se c'è).
         handle = post.get('handle') or ('' if x else post['user'])
-        user = post['user'] if x else sent_store.load_names().get(handle.lower(), handle)
+        user = post['user'] if x else sent_store.load_names().get(handle.lower(), post.get('name') or handle)
         # Testo già senza emoji (come uscirà nella grafica): nella Mini App si vede quello vero.
         return {'platform': 'threads' if th else 'x' if x else 'ig', 'user': ig_quote.clean_name(user), 'handle': handle,
                 'verified': bool(post.get('verified')), 'text': ig_quote.clean_text(post['text']),
-                'photos': photos, 'avatar_id': avatar}
+                'photos': photos, 'avatar_id': avatar, 'story': story}
 
     def _remember_ig_name(self, data):
         """Citazione IG inviata con un nome diverso dall'username: la prossima volta arriva già."""

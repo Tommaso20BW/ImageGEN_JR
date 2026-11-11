@@ -50,7 +50,7 @@ const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scel
 let mdPick = '';       // id partita ESPN scelta, 'manual' o ''
 let igPicking = false; // Storia IG: pagina "Dagli ultimi invii" aperta (11-invii.js)
 // CITAZIONE IG (12-citazione.js): link letto, foto del post, foto scelta, foto profilo.
-const iq = {url:'', photos:[], sel:-1, avatar:'', loading:false, verified:false};
+const iq = {url:'', photos:[], sel:-1, avatar:'', loading:false, verified:false, story:false};
 let kitFromMatch = false;   // maglia presa da ESPN (partite giocate): niente passaggio "Maglia"
 let fixtureList = [];
 let calRows = [];
@@ -337,7 +337,7 @@ function stepValue(step) {
       const m = fixtureList.find(f => f.id === mdPick);
       return mdPick === 'manual' ? 'A mano' : (m ? fixtureLabel(m, true) : '');
     }
-    case 'iqurl': return iq.photos.length ? `${iq.photos.length} foto` : '';
+    case 'iqurl': return iq.story ? 'Storia' : iq.photos.length ? `${iq.photos.length} foto` : '';
     case 'iqpick': return iq.sel >= 0 ? `Foto ${iq.sel + 1}` : '';
     case 'iqtext': return $('iqName').value.trim();
     case 'igcontent': {

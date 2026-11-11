@@ -13,6 +13,9 @@
   foto lo sfondo è canva/x_quote_bg.jpg (lo aggiunge il servizio come foto da scegliere).
 - Threads (platform='threads'): come X, logo Threads, icone mi piace, commenta, ripubblica, condividi;
   stesso sfondo di riserva per i post senza foto.
+- Storia Instagram (story=True): stesso riquadro fatto come una storia: in alto le barrette di
+  avanzamento, sotto il nome "Storia · @account", in basso la barra "Invia messaggio" con cuore e
+  condividi. Il testo può mancare (storia con la sola foto): il riquadro va in basso e la foto resta libera.
 
 Il calcolo della grandezza del testo lo fa Chrome (a-capo reali): il renderer aspetta `window.__ready`.
 """
@@ -104,7 +107,8 @@ window.__ready = (async () => {
 '''
 
 
-def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig', handle='', verified=False, **_):
+def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig', handle='', verified=False,
+               story=False, **_):
     """photo=None: sagoma per l'editor (sfondo trasparente, la foto la mette la Mini App).
     frame = posizione e zoom della foto scelti nell'editor ({'x','y','zoom'}, come la FOTO + JR)."""
     if photo is not None:
@@ -124,6 +128,9 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
     handle = clean_name(handle)
     # Nome in grassetto, sotto l'@username piccolo (senza username: "Instagram" / "X" / "Threads").
     sub = f'@{esc(handle)}' if handle else ('X' if x else 'Threads' if th else 'Instagram')
+    story = story and platform == 'ig'
+    if story:
+        sub = f'Storia · @{esc(handle)}' if handle else 'Storia'
     tick = (f'<svg class="tick" viewBox="0 0 24 24"><path fill="{"#1D9BF0" if x else "#0095F6"}" d="M22.5 12.5'
             'c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1.71-4-3.82-4-.47 0-.92.08-1.34.25C14.81 2.42'
             ' 13.5 1.5 12 1.5s-2.81.92-3.43 2.22c-.42-.17-.87-.25-1.34-.25-2.11 0-3.82 1.79-3.82 4 0 .5.09.98.24 '
@@ -133,14 +140,19 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
             'l1.4-1.4 2.3 2.3 5.1-5.1 1.4 1.4z"/></svg>' if verified else '')
     head = (f'<div id="hd">{avatar_html}<div id="who"><b>{esc(name or handle)}{tick}</b><span>{sub}</span></div>'
             f'<i id="ig">{X_LOGO if x else TH_LOGO if th else ICON_IG}</i></div>')
-    if th:      # Threads: mi piace, commenta, ripubblica, condividi
+    if story:   # Storia: barra per rispondere, cuore e condividi
+        acts = f'<div id="act" class="st"><span id="reply">Invia messaggio</span><div>{ICON_LIKE}{ICON_SHARE}</div></div>'
+    elif th:    # Threads: mi piace, commenta, ripubblica, condividi
         acts = f'<div id="act"><div>{ICON_LIKE}{ICON_COMMENT}{X_REPOST}{ICON_SHARE}</div><div></div></div>'
     elif x:
         acts = (f'<div id="act"><div>{X_REPLY}{X_REPOST}{ICON_LIKE}{X_VIEWS}</div>'
                 f'<div>{ICON_SAVE}{X_SHARE}</div></div>')
     else:
         acts = f'<div id="act"><div>{ICON_LIKE}{ICON_COMMENT}{ICON_SHARE}</div><div>{ICON_SAVE}</div></div>'
-    body = f'<div id="box">{head}<div id="txt">{esc(text)}</div>{acts}</div>' if text else ''
+    bars = '<div id="bars"><i class="full"></i><i class="half"></i><i></i></div>' if story else ''
+    txt = f'<div id="txt">{esc(text)}</div>' if text else ''
+    cls = ' class="st"' if story else ''
+    body = f'<div id="box"{cls}>{bars}{head}{txt}{acts}</div>' if text or story else ''
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 {_font_css()}
 *{{margin:0;padding:0;box-sizing:border-box}}
@@ -168,20 +180,30 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{'#
 #act{{display:flex;align-items:center;justify-content:space-between;flex:none}}
 #act div{{display:flex;gap:{36 if x else 30}px}}
 #act svg{{width:52px;height:52px;display:block}}
+#box.st{{padding-top:30px}}
+#zone.low{{align-items:flex-end}}
+#bars{{display:flex;gap:8px;flex:none;margin-bottom:-{TEXT_GAP - 26}px}}
+#bars i{{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.32);overflow:hidden;position:relative}}
+#bars i.full{{background:#fff}}
+#bars i.half::after{{content:'';position:absolute;inset:0 45% 0 0;background:#fff;border-radius:3px}}
+#act.st{{gap:30px}}
+#reply{{flex:1;min-width:0;height:84px;display:flex;align-items:center;padding:0 34px;border-radius:42px;
+  border:2px solid rgba(255,255,255,.7);color:rgba(255,255,255,.85);font:500 30px Poppins,sans-serif}}
 img[style*="left:0"]{{position:absolute}}
 </style></head><body>
 <div id="bg">{img}</div>
 <div id="shade"></div>
-<div id="zone">{body}</div>
+<div id="zone"{' class="low"' if story and not text else ''}>{body}</div>
 {_logo('white')}
 <script>{SCRIPT % json.dumps(cfg)}</script>
 </body></html>'''
 
 
 def render(*, photo, text='', name='', avatar=None, frame=None, ghost=False, platform='ig', handle='',
-           verified=False, **_):
+           verified=False, story=False, **_):
     return render_html(build_html(photo=None if ghost else photo, text=text, name=name, avatar=avatar,
-                                  frame=frame, platform=platform, handle=handle, verified=verified), ghost=ghost)
+                                  frame=frame, platform=platform, handle=handle, verified=verified, story=story),
+                       ghost=ghost)
 
 
 def x_background():

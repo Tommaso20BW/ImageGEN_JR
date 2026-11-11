@@ -311,12 +311,15 @@ def _build_state(envelope, catalog, now, expected_session):
     if kind in ('igq', 'xq', 'thq'):
         from graphics import ig_quote
         text = ig_quote.clean_text(incoming.get('text'))
-        if not text:
+        story = kind == 'igq' and incoming.get('story') is True        # storia: il testo può mancare
+        if not text and not story:
             raise ValueError('Scrivi il testo della citazione.')
         data = {'kind': kind, 'photo_id': _photo_id(incoming.get('photo_id')), 'text': text,
                 'name': ig_quote.clean_name(incoming.get('name')), 'frame': _frame(incoming.get('frame'))}
         data['handle'] = ig_quote.clean_name(incoming.get('handle'))
         data['verified'] = incoming.get('verified') is True
+        if story:
+            data['story'] = True
         if incoming.get('avatar_id'):
             data['avatar_id'] = _photo_id(incoming.get('avatar_id'))
         return {
