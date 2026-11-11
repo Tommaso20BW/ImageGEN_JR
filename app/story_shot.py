@@ -36,6 +36,44 @@ def _frame(image):
     return (top, bottom) if 1.6 <= ratio <= 1.95 else None
 
 
+def bars(image, top):
+    """Barrette in cima alla storia: quanto è piena ciascuna (1 = vista, 0 = da vedere), da sinistra.
+    None se non si trovano."""
+    import numpy as np
+    w = image.width
+    a = np.asarray(image.convert('L').crop((0, top, w, top + round(.07 * w)))).astype(int)
+    d = max(3, round(.012 * w))                          # le barrette sono più sottili di così
+    if a.shape[0] < 2 * d + 2:
+        return None
+    mid = a[d:-d]
+    thin = (mid - a[:-2 * d] > 25) & (mid - a[2 * d:] > 25)   # più chiara di sopra e di sotto
+    count = thin.sum(axis=1)
+    y = int(np.argmax(count))
+    if count[y] < w * .3:
+        return None
+    on = thin[y]
+    row = mid[y]
+    segs, start = [], None
+    for x, v in enumerate([*on, False]):
+        if v and start is None:
+            start = x
+        elif not v and start is not None:
+            segs.append((start, x))
+            start = None
+    merged = []                                          # buchi di 1-2 px dentro una barretta
+    for s0, s1 in segs:
+        if merged and s0 - merged[-1][1] <= 2:
+            merged[-1] = (merged[-1][0], s1)
+        else:
+            merged.append((s0, s1))
+    merged = [(s0, s1) for s0, s1 in merged if s1 - s0 > w * .015]
+    if not 1 <= len(merged) <= 30:
+        return None
+    white = row.max() - 25                               # parte vista: il bianco pieno
+    fills = [float((row[s0:s1] >= white).mean()) for s0, s1 in merged]
+    return [1.0 if f > .92 else 0.0 if f < .05 else round(f, 2) for f in fills]   # bordi sfumati
+
+
 def _jpeg(image):
     out = io.BytesIO()
     image.convert('RGB').save(out, 'JPEG', quality=92)
@@ -44,14 +82,20 @@ def _jpeg(image):
 
 def crop(raw):
     """(foto della storia, foto profilo o None). Senza riquadro riconosciuto: (raw, None)."""
+    photo, avatar, _ = read(raw)
+    return photo, avatar
+
+
+def read(raw):
+    """(foto della storia, foto profilo o None, barrette o None). Senza riquadro: (raw, None, None)."""
     try:
         image = Image.open(io.BytesIO(raw))
         image.load()
         box = _frame(image)
     except Exception:
-        return raw, None
+        return raw, None, None
     if not box:
-        return raw, None
+        return raw, None, None
     top, bottom = box
     w = image.width
     cx, cy, r = round(AVATAR[0] * w), round(top + AVATAR[1] * w), round(AVATAR[2] * w)
@@ -60,4 +104,8 @@ def crop(raw):
     band = round(HEADER * w)
     cover = story.crop((0, band, w, band + max(4, band // 10))).resize((w, band)).filter(ImageFilter.GaussianBlur(band / 6))
     story.paste(cover, (0, 0))
-    return _jpeg(story), _jpeg(avatar)
+    try:
+        fills = bars(image, top)
+    except Exception:
+        fills = None
+    return _jpeg(story), _jpeg(avatar), fills

@@ -50,6 +50,13 @@ class StoryPayloadTest(unittest.TestCase):
         state = webapp_payload.parse_webapp_request(self.envelope(text='Ciao'), None, 0, 's')
         self.assertNotIn('story', state['data'])
 
+    def test_story_bars(self):
+        state = webapp_payload.parse_webapp_request(self.envelope(text='', story=True, bars=[1, 0.5, 0]), None, 0, 's')
+        self.assertEqual(state['data']['bars'], [1.0, 0.5, 0.0])
+        for bad in ([2], 'x', [], [True]):
+            state = webapp_payload.parse_webapp_request(self.envelope(text='', story=True, bars=bad), None, 0, 's')
+            self.assertNotIn('bars', state['data'])
+
     def test_story_card(self):
         import io
         from PIL import Image
@@ -57,6 +64,9 @@ class StoryPayloadTest(unittest.TestCase):
         with mock.patch('graphics.ig_quote._font_css', return_value=''),                 mock.patch('graphics.photo_jr._logo', return_value=''):
             page = ig_quote.build_html(photo=raw.getvalue(), text='', name='Francisco', handle='fc7', story=True,
                                        verified=True)
+            two = ig_quote.build_html(photo=raw.getvalue(), story=True, bars=[1, 0.4])
+            self.assertEqual(two.count('<s style'), 2)
+            self.assertIn('width:40%', two)
             for part in ('id="card"', 'id="back"', 'id="bars"', 'Invia messaggio', '<b>fc7</b>', 'class="tick"'):
                 self.assertIn(part, page)
             post = ig_quote.build_html(photo=raw.getvalue(), text='Ciao', name='Francisco', handle='fc7')
@@ -73,7 +83,12 @@ class StoryShotTest(unittest.TestCase):
         for y in range(120, 120 + 1067):                               # storia 9:16, a righe colorate
             d.line([(0, y), (599, y)], fill=(40 + y % 180, 120, 60))
         d.ellipse((12, 120 + 30, 72, 120 + 90), fill=(250, 0, 0))     # foto profilo
+        d.rectangle((10, 132, 200, 134), fill=(255, 255, 255))         # barrette: vista, a metà, da vedere
+        d.rectangle((205, 132, 300, 134), fill=(255, 255, 255))
+        d.rectangle((301, 132, 395, 134), fill=(170, 170, 170))
+        d.rectangle((400, 132, 590, 134), fill=(170, 170, 170))
         out = io.BytesIO(); shot.save(out, 'PNG')
+        self.assertEqual(story_shot.read(out.getvalue())[2], [1.0, 0.5, 0.0])
         photo, avatar = story_shot.crop(out.getvalue())
         w, h = Image.open(io.BytesIO(photo)).size
         self.assertEqual(w, 600)

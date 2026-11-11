@@ -320,6 +320,10 @@ def _build_state(envelope, catalog, now, expected_session):
         data['verified'] = incoming.get('verified') is True
         if story:
             data['story'] = True
+            bars = incoming.get('bars')
+            if isinstance(bars, list) and 1 <= len(bars) <= 30 and all(
+                    isinstance(b, (int, float)) and not isinstance(b, bool) and 0 <= b <= 1 for b in bars):
+                data['bars'] = [round(float(b), 2) for b in bars]
         if incoming.get('avatar_id'):
             data['avatar_id'] = _photo_id(incoming.get('avatar_id'))
         return {

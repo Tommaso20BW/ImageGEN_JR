@@ -500,9 +500,11 @@ class Service:
         """Screenshot di una storia (Citazione IG): tiene la storia senza l'interfaccia di Instagram e,
         a parte, la foto profilo (serve se il link non l'ha data)."""
         import story_shot
-        photo, avatar = story_shot.crop(raw)
+        photo, avatar, bars = story_shot.read(raw)
         out = self.store_photo(photo)
         out['cropped'] = avatar is not None
+        if bars:
+            out['bars'] = bars
         if avatar:
             try:
                 out['avatar_id'] = self.store_photo(avatar)['photo_id']

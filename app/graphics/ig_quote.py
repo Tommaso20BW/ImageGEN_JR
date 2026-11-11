@@ -108,7 +108,7 @@ window.__ready = (async () => {
 
 
 def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig', handle='', verified=False,
-               story=False, **_):
+               story=False, bars=None, **_):
     """photo=None: sagoma per l'editor (sfondo trasparente, la foto la mette la Mini App).
     frame = posizione e zoom della foto scelti nell'editor ({'x','y','zoom'}, come la FOTO + JR)."""
     if photo is not None:
@@ -128,7 +128,7 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
     handle = clean_name(handle)
     # Nome in grassetto, sotto l'@username piccolo (senza username: "Instagram" / "X" / "Threads").
     if story and platform == 'ig' and photo is not None:
-        return build_story_html(photo=photo, name=name, avatar=avatar, handle=handle, verified=verified)
+        return build_story_html(photo=photo, name=name, avatar=avatar, handle=handle, verified=verified, bars=bars)
     sub = f'@{esc(handle)}' if handle else ('X' if x else 'Threads' if th else 'Instagram')
     tick = (f'<svg class="tick" viewBox="0 0 24 24"><path fill="{"#1D9BF0" if x else "#0095F6"}" d="M22.5 12.5'
             'c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1.71-4-3.82-4-.47 0-.92.08-1.34.25C14.81 2.42'
@@ -187,8 +187,8 @@ img[style*="left:0"]{{position:absolute}}
 
 # ---------- Storia ----------
 STORY_CARD = (191, 104, 698, 1241)      # riquadro 9:16 (x, y, larghezza, altezza) in pixel design
-STORY_BLUR = 38                        # sfocatura della foto dietro (px)
-STORY_DARK = .34                       # luminosità della foto dietro
+STORY_BLUR = 16                        # sfocatura della foto dietro (px)
+STORY_DARK = .2                        # luminosità della foto dietro
 TICK_PATH = ('M22.5 12.5c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1.71-4-3.82-4-.47 0-.92.08-1.34.25'
              'C14.81 2.42 13.5 1.5 12 1.5s-2.81.92-3.43 2.22c-.42-.17-.87-.25-1.34-.25-2.11 0-3.82 1.79-3.82 4 0 .5.09'
              '.98.24 1.43-1.27.65-2.15 2.02-2.15 3.6 0 1.5.8 2.8 1.97 3.48-.03.24-.05.48-.05.72 0 2.21 1.71 4 3.82 4 .47'
@@ -196,11 +196,14 @@ TICK_PATH = ('M22.5 12.5c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1
              '3.82-4 0-.24-.02-.48-.05-.72 1.17-.68 1.97-1.98 1.97-3.48z')
 
 
-def build_story_html(*, photo, name='', avatar=None, handle='', verified=False):
-    """Storia Instagram come sul telefono: foto nel riquadro 9:16, dietro la stessa foto sfocata."""
+def build_story_html(*, photo, name='', avatar=None, handle='', verified=False, bars=None):
+    """Storia Instagram come sul telefono: foto nel riquadro 9:16, dietro la stessa foto sfocata.
+    bars: quanto è piena ogni barretta in alto (0-1), lette dallo screenshot; senza, tre barrette."""
     check_photo(photo)
     from graphics.photo_jr import _logo
     uri = _uri(photo)
+    bars_html = ''.join(f'<i><s style="width:{max(0.0, min(1.0, float(b))) * 100:g}%"></s></i>'
+                        for b in (bars or [1, .55, 0])[:30])
     cx, cy, cw, ch = STORY_CARD
     who = esc(handle or name)
     avatar_html = (f'<img id="av" src="{_uri(avatar)}">' if avatar
@@ -217,9 +220,8 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#00
 #top{{position:absolute;left:0;right:0;top:0;height:230px;background:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,0))}}
 #bot{{position:absolute;left:0;right:0;bottom:0;height:230px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.55))}}
 #bars{{position:absolute;left:18px;right:18px;top:18px;display:flex;gap:6px}}
-#bars i{{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.38);position:relative;overflow:hidden}}
-#bars i.full{{background:#fff}}
-#bars i.half::after{{content:'';position:absolute;inset:0 45% 0 0;background:#fff}}
+#bars i{{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.38);overflow:hidden}}
+#bars s{{display:block;height:100%;background:#fff}}
 #hd{{position:absolute;left:20px;right:20px;top:42px;display:flex;align-items:center;gap:16px;color:#fff;
   font-family:'Poppins',sans-serif;text-shadow:0 1px 6px rgba(0,0,0,.35)}}
 #av{{width:66px;height:66px;flex:none;border-radius:50%;object-fit:cover;padding:3px;background:{IG_GRADIENT};
@@ -236,7 +238,7 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#00
 </style></head><body>
 <div id="back"></div>
 <div id="card"><div id="top"></div><div id="bot"></div>
-  <div id="bars"><i class="full"></i><i class="half"></i><i></i></div>
+  <div id="bars">{bars_html}</div>
   <div id="hd">{avatar_html}<b>{who}</b>{tick}<i id="ig">{ICON_IG}</i></div>
   <div id="act"><span id="reply">Invia messaggio...</span>{ICON_LIKE}{ICON_SHARE}</div>
 </div>
@@ -246,9 +248,9 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#00
 
 
 def render(*, photo, text='', name='', avatar=None, frame=None, ghost=False, platform='ig', handle='',
-           verified=False, story=False, **_):
+           verified=False, story=False, bars=None, **_):
     return render_html(build_html(photo=None if ghost else photo, text=text, name=name, avatar=avatar,
-                                  frame=frame, platform=platform, handle=handle, verified=verified, story=story),
+                                  frame=frame, platform=platform, handle=handle, verified=verified, story=story, bars=bars),
                        ghost=ghost)
 
 

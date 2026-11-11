@@ -66,7 +66,8 @@ async function iqUploadShot(file) {
     const body = await response.json().catch(() => ({}));
     if (!response.ok || !body.ok) throw new Error(body.error || 'Caricamento non riuscito.');
     clearPhoto();
-    Object.assign(iq, {photos:[{photo_id:body.photo_id, width:body.width, height:body.height}], sel:0, shotCropped:!!body.cropped});
+    Object.assign(iq, {photos:[{photo_id:body.photo_id, width:body.width, height:body.height}], sel:0, shotCropped:!!body.cropped,
+      bars:Array.isArray(body.bars) ? body.bars : null});
     if (!iq.avatar && body.avatar_id) {
       iq.avatar = body.avatar_id;
       $('iqAvatar').style.backgroundImage = `url("${iqThumb(iq.avatar)}")`;
@@ -113,7 +114,7 @@ function renderIqPick() {
 $('iqUrl').addEventListener('input', () => {
   clearError();
   if (iq.url && $('iqUrl').value.trim() !== iq.url) {
-    Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', story:false});
+    Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', story:false, bars:null});
     buildFlow();
     renderSteps();
   }
