@@ -3,7 +3,8 @@
 Grafiche della partita (Gol, Half Time, Full Time, Statistiche...): stesso testo dei messaggi
 di LiveScore (nomi italiani e hashtag di Impostazioni › Nomi). Le altre (Matchday, XI,
 Classifica, Convocati...) seguono i post fatti a mano, con le emoji personalizzate del canale.
-Tutte finiscono con la firma 👉 @Juventus_Reborn.
+Queste ultime finiscono con la firma 👉 @Juventus_Reborn; quelle della diretta no, come sul canale.
+Post, Storie e Citazioni partono senza testo.
 """
 import html
 
@@ -62,6 +63,20 @@ MD_TV = {'ita.1': 'DAZN', 'ita.coppa_italia': 'Mediaset', 'ita.super_cup': 'Medi
 MONTHS = ('GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO', 'AGOSTO',
           'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE')
 _SMALL = {'di', 'del', 'della', 'dei', 'degli', 'delle', 'de', 'da', 'la', 'le', 'il', 'lo', 'e'}
+
+
+def _serif(text):
+    """Lettere e cifre in grassetto Unicode (𝐍𝐎𝐕𝐄𝐌𝐁𝐑𝐄 𝟐𝟎𝟐𝟔), come nei post del canale."""
+    out = []
+    for ch in str(text):
+        if 'A' <= ch <= 'Z':
+            ch = chr(0x1D400 + ord(ch) - ord('A'))
+        elif 'a' <= ch <= 'z':
+            ch = chr(0x1D41A + ord(ch) - ord('a'))
+        elif '0' <= ch <= '9':
+            ch = chr(0x1D7CE + ord(ch) - ord('0'))
+        out.append(ch)
+    return esc(''.join(out))
 
 
 def esc(value):
@@ -234,20 +249,36 @@ def _other_caption(data):
     if kind == 'cal':
         month = int(data.get('month') or 0)
         name = MONTHS[month - 1] if 1 <= month <= 12 else ''
-        return f"{E_DAY}<b> CALENDARIO | {name} {esc(data.get('year'))}</b>"
-    return ''   # Post, Storie e Citazioni: solo la firma
+        when = ' '.join(str(part) for part in (name, data.get('year')) if part)
+        return f"{E_VS}{E_DAY} {_serif(when)}"
+    return ''
 
 
 MATCH_KINDS = {'goal', 'saved', 'kick', 'half', 'second', 'end_of_90', 'full', 'stats', 'xi', 'pxi',
                'squad', 'md'}
 
 
+# Post della diretta (come quelli di LiveScore): sul canale non hanno la firma.
+LIVE_KINDS = {'goal', 'saved', 'kick', 'half', 'second', 'end_of_90', 'full', 'stats'}
+
+
+# Post (testo scritto ogni volta a mano), Storie e Citazioni (per Instagram, X, Threads): niente testo.
+NO_CAPTION = {'jr', 'igbn', 'igq', 'xq', 'thq'}
+
+
+def _live(data):
+    return data.get('kind') in LIVE_KINDS or (data.get('kind') == 'xi' and data.get('team') == 'italy')
+
+
 def build(data):
-    """Didascalia HTML della grafica, con la firma in fondo."""
+    """Didascalia HTML della grafica ('' se non ne ha); firma in fondo tranne che nella diretta."""
     kind = data.get('kind')
+    if kind in NO_CAPTION:
+        return ''
     body = _match_caption(data) if kind in MATCH_KINDS else _other_caption(data)
-    sign = f"{SIGN} @Juventus_Reborn"
-    return f"{body}\n\n{sign}" if body else sign
+    if _live(data) or not body:
+        return body
+    return f"{body}\n\n{SIGN} @Juventus_Reborn"
 
 
 def safe_build(data):
@@ -256,5 +287,5 @@ def safe_build(data):
         return build(data)
     except Exception as exc:  # noqa: BLE001
         import log
-        log.warn('INVIO', f'Didascalia non creata ({type(exc).__name__}: {exc}): invio solo la firma')
-        return f"{SIGN} @Juventus_Reborn"
+        log.warn('INVIO', f'Didascalia non creata ({type(exc).__name__}: {exc}): invio la foto senza testo')
+        return ''

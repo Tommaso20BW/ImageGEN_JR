@@ -22,7 +22,7 @@ class CaptionTest(unittest.TestCase):
                               'goal_type': 'penalty', 'player': 'Dusan Vlahovic', 'minute': '90+2',
                               'score': (2, 1)})
         self.assertEqual(text, "<b>GOAL · 90+2' 🎙</b>\n\nFiorentina 2-<b>1 Juventus</b>\n"
-                               "⚽️ <i>D. Vlahovic (Rig.)</i>\n\n🇮🇹 #FiorentinaJuve\n\n" + SIGN)
+                               "⚽️ <i>D. Vlahovic (Rig.)</i>\n\n🇮🇹 #FiorentinaJuve")
 
     def test_full_time_with_penalties(self):
         text = caption.build({'kind': 'full', 'competition': 'ita.coppa_italia', 'side': 'home', 'opponent': FIO,
@@ -59,7 +59,10 @@ class CaptionTest(unittest.TestCase):
     def test_other_graphics(self):
         self.assertEqual(plain(caption.build({'kind': 'table', 'competition': 'SA'})),
                          '🇮🇹📊<b> Serie A | Classifica</b>\n\n👉 @Juventus_Reborn')
-        self.assertEqual(caption.build({'kind': 'jr'}), SIGN)
+        self.assertEqual(plain(caption.build({'kind': 'cal', 'month': 11, 'year': 2026})),
+                         '⚔️📆 𝐍𝐎𝐕𝐄𝐌𝐁𝐑𝐄 𝟐𝟎𝟐𝟔\n\n👉 @Juventus_Reborn')
+        for kind in ('jr', 'igbn', 'igq', 'xq', 'thq'):
+            self.assertEqual(caption.build({'kind': kind, 'text': 'x'}), '', kind)
 
     def test_names_are_escaped(self):
         text = caption.build({'kind': 'goal', 'team': 'italy', 'competition': 'uefa.nations', 'side': 'home',
@@ -67,8 +70,20 @@ class CaptionTest(unittest.TestCase):
         self.assertIn('A&lt;B', text)
         self.assertIn('X&amp;Y', text)
 
-    def test_broken_data_still_signs(self):
-        self.assertEqual(caption.safe_build({'kind': 'full', 'side': 'home', 'opponent': FIO}), SIGN)
+    def test_live_posts_have_no_signature(self):
+        for kind in ('goal', 'kick', 'half', 'second', 'end_of_90', 'full', 'stats'):
+            data = {'kind': kind, 'competition': 'ita.1', 'side': 'home', 'opponent': FIO,
+                    'score': (1, 0), 'moment': 'FT', 'player': 'Kenan Yildiz', 'minute': '5'}
+            self.assertNotIn('@Juventus_Reborn', caption.build(data), kind)
+        italy_xi = {'kind': 'xi', 'team': 'italy', 'competition': 'uefa.nations', 'side': 'home',
+                    'opponent': {'name': 'Francia'}}
+        self.assertNotIn('@Juventus_Reborn', caption.build(italy_xi))
+        for kind in ('xi', 'pxi', 'squad', 'md'):
+            data = {'kind': kind, 'competition': 'ita.1', 'side': 'home', 'opponent': FIO, 'info': {}}
+            self.assertTrue(caption.build(data).endswith(SIGN), kind)
+
+    def test_broken_data_sends_photo_without_text(self):
+        self.assertEqual(caption.safe_build({'kind': 'full', 'side': 'home', 'opponent': FIO}), '')
 
 
 class FakeResponse:
