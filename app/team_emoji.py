@@ -138,7 +138,7 @@ def team_detail(team, assets=None):
     base = auto.get(key) or {}
     suggest = []
     for s in base.get('suggest') or []:
-        if s.get('id') in where and (s.get('score') or 0) >= 0.85:   # solo quelle davvero simili
+        if s.get('id') in where and (s.get('score') or 0) >= 0.95:   # solo quelle quasi identiche al logo
             suggest.append(cell(*where[s['id']], score=s.get('score')))
     return {'key': key,
             'current': cell(row['pack'], row.get('index')) if row and row.get('pack') in info else None,

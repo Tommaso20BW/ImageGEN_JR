@@ -99,7 +99,7 @@ class LookupTest(unittest.TestCase):
 
     def test_team_page(self):
         auto = {'lecce': {**AUTO['lecce'], 'pack': 'ItalianFootballEmoji', 'index': 7, 'id': '333',
-                          'suggest': [{'id': '333', 'score': 0.99}, {'id': '444', 'score': 0.95}, {'id': '555', 'score': 0.6}]}}
+                          'suggest': [{'id': '333', 'score': 0.99}, {'id': '444', 'score': 0.96}, {'id': '555', 'score': 0.6}]}}
         with Assets(auto) as a:
             es.write_json(a / team_emoji.PACKS, es.pack_index({'ItalianFootballEmoji': [
                 {'id': '333', 'emoji': '🇮🇹', 'index': 7}, {'id': '444', 'index': 8}, {'id': '555', 'index': 9}]}))
@@ -107,7 +107,7 @@ class LookupTest(unittest.TestCase):
             self.assertEqual(page['key'], 'lecce')
             self.assertEqual((page['current']['pack'], page['current']['index']), ('ItalianFootballEmoji', 7))
             self.assertEqual(page['current']['name'], 'Italia')
-            self.assertEqual([c['index'] for c in page['suggest']], [7, 8])     # 60%: troppo diversa
+            self.assertEqual([c['index'] for c in page['suggest']], [7, 8])     # sotto il 95%: fuori
             self.assertEqual(page['packs'], [{'pack': 'ItalianFootballEmoji', 'name': 'Italia', 'count': 3}])
 
 
