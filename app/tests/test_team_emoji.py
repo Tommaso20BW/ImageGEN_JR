@@ -97,6 +97,20 @@ class LookupTest(unittest.TestCase):
                 team_emoji.save({'key': 'lecce', 'pack': 'ItalianFootballEmoji', 'index': 99}, a, env={})
 
 
+    def test_team_page(self):
+        auto = {'lecce': {**AUTO['lecce'], 'pack': 'ItalianFootballEmoji', 'index': 7, 'id': '333',
+                          'suggest': [{'id': '333', 'score': 0.99}, {'id': '444', 'score': 0.95}, {'id': '555', 'score': 0.6}]}}
+        with Assets(auto) as a:
+            es.write_json(a / team_emoji.PACKS, es.pack_index({'ItalianFootballEmoji': [
+                {'id': '333', 'emoji': '🇮🇹', 'index': 7}, {'id': '444', 'index': 8}, {'id': '555', 'index': 9}]}))
+            page = team_emoji.team_detail({'name': 'Lecce'}, a)
+            self.assertEqual(page['key'], 'lecce')
+            self.assertEqual((page['current']['pack'], page['current']['index']), ('ItalianFootballEmoji', 7))
+            self.assertEqual(page['current']['name'], 'Italia')
+            self.assertEqual([c['index'] for c in page['suggest']], [7, 8])     # 60%: troppo diversa
+            self.assertEqual(page['packs'], [{'pack': 'ItalianFootballEmoji', 'name': 'Italia', 'count': 3}])
+
+
 class MonthlyCheckTest(unittest.TestCase):
     TEAMS = [{'slug': 'red', 'name': 'Rossi'}, {'slug': 'blue', 'name': 'Blu'}]
     LOGOS = {'red': RED_CIRCLE, 'blue': BLUE_SQUARE}
@@ -171,6 +185,7 @@ class MonthlyCheckTest(unittest.TestCase):
         self.run_update(state, packs, {'e1': RED_CIRCLE, 'e2': BLUE_SQUARE})
         self.assertEqual(state['teams']['red']['id'], 'e1')
         self.assertEqual(state['teams']['blue']['id'], 'e2')
+        self.assertEqual(state['teams']['red']['suggest'][0]['id'], 'e1')    # consigliate: la più simile prima
 
     def test_sprite_keeps_the_picture(self):
         sheet = Image.open(io.BytesIO(es.build_sprite([BLUE_SQUARE, RED_CIRCLE])))

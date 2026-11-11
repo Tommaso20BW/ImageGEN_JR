@@ -90,6 +90,17 @@ def similarity(f, g):
     return float(max(0.0, 1 - distance / 2.5))
 
 
+SUGGEST = 8          # emoji consigliate per squadra (Impostazioni › squadra › Emoji)
+
+
+def suggestions(logo, pool):
+    """Le emoji più somiglianti al logo: [{'id', 'score'}], la migliore prima."""
+    if logo is None:
+        return []
+    scored = sorted(((similarity(logo, f), i) for i, f in pool if f is not None), reverse=True)
+    return [{'id': i, 'score': round(s, 3)} for s, i in scored[:SUGGEST] if s >= 0.5]
+
+
 def pick_rank(pack):
     return 0 if pack == OWN_PACK else 2 if pack.startswith(GENERIC_PACKS) else 1
 
@@ -244,6 +255,15 @@ def update(state, teams, packs, team_feature, emoji_feature, old_feature=lambda 
         if choose(by_key[key], [i, *([row['id']] if row.get('id') else [])])[0] == i:
             mapped[key] = entry(by_key[key], i)
             report.append(f"✅ {by_key[key]['name']}: ora usa la tua emoji ({where(i)}, {score:.0%})")
+
+    # 4. Consigliate: rifatte se i pack sono cambiati o se mancano.
+    changed = bool(new_ids) or set(known) != set(rows)
+    for team in teams:
+        row = mapped.get(team_key(team))
+        if row is None or (not changed and 'suggest' in row):
+            continue
+        logo = tf(team)
+        row['suggest'] = suggestions(logo, [(i, ef(i)) for i in rows]) if logo is not None else []
 
     state['packs'] = {pack: [e['id'] for e in items if e.get('id')] for pack, items in packs.items()}
     return report

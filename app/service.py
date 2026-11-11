@@ -860,10 +860,10 @@ class Service:
             return {'teams': team_settings.names_list(asset_dir())}
         if action == 'name_save':
             return team_settings.save_name(envelope.get('team') or {}, asset_dir())
-        if action in ('emoji_list', 'emoji_pack', 'emoji_save'):   # Impostazioni › Emoji squadre
+        if action in ('emoji_team', 'emoji_pack', 'emoji_save'):   # Impostazioni › squadra › Emoji
             import team_emoji
-            if action == 'emoji_list':
-                return team_emoji.settings_list(_logo_rows(str(asset_dir())), asset_dir())
+            if action == 'emoji_team':
+                return team_emoji.team_detail(envelope.get('team') or {}, asset_dir())
             if action == 'emoji_pack':
                 return team_emoji.pack_sheet(str(envelope.get('pack') or ''), asset_dir())
             return team_emoji.save(envelope.get('emoji') or {}, asset_dir())

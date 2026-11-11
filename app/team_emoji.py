@@ -1,4 +1,4 @@
-"""Emoji personalizzate delle squadre, per le didascalie e Impostazioni › Emoji squadre.
+"""Emoji personalizzate delle squadre, per le didascalie e Impostazioni › squadra › Emoji.
 
 Tutto nella cartella degli asset (repo LiveScore_Assets_JR):
   team_emoji/auto.json       scelta automatica (la aggiorna a ogni stagione tools/emoji_squadre.py)
@@ -80,43 +80,72 @@ def packs_info(assets=None):
     return _read((assets or _assets()) / PACKS, {})
 
 
-def _thumb(assets, info, pack, index):
-    """Miniatura 64 px (data URI PNG) di una emoji, ritagliata dalla griglia del pack."""
+_sheets = {}
+
+
+def _sheet(path):
+    """Griglia del pack aperta una volta sola (si riapre se il file cambia)."""
     from PIL import Image
+    stamp = path.stat().st_mtime
+    hit = _sheets.get(str(path))
+    if not hit or hit[0] != stamp:
+        image = Image.open(path)
+        image.load()
+        hit = _sheets[str(path)] = (stamp, image)
+    return hit[1]
+
+
+def _thumb(assets, info, pack, index):
+    """Miniatura (data URI WebP) di una emoji, ritagliata dalla griglia del pack."""
     meta = info.get(pack) or {}
     pos = next((n for n, e in enumerate(meta.get('items', [])) if e.get('index') == index), None)
     if pos is None:
         return ''
     cell, cols = int(meta.get('cell', 64)), int(meta.get('cols', 12))
     try:
-        sheet = Image.open(Path(assets) / 'team_emoji' / meta['file'])
-    except (OSError, KeyError):
+        sheet = _sheet(Path(assets) / 'team_emoji' / meta['file'])
+    except (OSError, KeyError, ValueError):
         return ''
     x, y = (pos % cols) * cell, (pos // cols) * cell
     out = io.BytesIO()
-    sheet.crop((x, y, x + cell, y + cell)).save(out, 'PNG', optimize=True)
-    return 'data:image/png;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
+    sheet.crop((x, y, x + cell, y + cell)).save(out, 'WEBP', quality=85)
+    return 'data:image/webp;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
 
 
-def settings_list(teams, assets=None):
-    """Pack (in ordine) e squadre del catalogo con l'emoji in uso e la sua miniatura."""
+def resolve_key(team, auto, manual):
+    """Chiave della squadra in auto.json / emoji.json (slug FCLogo o new:...), anche partendo dal nome."""
+    key = key_of(team)
+    if key and (key in auto or key in manual):
+        return key
+    names = {_norm(n) for n in [team.get('name'), team.get('display_name'), *(team.get('aliases') or [])] if n}
+    return next((k for k, r in auto.items() if names & {_norm(n) for n in [r.get('name'), *(r.get('aliases') or [])]}),
+                next((k for k, r in manual.items() if names & {_norm(r.get('name'))}), key))
+
+
+def team_detail(team, assets=None):
+    """Pagina Emoji di una squadra: emoji in uso, quella automatica, le consigliate e l'elenco dei pack."""
     assets = assets or _assets()
     info = packs_info(assets)
-    packs = [{'pack': p, 'name': m.get('name') or p, 'count': len(m.get('items', []))} for p, m in info.items()]
-    autos, manual = auto_rows(assets), manual_rows(assets)
-    out = []
-    for team in teams:
-        key = key_of(team)
-        if not key:
-            continue
-        row = current(team, assets, autos, manual)
-        auto = autos.get(key) or {}
-        out.append({'key': key, 'name': team.get('name'), 'display_name': team.get('display_name'),
-                    'pack': row and row.get('pack'), 'index': row and row.get('index'),
-                    'manual': key in manual,
-                    'thumb': _thumb(assets, info, row['pack'], row.get('index')) if row else '',
-                    'auto': {'pack': auto.get('pack'), 'index': auto.get('index')} if auto.get('id') else None})
-    return {'packs': packs, 'teams': out}
+    auto, manual = auto_rows(assets), manual_rows(assets)
+    key = resolve_key(team or {}, auto, manual)
+    where = {e['id']: (p, e.get('index')) for p, m in info.items() for e in m.get('items', [])}
+
+    def cell(pack, index, **extra):
+        return {'pack': pack, 'name': (info.get(pack) or {}).get('name') or pack, 'index': index,
+                'thumb': _thumb(assets, info, pack, index), **extra}
+
+    row = current({'key': key}, assets, auto, manual) if key else None
+    base = auto.get(key) or {}
+    suggest = []
+    for s in base.get('suggest') or []:
+        if s.get('id') in where and (s.get('score') or 0) >= 0.85:   # solo quelle davvero simili
+            suggest.append(cell(*where[s['id']], score=s.get('score')))
+    return {'key': key,
+            'current': cell(row['pack'], row.get('index')) if row and row.get('pack') in info else None,
+            'manual': key in manual,
+            'auto': cell(base['pack'], base.get('index')) if base.get('id') and base.get('pack') in info else None,
+            'suggest': suggest,
+            'packs': [{'pack': p, 'name': m.get('name') or p, 'count': len(m.get('items', []))} for p, m in info.items()]}
 
 
 def pack_sheet(pack, assets=None):

@@ -190,11 +190,6 @@ function renderSetList() {
     return;
   }
   const namesMine = noLogo().filter(r => r.custom);
-  const emo = setRow(null, 'Emoji squadre', 'Emoji degli avversari nel testo del Matchday');
-  emo.classList.add('emo-entry');
-  emo.querySelector('.set-ph').outerHTML = '<span class="emo-th emo-vs" style="width:36px;height:36px;font-size:22px">🆚</span>';
-  emo.addEventListener('click', openEmoji);
-  box.appendChild(emo);
   if (missing.length) { grp('Da sistemare'); addMissing(); }
   else if (espnTeamsJob) empty('Controllo il calendario ESPN…');
   if (modified.length || namesMine.length) { grp('Modificate'); addTeams(modified); addNames(namesMine); }
@@ -327,6 +322,7 @@ function openTeamSheet(team) {
   renderSetPage();
   // Il pacchetto ha solo miniature: logo nitido dal servizio.
   const T = setTeam;
+  emoLoadTeam(T);
   setPost({action:'logo_current', name:team.name}).then(r => {
     if (setTeam !== T) return;
     if (r.current) T.current = r.current;
@@ -357,11 +353,12 @@ function spPush(page) {
   if (page === 'tag') setDraft = {tag:T.tag || ''};
   if (page === 'espn') setDraft = {aliases:T.aliases.slice(), adding:false};
   if (page === 'link') setDraft = {q:''};
+  if (page === 'emoji' && !emoOpen()) return;
   setStack.push(page);
   renderSetPage();
 }
 function spPop() {
-  setStack.pop();
+  if (setStack.pop() === 'emoji-pack') { renderSetPage(); return; }   // la scelta in corso resta
   setDraft = null;
   if (!setStack.length) { closeSetSheet(); renderSetList(); return; }
   renderSetPage();
@@ -384,7 +381,7 @@ function renderSetPage() {
   const box = $('setPage');
   if (!page) { box.hidden = true; return; }
   box.hidden = false;
-  if (page.startsWith('emo')) { emoRender(page); return; }
+  if (page.startsWith('emoji')) { emoRender(); return; }
   const T = setTeam, D = setDraft;
   let html = '';
   if (page === 'team' || page === 'new') {
@@ -400,6 +397,7 @@ function renderSetPage() {
         ${spRow('Nome', setEsc(setShownName(T)), 'name')}
         ${spRow('Hashtag', '#' + setEsc(T.tag || T.tagOrig || ''), 'tag')}
         ${spRow('Nomi ESPN', String(nEspn), 'espn')}
+        ${isNew ? '' : spRow('Emoji', emoRowValue(T), 'emoji')}
       </div>
       ${isNew ? `<button type="button" class="sp-cta" data-sp="create" ${T.pending && !setBusy ? '' : 'disabled'}>${setBusy ? 'Creo…' : 'Crea squadra'}</button>`
         : T.key ? `<button type="button" class="sp-danger" data-sp="reset">${T.confirmReset ? 'Tocca di nuovo per confermare' : T.manual ? 'Elimina questa squadra' : 'Cancella tutte le personalizzazioni'}</button>` : ''}
@@ -522,8 +520,9 @@ async function spSave(change) {
 function spAfterSave(body) {
   const row = body && body.team;
   if (!row) { closeSetSheet(); renderSetList(); return; }
-  const current = setTeam.current;
+  const current = setTeam.current, emo = setTeam.emo;
   setTeam = teamState(row);
+  setTeam.emo = emo;
   if (!row.logo_custom || !current) setTeam.current = row.logo || current;
   setStack = ['team'];
   setDraft = null;
@@ -585,6 +584,7 @@ async function spUpload(file) {
 async function spOnSave() {
   const page = setStack[setStack.length - 1], T = setTeam, D = setDraft;
   if (page === 'nm') { nmSave(false); return; }
+  if (page === 'emoji') { emoOnSave(); return; }
   if (page === 'logo') {
     if (T.isNew) {      // bozza: il logo si salva con "Crea squadra"
       if (D.preview) T.pending = {logo:D.logo, preview:D.preview, aspect:D.aspect, frame:{...D.frame}};
