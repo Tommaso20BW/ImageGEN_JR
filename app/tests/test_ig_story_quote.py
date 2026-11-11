@@ -67,7 +67,7 @@ class StoryPayloadTest(unittest.TestCase):
             two = ig_quote.build_html(photo=raw.getvalue(), story=True, bars=[1, 0.4])
             self.assertEqual(two.count('<s style'), 2)
             self.assertIn('width:40%', two)
-            for part in ('id="card"', 'id="back"', 'id="bars"', 'Invia messaggio', '<b>fc7</b>', 'class="tick"'):
+            for part in ('body>img{position:absolute}', 'id="card"', 'id="back"', 'id="bars"', 'Invia messaggio', '<b>fc7</b>', 'class="tick"'):
                 self.assertIn(part, page)
             post = ig_quote.build_html(photo=raw.getvalue(), text='Ciao', name='Francisco', handle='fc7')
             self.assertNotIn('id="card"', post)

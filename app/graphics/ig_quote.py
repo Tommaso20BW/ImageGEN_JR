@@ -235,6 +235,7 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#00
 #reply{{flex:1;min-width:0;height:66px;display:flex;align-items:center;padding:0 26px;border-radius:33px;
   border:2px solid rgba(255,255,255,.75);color:#fff;font:500 23px Poppins,sans-serif}}
 #act svg{{width:42px;height:42px;display:block;flex:none}}
+body>img{{position:absolute}}
 </style></head><body>
 <div id="back"></div>
 <div id="card"><div id="top"></div><div id="bot"></div>
