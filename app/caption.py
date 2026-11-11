@@ -167,6 +167,13 @@ def _stadium(name):
     return ' '.join(w if i and w in _SMALL else w[:1].upper() + w[1:] for i, w in enumerate(words))
 
 
+def _team_emoji(data):
+    """Emoji dell'avversario dai pack (come sul canale); 🆚 se non c'è."""
+    import team_emoji
+    found = None if data.get('team') == 'italy' else team_emoji.find(data.get('opponent'))
+    return emoji(*found) if found else '🆚'
+
+
 def _match_caption(data):
     kind = data['kind']
     m = _match(data)
@@ -215,7 +222,7 @@ def _match_caption(data):
         info = data.get('info') or {}
         place = E_HOME if m['juve_home'] else E_AWAY
         rows = [f"{comp_emoji} {esc(COMPETITION_NAMES.get(competition, ''))}",
-                f"🆚 {opponent}",
+                f"{_team_emoji(data)} {opponent}",
                 f"{place} {esc(_stadium(info.get('stadium')))}",
                 f"{E_TV} {esc(MD_TV.get(competition, ''))}",
                 f"{E_TIME} {esc(str(info.get('time') or '').split(' ')[0])}",

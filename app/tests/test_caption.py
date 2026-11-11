@@ -1,6 +1,7 @@
 import io
 import re
 import unittest
+from unittest import mock
 
 import _percorsi  # noqa: F401
 
@@ -31,10 +32,11 @@ class CaptionTest(unittest.TestCase):
         self.assertTrue(text.startswith('<b>FINE PARTITA 🏁</b>'))
 
     def test_matchday_rows(self):
-        text = plain(caption.build({
-            'kind': 'md', 'competition': 'ita.1', 'side': 'away',
-            'opponent': {'name': 'US Lecce', 'aliases': ['US Lecce', 'Lecce']},
-            'info': {'stadium': 'STADIO VIA DEL MARE', 'time': '18:00 CEST', 'date': '25 OTTOBRE 2026'}}))
+        with mock.patch('team_emoji.find', return_value=None):     # squadra senza emoji: resta 🆚
+            text = plain(caption.build({
+                'kind': 'md', 'competition': 'ita.1', 'side': 'away',
+                'opponent': {'name': 'US Lecce', 'aliases': ['US Lecce', 'Lecce']},
+                'info': {'stadium': 'STADIO VIA DEL MARE', 'time': '18:00 CEST', 'date': '25 OTTOBRE 2026'}}))
         self.assertIn('<i>🇮🇹 Serie A</i>\n<i>🆚 Lecce</i>\n<i>✈️ Stadio Via del Mare</i>\n<i>📺 DAZN</i>\n'
                       '<i>⏰ 18:00</i>\n<i>📲 #LecceJuve</i>', text)
 

@@ -190,6 +190,11 @@ function renderSetList() {
     return;
   }
   const namesMine = noLogo().filter(r => r.custom);
+  const emo = setRow(null, 'Emoji squadre', 'Emoji degli avversari nel testo del Matchday');
+  emo.classList.add('emo-entry');
+  emo.querySelector('.set-ph').outerHTML = '<span class="emo-th emo-vs" style="width:36px;height:36px;font-size:22px">🆚</span>';
+  emo.addEventListener('click', openEmoji);
+  box.appendChild(emo);
   if (missing.length) { grp('Da sistemare'); addMissing(); }
   else if (espnTeamsJob) empty('Controllo il calendario ESPN…');
   if (modified.length || namesMine.length) { grp('Modificate'); addTeams(modified); addNames(namesMine); }
@@ -379,6 +384,7 @@ function renderSetPage() {
   const box = $('setPage');
   if (!page) { box.hidden = true; return; }
   box.hidden = false;
+  if (page.startsWith('emo')) { emoRender(page); return; }
   const T = setTeam, D = setDraft;
   let html = '';
   if (page === 'team' || page === 'new') {
