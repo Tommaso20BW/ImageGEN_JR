@@ -394,7 +394,7 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 
 /* Impostazioni › Emoji squadre */
 .emo-th{display:inline-flex;align-items:center;justify-content:center;flex:none;background:center/contain no-repeat}
-.emo-vs{border-radius:50%;background:var(--surface2)}
+.emo-vs{background:none;line-height:1}
 .emo-page>*{flex-shrink:0}
 .emo-page .sp-hero{padding-bottom:14px}
 .emo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:2px;padding:8px}

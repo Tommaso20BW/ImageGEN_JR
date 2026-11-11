@@ -29,7 +29,7 @@ function emoCellStyle(sheet, n) {
 }
 const emoImg = (cell, size) => cell && (cell.thumb || cell.style)
   ? `<span class="emo-th" style="width:${size}px;height:${size}px;${cell.thumb ? `background-image:url('${cell.thumb}')` : cell.style}"></span>`
-  : `<span class="emo-th emo-vs" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .55)}px">🆚</span>`;
+  : `<span class="emo-th emo-vs" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .8)}px">🆚</span>`;
 const emoSame = (a, b) => !!a && !!b && a.pack === b.pack && a.index === b.index;
 
 // Valore della riga "Emoji" nella pagina della squadra.
