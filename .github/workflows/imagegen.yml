@@ -144,7 +144,7 @@ jobs:
           echo "::error title=GitHub Pages::La Mini App di questo commit non è ancora pubblicata."
           exit 1
 
-      - name: Sessione ImageGen (tunnel e Telegram)
+      - name: Avvia tunnel e servizio
         shell: bash
         env:
           MANUAL_GRAPHICS_TELEGRAM_TOKEN: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_TOKEN }}
@@ -165,6 +165,9 @@ jobs:
           log() { printf '[%s] %-6s %-10s | %s\n' "$(TZ=Europe/Rome date +%H:%M:%S)" "$1" "$2" "$3"; }
           CLOUDFLARED="${RUNNER_TEMP}/cloudflared"
           LOG="${RUNNER_TEMP}/cloudflared.log"
+          SLOG="${RUNNER_TEMP}/service.log"
+          PID_FILE="${RUNNER_TEMP}/service.pid"
+          STATUS_FILE="${RUNNER_TEMP}/service.status"
 
           # cloudflared dalle release di GitHub; se GitHub non le serve (es. 504 per tutte le
           # versioni) si installa dal repository ufficiale di Cloudflare (pkg.cloudflare.com).
@@ -195,14 +198,13 @@ jobs:
               kill "$TUNNEL_PID" 2>/dev/null || true
             fi
           }
-          trap cleanup_tunnel EXIT
 
           # Tunnel nuovo: l'indirizzo esce nel log. Funzionante davvero lo verifica
           # il servizio (da internet) prima di mandare il pulsante su Telegram.
           start_tunnel() {
             cleanup_tunnel
             : >"$LOG"
-            "$CLOUDFLARED" tunnel \
+            nohup "$CLOUDFLARED" tunnel \
               --url "http://127.0.0.1:${PORT}" \
               --no-autoupdate \
               >"$LOG" 2>&1 &
@@ -222,7 +224,16 @@ jobs:
           }
 
           export IMAGEGEN_DIRECT_PORT="$PORT"
-          STATUS=1
+          # Il riepilogo finale lo scrive Python a sessione chiusa: lo raccoglie lo step dopo.
+          export GITHUB_STEP_SUMMARY="${RUNNER_TEMP}/summary.md"
+
+          : >"$SLOG"
+          tail -n +1 -F "$SLOG" &
+          TAIL_PID=$!
+          trap 'kill "$TAIL_PID" 2>/dev/null || true' EXIT
+          # Se il run viene annullato qui, lo stop arriva comunque a Python.
+          trap 'kill -TERM "$(cat "$PID_FILE" 2>/dev/null)" 2>/dev/null || true' INT TERM
+
           for ATTEMPT in 1 2 3; do
             if ! start_tunnel; then
               log WARN TUNNEL "Tunnel $ATTEMPT/3 non avviato"
@@ -232,28 +243,65 @@ jobs:
             export MANUAL_GRAPHICS_DIRECT_URL="$TUNNEL_URL"
             log INFO TUNNEL "Tunnel $ATTEMPT/3 creato · controllo che risponda prima del pulsante"
 
-            # Se il run viene annullato, lo stop arriva sempre a Python, che
-            # chiude la sessione e cancella i messaggi prima di uscire.
-            python -u app/service.py &
-            SERVICE_PID=$!
-            trap 'kill -TERM "$SERVICE_PID" 2>/dev/null || true' INT TERM
-            set +e
-            wait "$SERVICE_PID"
-            STATUS=$?
-            while kill -0 "$SERVICE_PID" 2>/dev/null; do
-              wait "$SERVICE_PID"
-              STATUS=$?
+            rm -f "$PID_FILE" "$STATUS_FILE"
+            # In background: il servizio resta vivo anche dopo la fine di questo step.
+            nohup bash -c 'python -u app/service.py >>"$0" 2>&1 & echo $! >"$1"; wait $!; echo $? >"$2"' \
+              "$SLOG" "$PID_FILE" "$STATUS_FILE" >/dev/null 2>&1 &
+
+            # Lo step finisce quando il pulsante è davvero su Telegram: il comando rapido
+            # su iPhone aspetta che parta lo step dopo (l'unico con "Telegram" nel nome).
+            while [ ! -f "$STATUS_FILE" ]; do
+              if grep -q 'Pulsante inviato su Telegram' "$SLOG"; then
+                echo "$TUNNEL_PID" >"${RUNNER_TEMP}/tunnel.pid"
+                sleep 0.5
+                exit 0
+              fi
+              sleep 0.5
             done
-            set -e
+
+            STATUS="$(cat "$STATUS_FILE")"
             # 75 = tunnel mai raggiungibile da internet: se ne apre uno nuovo.
             if [ "$STATUS" -ne 75 ]; then
+              cleanup_tunnel
+              sleep 0.5
               exit "$STATUS"
             fi
             log WARN TUNNEL "Tunnel $ATTEMPT/3 non raggiungibile · ne apro uno nuovo"
           done
+          cleanup_tunnel
           log ERROR TUNNEL "Nessun tunnel raggiungibile dopo 3 tentativi"
           echo "::error title=Tunnel::Nessun tunnel raggiungibile dopo 3 tentativi."
           exit 1
+
+      # Parte quando il pulsante è su Telegram e dura quanto la sessione.
+      - name: Sessione ImageGen (Telegram)
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          SLOG="${RUNNER_TEMP}/service.log"
+          PID_FILE="${RUNNER_TEMP}/service.pid"
+          STATUS_FILE="${RUNNER_TEMP}/service.status"
+          SERVICE_PID="$(cat "$PID_FILE")"
+
+          # Se il run viene annullato, lo stop arriva sempre a Python, che
+          # chiude la sessione e cancella i messaggi prima di uscire.
+          trap 'kill -TERM "$SERVICE_PID" 2>/dev/null || true' INT TERM
+
+          tail -n +"$(( $(wc -l <"$SLOG") + 1 ))" -F "$SLOG" &
+          TAIL_PID=$!
+
+          while [ ! -f "$STATUS_FILE" ]; do
+            sleep 1
+          done
+          sleep 0.5
+
+          kill "$TAIL_PID" 2>/dev/null || true
+          kill "$(cat "${RUNNER_TEMP}/tunnel.pid" 2>/dev/null)" 2>/dev/null || true
+          if [ -f "${RUNNER_TEMP}/summary.md" ]; then
+            cat "${RUNNER_TEMP}/summary.md" >>"$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$(cat "$STATUS_FILE")"
 
       - name: Elimina vecchi run ImageGen e Pages
         if: always()
