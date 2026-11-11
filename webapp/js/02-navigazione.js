@@ -274,7 +274,7 @@ function buildFlow() {
   else if (kind === 'conv') flow = ['convlist'];
   else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent','igsent'] : ['igcontent'];
-  else if (isQuoteKind(kind)) flow = [...(iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'];
+  else if (isQuoteKind(kind)) flow = [...(iq.story ? ['iqurl','iqshot'] : iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'];
   flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
 }
 
@@ -339,6 +339,7 @@ function stepValue(step) {
     }
     case 'iqurl': return iq.story ? 'Storia' : iq.photos.length ? `${iq.photos.length} foto` : '';
     case 'iqpick': return iq.sel >= 0 ? `Foto ${iq.sel + 1}` : '';
+    case 'iqshot': return iq.photos.length ? 'Allegato' : '';
     case 'iqtext': return $('iqName').value.trim();
     case 'igcontent': {
       const t = $('igText').value.trim().length;
@@ -506,7 +507,7 @@ function renderFlow() {
     if (tg && tg.disableVerticalSwipes) editing ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
   } catch (_) {}
   if (screenName === 'phasephoto') { if (LIVE) $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
-  if (screenName === 'iqurl' || screenName === 'iqpick' || screenName === 'iqtext') iqTexts();
+  if (screenName === 'iqurl' || screenName === 'iqpick' || screenName === 'iqshot' || screenName === 'iqtext') iqTexts();
   if (screenName === 'photo') { if (isQuoteKind(kind)) iqSyncPhoto(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
   if (screenName === 'jrphotos') renderJrPicker();
   if (screenName === 'jrlayout') { renderJrLayout(true); requestAnimationFrame(() => { fitColBig(); renderJrLayout(); }); }
@@ -530,6 +531,7 @@ function renderFlow() {
   if (screenName === 'igcontent') { if (igPicking) { igPicking = false; buildFlow(); } loadPhrases(); renderIgColor(); }
   if (screenName === 'igsent') { renderIgSent(); loadRecent(); }
   if (screenName === 'iqpick') renderIqPick();
+  if (screenName === 'iqshot') iqShotRefresh();
   if (screenName === 'sentitem') renderSentItem();
   if (screenName === 'calrows') fillCalendarFromFixtures();
   if (screenName === 'calrows') renderCalRows();

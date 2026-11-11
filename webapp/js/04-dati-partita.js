@@ -79,6 +79,7 @@ function validateCurrent() {
   }
 
   if (step === 'jrtitle' && !jrb.title.trim()) { showError('Scrivi il titolo.'); return false; }
+  if (step === 'iqshot' && !iq.photos.length) { showError('Allega lo screenshot della storia.'); return false; }
   if (step === 'iqpick' && iq.sel < 0) { showError('Tocca la foto da usare.'); return false; }
   if (step === 'iqtext' && !iq.story && !$('iqText').value.trim()) { showError('Scrivi il testo della citazione.'); return false; }
   if (step === 'igcontent') {

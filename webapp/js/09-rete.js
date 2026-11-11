@@ -20,9 +20,9 @@ function buildPayload(ghost=false) {
   }
   const photoId = photoState.id || (ghost ? '0'.repeat(16) : '');
   if (isQuoteKind(kind)) {
-    const photo = iq.story ? {photo_id:photoId} : iq.photos[iq.sel];
-    if (!photo || !photo.photo_id) throw new Error(iq.story ? 'Carica la foto della storia (Scegli foto).' : 'Scegli la foto del post.');
-    // Foto del post, o quella caricata a mano nell'editor ("Scegli foto"). Storia: sempre a mano.
+    const photo = iq.photos[iq.sel];
+    if (!photo) throw new Error(iq.story ? 'Allega lo screenshot della storia.' : 'Scegli la foto del post.');
+    // Foto del post (o della storia, dallo screenshot), o quella caricata a mano nell'editor ("Scegli foto").
     return {v:1, action:'render', session, data:{kind, photo_id:photoState.id || photo.photo_id, ...(iq.story ? {story:true} : {}),
       text:$('iqText').value.trim(), name:$('iqName').value.trim(), ...(iq.avatar ? {avatar_id:iq.avatar} : {}),
       handle:$('iqHandle').value.trim(), verified:!!iq.verified,

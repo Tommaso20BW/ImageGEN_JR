@@ -88,7 +88,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header(
             'Access-Control-Allow-Headers',
-            'Content-Type, X-ImageGEN-Session',
+            'Content-Type, X-ImageGEN-Session, X-ImageGEN-Crop',
         )
         self.send_header('Access-Control-Max-Age', '600')
         self.send_header('Cache-Control', 'no-store')
@@ -343,7 +343,11 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._json(413, {'ok': False, 'error': 'Foto troppo grande (max 12 MB).'})
             return
         try:
-            self._json(200, {'ok': True, **self.service.store_photo(self.rfile.read(length))})
+            raw = self.rfile.read(length)
+            if self.headers.get('X-ImageGEN-Crop', '') == 'story':
+                self._json(200, {'ok': True, **self.service.store_story_shot(raw)})
+                return
+            self._json(200, {'ok': True, **self.service.store_photo(raw)})
         except ValueError as exc:
             self._json(400, {'ok': False, 'error': str(exc)})
 
@@ -491,6 +495,20 @@ class Service:
             self.photos.pop(next(iter(self.photos)))
         log.info('FOTO', f'Foto caricata · {width}×{height}')
         return {'photo_id': photo_id, 'width': width, 'height': height}
+
+    def store_story_shot(self, raw):
+        """Screenshot di una storia (Citazione IG): tiene la storia senza l'interfaccia di Instagram e,
+        a parte, la foto profilo (serve se il link non l'ha data)."""
+        import story_shot
+        photo, avatar = story_shot.crop(raw)
+        out = self.store_photo(photo)
+        out['cropped'] = avatar is not None
+        if avatar:
+            try:
+                out['avatar_id'] = self.store_photo(avatar)['photo_id']
+            except ValueError:
+                pass
+        return out
 
     def _expires_ms(self):
         return int((time.time() + (self.deadline - time.monotonic())) * 1000)

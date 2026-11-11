@@ -43,6 +43,47 @@ async function iqLoad() {
   }
 }
 
+// STORIA: screenshot del telefono -> il servizio ritaglia la storia (senza ora, barrette, nome e barra
+// dei messaggi) e la foto profilo, che si usa se il link non l'ha data.
+function iqShotRefresh() {
+  const p = iq.photos[0];
+  $('iqShotThumb').hidden = !p;
+  $('iqShotThumb').style.backgroundImage = p ? `url("${iqThumb(p.photo_id)}")` : '';
+  $('iqShotPick').textContent = iq.shotLoading ? 'Caricamento…' : p ? 'Cambia screenshot' : 'Allega screenshot';
+  $('iqShotPick').disabled = !!iq.shotLoading;
+  $('iqShotHint').textContent = p && !iq.shotCropped ? 'Non sembra uno screenshot di una storia: uso l’immagine intera.' : '';
+}
+async function iqUploadShot(file) {
+  if (!file) return;
+  clearError();
+  if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+  iq.shotLoading = true; iqShotRefresh();
+  try {
+    const {blob, type} = await preparePhoto(file);
+    const response = await netFetch(`${directBase}/upload`, {
+      method:'POST', headers:{'Content-Type':type, 'X-ImageGEN-Session':session, 'X-ImageGEN-Crop':'story'}, body:blob
+    }, 60000);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.ok) throw new Error(body.error || 'Caricamento non riuscito.');
+    clearPhoto();
+    Object.assign(iq, {photos:[{photo_id:body.photo_id, width:body.width, height:body.height}], sel:0, shotCropped:!!body.cropped});
+    if (!iq.avatar && body.avatar_id) {
+      iq.avatar = body.avatar_id;
+      $('iqAvatar').style.backgroundImage = `url("${iqThumb(iq.avatar)}")`;
+    }
+    haptic('success');
+    iq.shotLoading = false; iqShotRefresh();
+    renderSteps();
+    if (iq.shotCropped && flow[flowIndex] === 'iqshot') nextField(true);
+  } catch (err) {
+    showError(err && err.message ? err.message : 'Caricamento non riuscito.');
+  } finally {
+    iq.shotLoading = false; iqShotRefresh();
+  }
+}
+$('iqShotPick').addEventListener('click', () => { if (!iq.shotLoading) $('iqShotFile').click(); });
+$('iqShotFile').addEventListener('change', e => { iqUploadShot(e.target.files && e.target.files[0]); e.target.value = ''; });
+
 function renderIqPick() {
   const box = $('iqPhotos');
   box.innerHTML = '';
@@ -136,7 +177,7 @@ function iqTexts() {
     : 'Il post ha più foto: tocca quella da usare come sfondo.';
   $('iqTextLead').textContent = x || th
     ? 'Testo preso dal post, senza emoji e link finali: puoi cambiarlo.'
-    : iq.story ? 'Storia: Instagram non dà il testo. Scrivilo tu, oppure lascia vuoto per la sola foto (dopo la carichi nell’editor).'
+    : iq.story ? 'Storia: scrivi la frase da citare, oppure lascia vuoto per avere solo la storia.'
     : 'Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.';
   $('iqText').placeholder = iq.story ? 'Testo della storia (facoltativo)' : 'Testo della citazione';
   $('iqHandleRow').hidden = false;      // @username: X e Instagram

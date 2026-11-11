@@ -65,3 +65,23 @@ class StoryPayloadTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class StoryShotTest(unittest.TestCase):
+    def test_crop_screenshot(self):
+        import io
+        import story_shot
+        from PIL import Image, ImageDraw
+        shot = Image.new('RGB', (600, 1400), (11, 16, 20))           # sfondo scuro del telefono
+        d = ImageDraw.Draw(shot)
+        for y in range(120, 120 + 1067):                               # storia 9:16, a righe colorate
+            d.line([(0, y), (599, y)], fill=(40 + y % 180, 120, 60))
+        d.ellipse((12, 120 + 30, 72, 120 + 90), fill=(250, 0, 0))     # foto profilo
+        out = io.BytesIO(); shot.save(out, 'PNG')
+        photo, avatar = story_shot.crop(out.getvalue())
+        w, h = Image.open(io.BytesIO(photo)).size
+        self.assertEqual(w, 600)
+        self.assertLessEqual(abs(h - (1067 - 81)), 4)      # misura su immagine ridotta: +-4 px
+        self.assertGreater(Image.open(io.BytesIO(avatar)).getpixel((24, 24))[0], 200)
+        plain = io.BytesIO(); Image.new('RGB', (800, 600), (200, 30, 30)).save(plain, 'PNG')
+        self.assertEqual(story_shot.crop(plain.getvalue()), (plain.getvalue(), None))   # foto normale: com'è
