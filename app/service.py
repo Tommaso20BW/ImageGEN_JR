@@ -1128,8 +1128,15 @@ class Service:
         th = threadspost.is_threads_url(url)
         x = th or xpost.is_x_url(url)          # X e Threads: nome e @account arrivano entrambi dal post
         story = not x and instagram.story_user(url) is not None     # storia: niente foto, la carichi tu
-        post = (threadspost.fetch(url) if th else xpost.fetch(url) if x
-                else instagram.fetch_story(url) if story else instagram.fetch(url))
+        if story:
+            try:
+                post = instagram.fetch_story(url)
+            except Exception:       # storia scaduta o Instagram che non risponde: l'account c'è nel link
+                handle = instagram.story_user(url)
+                post = {'code': '', 'user': handle, 'name': handle, 'verified': False, 'text': '',
+                        'avatar': None, 'photos': [], 'story': True}
+        else:
+            post = threadspost.fetch(url) if th else xpost.fetch(url) if x else instagram.fetch(url)
         photos = []
         for raw in post['photos']:
             try:

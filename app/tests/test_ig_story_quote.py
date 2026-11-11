@@ -112,3 +112,16 @@ class StoryEraseTest(unittest.TestCase):
         photo = Image.open(io.BytesIO(story_shot.crop(out.getvalue())[0]))
         self.assertLess(abs(photo.getpixel((200, 50))[0] - 100), 12)      # nome sparito
         self.assertGreater(photo.getpixel((220, 290))[0], 230)            # testo della storia intatto
+
+
+class StoryNoPageTest(unittest.TestCase):
+    def test_story_link_without_page(self):
+        """Storia che Instagram non mostra più: si va avanti con l'@ preso dal link."""
+        import service
+        fake = mock.Mock()
+        with mock.patch('instagram.fetch_story', side_effect=ValueError('niente')), \
+                mock.patch('sent_store.load_names', return_value={}):
+            out = service.Service.ig_post(fake, {'url': LINK})
+        self.assertTrue(out['story'])
+        self.assertEqual(out['handle'], 'francisco.conceicao7')
+        self.assertIsNone(out['avatar_id'])

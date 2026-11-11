@@ -8,6 +8,7 @@ const iqThumb = id => `${directBase}/photothumb?session=${encodeURIComponent(ses
 // "Avanti" sul link: legge il post (una volta per link). false = resta sulla pagina.
 async function iqLoad() {
   const url = $('iqUrl').value.trim();
+  if (iq.noLink && !url) return true;    // storia senza link: tutto dallo screenshot
   if (!url) { showError(`Incolla il link del post ${kind === 'xq' ? 'di X' : kind === 'thq' ? 'di Threads' : 'Instagram'}.`); return false; }
   if (iq.url === url && (iq.photos.length || iq.story)) return true;
   if (iq.loading) return false;          // già in lettura (incolla + Avanti insieme)
@@ -113,11 +114,23 @@ function renderIqPick() {
 // Link cambiato: il post letto prima non vale più.
 $('iqUrl').addEventListener('input', () => {
   clearError();
-  if (iq.url && $('iqUrl').value.trim() !== iq.url) {
-    Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', story:false, bars:null});
+  if ((iq.url || iq.noLink) && $('iqUrl').value.trim() !== iq.url) {
+    Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', story:false, noLink:false, bars:null});
     buildFlow();
     renderSteps();
   }
+});
+// Storia di cui il link non si legge (scaduta, account privato…): solo screenshot, nome e @ a mano.
+$('iqNoLink').addEventListener('click', () => {
+  clearError();
+  Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', verified:false, story:true, noLink:true, bars:null, shotCropped:false});
+  $('iqUrl').value = '';
+  $('iqName').value = '';
+  $('iqHandle').value = '';
+  $('iqAvatar').style.backgroundImage = '';
+  clearPhoto();
+  buildFlow();
+  nextField(true);
 });
 $('iqUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nextField(true); } });
 // Link incollato nel campo: il post si legge subito, senza "Avanti".
@@ -183,9 +196,11 @@ function iqTexts() {
     : 'Il post ha più foto: tocca quella da usare come sfondo.';
   $('iqTextLead').textContent = x || th
     ? 'Testo preso dal post, senza emoji e link finali: puoi cambiarlo.'
+    : iq.noLink ? 'Scrivi nome e @account della storia e tocca la spunta blu se è verificato: la foto profilo arriva dallo screenshot.'
     : iq.story ? 'Account della storia: nome, @account e spunta blu (il link non dice se è verificato).'
     : 'Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.';
   $('iqText').hidden = iq.story;
+  $('iqNoLinkBox').hidden = kind !== 'igq';
   $('iqTextTitle').textContent = iq.story ? 'Account' : 'Testo e account';
   $('iqVerRow').hidden = !iq.story;
   $('iqVerCk').textContent = iq.verified ? '✓' : '';

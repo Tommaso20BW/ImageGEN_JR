@@ -260,7 +260,7 @@ function resetAllData() {
   igClearPhoto();
   $('igText').value = '';
   igColor = 'black';
-  Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', loading:false, verified:false, story:false, bars:null});
+  Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', loading:false, verified:false, story:false, noLink:false, bars:null});
   ['iqUrl','iqText','iqName','iqHandle'].forEach(id => { $(id).value = ''; });
   igRefresh();
   $('calYear').value = String(new Date().getFullYear());
