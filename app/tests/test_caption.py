@@ -40,6 +40,21 @@ class CaptionTest(unittest.TestCase):
         self.assertIn('<i>🇮🇹 Serie A</i>\n<i>🆚 Lecce</i>\n<i>✈️ Stadio Via del Mare</i>\n<i>📺 DAZN</i>\n'
                       '<i>⏰ 18:00</i>\n<i>📲 #LecceJuve</i>', text)
 
+    def test_squad_hashtag_from_catalog_row(self):
+        # La Mini App manda il nome lungo del catalogo: l'hashtag usa gli altri nomi (AZ Alkmaar -> #AZJuve).
+        import json, tempfile
+        from pathlib import Path
+        import catalog
+        from webapp_payload import _canonical_team
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'team_logos').mkdir()
+            (Path(tmp) / 'team_logos/manifest.json').write_text(json.dumps({'teams': [
+                {'name': 'Alkmaar Zaanstreek', 'slug': 'AZ-Alkmaar', 'aliases': ['Alkmaar Zaanstreek', 'AZ Alkmaar']}]}))
+            row = _canonical_team(catalog.Catalog(tmp), {'name': 'Alkmaar Zaanstreek'})
+        self.assertEqual(row['slug'], 'AZ-Alkmaar')
+        text = caption.build({'kind': 'squad', 'competition': 'uefa.europa', 'side': 'away', 'opponent': row})
+        self.assertIn('per #AZJuve.', text)
+
     def test_matchday_home_friendly(self):
         text = caption.build({'kind': 'md', 'competition': 'club.friendly', 'side': 'home', 'opponent': FIO,
                               'info': {'stadium': 'ALLIANZ STADIUM', 'time': '18:00 CEST'}})

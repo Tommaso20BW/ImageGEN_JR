@@ -29,9 +29,12 @@ class Catalog:
                 g.normalize_name(n)
                 for n in [row['name'], row.get('display_name'), *row.get('aliases', [])] if n
             ]
+            # Anche gli altri nomi: servono a hashtag e nomi italiani ("Alkmaar Zaanstreek" = AZ Alkmaar).
             value = {
                 'name': row['name'],
                 'id': str(row.get('espn_id') or ''),
+                'aliases': [str(n) for n in row.get('aliases', []) if n],
+                **{k: row[k] for k in ('slug', 'display_name', 'override_key') if row.get(k)},
             }
             if q and any(q in n for n in names):
                 matches.append(value)
