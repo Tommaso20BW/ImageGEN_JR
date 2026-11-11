@@ -19,10 +19,13 @@ SIGN = emoji('5985659276327132147', '👉')
 E_NEWS = emoji('5433982607035474385', '📰')
 E_STATS = emoji('5431577498364158238', '📊')
 E_DAY = emoji('5431897022456145283', '📆')
-E_CUP = emoji('5409008750893734809', '🏆')
 E_ITA = emoji('5861702401290936738', '🇮🇹')        # Serie A
-E_ITA_TEAM = emoji('5911196788366251729', '🇮🇹')   # avversaria italiana nel Matchday
-E_UEFA = emoji('5800778775528479618', '🇪🇺')
+E_CI = emoji('5861593197452468452', '🇮🇹')         # Coppa Italia
+E_UEFA = emoji('5800778775528479618', '🇪🇺')       # Europa League
+E_FRIENDLY = emoji('5357080225463149588', '🤝')
+E_HOME = emoji('5789811507818668397', '🏟')
+E_TV = emoji('5373330964372004748', '📺')
+E_UP = emoji('5364105043907716258', '🆙')
 E_FIRE = emoji('5420315771991497307', '🔥')
 E_VS = emoji('5408935401442267103', '⚔️')
 E_AWAY = emoji('5361600266225326825', '✈️')
@@ -48,9 +51,29 @@ COMPETITION_NAMES = {
     'uefa.europa.conf': 'Conference League', 'uefa.super_cup': 'Supercoppa UEFA',
     'fifa.cwc': 'Mondiale per Club', 'club.friendly': 'Amichevole',
 }
-TABLES = {   # classifica: emoji e nome della competizione
-    'SA': (E_ITA, 'Serie A'), 'CI': ('🇮🇹', 'Coppa Italia'), 'UCL': ('🇪🇺', 'Champions League'),
-    'UEL': (E_UEFA, 'Europa League'), 'UECL': ('🇪🇺', 'Conference League'),
+TABLES = {   # classifica: emoji e nome della competizione, come nei post del canale
+    'SA': (E_ITA, 'Serie A'), 'UCL': ('🇪🇺', 'UCL'), 'UEL': (E_UEFA, 'UEL'), 'UECL': ('🇪🇺', 'UECL'),
+}
+# Matchday: emoji della competizione e canale TV di solito (la Mini App non chiede la TV).
+MD_COMPETITION = {'ita.1': E_ITA, 'ita.coppa_italia': E_CI, 'uefa.europa': E_UEFA, 'club.friendly': E_FRIENDLY}
+MD_TV = {'ita.1': 'DAZN', 'ita.coppa_italia': 'Mediaset', 'ita.super_cup': 'Mediaset',
+         'uefa.champions': 'Sky Sport', 'uefa.europa': 'Sky Sport', 'uefa.europa.conf': 'Sky Sport',
+         'uefa.super_cup': 'Sky Sport', 'club.friendly': 'Juventus.com'}
+# Matchday: emoji personalizzata di ogni avversaria (nome italiano minuscolo), dai post del canale.
+TEAM_EMOJI = {
+    'atalanta': ('5809830487824277376', '🇮🇹'), 'cagliari': ('5913307249396158963', '🇮🇹'),
+    'fiorentina': ('5913639563900752614', '🇮🇹'), 'frosinone': ('5911181365138690645', '🇮🇹'),
+    'genoa': ('5911268059053560883', '🇮🇹'), 'inter': ('5911036032035329229', '🇮🇹'),
+    'lazio': ('5911295933391312208', '🇮🇹'), 'lecce': ('5911196788366251729', '🇮🇹'),
+    'milan': ('5911391075506852997', '🇮🇹'), 'napoli': ('5832408070042428655', '🇮🇹'),
+    'palermo': ('5911464631116765226', '🇮🇹'), 'parma': ('5913350542666503216', '🇮🇹'),
+    'sassuolo': ('5911488085933169181', '🇮🇹'), 'next gen': ('6033087367521244085', '🧒'),
+    'basilea': ('5190496525863654450', '🇨🇭'), 'standard liegi': ('5384130857206316449', '🇧🇪'),
+    'nizza': ('5249262570509966779', '🇫🇷'), 'rennes': ('5341671489122885275', '🇫🇷'),
+    'chelsea': ('6019419613354269178', '🏴󠁧󠁢󠁥󠁮󠁧󠁿'), 'nec nijmegen': ('5195220903989901039', '🇳🇱'),
+    'nec': ('5195220903989901039', '🇳🇱'), 'celta vigo': ('5404664116595950240', '🇪🇸'),
+    'celta': ('5404664116595950240', '🇪🇸'), 'az alkmaar': ('5197389875359288686', '🇳🇱'),
+    'az': ('5197389875359288686', '🇳🇱'),
 }
 MONTHS = ('GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO', 'AGOSTO',
           'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE')
@@ -188,28 +211,42 @@ def _match_caption(data):
         return f"{E_CHECK}{E_NOTE} I convocati di <b>{esc(ALLENATORE)}</b> per {m['tag']}."
     if kind == 'md':
         competition = str(data.get('competition') or '')
-        comp_emoji = (E_ITA if competition == 'ita.1' else E_UEFA if competition.startswith('uefa.')
-                      else m['comp'])
+        comp_emoji = MD_COMPETITION.get(competition, m['comp'])
         opponent = m['away'] if m['juve_home'] else m['home']
-        opp_emoji = E_ITA_TEAM if competition.startswith('ita.') else '🆚'
+        known = TEAM_EMOJI.get(html.unescape(opponent).casefold())
+        opp_emoji = emoji(*known) if known else '🇮🇹' if competition.startswith('ita.') else '🆚'
         info = data.get('info') or {}
-        place = E_AWAY if not m['juve_home'] else '🏟'
+        place = E_HOME if m['juve_home'] else E_AWAY
         rows = [f"{comp_emoji} {esc(COMPETITION_NAMES.get(competition, ''))}",
                 f"{opp_emoji} {opponent}",
                 f"{place} {esc(_stadium(info.get('stadium')))}",
+                f"{E_TV} {esc(MD_TV.get(competition, ''))}",
                 f"{E_TIME} {esc(str(info.get('time') or '').split(' ')[0])}",
                 f"{E_PHONE} {m['tag']}"]
         return f"𝐌𝐀𝐓𝐂𝐇𝐃𝐀𝐘 {E_FIRE}{E_VS}\n\n" + '\n'.join(f'<i>{r}</i>' for r in rows if r.split(' ', 1)[-1].strip())
     return ''
 
 
+def _giornata(comp):
+    """Giornata della classifica appena letta da Diretta.it per la grafica (None se non c'è)."""
+    try:
+        from graphics import classifica
+        value = int((classifica._last.get(comp) or {}).get('giornata') or 0)
+    except Exception:  # noqa: BLE001
+        return None
+    return value or None
+
+
 def _other_caption(data):
     kind = data['kind']
     if kind == 'table':
-        flag, name = TABLES.get(str(data.get('competition') or ''), ('', ''))
-        if data.get('view') == 'bracket':
-            return f"{flag}{E_CUP}<b> {name} | Tabellone</b>"
-        return f"{flag}{E_STATS}<b> {name} | Classifica</b>"
+        comp = str(data.get('competition') or '').upper()
+        if data.get('view') == 'bracket' or comp == 'CI':
+            return f"{E_UP}{E_CI} Tabellone<b> Coppa Italia </b>aggiornato."
+        flag, name = TABLES.get(comp, ('', ''))
+        text = f"{flag}{E_STATS}<b> {name} | Classifica</b>"
+        round_ = _giornata(comp)
+        return text + (f"\n{E_DAY}<i> {round_}ª Giornata</i>" if round_ else '')
     if kind == 'conv':
         return f"{E_WORLD}<b>📋</b> I bianconeri convocati dalle rispettive nazionali."
     if kind == 'cal':

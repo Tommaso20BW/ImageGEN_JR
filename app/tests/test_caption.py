@@ -35,7 +35,29 @@ class CaptionTest(unittest.TestCase):
             'kind': 'md', 'competition': 'ita.1', 'side': 'away',
             'opponent': {'name': 'US Lecce', 'aliases': ['US Lecce', 'Lecce']},
             'info': {'stadium': 'STADIO VIA DEL MARE', 'time': '18:00 CEST', 'date': '25 OTTOBRE 2026'}}))
-        self.assertIn('<i>✈️ Stadio Via del Mare</i>\n<i>⏰ 18:00</i>\n<i>📲 #LecceJuve</i>', text)
+        self.assertIn('<i>🇮🇹 Serie A</i>\n<i>🇮🇹 Lecce</i>\n<i>✈️ Stadio Via del Mare</i>\n<i>📺 DAZN</i>\n'
+                      '<i>⏰ 18:00</i>\n<i>📲 #LecceJuve</i>', text)
+        self.assertIn('emoji-id="5911196788366251729">🇮🇹</tg-emoji> Lecce', caption.build({
+            'kind': 'md', 'competition': 'ita.1', 'side': 'away',
+            'opponent': {'name': 'US Lecce', 'aliases': ['US Lecce', 'Lecce']}, 'info': {}}))
+
+    def test_matchday_home_friendly(self):
+        text = caption.build({'kind': 'md', 'competition': 'club.friendly', 'side': 'home', 'opponent': FIO,
+                              'info': {'stadium': 'ALLIANZ STADIUM', 'time': '18:00 CEST'}})
+        self.assertIn('<i><tg-emoji emoji-id="5357080225463149588">🤝</tg-emoji> Amichevole</i>', text)
+        self.assertIn('<i><tg-emoji emoji-id="5789811507818668397">🏟</tg-emoji> Allianz Stadium</i>', text)
+        self.assertIn('Juventus.com', text)
+
+    def test_table_round_and_bracket(self):
+        from graphics import classifica
+        classifica._last['UEL'] = {'giornata': 4}
+        try:
+            self.assertEqual(plain(caption.build({'kind': 'table', 'competition': 'UEL'})),
+                             '🇪🇺📊<b> UEL | Classifica</b>\n📆<i> 4ª Giornata</i>\n\n👉 @Juventus_Reborn')
+        finally:
+            classifica._last.pop('UEL', None)
+        self.assertEqual(plain(caption.build({'kind': 'table', 'competition': 'CI', 'view': 'bracket'})),
+                         '🆙🇮🇹 Tabellone<b> Coppa Italia </b>aggiornato.\n\n👉 @Juventus_Reborn')
 
     def test_other_graphics(self):
         self.assertEqual(plain(caption.build({'kind': 'table', 'competition': 'SA'})),
