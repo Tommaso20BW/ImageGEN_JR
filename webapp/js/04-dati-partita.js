@@ -16,7 +16,7 @@ function validateCurrent() {
   const step = flow[flowIndex];
   if (!natValidate(step)) return false;
 
-  const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, mdpick:mdPick, jrstyle:jrb.style, tablecomp:tableComp, tableview:tableView};
+  const choice = {competition, side, kit, pose, phase, moment, jrcolor:jrColor, module:pxiModule, mdpick:mdPick, jrstyle:jrb.style, tablecomp:tableComp, tableview:tableView, iqmode:iq.mode};
   if (step in choice && !choice[step]) { showError('Seleziona un’opzione per continuare.'); return false; }
 
   if (step === 'kit' && needsShirt() && !shirt) { showError('Scegli la maglia dei giocatori.'); return false; }

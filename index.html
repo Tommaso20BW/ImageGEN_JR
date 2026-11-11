@@ -319,15 +319,22 @@
             <input id="igFile" type="file" accept="image/*" hidden>
           </section>
 
+          <section class="screen" data-screen="iqmode">
+            <div class="eyebrow">Citazione Instagram</div>
+            <h1>Post o storia</h1>
+            <p class="lead">Post: dal link arrivano foto, testo, nome e foto profilo. Storia: alleghi lo screenshot e la grafica la mostra come una storia vera (il link è facoltativo).</p>
+            <div id="iqModeOpts" class="opts" role="radiogroup"></div>
+          </section>
+
           <section class="screen" data-screen="iqurl">
             <div class="eyebrow">Citazione Instagram</div>
-            <h1>Link del post</h1>
+            <h1 id="iqUrlTitle">Link del post</h1>
             <p id="iqUrlLead" class="lead">Tieni premuto nel campo e incolla il link di un post Instagram: foto, testo, nome e foto profilo arrivano da soli.</p>
             <div class="ios-list">
               <label class="ios-row"><input id="iqUrl" class="ios-in iq-url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="go" placeholder="https://www.instagram.com/p/…"></label>
             </div>
             <div id="iqNoLinkBox" class="ios-list">
-              <button id="iqNoLink" class="ios-row ios-act" type="button">Storia senza link: solo screenshot</button>
+              <button id="iqNoLink" class="ios-row ios-act" type="button">Continua senza link</button>
             </div>
             <p id="iqHint" class="note"></p>
           </section>

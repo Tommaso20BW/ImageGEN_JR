@@ -8,14 +8,14 @@ const iqThumb = id => `${directBase}/photothumb?session=${encodeURIComponent(ses
 // "Avanti" sul link: legge il post (una volta per link). false = resta sulla pagina.
 async function iqLoad() {
   const url = $('iqUrl').value.trim();
-  if (iq.noLink && !url) return true;    // storia senza link: tutto dallo screenshot
+  if (iq.mode === 'story' && !url) { iqNoLink(); return true; }    // storia senza link: tutto dallo screenshot
   if (!url) { showError(`Incolla il link del post ${kind === 'xq' ? 'di X' : kind === 'thq' ? 'di Threads' : 'Instagram'}.`); return false; }
   if (iq.url === url && (iq.photos.length || iq.story)) return true;
   if (iq.loading) return false;          // già in lettura (incolla + Avanti insieme)
   if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return false; }
   iq.loading = true;
   $('nextButton').disabled = true;
-  $('iqHint').textContent = 'Leggo il post…';
+  $('iqHint').textContent = iq.mode === 'story' ? 'Leggo la storia…' : 'Leggo il post…';
   try {
     const response = await netFetch(`${directBase}/igpost`, {
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
@@ -23,6 +23,8 @@ async function iqLoad() {
     }, 60000, 2, true);
     const body = await response.json().catch(() => ({}));
     if (!response.ok || !body.ok) throw new Error(body.error || 'Post non leggibile.');
+    if (kind === 'igq' && iq.mode === 'story' && !body.story) throw new Error('Questo è il link di un post: torna indietro e scegli Post.');
+    if (kind === 'igq') iq.mode = body.story ? 'story' : 'post';     // link di una storia in "Post": passa a Storia
     Object.assign(iq, {url, photos:body.photos || [], sel:(body.photos || []).length === 1 ? 0 : -1,
       avatar:body.avatar_id || '', verified:!!body.verified, story:!!body.story});
     if (iq.story) clearPhoto();           // storia: la foto la carichi tu nell'editor
@@ -115,23 +117,34 @@ function renderIqPick() {
 $('iqUrl').addEventListener('input', () => {
   clearError();
   if ((iq.url || iq.noLink) && $('iqUrl').value.trim() !== iq.url) {
-    Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', story:false, noLink:false, bars:null});
+    Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', story:iq.mode === 'story', noLink:false, bars:null});
     buildFlow();
     renderSteps();
   }
 });
-// Storia di cui il link non si legge (scaduta, account privato…): solo screenshot, nome e @ a mano.
-$('iqNoLink').addEventListener('click', () => {
-  clearError();
-  Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', verified:false, story:true, noLink:true, bars:null, shotCropped:false});
+// Post o Storia (solo Citazione Instagram): cambiando tipo si riparte dal link.
+function iqReset(story, noLink) {
+  Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', verified:false, story, noLink, bars:null, shotCropped:false});
   $('iqUrl').value = '';
+  $('iqText').value = '';
   $('iqName').value = '';
   $('iqHandle').value = '';
   $('iqAvatar').style.backgroundImage = '';
   clearPhoto();
+}
+function iqSetMode(mode) {
+  iq.mode = mode;
+  iqReset(mode === 'story', false);
   buildFlow();
-  nextField(true);
-});
+  renderSteps();
+}
+// Storia di cui il link non si legge (scaduta, account privato…): solo screenshot, nome e @ a mano.
+function iqNoLink() {
+  clearError();
+  iqReset(true, true);
+  buildFlow();
+}
+$('iqNoLink').addEventListener('click', () => { iqNoLink(); nextField(true); });
 $('iqUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nextField(true); } });
 // Link incollato nel campo: il post si legge subito, senza "Avanti".
 const looksIg = v => /instagram\.com\/|instagr\.am\/|(?:^|\/\/|\.)(?:x|twitter)\.com\/[^/\s]+\/status\/|threads\.(?:com|net)\/(?:@[\w.]+\/post|share)\//i.test(v);
@@ -189,8 +202,11 @@ function iqTexts() {
   document.querySelectorAll('[data-screen^="iq"] .eyebrow').forEach(e => { e.textContent = `Citazione ${net}`; });
   $('iqUrlLead').textContent = x || th
     ? `Tieni premuto nel campo e incolla il link di un post di ${x ? 'X' : 'Threads'}: testo, nome, account, foto profilo e foto arrivano da soli.`
-    : 'Tieni premuto nel campo e incolla il link di un post o di una storia Instagram: foto, testo, nome e foto profilo arrivano da soli (dalle storie solo nome e foto profilo).';
-  $('iqUrl').placeholder = x ? 'https://x.com/…/status/…' : th ? 'https://www.threads.com/@…/post/…' : 'https://www.instagram.com/p/…';
+    : iq.mode === 'story' ? 'Incolla il link della storia: arrivano nome e foto profilo. Se non ce l’hai o non funziona, continua senza link.'
+    : 'Tieni premuto nel campo e incolla il link di un post Instagram: foto, testo, nome e foto profilo arrivano da soli.';
+  $('iqUrlTitle').textContent = kind === 'igq' && iq.mode === 'story' ? 'Link della storia' : 'Link del post';
+  $('iqUrl').placeholder = x ? 'https://x.com/…/status/…' : th ? 'https://www.threads.com/@…/post/…'
+    : iq.mode === 'story' ? 'https://www.instagram.com/stories/… (facoltativo)' : 'https://www.instagram.com/p/…';
   $('iqPickLead').textContent = x || th
     ? 'Tocca la foto da usare come sfondo, oppure "Sfondo".'
     : 'Il post ha più foto: tocca quella da usare come sfondo.';
@@ -200,7 +216,7 @@ function iqTexts() {
     : iq.story ? 'Account della storia: nome, @account e spunta blu (il link non dice se è verificato).'
     : 'Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.';
   $('iqText').hidden = iq.story;
-  $('iqNoLinkBox').hidden = kind !== 'igq';
+  $('iqNoLinkBox').hidden = kind !== 'igq' || iq.mode !== 'story';
   $('iqTextTitle').textContent = iq.story ? 'Account' : 'Testo e account';
   $('iqVerRow').hidden = !iq.story;
   $('iqVerCk').textContent = iq.verified ? '✓' : '';

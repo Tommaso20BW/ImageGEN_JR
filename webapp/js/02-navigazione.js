@@ -50,7 +50,7 @@ const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scel
 let mdPick = '';       // id partita ESPN scelta, 'manual' o ''
 let igPicking = false; // Storia IG: pagina "Dagli ultimi invii" aperta (11-invii.js)
 // CITAZIONE IG (12-citazione.js): link letto, foto del post, foto scelta, foto profilo.
-const iq = {url:'', photos:[], sel:-1, avatar:'', loading:false, verified:false, story:false, noLink:false, bars:null};
+const iq = {url:'', photos:[], sel:-1, avatar:'', loading:false, verified:false, story:false, noLink:false, bars:null, mode:''};
 let kitFromMatch = false;   // maglia presa da ESPN (partite giocate): niente passaggio "Maglia"
 let fixtureList = [];
 let calRows = [];
@@ -275,8 +275,9 @@ function buildFlow() {
   else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent','igsent'] : ['igcontent'];
   // Storia: niente editor della foto (la storia va intera nel riquadro 9:16).
-  else if (isQuoteKind(kind)) flow = iq.story ? ['iqurl','iqshot','iqtext']
-    : [...(iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'];
+  // Citazione Instagram: prima si sceglie Post o Storia. X e Threads: solo post.
+  else if (isQuoteKind(kind)) flow = [...(kind === 'igq' ? ['iqmode'] : []), ...(iq.story ? ['iqurl','iqshot','iqtext']
+    : [...(iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'])];
   flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
 }
 
@@ -339,7 +340,8 @@ function stepValue(step) {
       const m = fixtureList.find(f => f.id === mdPick);
       return mdPick === 'manual' ? 'A mano' : (m ? fixtureLabel(m, true) : '');
     }
-    case 'iqurl': return iq.noLink ? 'Senza link' : iq.story ? 'Storia' : iq.photos.length ? `${iq.photos.length} foto` : '';
+    case 'iqmode': return labelOf(IQ_MODES,iq.mode);
+    case 'iqurl': return iq.noLink ? 'Senza link' : !iq.url ? '' : iq.story ? 'Storia' : `${iq.photos.length} foto`;
     case 'iqpick': return iq.sel >= 0 ? `Foto ${iq.sel + 1}` : '';
     case 'iqshot': return iq.photos.length ? 'Allegato' : '';
     case 'iqtext': return $('iqName').value.trim();
@@ -509,7 +511,7 @@ function renderFlow() {
     if (tg && tg.disableVerticalSwipes) editing ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
   } catch (_) {}
   if (screenName === 'phasephoto') { if (LIVE) $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
-  if (screenName === 'iqurl' || screenName === 'iqpick' || screenName === 'iqshot' || screenName === 'iqtext') iqTexts();
+  if (screenName === 'iqmode' || screenName === 'iqurl' || screenName === 'iqpick' || screenName === 'iqshot' || screenName === 'iqtext') iqTexts();
   if (screenName === 'photo') { if (isQuoteKind(kind)) iqSyncPhoto(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
   if (screenName === 'jrphotos') renderJrPicker();
   if (screenName === 'jrlayout') { renderJrLayout(true); requestAnimationFrame(() => { fitColBig(); renderJrLayout(); }); }
@@ -578,7 +580,7 @@ function isLastStep() {
 /* ---------- Option groups ---------- */
 // Ricostruisce i bottoni solo se cambiano le opzioni; altrimenti sposta la selezione
 // sugli elementi esistenti, così il passaggio radio→radio è animato.
-const AUTO_OPTS = new Set(['natKindOpts','natPlayOpts','goalTypeOpts','tableCompOpts','tableViewOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts']);
+const AUTO_OPTS = new Set(['natKindOpts','natPlayOpts','goalTypeOpts','tableCompOpts','tableViewOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts','iqModeOpts']);
 function renderOptions(id, options, value, onSelect) {
   const box = $(id);
   box._options = options;
@@ -647,6 +649,7 @@ function updateScreenValues() {
   }
   renderJrColor();
   renderJrTitle();
+  renderOptions('iqModeOpts',IQ_MODES,iq.mode,v => { if (v !== iq.mode) iqSetMode(v); });
   renderOptions('jrRatioOpts',JR_RATIOS,jrb.ratio,v => { jrb.ratio = v; photoState.x = 0; photoState.y = 0; });
   renderOptions('jrStyleOpts',JR_STYLES,jrb.style,v => {
     jrb.style = v;
