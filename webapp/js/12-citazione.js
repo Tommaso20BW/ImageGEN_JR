@@ -81,6 +81,11 @@ async function iqUploadShot(file) {
     iq.shotLoading = false; iqShotRefresh();
   }
 }
+$('iqVerRow').addEventListener('click', () => {
+  haptic('select');
+  iq.verified = !iq.verified;
+  $('iqVerCk').textContent = iq.verified ? '✓' : '';
+});
 $('iqShotPick').addEventListener('click', () => { if (!iq.shotLoading) $('iqShotFile').click(); });
 $('iqShotFile').addEventListener('change', e => { iqUploadShot(e.target.files && e.target.files[0]); e.target.value = ''; });
 
@@ -177,8 +182,11 @@ function iqTexts() {
     : 'Il post ha più foto: tocca quella da usare come sfondo.';
   $('iqTextLead').textContent = x || th
     ? 'Testo preso dal post, senza emoji e link finali: puoi cambiarlo.'
-    : iq.story ? 'Storia: scrivi la frase da citare, oppure lascia vuoto per avere solo la storia.'
+    : iq.story ? 'Account della storia: nome, @account e spunta blu (il link non dice se è verificato).'
     : 'Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.';
-  $('iqText').placeholder = iq.story ? 'Testo della storia (facoltativo)' : 'Testo della citazione';
+  $('iqText').hidden = iq.story;
+  $('iqTextTitle').textContent = iq.story ? 'Account' : 'Testo e account';
+  $('iqVerRow').hidden = !iq.story;
+  $('iqVerCk').textContent = iq.verified ? '✓' : '';
   $('iqHandleRow').hidden = false;      // @username: X e Instagram
 }

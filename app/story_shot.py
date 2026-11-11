@@ -2,13 +2,13 @@
 di Instagram e la foto profilo.
 
 Nello screenshot la storia è un riquadro 9:16 su sfondo scuro uniforme: sopra ora e batteria, sotto
-la barra "Invia messaggio". In cima alla storia ci sono le barrette e la riga foto profilo / account:
-si tagliano anche quelle. Se lo screenshot non ha questa forma (storia a tutto schermo, foto normale)
+la barra "Invia messaggio". La storia resta intera (9:16); in cima, barrette e riga foto profilo /
+account si coprono con una sfumatura della foto subito sotto: lì la grafica rimette le sue. Se lo screenshot non ha questa forma (storia a tutto schermo, foto normale)
 la foto resta com'è.
 """
 import io
 
-from PIL import Image
+from PIL import Image, ImageFilter
 
 HEADER = 0.135        # barrette + riga dell'account, in parti della larghezza della storia
 AVATAR = (0.07, 0.085, 0.04)      # centro x, centro y (dall'alto della storia) e raggio, in parti della larghezza
@@ -54,7 +54,10 @@ def crop(raw):
         return raw, None
     top, bottom = box
     w = image.width
-    story = image.crop((0, top + round(HEADER * w), w, bottom))
     cx, cy, r = round(AVATAR[0] * w), round(top + AVATAR[1] * w), round(AVATAR[2] * w)
     avatar = image.crop((cx - r, cy - r, cx + r, cy + r))
+    story = image.convert('RGB').crop((0, top, w, bottom))
+    band = round(HEADER * w)
+    cover = story.crop((0, band, w, band + max(4, band // 10))).resize((w, band)).filter(ImageFilter.GaussianBlur(band / 6))
+    story.paste(cover, (0, 0))
     return _jpeg(story), _jpeg(avatar)

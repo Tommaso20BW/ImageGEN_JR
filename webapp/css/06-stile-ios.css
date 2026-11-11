@@ -242,6 +242,8 @@ textarea.field-input:focus{box-shadow:none!important;outline:0}
 .ig-list{display:block}
 /* Citazione IG: link, scelta della foto (griglia 3:4), foto profilo accanto al nome */
 .iq-url{width:100%;text-align:left!important}
+.iq-ver{display:flex;justify-content:space-between;align-items:center}
+.iq-ver #iqVerCk{color:var(--tint);font-weight:600}
 .iq-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .iq-ph{position:relative;aspect-ratio:3/4;border:0;padding:0;border-radius:10px;overflow:hidden;background:var(--line) center/cover no-repeat;cursor:pointer}
 .iq-ph.on{box-shadow:0 0 0 3px var(--surface),0 0 0 5.5px var(--tint)}

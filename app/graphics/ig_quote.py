@@ -13,9 +13,9 @@
   foto lo sfondo è canva/x_quote_bg.jpg (lo aggiunge il servizio come foto da scegliere).
 - Threads (platform='threads'): come X, logo Threads, icone mi piace, commenta, ripubblica, condividi;
   stesso sfondo di riserva per i post senza foto.
-- Storia Instagram (story=True): stesso riquadro fatto come una storia: in alto le barrette di
-  avanzamento, sotto il nome "Storia · @account", in basso la barra "Invia messaggio" con cuore e
-  condividi. Il testo può mancare (storia con la sola foto): il riquadro va in basso e la foto resta libera.
+- Storia Instagram (story=True, build_story_html): la storia (ritagliata dallo screenshot) dentro un
+  riquadro 9:16 come sul telefono, con sopra barrette, foto profilo e @account e sotto la barra
+  "Invia messaggio"; dietro la stessa foto, scurita e sfocata. Niente testo.
 
 Il calcolo della grandezza del testo lo fa Chrome (a-capo reali): il renderer aspetta `window.__ready`.
 """
@@ -127,10 +127,9 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
     th = platform == 'threads'
     handle = clean_name(handle)
     # Nome in grassetto, sotto l'@username piccolo (senza username: "Instagram" / "X" / "Threads").
+    if story and platform == 'ig' and photo is not None:
+        return build_story_html(photo=photo, name=name, avatar=avatar, handle=handle, verified=verified)
     sub = f'@{esc(handle)}' if handle else ('X' if x else 'Threads' if th else 'Instagram')
-    story = story and platform == 'ig'
-    if story:
-        sub = f'Storia · @{esc(handle)}' if handle else 'Storia'
     tick = (f'<svg class="tick" viewBox="0 0 24 24"><path fill="{"#1D9BF0" if x else "#0095F6"}" d="M22.5 12.5'
             'c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1.71-4-3.82-4-.47 0-.92.08-1.34.25C14.81 2.42'
             ' 13.5 1.5 12 1.5s-2.81.92-3.43 2.22c-.42-.17-.87-.25-1.34-.25-2.11 0-3.82 1.79-3.82 4 0 .5.09.98.24 '
@@ -140,19 +139,14 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
             'l1.4-1.4 2.3 2.3 5.1-5.1 1.4 1.4z"/></svg>' if verified else '')
     head = (f'<div id="hd">{avatar_html}<div id="who"><b>{esc(name or handle)}{tick}</b><span>{sub}</span></div>'
             f'<i id="ig">{X_LOGO if x else TH_LOGO if th else ICON_IG}</i></div>')
-    if story:   # Storia: barra per rispondere, cuore e condividi
-        acts = f'<div id="act" class="st"><span id="reply">Invia messaggio</span><div>{ICON_LIKE}{ICON_SHARE}</div></div>'
-    elif th:    # Threads: mi piace, commenta, ripubblica, condividi
+    if th:    # Threads: mi piace, commenta, ripubblica, condividi
         acts = f'<div id="act"><div>{ICON_LIKE}{ICON_COMMENT}{X_REPOST}{ICON_SHARE}</div><div></div></div>'
     elif x:
         acts = (f'<div id="act"><div>{X_REPLY}{X_REPOST}{ICON_LIKE}{X_VIEWS}</div>'
                 f'<div>{ICON_SAVE}{X_SHARE}</div></div>')
     else:
         acts = f'<div id="act"><div>{ICON_LIKE}{ICON_COMMENT}{ICON_SHARE}</div><div>{ICON_SAVE}</div></div>'
-    bars = '<div id="bars"><i class="full"></i><i class="half"></i><i></i></div>' if story else ''
-    txt = f'<div id="txt">{esc(text)}</div>' if text else ''
-    cls = ' class="st"' if story else ''
-    body = f'<div id="box"{cls}>{bars}{head}{txt}{acts}</div>' if text or story else ''
+    body = f'<div id="box">{head}<div id="txt">{esc(text)}</div>{acts}</div>' if text else ''
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 {_font_css()}
 *{{margin:0;padding:0;box-sizing:border-box}}
@@ -180,22 +174,74 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{'#
 #act{{display:flex;align-items:center;justify-content:space-between;flex:none}}
 #act div{{display:flex;gap:{36 if x else 30}px}}
 #act svg{{width:52px;height:52px;display:block}}
-#box.st{{padding-top:30px}}
-#zone.low{{align-items:flex-end}}
-#bars{{display:flex;gap:8px;flex:none;margin-bottom:-{TEXT_GAP - 26}px}}
-#bars i{{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.32);overflow:hidden;position:relative}}
-#bars i.full{{background:#fff}}
-#bars i.half::after{{content:'';position:absolute;inset:0 45% 0 0;background:#fff;border-radius:3px}}
-#act.st{{gap:30px}}
-#reply{{flex:1;min-width:0;height:84px;display:flex;align-items:center;padding:0 34px;border-radius:42px;
-  border:2px solid rgba(255,255,255,.7);color:rgba(255,255,255,.85);font:500 30px Poppins,sans-serif}}
+
 img[style*="left:0"]{{position:absolute}}
 </style></head><body>
 <div id="bg">{img}</div>
 <div id="shade"></div>
-<div id="zone"{' class="low"' if story and not text else ''}>{body}</div>
+<div id="zone">{body}</div>
 {_logo('white')}
 <script>{SCRIPT % json.dumps(cfg)}</script>
+</body></html>'''
+
+
+# ---------- Storia ----------
+STORY_CARD = (191, 104, 698, 1241)      # riquadro 9:16 (x, y, larghezza, altezza) in pixel design
+STORY_BLUR = 38                        # sfocatura della foto dietro (px)
+STORY_DARK = .34                       # luminosità della foto dietro
+TICK_PATH = ('M22.5 12.5c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1.71-4-3.82-4-.47 0-.92.08-1.34.25'
+             'C14.81 2.42 13.5 1.5 12 1.5s-2.81.92-3.43 2.22c-.42-.17-.87-.25-1.34-.25-2.11 0-3.82 1.79-3.82 4 0 .5.09'
+             '.98.24 1.43-1.27.65-2.15 2.02-2.15 3.6 0 1.5.8 2.8 1.97 3.48-.03.24-.05.48-.05.72 0 2.21 1.71 4 3.82 4 .47'
+             ' 0 .92-.08 1.34-.25.62 1.3 1.93 2.22 3.43 2.22s2.81-.92 3.43-2.22c.42.17.87.25 1.34.25 2.11 0 3.82-1.79 '
+             '3.82-4 0-.24-.02-.48-.05-.72 1.17-.68 1.97-1.98 1.97-3.48z')
+
+
+def build_story_html(*, photo, name='', avatar=None, handle='', verified=False):
+    """Storia Instagram come sul telefono: foto nel riquadro 9:16, dietro la stessa foto sfocata."""
+    check_photo(photo)
+    from graphics.photo_jr import _logo
+    uri = _uri(photo)
+    cx, cy, cw, ch = STORY_CARD
+    who = esc(handle or name)
+    avatar_html = (f'<img id="av" src="{_uri(avatar)}">' if avatar
+                   else f'<div id="av" class="none">{esc((handle or name)[:1].upper())}</div>')
+    tick = (f'<svg class="tick" viewBox="0 0 24 24"><path fill="#fff" d="{TICK_PATH}"/><path fill="#111" '
+            'd="M10.6 16.2 6.9 12.5l1.4-1.4 2.3 2.3 5.1-5.1 1.4 1.4z"/></svg>' if verified else '')
+    return f'''<!doctype html><html><head><meta charset="utf-8"><style>
+{_font_css()}
+*{{margin:0;padding:0;box-sizing:border-box}}
+html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#000}}
+#back{{position:absolute;inset:-80px;background:url({uri}) center/cover;filter:blur({STORY_BLUR}px) brightness({STORY_DARK}) saturate(1.1)}}
+#card{{position:absolute;left:{cx}px;top:{cy}px;width:{cw}px;height:{ch}px;border-radius:34px;overflow:hidden;
+  background:#111 url({uri}) center/cover;box-shadow:0 30px 90px rgba(0,0,0,.6);border:1.5px solid rgba(255,255,255,.14)}}
+#top{{position:absolute;left:0;right:0;top:0;height:230px;background:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,0))}}
+#bot{{position:absolute;left:0;right:0;bottom:0;height:230px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.55))}}
+#bars{{position:absolute;left:18px;right:18px;top:18px;display:flex;gap:6px}}
+#bars i{{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.38);position:relative;overflow:hidden}}
+#bars i.full{{background:#fff}}
+#bars i.half::after{{content:'';position:absolute;inset:0 45% 0 0;background:#fff}}
+#hd{{position:absolute;left:20px;right:20px;top:42px;display:flex;align-items:center;gap:16px;color:#fff;
+  font-family:'Poppins',sans-serif;text-shadow:0 1px 6px rgba(0,0,0,.35)}}
+#av{{width:66px;height:66px;flex:none;border-radius:50%;object-fit:cover;padding:3px;background:{IG_GRADIENT};
+  background-clip:padding-box}}
+#av.none{{display:grid;place-items:center;font:500 30px Poppins}}
+#hd b{{font-weight:500;font-size:27px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}}
+#hd .tick{{width:25px;height:25px;flex:none;margin-left:-8px}}
+#hd #ig{{margin-left:auto;flex:none}}
+#hd #ig svg{{width:38px;height:38px;display:block}}
+#act{{position:absolute;left:20px;right:20px;bottom:26px;display:flex;align-items:center;gap:22px}}
+#reply{{flex:1;min-width:0;height:66px;display:flex;align-items:center;padding:0 26px;border-radius:33px;
+  border:2px solid rgba(255,255,255,.75);color:#fff;font:500 23px Poppins,sans-serif}}
+#act svg{{width:42px;height:42px;display:block;flex:none}}
+</style></head><body>
+<div id="back"></div>
+<div id="card"><div id="top"></div><div id="bot"></div>
+  <div id="bars"><i class="full"></i><i class="half"></i><i></i></div>
+  <div id="hd">{avatar_html}<b>{who}</b>{tick}<i id="ig">{ICON_IG}</i></div>
+  <div id="act"><span id="reply">Invia messaggio...</span>{ICON_LIKE}{ICON_SHARE}</div>
+</div>
+{_logo('white')}
+<script>window.__ready = (async () => {{ try {{ await document.fonts.load('500 27px Poppins'); }} catch (e) {{}} for (const img of document.images) {{ try {{ await img.decode(); }} catch (e) {{}} }} }})();</script>
 </body></html>'''
 
 

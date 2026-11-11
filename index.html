@@ -350,13 +350,14 @@
 
           <section class="screen" data-screen="iqtext">
             <div class="eyebrow">Citazione Instagram</div>
-            <h1>Testo e account</h1>
+            <h1 id="iqTextTitle">Testo e account</h1>
             <p id="iqTextLead" class="lead">Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.</p>
             <textarea id="iqText" class="field-input" style="min-height:170px" spellcheck="true" placeholder="Testo della citazione"></textarea>
             <div class="field-label gap">Account</div>
             <div class="ios-list">
               <label class="ios-row"><span id="iqAvatar" class="iq-av"></span><input id="iqName" class="ios-in" maxlength="40" autocapitalize="words" autocomplete="off" spellcheck="false" placeholder="Nome (es. Francisco Conceição)"></label>
               <label id="iqHandleRow" class="ios-row" hidden><span class="iq-at">@</span><input id="iqHandle" class="ios-in" maxlength="40" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="account"></label>
+              <button id="iqVerRow" class="ios-row ios-act iq-ver" type="button" hidden><span>Spunta blu</span><span id="iqVerCk"></span></button>
             </div>
           </section>
 

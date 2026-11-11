@@ -51,20 +51,16 @@ class StoryPayloadTest(unittest.TestCase):
         self.assertNotIn('story', state['data'])
 
     def test_story_card(self):
-        with mock.patch('graphics.ig_quote._font_css', return_value=''), \
-                mock.patch('graphics.photo_jr._logo', return_value=''):
-            page = ig_quote.build_html(photo=None, text='Ciao', name='Francisco', handle='fc7', story=True)
-            self.assertIn('id="bars"', page)
-            self.assertIn('Invia messaggio', page)
-            self.assertIn('Storia · @fc7', page)
-            only_photo = ig_quote.build_html(photo=None, text='', name='Francisco', handle='fc7', story=True)
-            self.assertIn('class="low"', only_photo)
-            post = ig_quote.build_html(photo=None, text='Ciao', name='Francisco', handle='fc7')
-            self.assertNotIn('Invia messaggio', post)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        import io
+        from PIL import Image
+        raw = io.BytesIO(); Image.new('RGB', (90, 160), (30, 120, 60)).save(raw, 'JPEG')
+        with mock.patch('graphics.ig_quote._font_css', return_value=''),                 mock.patch('graphics.photo_jr._logo', return_value=''):
+            page = ig_quote.build_html(photo=raw.getvalue(), text='', name='Francisco', handle='fc7', story=True,
+                                       verified=True)
+            for part in ('id="card"', 'id="back"', 'id="bars"', 'Invia messaggio', '<b>fc7</b>', 'class="tick"'):
+                self.assertIn(part, page)
+            post = ig_quote.build_html(photo=raw.getvalue(), text='Ciao', name='Francisco', handle='fc7')
+            self.assertNotIn('id="card"', post)
 
 
 class StoryShotTest(unittest.TestCase):
@@ -81,7 +77,7 @@ class StoryShotTest(unittest.TestCase):
         photo, avatar = story_shot.crop(out.getvalue())
         w, h = Image.open(io.BytesIO(photo)).size
         self.assertEqual(w, 600)
-        self.assertLessEqual(abs(h - (1067 - 81)), 4)      # misura su immagine ridotta: +-4 px
+        self.assertLessEqual(abs(h - 1067), 4)      # storia intera; misura su immagine ridotta: +-4 px
         self.assertGreater(Image.open(io.BytesIO(avatar)).getpixel((24, 24))[0], 200)
         plain = io.BytesIO(); Image.new('RGB', (800, 600), (200, 30, 30)).save(plain, 'PNG')
         self.assertEqual(story_shot.crop(plain.getvalue()), (plain.getvalue(), None))   # foto normale: com'è

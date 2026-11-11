@@ -274,7 +274,9 @@ function buildFlow() {
   else if (kind === 'conv') flow = ['convlist'];
   else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent','igsent'] : ['igcontent'];
-  else if (isQuoteKind(kind)) flow = [...(iq.story ? ['iqurl','iqshot'] : iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'];
+  // Storia: niente editor della foto (la storia va intera nel riquadro 9:16).
+  else if (isQuoteKind(kind)) flow = iq.story ? ['iqurl','iqshot','iqtext']
+    : [...(iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'];
   flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
 }
 

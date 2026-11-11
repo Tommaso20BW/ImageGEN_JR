@@ -24,7 +24,7 @@ function buildPayload(ghost=false) {
     if (!photo) throw new Error(iq.story ? 'Allega lo screenshot della storia.' : 'Scegli la foto del post.');
     // Foto del post (o della storia, dallo screenshot), o quella caricata a mano nell'editor ("Scegli foto").
     return {v:1, action:'render', session, data:{kind, photo_id:photoState.id || photo.photo_id, ...(iq.story ? {story:true} : {}),
-      text:$('iqText').value.trim(), name:$('iqName').value.trim(), ...(iq.avatar ? {avatar_id:iq.avatar} : {}),
+      text:iq.story ? '' : $('iqText').value.trim(), name:$('iqName').value.trim(), ...(iq.avatar ? {avatar_id:iq.avatar} : {}),
       handle:$('iqHandle').value.trim(), verified:!!iq.verified,
       frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}}};
   }
