@@ -216,8 +216,8 @@ def build_story_html(*, photo, name='', avatar=None, handle='', verified=False, 
 html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#000}}
 #back{{position:absolute;inset:-80px;background:url({uri}) center/cover;filter:blur({STORY_BLUR}px) brightness({STORY_DARK}) saturate(1.1)}}
 #card{{position:absolute;left:{cx}px;top:{cy}px;width:{cw}px;height:{ch}px;border-radius:34px;overflow:hidden;
-  background:#111 url({uri}) center/cover;box-shadow:0 34px 80px rgba(0,0,0,.85),0 8px 22px rgba(0,0,0,.55);border:1.5px solid rgba(255,255,255,.14)}}
-#vig{{position:absolute;inset:0;background:radial-gradient(ellipse 75% 70% at 50% 50%,rgba(0,0,0,0) 40%,rgba(0,0,0,.6))}}
+  background:#111 url({uri}) center/cover;box-shadow:0 0 80px rgba(0,0,0,.8),0 0 24px rgba(0,0,0,.5);border:1.5px solid rgba(255,255,255,.14)}}
+#vig{{position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,0) 16%),radial-gradient(ellipse 75% 70% at 50% 50%,rgba(0,0,0,0) 40%,rgba(0,0,0,.6))}}
 #top{{position:absolute;left:0;right:0;top:0;height:230px;background:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,0))}}
 #bot{{position:absolute;left:0;right:0;bottom:0;height:230px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.55))}}
 #bars{{position:absolute;left:18px;right:18px;top:18px;display:flex;gap:6px}}
