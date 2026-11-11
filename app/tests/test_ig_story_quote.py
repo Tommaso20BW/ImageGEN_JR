@@ -96,3 +96,19 @@ class StoryShotTest(unittest.TestCase):
         self.assertGreater(Image.open(io.BytesIO(avatar)).getpixel((24, 24))[0], 200)
         plain = io.BytesIO(); Image.new('RGB', (800, 600), (200, 30, 30)).save(plain, 'PNG')
         self.assertEqual(story_shot.crop(plain.getvalue()), (plain.getvalue(), None))   # foto normale: com'è
+
+
+class StoryEraseTest(unittest.TestCase):
+    def test_header_text_erased(self):
+        import io
+        import story_shot
+        from PIL import Image, ImageDraw
+        shot = Image.new('RGB', (600, 1400), (11, 16, 20))
+        d = ImageDraw.Draw(shot)
+        d.rectangle((0, 120, 599, 120 + 1066), fill=(100, 110, 105))     # storia grigia
+        d.rectangle((90, 160, 300, 180), fill=(255, 255, 255))            # nome dell'account
+        d.rectangle((150, 400, 300, 420), fill=(255, 255, 255))           # scritta della storia: resta
+        out = io.BytesIO(); shot.save(out, 'PNG')
+        photo = Image.open(io.BytesIO(story_shot.crop(out.getvalue())[0]))
+        self.assertLess(abs(photo.getpixel((200, 50))[0] - 100), 12)      # nome sparito
+        self.assertGreater(photo.getpixel((220, 290))[0], 230)            # testo della storia intatto
