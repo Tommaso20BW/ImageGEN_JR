@@ -105,12 +105,12 @@ function buildPayload(ghost=false) {
     }
     if (PHOTO_PHASES.has(phase) && !isFriendly() && !nat) Object.assign(data, phasePhotoData(ghost));
   } else if (kind === 'xi') {
-    if (!photoId) throw new Error('Scegli una foto.');
+    if (!photoId) throw new Error('Scegli il giocatore.');
     data.lineup = lineupRows().map(p => ({number:p.number, name:p.name}));
     data.photo_id = photoId;
     data.frame = {x:photoState.x, y:photoState.y, zoom:photoState.zoom};
   } else if (kind === 'md') {
-    if (!photoId) throw new Error('Scegli una foto.');
+    if (!photoId) throw new Error('Scegli il giocatore.');
     data.photo_id = photoId;
     data.frame = {x:photoState.x, y:photoState.y, zoom:photoState.zoom};
     data.stadium = $('matchStadium').value;

@@ -256,6 +256,7 @@ function resetAllData() {
   updateSquadSummary();
   updateLineupSummary();
   clearPhoto();
+  mdpReset();
   clearPhase();
   igClearPhoto();
   $('igText').value = '';

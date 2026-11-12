@@ -73,6 +73,11 @@ function validateCurrent() {
     if (!photoState.id) { showError('Scegli una foto.'); return false; }
   }
 
+  if (step === 'mdplayer') {
+    if (!mdp.player) { showError('Scegli il giocatore.'); return false; }
+    if (!mdpReady()) { if (!mdp.loading) mdpLoad(); showError('Attendi la foto del giocatore.'); return false; }
+  }
+
   if (step === 'phasephoto') {
     if (ppState.uploading) { showError('Attendi il caricamento della foto.'); return false; }
     if (!ppState.bg) { showError('Scegli una foto.'); return false; }

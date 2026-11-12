@@ -513,25 +513,26 @@
             <div id="jrcGrid" class="ig-colors jrt-colors" role="radiogroup" aria-label="Colore del JR"></div>
           </section>
 
+          <section class="screen" data-screen="mdplayer">
+            <div id="mdpEyebrow" class="eyebrow">Matchday</div>
+            <h1>Giocatore</h1>
+            <p id="mdpLead" class="lead">Scegli il giocatore: la foto prende la maglia della partita.</p>
+            <div id="photoKitRow" class="src-row" role="radiogroup" aria-label="Maglia" hidden></div>
+            <label class="search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="photoPlayerSearch" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Cerca giocatore…">
+            </label>
+            <div id="photoPlayerSummary" class="hint"></div>
+            <div id="photoPlayerList" class="results"></div>
+          </section>
+
           <section class="screen" data-screen="photo">
             <div id="photoEyebrow" class="eyebrow">Starting XI</div>
             <div class="photo-head">
               <h1>Foto</h1>
-              <div class="head-icos">
-                <button id="photoPlayer" class="head-ico" type="button" aria-label="Scegli giocatore" title="Scegli giocatore" hidden><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></button>
-                <button id="photoPick" class="head-ico" type="button" aria-label="Scegli foto" title="Scegli foto"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></button>
-              </div>
+              <button id="photoPick" class="head-ico" type="button" aria-label="Scegli foto" title="Scegli foto"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></button>
             </div>
             <p id="photoLead" class="lead">Trascina la foto per spostarla, due dita per lo zoom.</p>
-            <div id="photoPlayerPanel" class="md-player" hidden>
-              <div id="photoKitRow" class="src-row" role="radiogroup" aria-label="Maglia" hidden></div>
-              <label class="search">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                <input id="photoPlayerSearch" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Cerca giocatore…">
-              </label>
-              <div id="photoPlayerSummary" class="hint"></div>
-              <div id="photoPlayerList" class="results"></div>
-            </div>
             <div id="photoFrame" class="photo-frame">
               <img id="photoImg" alt="" hidden>
               <img id="photoOverlay" class="overlay" alt="">

@@ -260,7 +260,7 @@ function buildFlow() {
   else if (PREMATCH.includes(kind)) {
     // Matchday / Starting XI di una partita UEFA: niente passo "Maglia" (colori della coppa).
     const kitStep = uefa && kind !== 'pxi' ? [] : ['kit'];
-    const rest = {squad:['squad'], xi:[...kitStep,'lineup','photo'], md:[...kitStep,'match','photo'], pxi:friendly ? ['xi11'] : ['kit','xi11']}[kind];
+    const rest = {squad:['squad'], xi:[...kitStep,'lineup','mdplayer'], md:[...kitStep,'match','mdplayer'], pxi:friendly ? ['xi11'] : ['kit','xi11']}[kind];
     flow = pick([...base,...rest]);
     // Squad List da una partita dei convocati: giocatori già compilati, si va dritti all'anteprima.
     if (kind === 'squad' && String(mdPick).startsWith('site:')) flow = ['mdpick'];
@@ -317,6 +317,7 @@ function stepValue(step) {
       return n ? `${n} / 11` : '';
     }
     case 'photo': return photoState.id ? 'Caricata' : '';
+    case 'mdplayer': { const p = players.find(x => x.name === mdp.player); return p ? surnameOf(p) : ''; }
     case 'phasephoto': return ppState.bg ? 'Caricata' : '';
     case 'jrcolor': return jrColorLabel();
     case 'jrstyle': return labelOf(JR_STYLES,jrb.style);
@@ -512,7 +513,8 @@ function renderFlow() {
   } catch (_) {}
   if (screenName === 'phasephoto') { if (LIVE) $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
   if (screenName === 'iqmode' || screenName === 'iqurl' || screenName === 'iqpick' || screenName === 'iqshot' || screenName === 'iqtext') iqTexts();
-  if (screenName === 'photo') { if (isQuoteKind(kind)) iqSyncPhoto(); mdp.open = false; mdpRender(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
+  if (screenName === 'photo') { if (isQuoteKind(kind)) iqSyncPhoto(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
+  if (screenName === 'mdplayer') { mdpRender(); mdpLoad(); }
   if (screenName === 'jrphotos') renderJrPicker();
   if (screenName === 'jrlayout') { renderJrLayout(true); requestAnimationFrame(() => { fitColBig(); renderJrLayout(); }); }
   if (screenName === 'jrbg') renderJrBg();
