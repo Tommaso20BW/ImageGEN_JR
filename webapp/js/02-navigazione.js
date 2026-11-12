@@ -512,7 +512,7 @@ function renderFlow() {
   } catch (_) {}
   if (screenName === 'phasephoto') { if (LIVE) $('ppEyebrow').textContent = liveTitle || labelOf(PHASES,phase); loadPpGhost(); requestAnimationFrame(layoutPhase); }
   if (screenName === 'iqmode' || screenName === 'iqurl' || screenName === 'iqpick' || screenName === 'iqshot' || screenName === 'iqtext') iqTexts();
-  if (screenName === 'photo') { if (isQuoteKind(kind)) iqSyncPhoto(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
+  if (screenName === 'photo') { if (isQuoteKind(kind)) iqSyncPhoto(); mdp.open = false; mdpRender(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
   if (screenName === 'jrphotos') renderJrPicker();
   if (screenName === 'jrlayout') { renderJrLayout(true); requestAnimationFrame(() => { fitColBig(); renderJrLayout(); }); }
   if (screenName === 'jrbg') renderJrBg();

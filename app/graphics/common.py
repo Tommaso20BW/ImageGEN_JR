@@ -360,3 +360,26 @@ def _fx(path, light):
     out = io.BytesIO()
     Image.fromarray(np.clip(a + .5, 0, 255).astype('uint8'), 'RGBA').save(out, format='PNG')
     return 'data:image/png;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
+
+
+# Matchday e Starting XI: posa 3:4 del giocatore già scontornata (players_matchday/ negli asset),
+# con la maglia della partita. Le grafiche UEFA prendono la maglia su cui sono disegnate.
+MATCHDAY_POSES = {'arms_crossed': 'pose_01_arms_crossed', 'pointing': 'pose_02_pointing'}
+
+
+def matchday_pose(player, kit, pose):
+    from graphics.probabili import PHOTO_KIT
+    from graphics.uefa import ALL, base_kit
+    if pose not in MATCHDAY_POSES:
+        raise ValueError('Posa non valida.')
+    if kit not in ALL:
+        raise ValueError('Maglia non valida.')
+    shirt = kit if kit in PHOTO_KIT else base_kit(kit)
+    suffix, keeper = PHOTO_KIT.get(shirt, PHOTO_KIT['home'])
+    tag = keeper if player.role == 'goalkeeper' else suffix
+    folder = asset_dir() / 'players_matchday' / player.slug
+    name = f'{player.slug}{"_" + tag if tag else ""}_{MATCHDAY_POSES[pose]}.png'
+    path = folder / name
+    if not path.is_file():
+        raise ValueError(f'Manca la posa di {player.name} con questa maglia.')
+    return path

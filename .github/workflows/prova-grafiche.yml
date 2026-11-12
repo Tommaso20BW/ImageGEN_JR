@@ -54,7 +54,7 @@ jobs:
         run: |
           mkdir -p _graphics_core/assets/goal_graphics
           cp -a _private_assets/players _private_assets/fonts _private_assets/team_logos _private_assets/overlays _private_assets/portrait _private_assets/word_textures _private_assets/canva _graphics_core/assets/goal_graphics/
-          for d in team_overrides team_emoji flags flags_round players_lega imagegen; do
+          for d in team_overrides team_emoji flags flags_round players_lega players_matchday imagegen; do
             if [ -d "_private_assets/$d" ]; then cp -a "_private_assets/$d" _graphics_core/assets/goal_graphics/; fi
           done
 

@@ -47,7 +47,7 @@ async function uploadIgPhoto(file) {
 }
 
 function clearPhoto() {
-  if (photoState.url) { try { URL.revokeObjectURL(photoState.url); } catch (_) {} }
+  if (photoState.url && photoState.url.startsWith('blob:')) { try { URL.revokeObjectURL(photoState.url); } catch (_) {} }
   Object.assign(photoState,{id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, uploading:false});
   $('photoImg').hidden = true;
   $('photoImg').removeAttribute('src');
@@ -1373,4 +1373,97 @@ async function jrTitleGhost(overlay) {
     overlay.src = url;
     overlay.style.visibility = '';
   } catch (_) {}
+}
+
+
+/* ---------- Matchday / Starting XI: "Scegli giocatore" ----------
+   Al posto di caricare una foto: posa 3:4 del giocatore già scontornata (asset players_matchday/),
+   con la maglia della partita. Partite UEFA: la maglia delle foto si sceglie qui (parte da quella
+   su cui è disegnata la competizione). La posa entra nell'editor come una foto caricata. */
+const MD_SHIRTS = [['home','Home'],['away','Away'],['third','Third']];
+const UEFA_BASE = {ucl:'third', uel:'home', conference:'home', coppa:'third', supercoppa:'third', usc:'third', cwc:'third', friendly:'third'};   // graphics/uefa.py base_kit
+const mdp = {open:false, pose:'arms_crossed', shirt:'', player:'', photoId:'', loading:false};
+
+function mdpAvailable() { return kind === 'md' || kind === 'xi'; }
+function mdpShirt() {
+  if (!UEFA_THEMES[kit]) return kit || 'home';
+  return mdp.shirt || UEFA_BASE[kit] || 'home';
+}
+function mdpRow(id, options, value, onPick) {
+  const box = $(id);
+  box.innerHTML = '';
+  options.forEach(([v,label]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn ghost' + (v === value ? ' on' : '');
+    b.setAttribute('role','radio');
+    b.setAttribute('aria-checked',v === value ? 'true' : 'false');
+    b.innerHTML = '<span class="src-name"></span>';
+    b.querySelector('.src-name').textContent = label;
+    b.addEventListener('click',() => { haptic('select'); onPick(v); });
+    box.appendChild(b);
+  });
+}
+function mdpRender() {
+  $('photoPlayer').hidden = !mdpAvailable();
+  const open = mdp.open && mdpAvailable();
+  $('photoPlayerPanel').hidden = !open;
+  $('photoFrame').style.display = open ? 'none' : '';
+  $('photoSummary').hidden = open;
+  $('photoLead').textContent = open ? (UEFA_THEMES[kit] ? 'Scegli posa, maglia e giocatore.' : 'Scegli posa e giocatore: la foto prende la maglia della partita.')
+    : 'Trascina la foto per spostarla, due dita per lo zoom.';
+  $('photoPlayer').classList.toggle('on',open);
+  if (!open) return;
+  mdpRow('photoPoseRow',POSES,mdp.pose,v => { mdp.pose = v; mdpRender(); });
+  $('photoKitRow').hidden = !UEFA_THEMES[kit];
+  if (UEFA_THEMES[kit]) mdpRow('photoKitRow',MD_SHIRTS,mdpShirt(),v => { mdp.shirt = v; mdpRender(); });
+  const q = $('photoPlayerSearch').value;
+  const matches = playersLoaded ? searchItems(players,q) : [];
+  $('photoPlayerSummary').textContent = mdp.loading ? 'Caricamento posa…'
+    : !playersLoaded ? 'Caricamento giocatori…' : !matches.length ? 'Nessun risultato.' : '';
+  renderResults('photoPlayerList',matches,photoState.id && photoState.id === mdp.photoId ? mdp.player : '',item => surnameOf(item),item => mdpPick(item),null,Infinity);
+}
+function mdpToggle(open = !mdp.open) {
+  mdp.open = open;
+  mdpRender();
+  if (!open) requestAnimationFrame(layoutPhoto);
+}
+async function mdpPick(item) {
+  if (mdp.loading) return;
+  clearError();
+  if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+  mdp.loading = true; mdpRender();
+  try {
+    const response = await netFetch(`${directBase}/playerphoto`,{
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify({v:1, session, player:item.name, kit:mdpShirt(), pose:mdp.pose})
+    }, 30000, 2);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.ok) throw new Error(body.error || 'Posa non disponibile.');
+    clearPhoto();
+    Object.assign(photoState,{id:body.photo_id, w:body.width, h:body.height, url:body.preview});
+    // Starting XI: il giocatore parte a destra e un po' più in basso, lontano da titolo e loghi.
+    if (kind === 'xi') Object.assign(photoState,{x:.1, y:.1, zoom:1.2});
+    mdp.player = item.name; mdp.photoId = body.photo_id;
+    $('photoImg').src = photoState.url;
+    $('photoImg').hidden = false;
+    $('photoEmpty').hidden = true;
+    mdp.loading = false;
+    mdpToggle(false);
+    layoutPhoto();
+    $('photoSummary').textContent = `${surnameOf(item)} · ${labelOf(POSES,mdp.pose)}`;
+    haptic('success');
+    updatePhotoOverlay();
+  } catch (err) {
+    showError(err && err.message ? err.message : 'Posa non disponibile.');
+  } finally {
+    mdp.loading = false;
+    if (mdp.open) mdpRender();
+    renderSteps();
+  }
+}
+function initPlayerPose() {
+  $('photoPlayer').addEventListener('click',() => { clearError(); mdpToggle(); });
+  $('photoPlayerSearch').addEventListener('input',() => mdpRender());
+  $('photoPick').addEventListener('click',() => { if (mdp.open) mdpToggle(false); });
 }

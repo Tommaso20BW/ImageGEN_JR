@@ -46,6 +46,7 @@ $('statRows').addEventListener('input',() => { collectStats(); renderSteps(); })
 $('statClear').addEventListener('click',() => { clearStats(); clearError(); renderSteps(); });
 $('squadText').addEventListener('input',() => { updateSquadSummary(); clearError(); renderSteps(); });
 initPhotoEditor();
+initPlayerPose();
 initJrBlur();
 initJrColor();
 natInit();

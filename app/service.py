@@ -357,7 +357,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost', '/colors'):
+                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -398,6 +398,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/colors':
                 self._json(200, {'ok': True, **self.service.colors(envelope)})
+                return
+
+            if path == '/playerphoto':
+                self._json(200, {'ok': True, **self.service.player_photo(envelope)})
                 return
 
             if path == '/igpost':
@@ -495,6 +499,29 @@ class Service:
             self.photos.pop(next(iter(self.photos)))
         log.info('FOTO', f'Foto caricata · {width}×{height}')
         return {'photo_id': photo_id, 'width': width, 'height': height}
+
+    def player_photo(self, envelope):
+        """Matchday / Starting XI: posa 3:4 del giocatore dagli asset al posto della foto caricata.
+        Entra tra le foto della sessione come un caricamento (stesso editor, stessa scia)."""
+        import base64
+        from PIL import Image
+        from graphics.common import matchday_pose
+        from livescore.graphics import goal as g
+        envelope = envelope or {}
+        name = str(envelope.get('player') or '')
+        player = next((p for p in g.load_players() if p.name == name), None)
+        if player is None:
+            raise ValueError('Giocatore non trovato.')
+        path = matchday_pose(player, str(envelope.get('kit') or 'home'), str(envelope.get('pose') or ''))
+        out = self.store_photo(path.read_bytes())
+        # Anteprima leggera per l'editor del telefono (la grafica usa il PNG intero).
+        with Image.open(path) as image:
+            image.thumbnail((720, 960))
+            buf = io.BytesIO()
+            image.save(buf, 'WEBP', quality=82)
+        out['preview'] = 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
+        log.info('FOTO', f'Posa di {player.name} ({path.name})')
+        return out
 
     def store_story_shot(self, raw):
         """Screenshot di una storia (Citazione IG): tiene la storia senza l'interfaccia di Instagram e,

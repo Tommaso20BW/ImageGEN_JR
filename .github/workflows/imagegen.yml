@@ -59,6 +59,8 @@ jobs:
           if [ -d _private_assets/flags_round ]; then cp -a _private_assets/flags_round _graphics_core/assets/goal_graphics/; fi
           # Foto ufficiali dei giocatori dal sito della Lega Serie A (app/foto_lega.py).
           if [ -d _private_assets/players_lega ]; then cp -a _private_assets/players_lega _graphics_core/assets/goal_graphics/; fi
+          # Pose 3:4 dei giocatori per Matchday e Starting XI ("Scegli giocatore").
+          if [ -d _private_assets/players_matchday ]; then cp -a _private_assets/players_matchday _graphics_core/assets/goal_graphics/; fi
           # Ultimi invii e frasi pronte della Storia IG (salvati dalla mini app, app/sent_store.py).
           if [ -d _private_assets/imagegen ]; then cp -a _private_assets/imagegen _graphics_core/assets/goal_graphics/; fi
 
