@@ -1377,12 +1377,14 @@ async function jrTitleGhost(overlay) {
 
 
 /* ---------- Matchday / Starting XI: "Scegli giocatore" ----------
-   Al posto di caricare una foto: posa 3:4 del giocatore già scontornata (asset players_matchday/),
+   Al posto di caricare una foto: posa 3:4 (Matchday indica, Starting XI braccia incrociate) del giocatore già scontornata (asset players_matchday/),
    con la maglia della partita. Partite UEFA: la maglia delle foto si sceglie qui (parte da quella
    su cui è disegnata la competizione). La posa entra nell'editor come una foto caricata. */
 const MD_SHIRTS = [['home','Home'],['away','Away'],['third','Third']];
 const UEFA_BASE = {ucl:'third', uel:'home', conference:'home', coppa:'third', supercoppa:'third', usc:'third', cwc:'third', friendly:'third'};   // graphics/uefa.py base_kit
-const mdp = {open:false, pose:'arms_crossed', shirt:'', player:'', photoId:'', loading:false};
+const mdp = {open:false, shirt:'', player:'', photoId:'', loading:false};
+// Posa fissa: Matchday indica lo stemma, Starting XI braccia incrociate.
+const mdpPose = () => kind === 'md' ? 'pointing' : 'arms_crossed';
 
 function mdpAvailable() { return kind === 'md' || kind === 'xi'; }
 function mdpShirt() {
@@ -1410,11 +1412,10 @@ function mdpRender() {
   $('photoPlayerPanel').hidden = !open;
   $('photoFrame').style.display = open ? 'none' : '';
   $('photoSummary').hidden = open;
-  $('photoLead').textContent = open ? (UEFA_THEMES[kit] ? 'Scegli posa, maglia e giocatore.' : 'Scegli posa e giocatore: la foto prende la maglia della partita.')
+  $('photoLead').textContent = open ? (UEFA_THEMES[kit] ? 'Scegli la maglia e il giocatore.' : 'Scegli il giocatore: la foto prende la maglia della partita.')
     : 'Trascina la foto per spostarla, due dita per lo zoom.';
   $('photoPlayer').classList.toggle('on',open);
   if (!open) return;
-  mdpRow('photoPoseRow',POSES,mdp.pose,v => { mdp.pose = v; mdpRender(); });
   $('photoKitRow').hidden = !UEFA_THEMES[kit];
   if (UEFA_THEMES[kit]) mdpRow('photoKitRow',MD_SHIRTS,mdpShirt(),v => { mdp.shirt = v; mdpRender(); });
   const q = $('photoPlayerSearch').value;
@@ -1436,7 +1437,7 @@ async function mdpPick(item) {
   try {
     const response = await netFetch(`${directBase}/playerphoto`,{
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-      body:JSON.stringify({v:1, session, player:item.name, kit:mdpShirt(), pose:mdp.pose})
+      body:JSON.stringify({v:1, session, player:item.name, kit:mdpShirt(), pose:mdpPose()})
     }, 30000, 2);
     const body = await response.json().catch(() => ({}));
     if (!response.ok || !body.ok) throw new Error(body.error || 'Posa non disponibile.');
@@ -1451,7 +1452,7 @@ async function mdpPick(item) {
     mdp.loading = false;
     mdpToggle(false);
     layoutPhoto();
-    $('photoSummary').textContent = `${surnameOf(item)} · ${labelOf(POSES,mdp.pose)}`;
+    $('photoSummary').textContent = surnameOf(item);
     haptic('success');
     updatePhotoOverlay();
   } catch (err) {
