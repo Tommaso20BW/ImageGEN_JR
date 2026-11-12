@@ -351,6 +351,22 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
+    # RINNOVI: maglia home con nome e anno di scadenza (font dello Juventus Store).
+    if kind == 'rin':
+        from graphics import rinnovo
+        name, year = rinnovo.clean_name(incoming.get('name')), rinnovo.clean_year(incoming.get('year'))
+        if not name:
+            raise ValueError('Scrivi il nome.')
+        if len(year) != 4:
+            raise ValueError("Scrivi l'anno con 4 cifre.")
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {'kind': 'rin', 'name': name, 'year': year},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
     # FOTO + JR: niente partita, solo foto e colore del logo.
     if kind == 'jr':
         try:

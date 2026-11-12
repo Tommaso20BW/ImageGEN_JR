@@ -20,6 +20,7 @@ KINDS = [
     ('CONVOCATI', 'conv'),
     ('FOTO + JR', 'jr'),
     ('STORIE INSTAGRAM - BREAKING NEWS', 'igbn'),
+    ('RINNOVI', 'rin'),
     ('CITAZIONE INSTAGRAM', 'igq'),
     ('CITAZIONE X', 'xq'),
     ('CITAZIONE THREADS', 'thq'),

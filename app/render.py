@@ -306,6 +306,11 @@ class Renderer:
                                    photo=self._photo(data) if data.get('photo_id') else None,
                                    color=data.get('color', 'black'))
 
+        if kind == 'rin':
+            from graphics import rinnovo
+
+            return rinnovo.render(name=data.get('name', ''), year=data.get('year', ''))
+
         if kind == 'jr':
             from graphics import photo_jr
 

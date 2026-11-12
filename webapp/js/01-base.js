@@ -77,6 +77,7 @@ const ICONS = {
   'conv':'<path d="M5.5 12.5l4.2 4.2L18.5 7.5" stroke-width="2.8"/>',
   'jr':'<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="1.8"/><path d="M21 16l-5-5-9 10"/>',
   'igbn':'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  'rin':'<path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M9.6 8.3 5.2 10.1C4.4 10.4 4.2 11 4.2 11.6L3.9 16.2M11.5 8.9 18.8 12.6C19.6 12.3 20.6 12.7 20.7 14L20.6 17.6C20.5 18.4 19.9 18.6 19 18.6C17.5 18.6 16.5 19 15 18.8C13 18.6 11.2 18.4 10 17.4C9.3 16.6 8.2 16.2 7.2 16.6M6.4 17.4C7.1 18.5 8.4 18.6 9.6 17.6M9 12.9C9.5 12.6 10 12.6 10.5 12.6H12.9"/><path fill="currentColor" stroke="none" d="M12.9 2.4 14.8 3.5 5.7 19 2.7 21.3 3.7 17.6Z"/>',
   'g-pre':'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/>',
   'g-events':'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>',
   'g-play':'<circle cx="12" cy="12" r="9"/><path d="M12 8.2l3.4 2.5-1.3 4h-4.2l-1.3-4zM12 8.2V3.1M15.4 10.7l5-1.9M14.1 14.7l3.4 4.4M9.9 14.7l-3.4 4.4M8.6 10.7l-5-1.9"/>',
@@ -105,6 +106,7 @@ const REQUESTS = [
   {id:'table',  kind:'table', icon:'table', title:'Classifica',  desc:'Classifiche e tabelloni, aggiornati da Diretta.it'},
   {id:'conv',   kind:'conv',  icon:'conv', title:'Convocati',    desc:'Bianconeri convocati in nazionale, con le bandiere'},
   {id:'jr',     kind:'jr',    icon:'jr', title:'Post',         desc:'Foto con il logo JR: classica, sfocata, collage o con titolo'},
+  {id:'rin',    kind:'rin',   icon:'rin', title:'Rinnovi',      desc:'Maglia stesa con nome e anno del contratto'},
   {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia Instagram', desc:'Breaking News in formato storia'},
   {id:'igq',    kind:'igq',   icon:'igq', title:'Citazione Instagram', desc:'Post Instagram: foto, testo e account'},
   {id:'xq',     kind:'xq',    icon:'xq', title:'Citazione X',  desc:'Post X: testo, account e foto (o sfondo)'},
@@ -117,7 +119,7 @@ const HOME_GROUPS = [
   {icon:'g-events', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
   {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
   {icon:'igq', title:'Social',                    ids:['igbn','igq','xq','thq']},
-  {icon:'g-other', title:'Altro',                 ids:['jr','cal','table','sent']},
+  {icon:'g-other', title:'Altro',                 ids:['rin','jr','cal','table','sent']},
   {icon:'ita', title:'Nazionale',                 ids:['ita','conv']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
@@ -199,7 +201,7 @@ const STEP_NAMES = {
   competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
   player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
   natkind:'Grafica', natxi:'Formazione', natopp:'Avversaria', natplayer:'Giocatore', goaltype:'Tipo di gol',
-  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
+  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', rincontent:'Rinnovo', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
 };
 
 const $ = id => document.getElementById(id);

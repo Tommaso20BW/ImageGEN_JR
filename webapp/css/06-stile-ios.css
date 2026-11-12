@@ -220,6 +220,7 @@ button.sp-item:active{background:var(--accent-soft)}
 .hm-item[data-id="stats"] .hm-ico{background:#5856D6}
 .hm-item[data-id="jr"] .hm-ico{background:#FF2D55}
 .hm-item[data-id="igbn"] .hm-ico{background:#AF52DE}
+.hm-item[data-id="rin"] .hm-ico{background:#34C759}
 .hm-item[data-id="igq"] .hm-ico{background:linear-gradient(45deg,#F58529,#DD2A7B 55%,#8134AF)}
 .hm-item[data-id="cal"] .hm-ico{background:#FF9500}
 .hm-item[data-id="table"] .hm-ico{background:#30B0C7}

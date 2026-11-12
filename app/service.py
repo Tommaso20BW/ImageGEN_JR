@@ -1521,6 +1521,8 @@ def _send_detail(data):
         who = ' · '.join(v for v in (str(data.get('name') or ''),
                                      f"@{data['handle']}" if data.get('handle') else '') if v)
         return {**empty, 'player': who, 'note': note}
+    if kind == 'rin':
+        return {**empty, 'player': str(data.get('name') or ''), 'note': f"Fino al {data.get('year', '')}"}
     if kind == 'conv':
         n = len(data.get('players') or [])
         return {**empty, 'player': f'{n} giocatori',

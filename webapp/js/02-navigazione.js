@@ -273,6 +273,7 @@ function buildFlow() {
   else if (kind === 'cal') flow = ['calmonth','calrows'];
   else if (kind === 'conv') flow = ['convlist'];
   else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
+  else if (kind === 'rin') flow = ['rincontent'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent','igsent'] : ['igcontent'];
   // Storia: niente editor della foto (la storia va intera nel riquadro 9:16).
   // Citazione Instagram: prima si sceglie Post o Storia. X e Threads: solo post.
@@ -346,6 +347,10 @@ function stepValue(step) {
     case 'iqpick': return iq.sel >= 0 ? `Foto ${iq.sel + 1}` : '';
     case 'iqshot': return iq.photos.length ? 'Allegato' : '';
     case 'iqtext': return $('iqName').value.trim();
+    case 'rincontent': {
+      const n = $('rinName').value.trim().toUpperCase(), y = $('rinYear').value.trim();
+      return n && y ? `${n} · ${y}` : n;
+    }
     case 'igcontent': {
       const t = $('igText').value.trim().length;
       return [t ? 'Testo' : '', igb.id ? 'Foto' : ''].filter(Boolean).join(' + ');

@@ -28,6 +28,12 @@ function buildPayload(ghost=false) {
       handle:$('iqHandle').value.trim(), verified:!!iq.verified,
       frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}}};
   }
+  if (kind === 'rin') {
+    const name = $('rinName').value.trim(), year = $('rinYear').value.trim();
+    if (!name) throw new Error('Scrivi il nome.');
+    if (!/^\d{4}$/.test(year)) throw new Error("Scrivi l'anno con 4 cifre.");
+    return {v:1, action:'render', session, data:{kind:'rin', name, year}};
+  }
   if (kind === 'igbn') {
     const text = $('igText').value.trim();
     if (!text && !igb.id) throw new Error('Scrivi un testo o scegli una foto.');

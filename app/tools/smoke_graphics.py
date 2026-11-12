@@ -95,6 +95,7 @@ def _cases(roster):
                              'cards': [{'photo_id': 'a' * 16, 'x': .5, 'y': .5, 'w': .7}]}
     yield 'Post (collage)', {'kind': 'jr', 'style': 'collage', 'color': 'black', 'cells': [
         {'photo_id': 'a' * 16, 'x': 0, 'y': 0, 'w': .5, 'h': 1}, {'photo_id': 'b' * 16, 'x': .5, 'y': 0, 'w': .5, 'h': 1}]}
+    yield 'Rinnovo', {'kind': 'rin', 'name': 'N.GONZALEZ', 'year': '2030'}
     yield 'Storia Instagram', {'kind': 'igbn', 'text': 'Breaking news: prova automatica delle grafiche.', **photo}
     quote = {'text': 'Testo di prova della citazione, abbastanza lungo da andare a capo.', 'name': 'Juventus Reborn',
              'handle': 'juventus_reborn', **photo}

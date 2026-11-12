@@ -270,7 +270,7 @@ LIVE_KINDS = {'goal', 'saved', 'kick', 'half', 'second', 'end_of_90', 'full', 's
 
 
 # Post (testo scritto ogni volta a mano), Storie e Citazioni (per Instagram, X, Threads): niente testo.
-NO_CAPTION = {'jr', 'igbn', 'igq', 'xq', 'thq'}
+NO_CAPTION = {'jr', 'igbn', 'igq', 'xq', 'thq', 'rin'}
 
 
 def _live(data):
