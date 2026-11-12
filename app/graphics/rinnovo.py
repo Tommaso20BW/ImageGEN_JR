@@ -19,9 +19,10 @@ JR_COLOR = 'white'        # logo JR come nelle altre grafiche (FOTO + JR), in al
 
 # Dove stanno nome e numero sulla maglia (misurati sulla grafica di riferimento, 1500x2000):
 # angolo in alto a sinistra e in basso a sinistra a x0, in alto e in basso a destra a x1.
-# La maglia è un po' girata: il lato destro è più in basso.
-NAME_BOX = {'x0': 458, 'x1': 1029, 'top': (487, 517), 'bottom': (595, 627), 'max_w': 640}
-YEAR_BOX = {'x0': 387, 'x1': 1081, 'top': (656, 707), 'bottom': (961, 998), 'max_w': 760}
+# La maglia è un po' girata: il lato destro è più in basso. cx = centro della scritta, sull'asse della
+# maglia (colletto a x 737, fondo a x 765: la maglia pende un po', quindi più in basso sta più a destra).
+NAME_BOX = {'x0': 458, 'x1': 1029, 'top': (487, 517), 'bottom': (595, 627), 'max_w': 640, 'cx': 749}
+YEAR_BOX = {'x0': 387, 'x1': 1081, 'top': (656, 707), 'bottom': (961, 998), 'max_w': 760, 'cx': 755}
 
 SPECIAL = {'.': 'dot', ' ': 'space', '-': 'dash', "'": 'apostrophe', '’': 'apostrophe'}
 
@@ -85,7 +86,7 @@ def _place(canvas, line, box):
     """Mette la riga nel riquadro inclinato `box`, centrata; se è troppo lunga la stringe."""
     x0, x1 = box['x0'], box['x1']
     (t0, t1), (b0, b1) = box['top'], box['bottom']
-    cx = (x0 + x1) / 2
+    cx = box.get('cx', (x0 + x1) / 2)
     h_mid = ((b0 - t0) + (b1 - t1)) / 2
     w = line.width * h_mid / line.height
     w = min(w, box['max_w'])
