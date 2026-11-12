@@ -21,8 +21,8 @@ JR_COLOR = 'white'        # logo JR come nelle altre grafiche (FOTO + JR), in al
 # angolo in alto a sinistra e in basso a sinistra a x0, in alto e in basso a destra a x1.
 # La maglia è un po' girata: il lato destro è più in basso. cx = centro della scritta, sull'asse della
 # maglia (colletto a x 737, fondo a x 765: la maglia pende un po', quindi più in basso sta più a destra).
-NAME_BOX = {'x0': 458, 'x1': 1029, 'top': (487, 517), 'bottom': (595, 627), 'max_w': 640, 'cx': 749}
-YEAR_BOX = {'x0': 387, 'x1': 1081, 'top': (656, 707), 'bottom': (961, 998), 'max_w': 760, 'cx': 755}
+NAME_BOX = {'x0': 458, 'x1': 1029, 'top': (487, 517), 'bottom': (595, 627), 'max_w': 640, 'cx': 768}
+YEAR_BOX = {'x0': 387, 'x1': 1081, 'top': (656, 707), 'bottom': (961, 998), 'max_w': 760, 'cx': 772}
 
 SPECIAL = {'.': 'dot', ' ': 'space', '-': 'dash', "'": 'apostrophe', '’': 'apostrophe'}
 
