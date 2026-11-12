@@ -673,7 +673,9 @@ function updateScreenValues() {
   renderOptions('tableCompOpts',TABLE_COMPS,tableComp,v => { tableComp = v; buildFlow(); });
   renderOptions('tableViewOpts',TABLE_VIEWS,tableView,v => { tableView = v; });
   renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); autoCalendar(); });
-  renderOptions('poseOpts',POSES,pose,v => pose = v);
+  const poseList = posesForPlayer();
+  if (pose && !poseList.some(([v]) => v === pose)) pose = '';   // cambiati giocatore o maglia
+  renderOptions('poseOpts',poseList,pose,v => pose = v);
   natRender();
   renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
   updatePhaseUI();

@@ -188,6 +188,13 @@ let PXI_MODULES = [["4-2-3-1", "4-2-3-1"], ["4-3-3", "4-3-3"], ["4-4-2", "4-4-2"
 let PXI_ROLES = {"4-2-3-1": ["POR", "TS", "DC", "DC", "TD", "CDC", "CDC", "AS", "COC", "AD", "ATT"], "4-3-3": ["POR", "TS", "DC", "DC", "TD", "CC", "CC", "CC", "AS", "ATT", "AD"], "4-4-2": ["POR", "TS", "DC", "DC", "TD", "ES", "CC", "CC", "ED", "ATT", "ATT"], "4-3-1-2": ["POR", "TS", "DC", "DC", "TD", "CC", "CC", "CC", "TRQ", "ATT", "ATT"], "4-2-2-2": ["POR", "TS", "DC", "DC", "TD", "CDC", "CDC", "AS", "AD", "ATT", "ATT"], "4-3-2-1": ["POR", "TS", "DC", "DC", "TD", "CC", "CC", "CC", "TRQ", "TRQ", "ATT"], "4-1-2-1-2": ["POR", "TS", "DC", "DC", "TD", "CDC", "CC", "CC", "COC", "ATT", "ATT"], "3-4-2-1": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "TRQ", "TRQ", "ATT"], "3-4-1-2": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "TRQ", "ATT", "ATT"], "3-5-2": ["POR", "DC", "DC", "DC", "ES", "CC", "CDC", "CC", "ED", "ATT", "ATT"], "3-5-1-1": ["POR", "DC", "DC", "DC", "ES", "CC", "CDC", "CC", "ED", "TRQ", "ATT"], "3-4-3": ["POR", "DC", "DC", "DC", "ES", "CC", "CC", "ED", "AS", "ATT", "AD"], "5-4-1": ["POR", "TS", "DC", "DC", "DC", "TD", "ES", "CC", "CC", "ED", "ATT"]};
 // Pose di Gol e Parata: le due base più le esultanze (livescore/graphics/goal.py POSES).
 const POSES = [['arms_crossed','Braccia incrociate'],['pointing','Indica'],['scream','Urlo'],['point_sky','Dito al cielo'],['kiss_crest','Bacio allo stemma'],['shush','Shh']];
+// Solo le pose che esistono per il giocatore scelto con quella maglia (catalogo del workflow).
+// Senza l'elenco (catalogo di riserva da GitHub) restano tutte: il servizio avvisa se ne manca una.
+function posesForPlayer() {
+  const byKit = selectedPlayer && selectedPlayer.poses;
+  const have = byKit && byKit[kit];
+  return Array.isArray(have) && have.length ? POSES.filter(([v]) => have.includes(v)) : POSES;
+}
 const MOMENTS = [['HT','HALF TIME'],['2H_END',"END OF 90'"],['FT','FULL TIME']];
 const STATS = [
   'POSSESSO','xG','TIRI','TIRI IN PORTA','CORNER','FALLI',

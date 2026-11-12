@@ -87,8 +87,11 @@ def _prepare(assets, team):
     return row
 
 
-def _players():
-    """Rosa dal motore grafico, nello stesso formato letto dalla Mini App."""
+def _players(assets=g.DEFAULT_ASSET_DIR):
+    """Rosa dal motore grafico, nello stesso formato letto dalla Mini App.
+
+    'poses' dice, maglia per maglia, quali pose hanno il PNG: la Mini App mostra solo quelle.
+    """
     rows = []
     for player in g.load_players():
         rows.append({
@@ -97,6 +100,8 @@ def _players():
             'role': getattr(player, 'role', None),
             'slug': player.slug,
             'number': SHIRT_NUMBERS.get(player.slug),
+            'poses': {kit: list(g.available_poses(player, kit, assets) or ())
+                      for kit in ('home', 'away', 'third')},
         })
     rows.sort(key=lambda row: row['name'].casefold())
     return rows
@@ -116,7 +121,7 @@ def build_team_bundle(assets=g.DEFAULT_ASSET_DIR):
     ready = sum(1 for row in rows if row.get('logo'))
     log.info('AVVIO', f'Loghi incorporati: {ready}/{len(rows)}')
     try:
-        players = _players()
+        players = _players(assets)
     except Exception as exc:  # la Mini App ripiega sul download da GitHub
         log.warn('AVVIO', f'Calciatori non preparati: {exc}')
         players = []
