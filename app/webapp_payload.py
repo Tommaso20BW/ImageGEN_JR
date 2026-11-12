@@ -21,7 +21,8 @@ VALID_SIDES = {'home', 'away'}
 ITALY_KINDS = {'kick', 'second', 'half', 'end_of_90', 'full', 'goal', 'saved', 'stats', 'xi'}
 ITALY_KITS = {'ita_home', 'ita_away'}
 GOAL_TYPES = {'goal', 'penalty', 'own', 'nophoto'}   # gol, rigore, autogol, senza foto
-VALID_POSES = {'arms_crossed', 'pointing'}
+VALID_POSES = {'arms_crossed', 'pointing', 'scream', 'point_sky', 'kiss_crest', 'shush'}
+BASE_POSES = {'arms_crossed', 'pointing'}   # le esultanze possono mancare per qualche maglia
 VALID_MOMENTS = {'HT', '2H_END', 'FT'}
 BUSY = {'ready', 'rendering', 'sending'}
 
@@ -474,6 +475,13 @@ def _build_state(envelope, catalog, now, expected_session):
         pose = str(incoming.get('pose') or ('arms_crossed' if friendly else ''))
         if pose not in VALID_POSES:
             raise ValueError('Posa non valida.')
+        if pose not in BASE_POSES:
+            # Senza il PNG la card ripiegherebbe in silenzio su un'altra posa: meglio dirlo subito.
+            from livescore.graphics import goal as g
+            player = next((p for p in g.load_players() if p.name == data['player']), None)
+            assets = getattr(catalog, 'assets', g.DEFAULT_ASSET_DIR)
+            if player and pose not in (g.available_poses(player, kit, assets) or ()):
+                raise ValueError(f'Manca questa esultanza di {player.name} con questa maglia: scegli un\'altra posa.')
         data['pose'] = pose
 
     elif kind in ('second', 'half', 'full', 'end_of_90'):

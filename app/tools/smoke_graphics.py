@@ -61,6 +61,8 @@ def _cases(roster):
     yield 'Gol (autogol)', {'kind': 'goal', **match, 'goal_type': 'own', 'player': 'Rossi', 'minute': '12', 'score': [1, 0]}
     yield 'Gol (senza foto)', {'kind': 'goal', **match, 'goal_type': 'nophoto', 'player': 'Mario Bianchi', 'minute': '30'}
     yield 'Parata', {'kind': 'saved', **match, 'pose': 'arms_crossed', 'player': keeper, 'minute': '77'}
+    yield 'Gol (esultanza urlo)', {'kind': 'goal', **match, 'kit': 'away', 'pose': 'scream', 'player': outfield[0], 'minute': '61', 'score': [2, 0]}
+    yield 'Parata (esultanza urlo)', {'kind': 'saved', **match, 'pose': 'scream', 'player': keeper, 'minute': '80'}
     yield 'Kick Off', {'kind': 'kick', **match}
     yield '2nd Half', {'kind': 'second', **match, 'score': [1, 1]}
     yield 'Half Time', {'kind': 'half', **match, 'score': [1, 0], **photo}
