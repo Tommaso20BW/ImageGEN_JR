@@ -120,6 +120,14 @@ def _italy_state(incoming, kind, competition, kit, side, now):
         names = [_free_name(n, 30) for n in names]
         if not all(names):
             raise ValueError('Scrivi gli 11 titolari.')
+        # Due cognomi uguali: servono iniziali diverse (S. Esposito, P. Esposito), se no si chiede.
+        folded = [' '.join(n.split()).casefold() for n in names]
+        bare = [re.sub(r'^\w\.\s+', '', n) for n in folded]
+        for i, j in ((i, j) for i in range(11) for j in range(i + 1, 11)):
+            if bare[i] == bare[j] and (folded[i] == folded[j] or bare[i] in (folded[i], folded[j])):
+                surname = re.sub(r'^\w\.\s+', '', ' '.join(names[i].split()))
+                raise ValueError(f"Ci sono due {surname.upper()}: scrivi anche l'iniziale del nome "
+                                 f"(es. S. {surname}).")
         data.update(formation=formation, players=names)
     return {'id': uuid.uuid4().hex[:10], 'data': data, 'status': 'ready', 'updated': now,
             'source': 'webapp-direct'}

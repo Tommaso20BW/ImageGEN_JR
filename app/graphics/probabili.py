@@ -145,6 +145,19 @@ def label_name(player):
     return plain(singles[-1] if singles else player.name.split()[-1]).upper()
 
 
+def label_names(players):
+    """label_name per ogni giocatore; con due cognomi uguali si aggiunge l'iniziale del nome
+    (S. ESPOSITO, P. ESPOSITO)."""
+    base = [label_name(p) for p in players]
+    labels = list(base)
+    for i, (player, lab) in enumerate(zip(players, base)):
+        if base.count(lab) > 1:
+            first = plain(str(getattr(player, 'name', '') or '')).split()
+            if len(first) > 1 and first[0][0].isalpha():
+                labels[i] = f'{first[0][0].upper()}. {lab}'
+    return labels
+
+
 def head_photo(player, kit, shirt=None):
     suffix, keeper = PHOTO_KIT[shirt if shirt in PHOTO_KIT else base_kit(kit)]
     folder = asset_dir() / 'players' / player.slug
@@ -210,6 +223,7 @@ def build_html(*, kit, module, players, shirt=None, home_name, home_id, away_nam
     # Amichevoli: solo i nomi, senza foto dei giocatori e senza lastre sfumate (effetto luce).
     names_only = kit == 'friendly'
     cards, labels, names = [], [], []   # lastre+teste sotto, blocchi coi nomi sempre sopra
+    shown = label_names(players)
     for i, ((cx, top), player) in enumerate(zip(place_cards(layout['cards'], s), players)):
         if names_only:
             # Niente foto sopra il nome: l'etichetta sale al centro dello spazio della card,
@@ -229,7 +243,7 @@ def build_html(*, kit, module, players, shirt=None, home_name, home_id, away_nam
         x, base = cx + text['cx'] * s, top + text['base'] * s
         t = (f'<text x="{x}" y="{base}" text-anchor="middle" font-family="{NAME_FONT}" font-weight="500" '
              f'font-size="{NAME_SIZE * s}" letter-spacing="{NAME_SPACING * s}" data-fit="{NAME_MAX_W * s}">'
-             f'{esc(label_name(player))}</text>')
+             f'{esc(shown[i])}</text>')
         if 'texture' in text:
             bx, by, bw, bh = _rect((cx, top), meta['box'], s)
             names.append(f'<clipPath id="n{i}">{t}</clipPath><image href="{data_uri(canva / text["texture"])}" '

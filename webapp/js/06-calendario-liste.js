@@ -197,8 +197,11 @@ function parseFormation(raw) {
       let number = '', label = clean;
       if (m) { if (/^\d/.test(m[1])) { number = m[1]; label = m[2]; } else { label = m[1]; number = m[2]; } }
       // Via le iniziali del nome: "Vicario G." / "G. Vicario" -> "Vicario".
+      // L'iniziale resta in "initial": serve con due cognomi uguali (S. Esposito, P. Esposito).
+      const ini = label.match(/^(\p{L})\.\s+/u) || label.match(/\s+(\p{L})\.$/u);
       label = label.replace(/\s+\p{L}\.$/u,'').replace(/^\p{L}\.\s+/u,'').replace(/[.\-\s]+$/,'').trim();
-      return label && /\p{L}/u.test(label) ? {label, number:number ? String(Number(number)) : ''} : null;
+      return label && /\p{L}/u.test(label)
+        ? {label, number:number ? String(Number(number)) : '', initial:ini ? ini[1].toUpperCase() : ''} : null;
     }).filter(Boolean);
     if (parts.length) groups.push(parts);
   });

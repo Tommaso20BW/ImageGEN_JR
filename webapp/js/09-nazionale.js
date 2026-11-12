@@ -71,11 +71,28 @@ function natStepValue(step) {
   return null;
 }
 
+// Cognomi uguali senza iniziali diverse che li distinguano ("Esposito" e "P. Esposito",
+// oppure due "Esposito"): si chiede l'iniziale. Restituisce i cognomi (minuscoli).
+function natTwins() {
+  const names = natXi.map(n => n.trim().toLowerCase()).filter(Boolean);
+  const bare = n => n.replace(/^\p{L}\.\s+/u,'');
+  return [...new Set(names.filter((n,i) => names.some((m,j) => j !== i && bare(m) === bare(n)
+    && (m === n || m === bare(m) || n === bare(n)))).map(bare))];
+}
+
+function natTwinsError() {
+  const twin = natTwins()[0];
+  if (!twin) return '';
+  const name = cleanName(twin).toUpperCase();
+  return `Ci sono due ${name}: scrivi anche l'iniziale del nome (es. S. ${cleanName(twin)}).`;
+}
+
 function natValidate(step) {
   if (step === 'natkind' && !natSel) { showError('Scegli la grafica.'); return false; }
   if (step === 'goaltype' && !goalType) { showError('Scegli il tipo di gol.'); return false; }
   if (step === 'natxi' && !natModule) { showError('Scegli il modulo.'); return false; }
   if (step === 'natxi' && natXi.some(n => !n.trim())) { showError('Scrivi tutti gli 11 titolari.'); return false; }
+  if (step === 'natxi' && natTwinsError()) { showError(natTwinsError()); return false; }
   if (step === 'natopp' && !natOppName()) { showError('Scrivi la squadra avversaria.'); return false; }
   if (step === 'natplayer' && !natPlayerName()) {
     showError(kind === 'saved' ? 'Scrivi il nome del portiere.' : goalType === 'own' ? "Scrivi chi ha fatto l'autogol." : 'Scrivi il nome del marcatore.');
@@ -113,6 +130,7 @@ function natPayload() {
   if (kind === 'natxi') {
     if (!natModule) throw new Error('Scegli il modulo.');
     if (natXi.some(n => !n.trim())) throw new Error('Scrivi tutti gli 11 titolari.');
+    if (natTwinsError()) throw new Error(natTwinsError());
     data.kind = 'xi';
     data.formation = natModule;
     data.players = natXi.map(n => n.replace(/\s+/g,' ').trim());
@@ -152,7 +170,15 @@ function natReadXi(render = true) {
     sizes.forEach(n => { ordered.push(...flat.slice(at, at + n).reverse()); at += n; });
     ordered.push(...flat.slice(at));
   }
-  natXi = Array.from({length:11},(_,i) => ordered[i] ? cleanName(ordered[i].label) : '');
+  // Due cognomi uguali: si tiene l'iniziale scritta (S. Esposito, P. Esposito); se manca si chiede.
+  const seen = {};
+  ordered.slice(0,11).forEach(p => { const k = cleanName(p.label).toLowerCase(); seen[k] = (seen[k] || 0) + 1; });
+  natXi = Array.from({length:11},(_,i) => {
+    const p = ordered[i];
+    if (!p) return '';
+    const name = cleanName(p.label);
+    return seen[name.toLowerCase()] > 1 && p.initial ? `${p.initial}. ${name}` : name;
+  });
   natModuleButton();
   const roles = natRoles(natModule);
   const box = $('natXiParsed');
@@ -163,7 +189,7 @@ function natReadXi(render = true) {
     row.innerHTML = '<span class="pr-num pr-role"></span><span class="pr-name"></span><span class="pr-role"></span>';
     row.children[0].textContent = roles[i] || '';
     row.children[1].textContent = name ? name.toUpperCase() : '—';
-    row.children[2].textContent = name ? '' : 'manca';
+    row.children[2].textContent = !name ? 'manca' : natTwins().includes(name.toLowerCase().replace(/^\p{L}\.\s+/u,'')) ? 'iniziale?' : '';
     box.appendChild(row);
   });
   $('natXiSummary').textContent = `${flat.length} / 11 giocatori`;

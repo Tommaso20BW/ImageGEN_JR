@@ -469,12 +469,14 @@ class Renderer:
         if kind == 'xi':
             from graphics import starting_xi
 
-            from graphics.probabili import label_name, plain
+            from graphics.probabili import label_names, plain
             from livescore.graphics import goal as g
 
             # Nomi dalla rosa -> nome breve come su Canva ("MCKENNIE", "NICO GONZALEZ").
             roster = {p.name: p for p in g.load_players()}
-            lineup = [(number, label_name(roster[name]) if name in roster else plain(name))
+            # Due cognomi uguali: S. ESPOSITO, P. ESPOSITO.
+            shown = iter(label_names([roster[name] for _, name in data['lineup'] if name in roster]))
+            lineup = [(number, next(shown) if name in roster else plain(name))
                       for number, name in data['lineup']]
             return starting_xi.render(
                 **teams(data),
