@@ -250,7 +250,7 @@ function initPhotoEditor() {
     return {x:(a.x + b.x) / 2, y:(a.y + b.y) / 2, d:Math.hypot(a.x - b.x, a.y - b.y)};
   };
   frame.addEventListener('pointerdown',e => {
-    if (!photoState.id) { $('photoFile').click(); return; }
+    if (!photoState.id) { if (kind !== 'md' && kind !== 'xi') $('photoFile').click(); return; }
     frame.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId,{x:e.clientX, y:e.clientY});
     last = snapshot();
@@ -1380,7 +1380,7 @@ async function jrTitleGhost(overlay) {
    Niente foto da caricare: si sceglie il giocatore e arriva la sua posa 3:4 già scontornata
    (asset players_matchday/) con la maglia della partita. Matchday: mano che indica lo stemma;
    Starting XI: braccia incrociate. Partite UEFA: la maglia delle foto si sceglie qui (parte da
-   quella su cui è disegnata la competizione). Posizione fissa, nessun editor. */
+   quella su cui è disegnata la competizione). Poi il passo Foto per spostarla e zoomarla. */
 const MD_SHIRTS = [['home','Home'],['away','Away'],['third','Third']];
 const UEFA_BASE = {ucl:'third', uel:'home', conference:'home', coppa:'third', supercoppa:'third', usc:'third', cwc:'third', friendly:'third'};   // graphics/uefa.py base_kit
 // Starting XI: il giocatore a destra e un po' più in basso, lontano da titolo e loghi.
@@ -1440,7 +1440,10 @@ async function mdpLoad() {
     if (!response.ok || !body.ok) throw new Error(body.error || 'Foto del giocatore non disponibile.');
     if (key !== mdpKey()) return;          // scelta cambiata mentre arrivava: vale l'ultima
     clearPhoto();
-    Object.assign(photoState,{id:body.photo_id, w:body.width, h:body.height, ...(MD_FRAMES[kind] || MD_FRAMES.md)});
+    Object.assign(photoState,{id:body.photo_id, w:body.width, h:body.height, url:body.preview, ...(MD_FRAMES[kind] || MD_FRAMES.md)});
+    $('photoImg').src = photoState.url;
+    $('photoImg').hidden = false;
+    $('photoEmpty').hidden = true;
     mdp.key = key;
     haptic('success');
   } catch (err) {
