@@ -1422,11 +1422,14 @@ function mdpRender() {
   $('photoPlayerSummary').textContent = mdp.loading ? 'Caricamento foto…'
     : !playersLoaded ? 'Caricamento giocatori…' : !matches.length ? 'Nessun risultato.'
     : chosen ? `Selezionato: ${surnameOf(chosen)}` : '';
-  renderResults('photoPlayerList',matches,mdp.player,item => surnameOf(item),item => { mdp.player = item.name; mdpRender(); mdpLoad(); },null,Infinity);
+  renderResults('photoPlayerList',matches,mdp.player,item => surnameOf(item),item => { mdp.player = item.name; mdpRender(); mdpLoad(true); },null,Infinity);
 }
 // Foto del giocatore scelto (di nuovo se nel frattempo cambiano maglia o grafica).
-async function mdpLoad() {
-  if (!mdp.player || mdpReady()) return;
+// advance: scelto il giocatore, appena la foto è pronta si passa da soli al passo Foto.
+const mdpAdvance = () => { if (flow[flowIndex] === 'mdplayer' && mdpReady()) nextField(true); };
+async function mdpLoad(advance=false) {
+  if (!mdp.player) return;
+  if (mdpReady()) { if (advance) mdpAdvance(); return; }
   clearError();
   if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
   const key = mdpKey();
@@ -1446,6 +1449,7 @@ async function mdpLoad() {
     $('photoEmpty').hidden = true;
     mdp.key = key;
     haptic('success');
+    if (advance) setTimeout(mdpAdvance, 180);
   } catch (err) {
     if (key === mdpKey()) { mdp.player = ''; showError(err && err.message ? err.message : 'Foto del giocatore non disponibile.'); }
   } finally {
