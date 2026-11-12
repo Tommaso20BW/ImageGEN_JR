@@ -15,6 +15,7 @@ from graphics.common import asset_dir
 W, H = 1500, 2000
 NAME_MAX = 16
 YEAR_MAX = 4
+JR_COLOR = 'white'        # logo JR come nelle altre grafiche (FOTO + JR), in alto a destra
 
 # Dove stanno nome e numero sulla maglia (misurati sulla grafica di riferimento, 1500x2000):
 # angolo in alto a sinistra e in basso a sinistra a x0, in alto e in basso a destra a x1.
@@ -99,6 +100,13 @@ def _place(canvas, line, box):
     canvas.alpha_composite(warped)
 
 
+def _jr_logo():
+    """Logo JR bianco in alto a destra: lo stesso overlay 3:4 della FOTO + JR, portato a 1500x2000."""
+    from graphics.photo_jr import _meta
+    path = asset_dir() / 'canva' / _meta()[JR_COLOR]['overlay']
+    return Image.open(path).convert('RGBA').resize((W, H), Image.LANCZOS)
+
+
 def _shade(background):
     """Pieghe e luce del tessuto: luminosità della maglia rispetto al bianco pieno."""
     lum = np.asarray(background.convert('L'), dtype=np.float32)
@@ -123,7 +131,9 @@ def render(*, name, year):
     ink = rgba[..., :3] * _shade(background)
     alpha = rgba[..., 3:] / 255.0
     base = np.asarray(background, dtype=np.float32)
-    out = Image.fromarray(np.clip(base * (1 - alpha) + ink * alpha, 0, 255).astype(np.uint8))
+    out = Image.fromarray(np.clip(base * (1 - alpha) + ink * alpha, 0, 255).astype(np.uint8)).convert('RGBA')
+    out.alpha_composite(_jr_logo())
+    out = out.convert('RGB')
     buf = io.BytesIO()
     out.save(buf, 'PNG')
     return buf.getvalue()
