@@ -357,7 +357,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/bdayphotos', '/bdaybirths', '/bdoldcut', '/tgposts', '/tgphoto', '/translate'):
+                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/posethumbs', '/bdayphotos', '/bdaybirths', '/bdoldcut', '/tgposts', '/tgphoto', '/translate'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -402,6 +402,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/playerphoto':
                 self._json(200, {'ok': True, **self.service.player_photo(envelope)})
+                return
+
+            if path == '/posethumbs':
+                self._json(200, {'ok': True, **self.service.pose_thumbs(envelope)})
                 return
 
             if path == '/bdayphotos':
@@ -544,6 +548,23 @@ class Service:
         out['preview'] = 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
         log.info('FOTO', f'Posa di {player.name} ({path.name})')
         return out
+
+    def pose_thumbs(self, envelope):
+        """Gol / Parata: miniature delle pose del giocatore con la maglia scelta (solo quelle che esistono)."""
+        from concurrent.futures import ThreadPoolExecutor
+        from graphics import compleanno
+        from livescore.graphics import goal as g
+        envelope = envelope or {}
+        name = str(envelope.get('player') or '')
+        kit = str(envelope.get('kit') or 'home')
+        player = next((p for p in g.load_players() if p.name == name), None)
+        if player is None:
+            raise ValueError('Giocatore non trovato.')
+        poses = g.available_poses(player, kit, compleanno.asset_dir()) or ()
+        ids = [f'players/{player.slug}/{g.player_filename(player, kit, p)}' for p in poses]
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            thumbs = list(pool.map(compleanno.thumb, ids))
+        return {'poses': [{'pose': p, 'thumb': t} for p, t in zip(poses, thumbs)]}
 
     def bday_photos(self, envelope):
         """Compleanno: tutte le pose del giocatore (miniature per gruppo) e la sua data di nascita."""

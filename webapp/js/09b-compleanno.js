@@ -2,7 +2,6 @@
    Passi: Giocatore (lista con ricerca) → Foto (le sue pose con la maglia home in quadretti, divise
    in Matchday, Starting e Goal, o Saved per i portieri) → Dati (nome sulla striscia, data di nascita
    ed età) → Posizione (trascina il giocatore, due dita per lo zoom). La data arriva da sola (asset o Wikidata) insieme alle foto; si può sempre correggere. */
-const BD_GROUPS = [['matchday','Matchday'],['starting','Starting'],['goal','Goal'],['saved','Saved']];
 // Un solo Compleanno, due tipi: Rosa attuale (pose degli asset) o Ex giocatore (foto caricata).
 const BD_MODES = [['now','Rosa attuale'],['old','Ex giocatore']];
 // manual: giocatore non in elenco, aggiunto a mano con una foto caricata (scontornata dal servizio).
@@ -293,33 +292,26 @@ function bdPhotosRender() {
   box.innerHTML = '';
   const chosen = players.find(p => p.name === bd.player);
   $('bdPhotoLead').textContent = chosen ? `Tocca la foto di ${surnameOf(chosen)} da mettere nel poster.` : 'Scegli prima il giocatore.';
-  BD_GROUPS.forEach(([group,label]) => {
-    const rows = bd.photos.filter(p => p.group === group);
-    if (!rows.length) return;
-    const head = document.createElement('div');
-    head.className = 'bd-group';
-    head.textContent = label;
-    box.appendChild(head);
-    const grid = document.createElement('div');
-    grid.className = 'iq-grid';
-    rows.forEach(p => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'iq-ph bd-ph' + (p.id === bd.photo ? ' on' : '');
-      b.style.backgroundImage = `url("${p.thumb}")`;
-      b.setAttribute('aria-label',label);
-      b.addEventListener('click',() => {
-        haptic('select');
-        if (bd.photo !== p.id) bd.frame = {x:0, y:0, zoom:1};
-        bd.photo = p.id;
-        bdPhotosRender();
-        renderSteps();
-        setTimeout(() => { if (flow[flowIndex] === 'bdphoto') nextField(true); }, 180);
-      });
-      grid.appendChild(b);
+  // Tutte le foto insieme, senza dividerle per Matchday / Starting / Goal.
+  const grid = document.createElement('div');
+  grid.className = 'iq-grid';
+  bd.photos.forEach(p => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'iq-ph bd-ph' + (p.id === bd.photo ? ' on' : '');
+    b.style.backgroundImage = `url("${p.thumb}")`;
+    b.setAttribute('aria-label','Foto');
+    b.addEventListener('click',() => {
+      haptic('select');
+      if (bd.photo !== p.id) bd.frame = {x:0, y:0, zoom:1};
+      bd.photo = p.id;
+      bdPhotosRender();
+      renderSteps();
+      setTimeout(() => { if (flow[flowIndex] === 'bdphoto') nextField(true); }, 180);
     });
-    box.appendChild(grid);
+    grid.appendChild(b);
   });
+  box.appendChild(grid);
 }
 
 function bdValidate(step) {
@@ -345,7 +337,7 @@ function bdStepValue(step) {
   }
   if (step === 'bdphoto') {
     const p = bdPhotoOf(bd.photo);
-    return p ? labelOf(BD_GROUPS,p.group) : '';
+    return p ? 'Scelta' : '';
   }
   if (step === 'bdmode') return labelOf(BD_MODES,bd.mode);
   if (step === 'bdoname') return $('bdoName').value.trim().toUpperCase();

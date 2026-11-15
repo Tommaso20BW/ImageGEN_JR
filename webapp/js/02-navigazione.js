@@ -686,6 +686,7 @@ function updateScreenValues() {
   const poseList = posesForPlayer();
   if (pose && !poseList.some(([v]) => v === pose)) pose = '';   // cambiati giocatore o maglia
   renderOptions('poseOpts',poseList,pose,v => pose = v);
+  poseGridRender();
   natRender();
   renderOptions('momentOpts',MOMENTS,moment,v => moment = v);
   updatePhaseUI();
@@ -896,4 +897,55 @@ function updateSessionTimer() {
       else showError(EXPIRED_MESSAGE);
     }
   }
+}
+
+// ---- Gol / Parata: la posa si sceglie guardando le foto (solo quelle della maglia scelta) ----
+// Senza giocatore o se le miniature non arrivano resta l'elenco con i nomi delle pose.
+const poseThumbs = {key:'', rows:[], loadingKey:'', errorKey:''};
+async function poseThumbsLoad(key, name) {
+  poseThumbs.loadingKey = key;
+  try {
+    const response = await netFetch(`${directBase}/posethumbs`, {
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify({v:1, session, player:name, kit:kit || 'home'})
+    }, 30000, 2);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.ok) throw new Error(body.error || 'Foto non disponibili.');
+    poseThumbs.key = key;
+    poseThumbs.rows = body.poses || [];
+  } catch (_) {
+    poseThumbs.errorKey = key;
+  } finally {
+    if (poseThumbs.loadingKey === key) poseThumbs.loadingKey = '';
+    poseGridRender();
+  }
+}
+function poseGridRender() {
+  const box = $('poseGrid');
+  if (!box) return;
+  const name = selectedPlayer && selectedPlayer.name;
+  const key = name && directBase && session ? `${name}|${kit || 'home'}` : '';
+  const rows = key && poseThumbs.key === key ? poseThumbs.rows.filter(r => POSES.some(([v]) => v === r.pose)) : null;
+  const failed = !key || poseThumbs.errorKey === key || !!(rows && !rows.length);
+  if (key && !rows && !failed && poseThumbs.loadingKey !== key) poseThumbsLoad(key, name);
+  $('poseOpts').hidden = !failed;
+  box.hidden = failed;
+  if (failed) return;
+  if (!rows) { box.innerHTML = '<div class="hint" style="grid-column:1/-1">Carico le foto…</div>'; return; }
+  box.innerHTML = '';
+  rows.forEach(r => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'iq-ph bd-ph' + (r.pose === pose ? ' on' : '');
+    b.style.backgroundImage = `url("${r.thumb}")`;
+    b.setAttribute('aria-label', labelOf(POSES, r.pose));
+    b.addEventListener('click', () => {
+      haptic('select');
+      pose = r.pose;
+      poseGridRender();
+      renderSteps();
+      setTimeout(() => { if (flow[flowIndex] === 'pose') nextField(true); }, 180);
+    });
+    box.appendChild(b);
+  });
 }

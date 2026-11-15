@@ -36,6 +36,7 @@ body:not(.preview-mode) .bar{display:none}
 .hm-go{color:var(--chev);width:16px;height:16px}
 /* opzioni: righe con la spunta (un tocco = avanti) */
 .opts,.opts.grid{display:block!important;background:var(--surface);border-radius:14px;overflow:hidden}
+.opts[hidden]{display:none!important}
 .opts .opt{width:100%;border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;min-height:50px;padding:0 16px!important;
   border-bottom:1px solid var(--line)!important;transform:none!important}
 .opts .opt:last-child{border-bottom:0!important}
