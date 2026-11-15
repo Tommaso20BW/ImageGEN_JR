@@ -1,19 +1,11 @@
 /* ---------- Compleanno ----------
    Passi: Giocatore (lista con ricerca) → Foto (tutte le sue pose degli asset in quadretti, divise
    in Matchday, Starting e Goal, o Saved per i portieri) → Dati (nome sulla striscia, data di nascita
-   ed età) → Posizione (trascina il giocatore, due dita per lo zoom). La data arriva da sola (asset o Wikidata) insieme alle foto; si può sempre correggere. */
+   ed età) → Posizione (trascina il giocatore, due dita per lo zoom). Nome, data ed età li scrivi tu. */
 const BD_GROUPS = [['matchday','Matchday'],['starting','Starting'],['goal','Goal'],['saved','Saved']];
-const bd = {player:'', photos:[], photo:'', loading:false, key:'', birth:'', page:null,
+const bd = {player:'', photos:[], photo:'', loading:false, key:'', page:null,
   frame:{x:0, y:0, zoom:1}, ghostKey:'', ghostUrl:''};
 
-function bdAge(iso) {
-  const m = /^(\d{4})-\d{2}-\d{2}$/.exec(iso || '');
-  return m ? String(new Date().getFullYear() - Number(m[1])) : '';
-}
-function bdSetBirth(iso) {
-  $('bdBirth').value = iso || '';
-  $('bdAge').value = bdAge(iso);
-}
 function bdPhotoOf(id) { return bd.photos.find(p => p.id === id); }
 
 function bdRender() {
@@ -28,9 +20,7 @@ function bdRender() {
 
 function bdPick(name) {
   if (name !== bd.player) {
-    Object.assign(bd,{player:name, photos:[], photo:'', key:'', birth:''});
-    $('bdName').value = '';
-    bdSetBirth('');
+    Object.assign(bd,{player:name, photos:[], photo:'', key:''});
   }
   bdRender();
   bdLoad(true);
@@ -55,9 +45,6 @@ async function bdLoad(advance=false) {
     bd.photos = body.photos || [];
     bd.page = body.page || null;
     bd.key = key;
-    bd.birth = body.birth || '';
-    if (!$('bdName').value.trim()) $('bdName').value = body.name || key.toUpperCase();
-    if (!$('bdBirth').value) bdSetBirth(bd.birth);
     haptic('success');
     if (advance && flow[flowIndex] === 'bdplayer') setTimeout(() => nextField(true), 180);
   } catch (err) {
@@ -113,6 +100,7 @@ function bdValidate(step) {
   if (step === 'bdinfo') {
     if (!$('bdName').value.trim()) { showError('Scrivi il nome.'); return false; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test($('bdBirth').value)) { showError('Scrivi la data di nascita.'); return false; }
+    if (!/^\d{1,2}$/.test($('bdAge').value.trim()) || !Number($('bdAge').value)) { showError("Scrivi l'età."); return false; }
   }
   return true;
 }
@@ -140,20 +128,20 @@ function bdPayload() {
   const name = $('bdName').value.trim(), birth = $('bdBirth').value;
   if (!name) throw new Error('Scrivi il nome.');
   if (!birth) throw new Error('Scrivi la data di nascita.');
+  if (!$('bdAge').value.trim()) throw new Error("Scrivi l'età.");
   return {v:1, action:'render', session, data:{kind:'bday', player:bd.player, photo:bd.photo, name, birth,
     age:$('bdAge').value.trim(), frame:{...bd.frame}}};
 }
 
 function bdReset() {
-  Object.assign(bd,{player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
+  Object.assign(bd,{player:'', photos:[], photo:'', loading:false, key:'', frame:{x:0, y:0, zoom:1}});
   ['bdPlayerSearch','bdName','bdBirth','bdAge'].forEach(id => { $(id).value = ''; });
 }
 
 function initBirthday() {
   initBirthdayEditor();
   $('bdPlayerSearch').addEventListener('input',() => bdRender());
-  $('bdBirth').addEventListener('change',() => { $('bdAge').value = bdAge($('bdBirth').value); renderSteps(); });
-  ['bdName','bdAge'].forEach(id => $(id).addEventListener('input',() => renderSteps()));
+  ['bdName','bdBirth','bdAge'].forEach(id => $(id).addEventListener('input',() => renderSteps()));
 }
 
 /* --- Posizione: il poster senza giocatore (sagoma del servizio) e sopra la sagoma del giocatore,

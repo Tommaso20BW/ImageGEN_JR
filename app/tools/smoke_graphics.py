@@ -100,7 +100,7 @@ def _cases(roster):
     yield 'Rinnovo', {'kind': 'rin', 'name': 'N.GONZALEZ', 'year': '2030'}
     from graphics import compleanno
     star = next(p for p in roster if p.role == 'outfield' and compleanno.player_photos(p))
-    yield 'Compleanno', {'kind': 'bday', 'player': star.name, 'name': star.name, 'birth': '2005-05-04',
+    yield 'Compleanno', {'kind': 'bday', 'player': star.name, 'name': star.name, 'birth': '2005-05-04', 'age': '21',
                          'photo': compleanno.player_photos(star)[-1]['id']}
     yield 'Storia Instagram', {'kind': 'igbn', 'text': 'Breaking news: prova automatica delle grafiche.', **photo}
     quote = {'text': 'Testo di prova della citazione, abbastanza lungo da andare a capo.', 'name': 'Juventus Reborn',
