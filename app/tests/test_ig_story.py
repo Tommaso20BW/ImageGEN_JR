@@ -27,6 +27,7 @@ class TextTests(unittest.TestCase):
         self.assertEqual(S.clean_text('Ciao 👋  mondo\n\n\n\nfine 👉 @Juventus_Reborn'), 'Ciao mondo\n\nfine')
         with self.assertRaises(ValueError):
             S.clean_text('x' * (S.MAX_TEXT + 1))
+        self.assertEqual(S.clean_text('✅📋 𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄 𝐈𝐓𝐀𝐋𝐈𝐀'), 'XI UFFICIALE ITALIA')
 
     def test_label_and_color_keys(self):
         self.assertEqual(S.label_key('ufficiale'), 'ufficiale')

@@ -17,6 +17,7 @@ Dal testo vengono tolti in automatico gli emoji e la firma "👉 @Juventus_Rebor
 """
 import io
 import re
+import unicodedata
 from functools import lru_cache
 
 import numpy as np
@@ -37,8 +38,8 @@ PHOTO_LOW = 220                      # ...o questa, se il testo è già sceso a 
 FS_KEEP = 40
 FS_MIN = 30
 # Grandezza del testo in base ai caratteri: (fino a N caratteri, grandezza)
-FS_PHOTO_STEPS = ((120, 62), (240, 54), (10**9, 46))
-FS_SOLO_STEPS = ((80, 84), (150, 72), (240, 64), (10**9, 54))
+FS_PHOTO_STEPS = ((120, 54), (240, 48), (10**9, 42))
+FS_SOLO_STEPS = ((80, 72), (150, 62), (240, 56), (10**9, 48))
 
 PAPER = (226, 220, 206)
 STRIP = (250, 248, 242)
@@ -92,7 +93,10 @@ def strip_emoji(text):
 
 def tidy(value):
     """Niente emoji né firma, a-capo mantenuti, righe vuote di fila ridotte a una (nessun limite)."""
-    text = strip_emoji(str(value or '').replace('\r\n', '\n').replace('\r', '\n'))
+    # NFKC: le lettere "grassetto" Unicode copiate dai post (𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄) diventano lettere
+    # normali, che il font sa disegnare
+    text = unicodedata.normalize('NFKC', str(value or ''))
+    text = strip_emoji(text.replace('\r\n', '\n').replace('\r', '\n'))
     lines = [' '.join(line.split()) for line in text.split('\n')]
     return re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()
 
