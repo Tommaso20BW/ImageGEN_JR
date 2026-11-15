@@ -22,7 +22,7 @@ class TimbriTests(unittest.TestCase):
 
     def test_two_stamps_far_apart(self):
         """Uno in alto e uno in basso, in angoli opposti: in mezzo non c'è niente."""
-        for seed in range(25):
+        for seed in range(60):
             m = T.stamps_mask((self.W, self.H), seed)
             self.assertLess(m[int(self.H * .42):int(self.H * .58)].max(), .01, seed)
             top, bottom = m[:self.H // 2], m[self.H // 2:]
