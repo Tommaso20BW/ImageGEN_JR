@@ -9,7 +9,6 @@ const BD_MODES = [['now','Rosa attuale'],['old','Ex giocatore']];
 // births: date di nascita della rosa (nome -> AAAA-MM-GG) per ordinare l'elenco dal prossimo compleanno.
 const bd = {mode:'now', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', page:null,
   frame:{x:0, y:0, zoom:1}, ghostKey:'', ghostUrl:'', births:null, birthsBusy:false};
-const BD_MONTHS = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 
 // Giorni al prossimo compleanno (0 = oggi); Infinity se la data non c'è.
 function bdDaysTo(iso) {
@@ -20,11 +19,11 @@ function bdDaysTo(iso) {
   if (next < today) next = new Date(today.getFullYear() + 1, Number(m[2]) - 1, Number(m[3]));
   return Math.round((next - today) / 864e5);
 }
+// Data del compleanno (gg.mm) e quanto manca, per l'elenco: [data, mancano] o null.
 function bdWhen(iso) {
   const n = bdDaysTo(iso);
-  if (n === Infinity) return '';
-  const day = `${Number(iso.slice(8,10))} ${BD_MONTHS[Number(iso.slice(5,7)) - 1]}`;
-  return n === 0 ? `${day} · oggi` : n === 1 ? `${day} · domani` : `${day} · tra ${n} giorni`;
+  if (n === Infinity) return null;
+  return [`${iso.slice(8,10)}.${iso.slice(5,7)}`, n === 0 ? 'Oggi' : n === 1 ? 'Domani' : `${n} gg`];
 }
 async function bdLoadBirths() {
   if (bd.births || bd.birthsBusy || !directBase || !session) return;
@@ -161,7 +160,15 @@ function bdRender() {
       tag.className = 'bd-when';
       row.insertBefore(tag,row.querySelector('.tick'));
     }
-    tag.textContent = bdWhen(births[row.dataset.name]);
+    const when = bdWhen(births[row.dataset.name]);
+    tag.innerHTML = '';
+    if (when) {
+      const d = document.createElement('b'), n = document.createElement('small');
+      d.textContent = when[0];
+      n.textContent = when[1];
+      if (when[1] === 'Oggi') n.className = 'today';
+      tag.append(d, n);
+    }
   }
 }
 
