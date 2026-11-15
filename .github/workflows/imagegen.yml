@@ -28,19 +28,36 @@ jobs:
       - name: Checkout ImageGEN JR
         uses: actions/checkout@v6
 
-      # Gli asset privati (~850 MB di foto) sono la parte più lenta dell'avvio (~27 s): si scaricano
-      # in background mentre gli step dopo preparano Python e i modelli; li aspetta "Installa asset privati".
+      # Gli asset privati (~850 MB di foto) sono la parte più lenta dell'avvio: in un solo clone ~29 s.
+      # Si scaricano in 5 pezzi in parallelo (clone parziale + sparse checkout, ognuno con le sue cartelle)
+      # e in background, mentre gli step dopo preparano Python e i modelli; li aspetta "Installa asset privati".
       - name: Scarica asset privati in background
         shell: bash
         env:
           ASSETS_PAT: ${{ secrets.ASSETS_PAT }}
         run: |
           set -euo pipefail
-          AUTH="$(printf 'x-access-token:%s' "$ASSETS_PAT" | base64 -w0)"
-          echo "::add-mask::$AUTH"
-          URL=https://github.com/Tommaso20BW/LiveScore_Assets_JR.git
-          nohup bash -c 'git -c http.extraheader="AUTHORIZATION: basic $0" clone -q --depth 1 --single-branch "$1" _private_assets >"$2" 2>&1; echo $? >"$3"' \
-            "$AUTH" "$URL" "${RUNNER_TEMP}/assets.log" "${RUNNER_TEMP}/assets.status" >/dev/null 2>&1 &
+          ASSETS_AUTH="$(printf 'x-access-token:%s' "$ASSETS_PAT" | base64 -w0)"
+          echo "::add-mask::$ASSETS_AUTH"
+          export ASSETS_AUTH ASSETS_URL=https://github.com/Tommaso20BW/LiveScore_Assets_JR.git
+          cat >"${RUNNER_TEMP}/assets_dl.sh" <<'EOF'
+          name=$1; shift
+          dir="$GITHUB_WORKSPACE/_assets_$name"
+          H="AUTHORIZATION: basic $ASSETS_AUTH"
+          {
+            git -c http.extraheader="$H" clone -q --depth 1 --filter=blob:none --no-checkout --single-branch "$ASSETS_URL" "$dir" &&
+            git -C "$dir" -c http.extraheader="$H" sparse-checkout set --no-cone "$@" &&
+            git -C "$dir" -c http.extraheader="$H" checkout -q
+          } >"$RUNNER_TEMP/assets_$name.log" 2>&1
+          echo $? >"$RUNNER_TEMP/assets_$name.status"
+          EOF
+          # Pezzi di grandezza simile: giocatori (429 MB, in due), pose Matchday (228), Canva (131), il resto.
+          set -f
+          for spec in 'gioc1 /players/[a-k]*' 'gioc2 /players/[!a-k]*' 'matchday /players_matchday/' 'canva /canva/' \
+                      'resto /* !/players/ !/players_matchday/ !/canva/'; do
+            nohup bash "${RUNNER_TEMP}/assets_dl.sh" $spec >/dev/null 2>&1 &
+          done
+          set +f
 
       - name: Checkout motore grafico LiveScore JR
         uses: actions/checkout@v6
@@ -97,14 +114,25 @@ jobs:
         run: |
           set -euo pipefail
           log() { printf '[%s] %-6s %-10s | %s\n' "$(TZ=Europe/Rome date +%H:%M:%S)" "$1" "$2" "$3"; }
-          # Aspetta il download partito all'inizio (al massimo 5 minuti).
-          for _ in $(seq 1 600); do [ -f "${RUNNER_TEMP}/assets.status" ] && break; sleep 0.5; done
-          if [ "$(cat "${RUNNER_TEMP}/assets.status" 2>/dev/null || echo 1)" != "0" ]; then
-            cat "${RUNNER_TEMP}/assets.log" 2>/dev/null || true
-            echo "::error title=Asset::Download degli asset privati non riuscito."
-            exit 1
-          fi
+          # Aspetta i 5 download partiti all'inizio (al massimo 5 minuti).
+          PARTS="gioc1 gioc2 matchday canva resto"
+          for part in $PARTS; do
+            for _ in $(seq 1 600); do [ -f "${RUNNER_TEMP}/assets_$part.status" ] && break; sleep 0.5; done
+            if [ "$(cat "${RUNNER_TEMP}/assets_$part.status" 2>/dev/null || echo 1)" != "0" ]; then
+              cat "${RUNNER_TEMP}/assets_$part.log" 2>/dev/null || true
+              echo "::error title=Asset::Download degli asset privati non riuscito ($part)."
+              exit 1
+            fi
+          done
           log INFO ASSET "Asset privati scaricati"
+          # Rimette insieme i pezzi in _private_assets (stessa cartella di prima). mv: niente copie inutili.
+          mkdir -p _private_assets/players
+          for part in $PARTS; do
+            for item in "_assets_$part"/*; do
+              [ -e "$item" ] || continue
+              if [ "$(basename "$item")" = players ]; then mv "$item"/* _private_assets/players/; else mv "$item" _private_assets/; fi
+            done
+          done
           mkdir -p _graphics_core/assets/goal_graphics
           cp -a _private_assets/players _private_assets/fonts _private_assets/team_logos _private_assets/overlays _private_assets/portrait _private_assets/word_textures _private_assets/canva _graphics_core/assets/goal_graphics/
           # Correzioni squadre dalla mini app ImageGen (fuori da team_logos/: la sync FCLogo non le tocca).
