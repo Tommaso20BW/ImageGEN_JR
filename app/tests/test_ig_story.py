@@ -30,8 +30,8 @@ class TextTests(unittest.TestCase):
 
     def test_label_and_color_keys(self):
         self.assertEqual(S.label_key('ufficiale'), 'ufficiale')
-        self.assertEqual(S.label_key('boh'), 'breaking')
-        self.assertEqual(S.label_key(None), 'breaking')
+        self.assertEqual(S.label_key('boh'), 'ultimora')
+        self.assertEqual(S.label_key(None), 'ultimora')
         self.assertEqual(S.LABELS['none'], ())
         self.assertEqual(S.text_color('red'), 'red')
         self.assertEqual(S.text_color('white'), 'black')
@@ -75,10 +75,10 @@ class LayoutTests(unittest.TestCase):
 @unittest.skipUnless(HAS_ASSETS, 'servono i font e il logo degli asset privati')
 class RenderTests(unittest.TestCase):
     def test_render_size_and_seed(self):
-        one = S.render(text='Notizia di prova.', label='breaking', seed=3)
+        one = S.render(text='Notizia di prova.', label='ultimora', seed=3)
         self.assertEqual(Image.open(io.BytesIO(one)).size, (S.W, S.H))
-        self.assertEqual(one, S.render(text='Notizia di prova.', label='breaking', seed=3))
-        self.assertNotEqual(one, S.render(text='Notizia di prova.', label='breaking', seed=4))
+        self.assertEqual(one, S.render(text='Notizia di prova.', label='ultimora', seed=3))
+        self.assertNotEqual(one, S.render(text='Notizia di prova.', label='ultimora', seed=4))
 
     def test_render_photo_only_without_label(self):
         out = S.render(photo=jpeg(800, 1200), label='none', seed=1)
@@ -98,8 +98,8 @@ class PayloadTests(unittest.TestCase):
         data = self.parse(text='Ciao', label='mercato', color='red')
         self.assertEqual((data['label'], data['color']), ('mercato', 'red'))
         self.assertIsInstance(data['seed'], int)
-        self.assertEqual(self.parse(text='Ciao', label='???')['label'], 'breaking')
-        self.assertEqual(self.parse(text='Ciao')['label'], 'breaking')
+        self.assertEqual(self.parse(text='Ciao', label='???')['label'], 'ultimora')
+        self.assertEqual(self.parse(text='Ciao')['label'], 'ultimora')
 
     def test_empty(self):
         with self.assertRaises(ValueError):

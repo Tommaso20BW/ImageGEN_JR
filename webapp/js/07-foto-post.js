@@ -9,7 +9,7 @@ const photoState = {id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, uploading:false};
 // STORIE IG: foto facoltativa sotto il testo (nessun editor: il servizio la adatta da solo).
 const igb = {id:'', url:'', uploading:false};
 let igColor = 'black';     // colore del testo (tavolozza in 11-invii.js)
-let igLabel = 'breaking';  // etichetta in alto (chip in 11-invii.js)
+let igLabel = 'ultimora';  // etichetta in alto (chip in 11-invii.js)
 function igRefresh() {
   // Foto scelta: sta sul riquadro Galleria (tocco = cambiala, × = toglila)
   $('igPick').classList.toggle('has-photo', !!igb.url);

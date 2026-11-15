@@ -2,7 +2,7 @@
 
 Carta stropicciata con grana (le texture del Compleanno) e, in colonna al centro:
 
-- etichetta scelta nella Mini App (BREAKING NEWS, ULTIM'ORA, UFFICIALE, ...; o nessuna): ogni
+- etichetta scelta nella Mini App (ULTIM'ORA, NOTIZIA, UFFICIALE, ...; o nessuna): ogni
   parola su una striscia strappata, nero e oro alternati;
 - foto (facoltativa): stampa con bordo bianco, inclinata, con due pezzi di nastro adesivo;
 - testo (facoltativo): battuto a macchina (Special Elite), una riga per striscia di carta bianca,
@@ -54,14 +54,14 @@ MAX_TEXT = 500
 
 # Etichetta in alto: chiave della Mini App -> parole (una striscia ciascuna)
 LABELS = {
-    'breaking': ('BREAKING', 'NEWS'),
-    'ultimora': ('ULTIM’ORA',),
-    'ufficiale': ('UFFICIALE',),
-    'mercato': ('CALCIOMERCATO',),
-    'esclusiva': ('ESCLUSIVA',),
+    'ultimora': ('ULTIM’ORA',),             # notizia urgente (quella di base)
+    'notizia': ('NOTIZIA',),                # notizia normale
+    'ufficiale': ('UFFICIALE',),            # confermata dal club
+    'mercato': ('CALCIOMERCATO',),          # trattative e voci di mercato
+    'infortunio': ('INFORTUNIO',),          # aggiornamenti medici
     'none': (),
 }
-DEFAULT_LABEL = 'breaking'
+DEFAULT_LABEL = 'ultimora'
 
 TEXT_COLOR = '#1a1612'
 # Colori del testo scelti nella Mini App (tavolozza dei testi di Instagram). 'black' è quello di base.
@@ -77,7 +77,7 @@ def text_color(value):
 
 
 def label_key(value):
-    """Chiave dell'etichetta valida (BREAKING NEWS se manca o non esiste)."""
+    """Chiave dell'etichetta valida (ULTIM'ORA se manca o non esiste)."""
     return value if value in LABELS else DEFAULT_LABEL
 
 

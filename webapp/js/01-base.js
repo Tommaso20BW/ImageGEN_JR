@@ -109,7 +109,7 @@ const REQUESTS = [
   {id:'jr',     kind:'jr',    icon:'jr', title:'Post',         desc:'Foto con il logo JR: classica, sfocata, collage o con titolo'},
   {id:'rin',    kind:'rin',   icon:'rin', title:'Rinnovi',      desc:'Maglia stesa con nome e anno del contratto'},
   {id:'bday',   kind:'bday',  icon:'bday', title:'Compleanno',   desc:'Auguri a un giocatore della rosa o a un ex'},
-  {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia Instagram', desc:'Breaking News in formato storia'},
+  {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia Instagram', desc:'Notizia in formato storia'},
   {id:'igq',    kind:'igq',   icon:'igq', title:'Citazione Instagram', desc:'Post Instagram: foto, testo e account'},
   {id:'xq',     kind:'xq',    icon:'xq', title:'Citazione X',  desc:'Post X: testo, account e foto (o sfondo)'},
   {id:'thq',    kind:'thq',   icon:'thq', title:'Citazione Threads', desc:'Post Threads: testo, account e foto (o sfondo)'},
