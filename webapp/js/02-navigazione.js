@@ -41,7 +41,7 @@ let jrColor = '';      // FOTO + JR: colore del logo
 const JR_LIMITS = {blur:4, collage:9};      // foto massime per stile
 const jrLimit = () => JR_LIMITS[jrb.style] || 1;
 const jrMin = () => jrb.style === 'collage' ? 2 : 1;
-const jrb = {style:'', ratio:'3:4', title:'', tcolor:'#ffffff', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null};
+const jrb = {style:'', ratio:'', title:'', tcolor:'#ffffff', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null};
 let pxiModule = '';    // PROBABILE XI: modulo
 let tableComp = '';    // CLASSIFICA: SA, CI, UCL, UEL o UECL
 let tableView = '';    // coppe europee: 'table' (classifica) o 'bracket' (tabellone)

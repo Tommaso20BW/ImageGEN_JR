@@ -7,7 +7,7 @@ const BD_GROUPS = [['matchday','Matchday'],['starting','Starting'],['goal','Goal
 const BD_MODES = [['now','Rosa attuale'],['old','Ex giocatore']];
 // manual: giocatore non in elenco, aggiunto a mano con una foto caricata (scontornata dal servizio).
 // births: date di nascita della rosa (nome -> AAAA-MM-GG) per ordinare l'elenco dal prossimo compleanno.
-const bd = {mode:'now', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', page:null,
+const bd = {mode:'', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', page:null,
   frame:{x:0, y:0, zoom:1}, ghostKey:'', ghostUrl:'', births:null, birthsBusy:false};
 
 // Giorni al prossimo compleanno (0 = oggi); Infinity se la data non c'è.
@@ -328,6 +328,7 @@ function bdValidate(step) {
     if (!bd.photos.length) { if (!bd.loading) bdLoad(); showError('Attendi le foto del giocatore.'); return false; }
   }
   if (step === 'bdphoto' && !bdPhotoOf(bd.photo)) { showError('Tocca una foto.'); return false; }
+  if (step === 'bdmode' && !bd.mode) { showError('Scegli il tipo.'); return false; }
   if (step === 'bdoname' && !$('bdoName').value.trim()) { showError('Scrivi il nome.'); return false; }
   if (step === 'bdophoto' && !bdo.id) { showError(bdo.loading ? 'Attendi lo scontorno.' : 'Carica la foto.'); return false; }
   if (step === 'bdinfo') {
@@ -378,7 +379,7 @@ function bdPayload() {
 }
 
 function bdReset() {
-  Object.assign(bd,{mode:'now', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
+  Object.assign(bd,{mode:'', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
   ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName'].forEach(id => { $(id).value = ''; });
   bdClearUpload();
   bdoTexts();

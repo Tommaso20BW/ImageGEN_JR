@@ -186,7 +186,7 @@ const JR_STYLES = [['classic','Classica'],['blur','Sfocata'],['collage','Collage
 // Formati della Classica: larghezza fissa 1080, cambia l'altezza (come graphics/photo_jr.py RATIOS).
 // Il logo JR resta in alto a destra, alla stessa distanza dai bordi e della stessa misura del 3:4.
 const JR_RATIOS = [['3:4','3:4'],['4:5','4:5'],['1:1','1:1'],['9:16','9:16'],['16:9','16:9'],['4:3','4:3'],['3:2','3:2']];
-const ratioDims = r => { const [w,h] = String(r).split(':').map(Number); return [1080, 1080 * h / w]; };
+const ratioDims = r => { const [w,h] = (/^\d+:\d+$/.test(String(r)) ? String(r) : '3:4').split(':').map(Number); return [1080, 1080 * h / w]; };
 const CAL_MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const CAL_MAX = 14;
 let PXI_MODULES = [["4-2-3-1", "4-2-3-1"], ["4-3-3", "4-3-3"], ["4-4-2", "4-4-2"], ["4-3-1-2", "4-3-1-2"], ["4-2-2-2", "4-2-2-2"], ["4-3-2-1", "4-3-2-1"], ["4-1-2-1-2", "4-1-2-1-2"], ["3-4-2-1", "3-4-2-1"], ["3-4-1-2", "3-4-1-2"], ["3-5-2", "3-5-2"], ["3-5-1-1", "3-5-1-1"], ["3-4-3", "3-4-3"], ["5-4-1", "5-4-1"]];

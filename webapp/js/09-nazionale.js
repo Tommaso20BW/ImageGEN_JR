@@ -6,7 +6,7 @@
    Gol (Juventus e Italia): Gol / Rigore / Autogol / Senza foto (Senza foto solo Juventus, non nelle amichevoli). */
 let nat = false;          // true = voce "Italia"
 let natSel = '';          // grafica scelta: kick, half, second, end_of_90, full, goal, saved, stats
-let goalType = 'goal';    // goal | penalty | own | nophoto
+let goalType = '';      // goal | penalty | own | nophoto
 // Starting XI dell'Italia: modulo e 11 cognomi (portiere, poi le linee dalla difesa all'attacco).
 // Si incolla come la Probabile XI dei club: il modulo si trova dal testo (o si sceglie dal pannello).
 let natModule = '';
@@ -39,7 +39,7 @@ function natPickKind(v) {              // grafica dell'Italia scelta: tipo e fas
   natSel = v;
   kind = NAT_PHASES.has(v) ? 'match' : v;   // 'natxi': Starting XI senza foto (non quella Juventus)
   phase = NAT_PHASES.has(v) ? v : '';
-  if (kind !== 'goal') goalType = 'goal';
+  if (kind !== 'goal') goalType = '';
   buildFlow();
 }
 
@@ -56,7 +56,7 @@ function natFlow() {
 
 // Gol della Juventus: dopo la maglia si sceglie il tipo; autogol e senza marcatore senza foto (niente posa).
 function juveGoalSteps(friendly) {
-  if (friendly && goalType === 'nophoto') goalType = 'goal';
+  if (friendly && goalType === 'nophoto') goalType = '';
   if (kind !== 'goal') return friendly ? ['player','minute'] : ['player','minute','pose'];
   if (goalType === 'own' || goalType === 'nophoto') return ['goaltype','natplayer','minute'];
   return ['goaltype','player','minute',...(friendly ? [] : ['pose'])];
@@ -107,7 +107,7 @@ function natRender() {
   renderOptions('natKindOpts',NAT_KINDS.filter(([v]) => NAT_PHASES.has(v)),natSel,natPickKind);
   renderOptions('natPlayOpts',NAT_KINDS.filter(([v]) => !NAT_PHASES.has(v) && v !== 'natxi'),natSel,natPickKind);
   natModuleButton();
-  if (noPhotoAlways() && goalType === 'nophoto') goalType = 'goal';
+  if (noPhotoAlways() && goalType === 'nophoto') goalType = '';
   renderOptions('goalTypeOpts',goalTypeOptions(),goalType,v => { goalType = v; buildFlow(); });
   $('natPlayerTitle').textContent = kind === 'saved' ? 'Portiere' : goalType === 'own' ? 'Chi ha fatto autogol' : 'Marcatore';
   $('natPlayerLead').textContent = kind === 'saved' ? 'Scrivi nome e cognome del portiere.'
@@ -117,7 +117,7 @@ function natRender() {
 }
 
 function natReset() {
-  natSel = ''; goalType = 'goal';
+  natSel = ''; goalType = '';
   natModule = ''; natModuleManual = false; natXi = Array(11).fill('');
   $('natXiText').value = ''; natReadXi(false);
   $('natOpp').value = ''; $('natPlayer').value = '';

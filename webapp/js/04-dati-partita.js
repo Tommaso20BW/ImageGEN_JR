@@ -83,6 +83,7 @@ function validateCurrent() {
     if (!ppState.bg) { showError('Scegli una foto.'); return false; }
   }
 
+  if (step === 'jrratio' && !jrb.ratio) { showError('Scegli il formato.'); return false; }
   if (step === 'jrtitle' && !jrb.title.trim()) { showError('Scrivi il titolo.'); return false; }
   if (step === 'iqshot' && !iq.photos.length) { showError('Allega lo screenshot della storia.'); return false; }
   if (step === 'iqpick' && iq.sel < 0) { showError('Tocca la foto da usare.'); return false; }
