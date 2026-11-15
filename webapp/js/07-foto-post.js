@@ -117,10 +117,33 @@ function editorImageUrls() {
   return {overlay:`${directBase}/overlay?${q}`, bg:`${directBase}/pagebg?${q}`};
 }
 
+/* Sagoma pronta e generica (dati finti, tools/placeholders.py) delle grafiche la cui sagoma vera la
+   disegna il servizio coi dati inseriti (/ghost, qualche secondo): Titolo JR, Citazioni, Compleanno.
+   Si vede subito, così la foto si può già spostare; poi arriva quella vera e la sostituisce. */
+function readyGhostUrl() {
+  if (!directBase || !session) return '';
+  let name = '', variant = '';
+  if (kind === 'jr' && jrb.style === 'title') { name = 'jrtitle'; variant = jrColor || 'black'; }
+  else if (isQuoteKind(kind)) { name = 'quote'; variant = kind === 'xq' ? 'x' : kind === 'thq' ? 'threads' : iq.story ? 'igstory' : 'ig'; }
+  else if (kind === 'bday') { name = 'compleanno'; variant = bdOld() ? 'old' : 'now'; }
+  if (!name || !/^[a-z]+$/.test(variant || '')) return '';
+  return `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${name}&kit=${variant}`;
+}
+
+// Mostra la sagoma pronta mentre quella vera non c'è ancora (isReal() dice se è già arrivata).
+async function showReadyGhost(img, isReal, show) {
+  const url = readyGhostUrl();
+  if (!url || !(await fetchEditorImage(url)) || isReal() || readyGhostUrl() !== url) return;
+  img.src = url;
+  show();
+}
+
 // Appena si conosce la maglia (o la competizione) sagoma e sfondo partono in background.
 function preloadEditorImages() {
   const urls = editorImageUrls();
   if (urls) { fetchEditorImage(urls.overlay); fetchEditorImage(urls.bg); }
+  const ready = readyGhostUrl();
+  if (ready) fetchEditorImage(ready);
   const phaseUrl = phaseOverlayUrl();
   if (phaseUrl) fetchEditorImage(phaseUrl);
 }
@@ -1364,6 +1387,8 @@ async function jrTitleGhost(overlay) {
   if (key === jrtGhostKey && jrtGhostUrl) { overlay.src = jrtGhostUrl; overlay.style.visibility = ''; return; }
   jrtGhostKey = key;
   overlay.style.visibility = 'hidden';
+  let real = false;
+  showReadyGhost(overlay, () => real || jrtGhostKey !== key, () => { overlay.style.visibility = ''; });
   try {
     const response = await netFetch(`${directBase}/ghost`, {
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body
@@ -1372,6 +1397,7 @@ async function jrTitleGhost(overlay) {
     const url = URL.createObjectURL(await response.blob());
     if (jrtGhostUrl) { try { URL.revokeObjectURL(jrtGhostUrl); } catch (_) {} }
     jrtGhostUrl = url;
+    real = true;
     overlay.src = url;
     overlay.style.visibility = '';
   } catch (_) {}

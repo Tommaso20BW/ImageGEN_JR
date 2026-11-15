@@ -184,6 +184,8 @@ async function iqGhost(overlay) {
   if (key === iqGhostKey && iqGhostUrl) { overlay.src = iqGhostUrl; overlay.style.visibility = ''; return; }
   iqGhostKey = key;
   overlay.style.visibility = 'hidden';
+  let real = false;
+  showReadyGhost(overlay, () => real || iqGhostKey !== key, () => { overlay.style.visibility = ''; });
   try {
     const response = await netFetch(`${directBase}/ghost`, {
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body
@@ -192,6 +194,7 @@ async function iqGhost(overlay) {
     const url = URL.createObjectURL(await response.blob());
     if (iqGhostUrl) { try { URL.revokeObjectURL(iqGhostUrl); } catch (_) {} }
     iqGhostUrl = url;
+    real = true;
     overlay.src = url;
     overlay.style.visibility = '';
   } catch (_) {}

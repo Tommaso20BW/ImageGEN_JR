@@ -254,6 +254,8 @@ async function bdGhost() {
   bd.ghostKey = key;
   ghost.hidden = true;
   $('bdPosHint').textContent = 'Preparo il poster…';
+  let real = false;
+  showReadyGhost(ghost, () => real || bd.ghostKey !== key, () => { ghost.hidden = false; });
   try {
     const response = await netFetch(`${directBase}/ghost`, {
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body
@@ -262,6 +264,7 @@ async function bdGhost() {
     const url = URL.createObjectURL(await response.blob());
     if (bd.ghostUrl) { try { URL.revokeObjectURL(bd.ghostUrl); } catch (_) {} }
     bd.ghostUrl = url;
+    real = true;
     ghost.src = url;
     ghost.hidden = false;
   } catch (_) {
