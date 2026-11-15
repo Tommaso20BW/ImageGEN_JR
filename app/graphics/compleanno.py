@@ -11,6 +11,7 @@ quindi basta portarle alla stessa altezza perché la testa cada sempre allo stes
 """
 import base64
 import io
+import json
 import re
 import unicodedata
 from datetime import date
@@ -37,7 +38,6 @@ PLAYER_H = {'point_sky': 1560}
 PLAYER_H_DEFAULT = 1250
 STRIP_Y = H - 205                # centro della striscia del nome (il ritaglio finisce qui)
 NAME_SIZE, NAME_MAX_SIZE = 170, 210
-TEXT_GAP = 20                    # carta libera tra le scritte nere e il contorno del ritaglio
 NAME_MAX_W = W - 2 * 70 - 40     # oltre questa larghezza il nome si rimpicciolisce
 NAME_MAX = 28
 
@@ -132,6 +132,76 @@ def thumb(photo_id, size=(420, 560)):
         buf = io.BytesIO()
         im.save(buf, 'WEBP', quality=78)
     return 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
+
+
+# ---------------------------------------------------------------- data di nascita (Wikidata)
+WIKIDATA_API = 'https://www.wikidata.org/w/api.php'
+FOOTBALLER, JUVENTUS = 'Q937857', 'Q1422'
+
+
+def _wd_get(params, timeout):
+    import requests
+    resp = requests.get(WIKIDATA_API, params={**params, 'format': 'json'}, timeout=timeout,
+                        headers={'User-Agent': 'ImageGEN-JR/1.0 (birthday graphic)'})
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _claim_ids(entity, prop):
+    out = set()
+    for c in entity.get('claims', {}).get(prop, []):
+        v = c.get('mainsnak', {}).get('datavalue', {}).get('value')
+        if isinstance(v, dict) and v.get('id'):
+            out.add(v['id'])
+    return out
+
+
+def _claim_date(entity):
+    for c in entity.get('claims', {}).get('P569', []):
+        v = c.get('mainsnak', {}).get('datavalue', {}).get('value') or {}
+        m = re.match(r'^\+(\d{4})-(\d\d)-(\d\d)', str(v.get('time') or ''))
+        if m and v.get('precision', 11) >= 11:
+            return date(*(int(x) for x in m.groups()))
+    return None
+
+
+@lru_cache(maxsize=128)
+def birth_date(name, timeout=6.0):
+    """Data di nascita del calciatore da Wikidata (preferendo chi ha giocato nella Juventus), o None."""
+    try:
+        found = _wd_get({'action': 'wbsearchentities', 'search': name, 'language': 'en', 'type': 'item',
+                         'limit': 7}, timeout).get('search', [])
+        ids = [r['id'] for r in found if r.get('id')]
+        if not ids:
+            return None
+        ents = _wd_get({'action': 'wbgetentities', 'ids': '|'.join(ids), 'props': 'claims'}, timeout).get('entities', {})
+    except Exception:            # rete, risposta strana: la data si scrive a mano
+        return None
+    best = None
+    for qid in ids:
+        e = ents.get(qid) or {}
+        born = _claim_date(e)
+        if not born or FOOTBALLER not in _claim_ids(e, 'P106'):
+            continue
+        if JUVENTUS in _claim_ids(e, 'P54'):
+            return born
+        best = best or born
+    return best
+
+
+def known_births():
+    """Date di nascita della rosa già salvate negli asset (imagegen/compleanni.json, slug -> AAAA-MM-GG)."""
+    try:
+        rows = json.loads((asset_dir() / 'imagegen' / 'compleanni.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {}
+    return {k: v for k, v in rows.items() if parse_birth(v)}
+
+
+def player_birth(player):
+    """Data di nascita: prima dal file degli asset, altrimenti da Wikidata (None se non si trova)."""
+    known = known_births().get(player.slug)
+    return parse_birth(known) if known else birth_date(player.name)
 
 
 # ---------------------------------------------------------------- texture
@@ -324,14 +394,6 @@ def _scissor_mask(alpha, gap=22, smooth=30, eps=14, jitter=7, seed=4):
     return np.asarray(Image.fromarray(big).resize((W, H), Image.LANCZOS), np.float32) / 255
 
 
-def _grow(m, px):
-    """Maschera allargata di px pixel (bordo morbido)."""
-    import cv2
-    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * px + 1, 2 * px + 1))
-    grown = cv2.dilate(np.uint8(np.clip(m, 0, 1) * 255), k)
-    return np.asarray(Image.fromarray(grown).filter(ImageFilter.GaussianBlur(1.2)), np.float32) / 255
-
-
 def name_size(name):
     """Corpo del nome: grande come nella grafica approvata, più piccolo se il nome è lungo."""
     w = _word(name, NAME_SIZE, MONO, 9).width
@@ -416,9 +478,7 @@ def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False
     cut[STRIP_Y:] = 0
     sh = _shift(_blur(cut, 16), 14, 18) * (1 - cut)
 
-    # le scritte nere (titolo, data, linea) non toccano mai il ritaglio: attorno resta un filo di carta
-    keep = 1 - _grow(cut, TEXT_GAP)
-    black = np.maximum(black, title) * keep
+    black = np.maximum(black, title * (1 - cut))
     tone = (1 - lum) ** 0.9
     black = np.maximum(black, (_screen(tone, CELL, 45) * (1 - SMOOTH) + tone * SMOOTH) * alpha)
     gtone = np.clip(0.75 - lum, 0, 1) * 1.1

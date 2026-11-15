@@ -76,16 +76,12 @@ class PhotoTests(unittest.TestCase):
 
     def test_payload(self):
         env = {'v': 1, 'action': 'render', 'session': 's1', 'data': {
-            'kind': 'bday', 'player': 'Kenan Yildiz', 'name': 'Kenan Yıldız', 'birth': '2005-05-04', 'age': '21',
+            'kind': 'bday', 'player': 'Kenan Yildiz', 'name': 'Kenan Yıldız', 'birth': '2005-05-04', 'age': '',
             'photo': 'players/kenan_yildiz/kenan_yildiz_pose_04_point_sky.png'}}
         data = webapp_payload.parse_webapp_request(env, FakeCatalog(), 0, 's1')['data']
         self.assertEqual((data['player'], data['birth']), ('Kenan Yildiz', '2005-05-04'))
         self.assertTrue(data['name'].startswith('KENAN Y'))
-        self.assertEqual(data['age'], 21)
-        env['data']['age'] = ''
-        with self.assertRaises(ValueError):          # l'età si scrive a mano
-            webapp_payload.parse_webapp_request(env, FakeCatalog(), 0, 's1')
-        env['data']['age'] = '21'
+        self.assertEqual(data['age'], date.today().year - 2005)
         env['data']['birth'] = '2005-02-30'
         with self.assertRaises(ValueError):
             webapp_payload.parse_webapp_request(env, FakeCatalog(), 0, 's1')

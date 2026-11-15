@@ -540,7 +540,7 @@ class Service:
         return out
 
     def bday_photos(self, envelope):
-        """Compleanno: tutte le pose del giocatore (miniature per gruppo). Nome, data ed età li scrive l'utente."""
+        """Compleanno: tutte le pose del giocatore (miniature per gruppo) e la sua data di nascita."""
         from concurrent.futures import ThreadPoolExecutor
         from graphics import compleanno
         from livescore.graphics import goal as g
@@ -552,13 +552,18 @@ class Service:
         if not rows:
             raise ValueError('Nessuna foto di questo giocatore negli asset.')
         with ThreadPoolExecutor(max_workers=6) as pool:
+            born = pool.submit(compleanno.player_birth, player)
             thumbs = list(pool.map(compleanno.thumb, [r['id'] for r in rows]))
+            try:
+                birth = born.result(timeout=8)
+            except Exception:
+                birth = None
         for row, url in zip(rows, thumbs):
             row['thumb'] = url
             row['height'] = compleanno.base_height(row['id'])
         return {'photos': rows, 'page': {'w': compleanno.W, 'h': compleanno.H, 'cx': compleanno.PLAYER_CX,
                                          'foot': compleanno.PLAYER_FOOT, 'cut': compleanno.STRIP_Y - 105,
-                                         'zoom': [compleanno.ZOOM_MIN, compleanno.ZOOM_MAX]}}
+                                         'zoom': [compleanno.ZOOM_MIN, compleanno.ZOOM_MAX]}, 'birth': birth.isoformat() if birth else '', 'name': compleanno.clean_name(player.name)}
 
     def store_story_shot(self, raw):
         """Screenshot di una storia (Citazione IG): tiene la storia senza l'interfaccia di Instagram e,

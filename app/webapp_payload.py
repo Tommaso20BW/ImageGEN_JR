@@ -376,7 +376,7 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
-    # COMPLEANNO: giocatore, una sua posa dagli asset; nome, data di nascita ed età scritti a mano.
+    # COMPLEANNO: giocatore, una sua posa dagli asset, nome scritto sulla striscia, data ed età.
     if kind == 'bday':
         from graphics import compleanno
         from livescore.graphics import goal as g
@@ -393,9 +393,7 @@ def _build_state(envelope, catalog, now, expected_session):
         if not born:
             raise ValueError('Scrivi la data di nascita.')
         age = str(incoming.get('age') or '').strip()
-        if not (age.isdigit() and 0 < int(age) < 100):
-            raise ValueError("Scrivi l'età.")
-        age = int(age)
+        age = int(age) if age.isdigit() and 0 < int(age) < 100 else compleanno.age_on_birthday(born)
         return {
             'id': uuid.uuid4().hex[:10],
             'data': {'kind': 'bday', 'player': name, 'photo': photo, 'name': label,
