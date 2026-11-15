@@ -1,7 +1,6 @@
 """STORIE IG - collage su carta (1080x1920).
 
-Carta stropicciata con grana (le texture del Compleanno), due timbri Juve sbiaditi negli angoli
-opposti (ig_timbri: stile e posizione cambiano a ogni grafica) e, in colonna al centro:
+Carta stropicciata con grana (le texture del Compleanno) e, in colonna al centro:
 
 - etichetta scelta nella Mini App (BREAKING NEWS, CALCIOMERCATO, UFFICIALE o nessuna): ogni
   parola su una striscia strappata, nero e oro alternati;
@@ -25,7 +24,6 @@ import numpy as np
 from PIL import Image, ImageFilter, ImageOps
 
 from graphics import compleanno as cp
-from graphics import ig_timbri
 from graphics.common import asset_dir
 from graphics.starting_xi import check_photo
 
@@ -359,7 +357,6 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     parts, lines, size, ph_h, y = layout(text, label, psize)
 
     img = cp._paper((W, H), PAPER, seed=int(rng.integers(1 << 20))).copy()
-    img = ig_timbri.stamp(img, seed ^ 0x2B1D)   # due timbri sbiaditi negli angoli opposti
     light = cp._crumple((W, H), int(rng.integers(1 << 20)), 0.7, folds=3)
 
     # etichetta: strisce sfalsate, nero/oro alternati, inclinazioni opposte
