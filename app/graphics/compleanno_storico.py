@@ -26,8 +26,10 @@ PERSON_MAX_W = 1560
 @lru_cache(maxsize=1)
 def _background():
     with Image.open(asset_dir().joinpath(*BG)) as im:
+        if im.size == (W, H):
+            return im.convert('RGB')
         bg = im.convert('RGB').resize((W, H), Image.LANCZOS)
-    return bg.filter(ImageFilter.UnsharpMask(2, 60, 2))
+    return bg.filter(ImageFilter.UnsharpMask(2, 60, 2))      # sfondo piccolo: un filo di nitidezza
 
 
 def _name_mask(text):
