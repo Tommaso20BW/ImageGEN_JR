@@ -262,6 +262,8 @@ function resetAllData() {
   igClearPhoto();
   $('igText').value = '';
   igColor = 'black';
+  igLabel = 'breaking';
+  if (typeof setIgLabel === 'function') setIgLabel(igLabel);
   Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', loading:false, verified:false, story:false, noLink:false, bars:null, mode:''});
   ['iqUrl','iqText','iqName','iqHandle'].forEach(id => { $(id).value = ''; });
   igRefresh();

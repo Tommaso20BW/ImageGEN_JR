@@ -547,7 +547,7 @@ function renderFlow() {
   }
   if (screenName === 'sentlist') { renderSentList(); loadRecent(); }
   if (screenName === 'jrcolor' || screenName === 'jrtitle') loadSavedColors();
-  if (screenName === 'igcontent') { if (igPicking) { igPicking = false; buildFlow(); } loadPhrases(); renderIgColor(); }
+  if (screenName === 'igcontent') { if (igPicking) { igPicking = false; buildFlow(); } loadPhrases(); renderIgColor(); setIgLabel(igLabel); }
   if (screenName === 'igsent') { renderIgSent(); loadRecent(); }
   if (screenName === 'igtg') { renderIgTg(); loadIgTg(); }
   if (screenName === 'igphr') loadPhrases();

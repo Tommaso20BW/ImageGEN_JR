@@ -1,6 +1,7 @@
 """Validate ImageGEN Mini App requests."""
 import json
 import math
+import random
 import re
 import uuid
 
@@ -349,7 +350,9 @@ def _build_state(envelope, catalog, now, expected_session):
         photo_id = incoming.get('photo_id')
         if not text and not photo_id:
             raise ValueError('Scrivi un testo o scegli una foto.')
-        data = {'kind': 'igbn', 'text': text, 'color': ig_story.text_color(incoming.get('color'))}
+        # seed: gli angoli delle strisce cambiano a ogni grafica, ma la stessa grafica rifatta resta uguale
+        data = {'kind': 'igbn', 'text': text, 'color': ig_story.text_color(incoming.get('color')),
+                'label': ig_story.label_key(incoming.get('label')), 'seed': random.randrange(1 << 30)}
         if photo_id:
             data['photo_id'] = _photo_id(photo_id)
         return {

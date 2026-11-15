@@ -354,6 +354,32 @@ function deletePhrase(text) {
 const cleanPhrase = v => String(v || '').replace(/\r/g, '').split('\n')
   .map(l => l.split(/\s+/).filter(Boolean).join(' ')).join('\n').trim();
 
+/* ----- Storia IG: etichetta in alto ----- */
+// Stesse chiavi di graphics/ig_story.py (LABELS).
+const IG_LABELS = [['breaking','Breaking News'],['ultimora','Ultim’ora'],['ufficiale','Ufficiale'],
+  ['mercato','Calciomercato'],['esclusiva','Esclusiva'],['none','Nessuna']];
+
+function setIgLabel(key) {
+  igLabel = IG_LABELS.some(l => l[0] === key) ? key : 'breaking';
+  $('igLabels').querySelectorAll('.opt').forEach(b => {
+    const on = b.dataset.l === igLabel;
+    b.classList.toggle('selected', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+}
+
+IG_LABELS.forEach(([key, name]) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'opt';
+  b.dataset.l = key;
+  b.textContent = name;
+  b.setAttribute('role', 'radio');
+  b.addEventListener('click', () => { haptic('select'); setIgLabel(key); });
+  $('igLabels').appendChild(b);
+});
+setIgLabel(igLabel);
+
 /* ----- Storia IG: colore del testo ----- */
 // Pallino in alto a destra = colore attuale; un tocco apre la tavolozza sopra il testo.
 // Stessi colori di graphics/ig_story.py (TEXT_COLORS).
