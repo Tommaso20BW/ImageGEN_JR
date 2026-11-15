@@ -48,7 +48,7 @@ let tableView = '';    // coppe europee: 'table' (classifica) o 'bracket' (tabel
 let calMonth = 0;      // CALENDARIO: mese (1-12)
 const PREMATCH = ['squad','xi','md','pxi'];   // grafiche che partono dalla scelta della partita
 let mdPick = '';       // id partita ESPN scelta, 'manual' o ''
-let igPicking = false; // Storia IG: pagina "Dagli ultimi invii" aperta (11-invii.js)
+let igPicking = false; // Storia IG: pagina aperta da Contenuto: 'sent' (ultimi invii) o 'tg' (canale) (11-invii.js)
 // CITAZIONE IG (12-citazione.js): link letto, foto del post, foto scelta, foto profilo.
 const iq = {url:'', photos:[], sel:-1, avatar:'', loading:false, verified:false, story:false, noLink:false, bars:null, mode:''};
 let kitFromMatch = false;   // maglia presa da ESPN (partite giocate): niente passaggio "Maglia"
@@ -274,7 +274,7 @@ function buildFlow() {
   else if (kind === 'conv') flow = ['convlist'];
   else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'rin') flow = ['rincontent'];
-  else if (kind === 'igbn') flow = igPicking ? ['igcontent','igsent'] : ['igcontent'];
+  else if (kind === 'igbn') flow = igPicking ? ['igcontent', igPicking === 'tg' ? 'igtg' : 'igsent'] : ['igcontent'];
   // Storia: niente editor della foto (la storia va intera nel riquadro 9:16).
   // Citazione Instagram: prima si sceglie Post o Storia. X e Threads: solo post.
   else if (isQuoteKind(kind)) flow = [...(kind === 'igq' ? ['iqmode'] : []), ...(iq.story ? ['iqurl','iqshot','iqtext']
@@ -542,6 +542,7 @@ function renderFlow() {
   if (screenName === 'jrcolor' || screenName === 'jrtitle') loadSavedColors();
   if (screenName === 'igcontent') { if (igPicking) { igPicking = false; buildFlow(); } loadPhrases(); renderIgColor(); }
   if (screenName === 'igsent') { renderIgSent(); loadRecent(); }
+  if (screenName === 'igtg') { renderIgTg(); loadIgTg(); }
   if (screenName === 'iqpick') renderIqPick();
   if (screenName === 'iqshot') iqShotRefresh();
   if (screenName === 'sentitem') renderSentItem();

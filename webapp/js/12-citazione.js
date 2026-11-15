@@ -29,6 +29,7 @@ async function iqLoad() {
       avatar:body.avatar_id || '', verified:!!body.verified, story:!!body.story});
     if (iq.story) clearPhoto();           // storia: la foto la carichi tu nell'editor
     $('iqText').value = body.text || '';
+    iqTrReset();
     $('iqName').value = body.user || '';
     $('iqHandle').value = body.handle || '';
     $('iqAvatar').style.backgroundImage = iq.avatar ? `url("${iqThumb(iq.avatar)}")` : '';
@@ -127,6 +128,7 @@ function iqReset(story, noLink) {
   Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', verified:false, story, noLink, bars:null, shotCropped:false});
   $('iqUrl').value = '';
   $('iqText').value = '';
+  iqTrReset();
   $('iqName').value = '';
   $('iqHandle').value = '';
   $('iqAvatar').style.backgroundImage = '';
@@ -222,3 +224,40 @@ function iqTexts() {
   $('iqVerCk').textContent = iq.verified ? '✓' : '';
   $('iqHandleRow').hidden = false;      // @username: X e Instagram
 }
+
+/* ----- Traduttore: il testo del post in italiano con un tocco (app/translate.py) -----
+   Dopo la traduzione lo stesso pulsante rimette il testo originale. */
+const iqTr = {orig:null, busy:false};
+function iqTrRefresh() {
+  const b = $('iqTranslate');
+  b.textContent = iqTr.busy ? 'Traduco…' : iqTr.orig !== null ? 'Rimetti il testo originale' : 'Traduci in italiano';
+  b.disabled = iqTr.busy;
+}
+function iqTrReset() { iqTr.orig = null; iqTrRefresh(); }
+async function iqTranslate() {
+  clearError();
+  if (iqTr.busy) return;
+  if (iqTr.orig !== null) { $('iqText').value = iqTr.orig; iqTrReset(); haptic('select'); return; }
+  const text = $('iqText').value.trim();
+  if (!text) { showError('Non c’è testo da tradurre.'); return; }
+  if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+  haptic('select');
+  iqTr.busy = true; iqTrRefresh();
+  try {
+    const response = await netFetch(`${directBase}/translate`, {
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify({v:1, action:'translate', session, text})
+    }, 30000, 2, true);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.ok) throw new Error(body.error || 'Traduzione non riuscita.');
+    if (body.source === 'it') { showError('Il testo è già in italiano.'); return; }
+    iqTr.orig = $('iqText').value;
+    $('iqText').value = body.text;
+    haptic('success');
+  } catch (error) {
+    showError(error && error.name === 'AbortError' ? 'ImageGEN non risponde. Riprova.' : (error.message || 'Traduzione non riuscita.'));
+  } finally {
+    iqTr.busy = false; iqTrRefresh();
+  }
+}
+$('iqTranslate').addEventListener('click', iqTranslate);

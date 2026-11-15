@@ -314,6 +314,10 @@
             <textarea id="igText" class="field-input" maxlength="500" style="min-height:170px" spellcheck="true"
               placeholder="Testo (facoltativo se scegli una foto)"></textarea>
             <div class="hint ig-count"><span id="igHint"></span><span id="igCount">0 / 500</span></div>
+            <div class="field-label gap">Notizie</div>
+            <div class="ios-list">
+              <button id="igFromTg" class="ios-row ios-act" type="button">Dal canale Telegram</button>
+            </div>
             <div class="field-label gap">Frasi pronte</div>
             <div id="igPhrases" class="ios-list ig-phrases">
               <div id="igPhrasesEmpty" class="ios-row ig-ph-empty">Nessuna frase salvata.</div>
@@ -373,6 +377,9 @@
             <h1 id="iqTextTitle">Testo e account</h1>
             <p id="iqTextLead" class="lead">Testo preso dal post, senza emoji e hashtag finali: puoi cambiarlo.</p>
             <textarea id="iqText" class="field-input" style="min-height:170px" spellcheck="true" placeholder="Testo della citazione"></textarea>
+            <div class="ios-list iq-tr">
+              <button id="iqTranslate" class="ios-row ios-act" type="button">Traduci in italiano</button>
+            </div>
             <div class="field-label gap">Account</div>
             <div class="ios-list">
               <label class="ios-row"><span id="iqAvatar" class="iq-av"></span><input id="iqName" class="ios-in" maxlength="40" autocapitalize="words" autocomplete="off" spellcheck="false" placeholder="Nome (es. Francisco Conceição)"></label>
@@ -387,6 +394,14 @@
             <p class="lead">Tocca una grafica: diventa la foto della storia.</p>
             <p id="igSentEmpty" class="note" hidden>Nessuna grafica inviata.</p>
             <section id="igSentGroup" class="hm-group"><div id="igSentList" class="hm-list"></div></section>
+          </section>
+
+          <section class="screen" data-screen="igtg">
+            <div class="eyebrow">Storie Instagram · Breaking News</div>
+            <h1>Dal canale Telegram</h1>
+            <p class="lead">Gli ultimi 20 post di Juventus Reborn, già senza emoji, fonte e @Juventus_Reborn. Tocca una notizia: diventa il testo della storia.</p>
+            <p id="igTgNote" class="note"></p>
+            <section id="igTgGroup" class="hm-group" hidden><div id="igTgList" class="hm-list"></div></section>
           </section>
 
           <section class="screen" data-screen="tablecomp">

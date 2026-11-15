@@ -357,7 +357,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto'):
+                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/tgposts', '/translate'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -406,6 +406,14 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/igpost':
                 self._json(200, {'ok': True, **self.service.ig_post(envelope)})
+                return
+
+            if path == '/tgposts':
+                self._json(200, {'ok': True, **self.service.tg_posts(envelope)})
+                return
+
+            if path == '/translate':
+                self._json(200, {'ok': True, **self.service.translate(envelope)})
                 return
 
             if path == '/layout':
@@ -1187,6 +1195,20 @@ class Service:
         return {'platform': 'threads' if th else 'x' if x else 'ig', 'user': ig_quote.clean_name(user), 'handle': handle,
                 'verified': bool(post.get('verified')), 'text': ig_quote.clean_text(post['text']),
                 'photos': photos, 'avatar_id': avatar, 'story': story}
+
+    def tg_posts(self, envelope):
+        """Storia IG: ultimi 20 post del canale Telegram, già puliti come testo della storia."""
+        import requests
+        import tgchannel
+        try:
+            return {'posts': tgchannel.fetch()}
+        except requests.RequestException as exc:
+            raise ValueError('Canale Telegram non raggiungibile. Riprova tra poco.') from exc
+
+    def translate(self, envelope):
+        """Citazioni: testo tradotto in italiano."""
+        import translate
+        return translate.to_italian((envelope or {}).get('text'))
 
     def _remember_ig_name(self, data):
         """Citazione IG inviata con un nome diverso dall'username: la prossima volta arriva già."""

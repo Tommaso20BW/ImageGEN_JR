@@ -409,3 +409,8 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .emo-page .set-empty{padding:24px 0;text-align:center;color:var(--muted)}
 .sp-v .emo-th{vertical-align:middle}
 #iqNoLinkBox{margin-top:14px}
+
+/* Storia IG: post del canale Telegram (testo su più righe) */
+.tg-post .hm-top{align-items:flex-start}
+.tg-post .hm-top .hm-name{white-space:normal;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;font-size:14.5px;font-weight:500;line-height:1.32}
+.iq-tr{margin-top:10px}

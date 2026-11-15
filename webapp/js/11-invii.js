@@ -231,7 +231,7 @@ $('sentEdit').addEventListener('click', editRecent);
 // della storia (il servizio la tratta come una foto caricata) e si torna al Contenuto.
 function openIgSent() {
   haptic('select');
-  igPicking = true;
+  igPicking = 'sent';
   buildFlow();
   navDir = 1;
   flowIndex = flow.indexOf('igsent');
@@ -388,6 +388,7 @@ $('igColorBtn').addEventListener('click', () => {
 });
 
 $('igFromSent').addEventListener('click', openIgSent);
+$('igFromTg').addEventListener('click', openIgTg);
 $('igPhraseSave').addEventListener('click', savePhrase);
 $('igText').addEventListener('input', renderPhrases);
 
@@ -414,3 +415,70 @@ function updateEndNotice() {
 setInterval(updateEndNotice, 5000);
 
 if (!LIVE) updateEndNotice();
+
+/* ----- Storia IG: testo dagli ultimi post del canale Telegram (app/tgchannel.py) -----
+   "Dal canale Telegram" apre l'elenco degli ultimi 20 post, già senza emoji, fonte e firma:
+   il tocco su una notizia la mette nel testo della storia e si torna al Contenuto. */
+let tgPosts = null, tgLoading = false;
+function openIgTg() {
+  haptic('select');
+  igPicking = 'tg';
+  buildFlow();
+  navDir = 1;
+  flowIndex = flow.indexOf('igtg');
+  renderFlow();
+}
+async function loadIgTg() {
+  if (tgLoading) return;
+  clearError();
+  if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+  tgLoading = true;
+  renderIgTg();
+  try {
+    const response = await netFetch(`${directBase}/tgposts`, {
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify({v:1, action:'tgposts', session})
+    }, 30000, 2, true);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.ok) throw new Error(body.error || 'Canale Telegram non disponibile.');
+    tgPosts = Array.isArray(body.posts) ? body.posts : [];
+  } catch (error) {
+    showError(error && error.name === 'AbortError' ? 'ImageGEN non risponde. Riprova.' : (error.message || 'Canale Telegram non disponibile.'));
+  } finally {
+    tgLoading = false;
+    renderIgTg();
+  }
+}
+function tgWhen(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const time = d.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+  return d.toDateString() === new Date().toDateString() ? time : `${d.getDate()}/${d.getMonth() + 1} ${time}`;
+}
+function renderIgTg() {
+  const list = $('igTgList'), posts = tgPosts || [];
+  list.innerHTML = '';
+  $('igTgNote').textContent = tgLoading && !posts.length ? 'Leggo il canale…' : tgPosts && !posts.length ? 'Nessun post con testo.' : '';
+  $('igTgGroup').hidden = !posts.length;
+  posts.forEach(post => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'hm-item tg-post';
+    b.innerHTML = '<span class="hm-txt"><span class="hm-top"><span class="hm-name"></span><span class="hm-time"></span></span></span>' +
+      '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+    b.querySelector('.hm-name').textContent = post.text;
+    b.querySelector('.hm-time').textContent = tgWhen(post.date);
+    b.addEventListener('click', () => pickIgTg(post));
+    list.appendChild(b);
+  });
+}
+function pickIgTg(post) {
+  haptic('success');
+  clearError();
+  $('igText').value = String(post.text || '').slice(0, 500);
+  igRefresh();
+  renderPhrases();
+  navDir = -1;
+  flowIndex = 0;
+  renderFlow();            // Contenuto: igPicking torna false e il percorso si accorcia
+}

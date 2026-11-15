@@ -114,13 +114,16 @@ const REQUESTS = [
   {id:'sent',   kind:'sent',  icon:'sent', title:'Ultimi invii', desc:'Rimanda o modifica le grafiche già inviate'},
   {id:'ita',    kind:'ita',   icon:'ita', title:'Italia',       desc:'Grafiche della Nazionale'}
 ];
+// In ordine di uso: prima della partita, durante, dopo; poi notizie, social, classifiche.
 const HOME_GROUPS = [
-  {icon:'g-pre', title:'Pre-gara',              ids:['md','pxi','squad','xi']},
-  {icon:'g-events', title:'Eventi della partita', ids:['kick','half','second','end90','full']},
+  {icon:'g-pre', title:'Pre-gara',              ids:['pxi','squad','md','xi']},
+  {icon:'g-events', title:'Fasi della partita', ids:['kick','half','second','end90','full']},
   {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
-  {icon:'igq', title:'Social',                    ids:['igbn','igq','xq','thq']},
-  {icon:'g-other', title:'Altro',                 ids:['rin','jr','cal','table','sent']},
-  {icon:'ita', title:'Nazionale',                 ids:['ita','conv']}
+  {icon:'jr', title:'Notizie e post',            ids:['igbn','jr','rin']},
+  {icon:'igq', title:'Citazioni',                ids:['igq','xq','thq']},
+  {icon:'cal', title:'Calendario e classifiche', ids:['cal','table']},
+  {icon:'ita', title:'Nazionale',                ids:['ita','conv']},
+  {icon:'sent', title:'Ultimi invii',            ids:['sent']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
 const COMPETITIONS_UEFA = [
@@ -209,7 +212,7 @@ const STEP_NAMES = {
   competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
   player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
   natkind:'Grafica', natxi:'Formazione', natopp:'Avversaria', natplayer:'Giocatore', goaltype:'Tipo di gol',
-  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', rincontent:'Rinnovo', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
+  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', rincontent:'Rinnovo', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', igtg:'Notizia', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
 };
 
 const $ = id => document.getElementById(id);
