@@ -414,3 +414,30 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .tg-post .hm-top{align-items:flex-start}
 .tg-post .hm-top .hm-name{white-space:normal;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;font-size:14.5px;font-weight:500;line-height:1.32}
 .iq-tr{margin-top:10px}
+
+/* Storia IG: pagina Contenuto (testo, due riquadri, foto, due riquadri) */
+.ig-text{min-height:150px}
+.ig-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.ig-tile{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-height:88px;padding:13px 14px;border:0;border-radius:12px;
+  background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.ig-tile svg{width:24px;height:24px;margin-bottom:5px;fill:none;stroke:var(--accent);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ig-tile span{font-size:15.5px;font-weight:600;line-height:1.2}
+.ig-tile small{font-size:12.5px;color:var(--muted);line-height:1.25}
+.ig-tile:active{background:var(--accent-soft)}
+.ig-tile:disabled{opacity:.5}
+.ig-thumb{position:relative;width:100%;height:220px;margin-top:2px;border-radius:12px;background:var(--surface2) center/cover no-repeat}
+.ig-thumb[hidden]{display:none}
+.ig-thumb + .ig-tiles{margin-top:10px}
+.ig-thumb-x{position:absolute;top:8px;right:8px;width:32px;height:32px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;
+  font-size:21px;line-height:1;cursor:pointer}
+.ig-thumb-x[hidden]{display:none}
+.ig-foot{margin-top:14px!important}
+.ig-save{margin-top:14px}
+
+/* Storia IG: foto dei post del canale (una: miniatura a destra; album: si sceglie) */
+.tg-one{flex:0 0 auto;width:58px;height:58px;margin-left:10px;border-radius:9px;background:var(--surface2) center/cover no-repeat}
+.tg-album{cursor:default}
+.tg-pics{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.tg-pic{width:64px;height:64px;padding:0;border:0;border-radius:9px;background:var(--surface2) center/cover no-repeat;cursor:pointer}
+.tg-pic:active{outline:2px solid var(--accent);outline-offset:1px}
+.tg-nopic{width:auto;padding:0 12px;font:inherit;font-size:13px;font-weight:600;color:var(--text)}

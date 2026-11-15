@@ -306,31 +306,38 @@
           <section class="screen" data-screen="igcontent">
             <div class="eyebrow">Storie Instagram · Breaking News</div>
             <div class="photo-head">
-              <h1>Contenuto</h1>
+              <h1>Storia</h1>
               <button id="igColorBtn" class="head-ico" type="button" aria-label="Colore del testo" title="Colore del testo"><span id="igColorDot" class="ig-dot"></span></button>
             </div>
-            <p class="lead">Scrivi il testo, aggiungi una foto, oppure entrambi: testo sopra e foto sotto. Misure e altezze le calcola ImageGEN tra la scritta e il logo.</p>
             <div id="igColors" class="ig-colors" role="radiogroup" aria-label="Colore del testo" hidden></div>
-            <textarea id="igText" class="field-input" maxlength="500" style="min-height:170px" spellcheck="true"
-              placeholder="Testo (facoltativo se scegli una foto)"></textarea>
+            <div class="field-label">Testo</div>
+            <textarea id="igText" class="field-input ig-text" maxlength="500" spellcheck="true"
+              placeholder="Scrivi la notizia (facoltativo se c’è la foto)"></textarea>
             <div class="hint ig-count"><span id="igHint"></span><span id="igCount">0 / 500</span></div>
-            <div class="field-label gap">Notizie</div>
-            <div class="ios-list">
-              <button id="igFromTg" class="ios-row ios-act" type="button">Dal canale Telegram</button>
-            </div>
-            <div class="field-label gap">Frasi pronte</div>
-            <div id="igPhrases" class="ios-list ig-phrases">
-              <div id="igPhrasesEmpty" class="ios-row ig-ph-empty">Nessuna frase salvata.</div>
-              <button id="igPhraseSave" class="ios-row ios-act" type="button">Salva il testo come frase pronta</button>
+            <div class="ig-tiles">
+              <button id="igFromTg" class="ig-tile" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></svg><span>Dal canale</span><small>Testo e foto dei post</small></button>
+              <button id="igOpenPhr" class="ig-tile" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 11h14M5 16h9"/></svg><span>Frasi pronte</span><small id="igPhrCount">Salvate da te</small></button>
             </div>
             <div class="field-label gap">Foto</div>
-            <div class="ios-list ig-list">
-              <div id="igThumb" class="ig-thumb" hidden></div>
-              <button id="igPick" class="ios-row ios-act" type="button">Scegli foto</button>
-              <button id="igFromSent" class="ios-row ios-act" type="button">Dagli ultimi invii</button>
-              <button id="igClear" class="ios-row ios-act danger" type="button" hidden>Rimuovi foto</button>
+            <div id="igThumb" class="ig-thumb" hidden><button id="igClear" class="ig-thumb-x" type="button" aria-label="Rimuovi foto" hidden>×</button></div>
+            <div class="ig-tiles">
+              <button id="igPick" class="ig-tile" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span id="igPickLabel">Galleria</span><small>Dal telefono</small></button>
+              <button id="igFromSent" class="ig-tile" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Ultimi invii</span><small>Grafiche già inviate</small></button>
             </div>
+            <p class="note ig-foot">Testo sopra e foto sotto: misure e altezze le calcola ImageGEN.</p>
             <input id="igFile" type="file" accept="image/*" hidden>
+          </section>
+
+          <section class="screen" data-screen="igphr">
+            <div class="eyebrow">Storie Instagram · Breaking News</div>
+            <h1>Frasi pronte</h1>
+            <p class="lead">Tocca una frase: va nel testo con il suo colore. × la elimina.</p>
+            <div id="igPhrases" class="ios-list ig-phrases">
+              <div id="igPhrasesEmpty" class="ios-row ig-ph-empty">Nessuna frase salvata.</div>
+            </div>
+            <div class="ios-list ig-save">
+              <button id="igPhraseSave" class="ios-row ios-act" type="button">Salva il testo attuale come frase</button>
+            </div>
           </section>
 
           <section class="screen" data-screen="iqmode">
@@ -399,7 +406,7 @@
           <section class="screen" data-screen="igtg">
             <div class="eyebrow">Storie Instagram · Breaking News</div>
             <h1>Dal canale Telegram</h1>
-            <p class="lead">Gli ultimi 20 post di Juventus Reborn, già senza emoji, fonte e @Juventus_Reborn. Tocca una notizia: diventa il testo della storia.</p>
+            <p class="lead">Ultimi 20 post di Juventus Reborn, già puliti. Tocca una notizia: testo e foto vanno nella storia. Se le foto sono più d’una, tocca quella da usare.</p>
             <p id="igTgNote" class="note"></p>
             <section id="igTgGroup" class="hm-group" hidden><div id="igTgList" class="hm-list"></div></section>
           </section>

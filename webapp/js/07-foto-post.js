@@ -13,7 +13,7 @@ function igRefresh() {
   $('igThumb').hidden = !igb.url;
   $('igThumb').style.backgroundImage = igb.url ? `url("${igb.url}")` : '';
   $('igClear').hidden = !igb.id;
-  $('igPick').textContent = igb.id ? 'Cambia foto' : 'Scegli foto';
+  $('igPickLabel').textContent = igb.id ? 'Cambia foto' : 'Galleria';
   const n = $('igText').value.length;
   $('igCount').textContent = `${n} / 500`;
   $('igHint').textContent = igb.uploading ? 'Caricamento foto…' : '';

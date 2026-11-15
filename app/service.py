@@ -357,7 +357,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/tgposts', '/translate'):
+                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/tgposts', '/tgphoto', '/translate'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -410,6 +410,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/tgposts':
                 self._json(200, {'ok': True, **self.service.tg_posts(envelope)})
+                return
+
+            if path == '/tgphoto':
+                self._json(200, {'ok': True, **self.service.tg_photo(envelope)})
                 return
 
             if path == '/translate':
@@ -1204,6 +1208,16 @@ class Service:
             return {'posts': tgchannel.fetch()}
         except requests.RequestException as exc:
             raise ValueError('Canale Telegram non raggiungibile. Riprova tra poco.') from exc
+
+    def tg_photo(self, envelope):
+        """Storia IG: foto scelta di un post del canale, tenuta come una foto caricata."""
+        import requests
+        import tgchannel
+        try:
+            raw = tgchannel.download_photo((envelope or {}).get('url'))
+        except requests.RequestException as exc:
+            raise ValueError('Foto del canale non scaricabile. Riprova tra poco.') from exc
+        return self.store_photo(raw)
 
     def translate(self, envelope):
         """Citazioni: testo tradotto in italiano."""

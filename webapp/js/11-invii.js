@@ -270,8 +270,8 @@ async function pickIgSent(item) {
 }
 
 /* ----- Storia IG: frasi pronte ----- */
-// Elenco sotto il testo: un tocco mette la frase nel testo; "×" la toglie; "Salva il testo
-// come frase pronta" la aggiunge. Le frasi restano nel repo degli asset (sent_store.py).
+// Pagina a parte (dal riquadro "Frasi pronte"): un tocco mette la frase nel testo e si torna alla
+// storia; "×" la toglie; "Salva il testo attuale" la aggiunge. Restano nel repo degli asset (sent_store.py).
 let igPhrases = [];
 async function phrasesCall(action, text='', color='black') {
   const response = await netFetch(`${directBase}/phrases`, {
@@ -289,6 +289,15 @@ function loadPhrases() {
   if (!directBase || !session) return;
   renderPhrases();
   phrasesCall('list').catch(() => {});
+}
+
+function openIgPhrases() {
+  haptic('select');
+  igPicking = 'phr';
+  buildFlow();
+  navDir = 1;
+  flowIndex = flow.indexOf('igphr');
+  renderFlow();
 }
 
 function renderPhrases() {
@@ -309,14 +318,16 @@ function renderPhrases() {
       clearError();
       igRefresh();
       renderPhrases();
+      if (flow[flowIndex] === 'igphr') { navDir = -1; flowIndex = 0; renderFlow(); }
     });
     row.querySelector('.ig-ph-del').addEventListener('click', () => deletePhrase(text));
-    box.insertBefore(row, save);
+    box.appendChild(row);
   });
   // Già salvata uguale (stesso testo e stesso colore): niente da salvare.
   const current = cleanPhrase($('igText').value);
   save.disabled = !current || igPhrases.some(p => p.text === current && p.color === igColor);
   $('igPhrasesEmpty').hidden = igPhrases.length > 0;
+  $('igPhrCount').textContent = igPhrases.length === 1 ? '1 frase' : igPhrases.length ? `${igPhrases.length} frasi` : 'Salvate da te';
 }
 
 async function savePhrase() {
@@ -389,6 +400,7 @@ $('igColorBtn').addEventListener('click', () => {
 
 $('igFromSent').addEventListener('click', openIgSent);
 $('igFromTg').addEventListener('click', openIgTg);
+$('igOpenPhr').addEventListener('click', openIgPhrases);
 $('igPhraseSave').addEventListener('click', savePhrase);
 $('igText').addEventListener('input', renderPhrases);
 
@@ -417,8 +429,9 @@ setInterval(updateEndNotice, 5000);
 if (!LIVE) updateEndNotice();
 
 /* ----- Storia IG: testo dagli ultimi post del canale Telegram (app/tgchannel.py) -----
-   "Dal canale Telegram" apre l'elenco degli ultimi 20 post, già senza emoji, fonte e firma:
-   il tocco su una notizia la mette nel testo della storia e si torna al Contenuto. */
+   "Dal canale" apre l'elenco degli ultimi 20 post, già senza emoji, fonte e firma: il tocco su una
+   notizia mette testo e foto nella storia e si torna al Contenuto. Un album mostra le sue foto:
+   si tocca quella da usare (o "Solo testo"). */
 let tgPosts = null, tgLoading = false;
 function openIgTg() {
   haptic('select');
@@ -458,24 +471,76 @@ function tgWhen(iso) {
 function renderIgTg() {
   const list = $('igTgList'), posts = tgPosts || [];
   list.innerHTML = '';
-  $('igTgNote').textContent = tgLoading && !posts.length ? 'Leggo il canale…' : tgPosts && !posts.length ? 'Nessun post con testo.' : '';
+  $('igTgNote').textContent = tgLoading && !posts.length ? 'Leggo il canale…' : tgPosts && !posts.length ? 'Nessun post.' : '';
   $('igTgGroup').hidden = !posts.length;
   posts.forEach(post => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'hm-item tg-post';
+    const photos = Array.isArray(post.photos) ? post.photos : [];
+    const many = photos.length > 1;
+    const b = document.createElement(many ? 'div' : 'button');
+    if (!many) b.type = 'button';
+    b.className = 'hm-item tg-post' + (many ? ' tg-album' : '');
     b.innerHTML = '<span class="hm-txt"><span class="hm-top"><span class="hm-name"></span><span class="hm-time"></span></span></span>' +
-      '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-    b.querySelector('.hm-name').textContent = post.text;
+      (photos.length === 1 ? '<span class="tg-one"></span>' : many ? '' : '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>');
+    b.querySelector('.hm-name').textContent = post.text || 'Solo foto';
     b.querySelector('.hm-time').textContent = tgWhen(post.date);
-    b.addEventListener('click', () => pickIgTg(post));
+    if (photos.length === 1) b.querySelector('.tg-one').style.backgroundImage = `url("${photos[0]}")`;
+    if (many) {
+      const row = document.createElement('div');
+      row.className = 'tg-pics';
+      photos.forEach((url, i) => {
+        const t = document.createElement('button');
+        t.type = 'button';
+        t.className = 'tg-pic';
+        t.style.backgroundImage = `url("${url}")`;
+        t.setAttribute('aria-label', `Usa la foto ${i + 1}`);
+        t.addEventListener('click', () => pickIgTg(post, url));
+        row.appendChild(t);
+      });
+      if (post.text) {
+        const t = document.createElement('button');
+        t.type = 'button';
+        t.className = 'tg-pic tg-nopic';
+        t.textContent = 'Solo testo';
+        t.addEventListener('click', () => pickIgTg(post, ''));
+        row.appendChild(t);
+      }
+      b.querySelector('.hm-txt').appendChild(row);
+    } else {
+      b.addEventListener('click', () => pickIgTg(post, photos[0] || ''));
+    }
     list.appendChild(b);
   });
 }
-function pickIgTg(post) {
-  haptic('success');
+let tgPicking = false;
+async function pickIgTg(post, photoUrl) {
+  if (tgPicking) return;
   clearError();
-  $('igText').value = String(post.text || '').slice(0, 500);
+  if (photoUrl) {
+    haptic('select');
+    tgPicking = true;
+    igb.uploading = true;
+    igRefresh();
+    try {
+      const response = await netFetch(`${directBase}/tgphoto`, {
+        method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+        body:JSON.stringify({v:1, action:'tgphoto', session, url:photoUrl})
+      }, 60000, 2, true);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) throw new Error(body.error || 'Foto del canale non disponibile.');
+      if (igb.url && igb.url.startsWith('blob:')) { try { URL.revokeObjectURL(igb.url); } catch (_) {} }
+      igb.id = body.photo_id;
+      igb.url = photoUrl;
+    } catch (error) {
+      showError(error && error.name === 'AbortError' ? 'ImageGEN non risponde. Riprova.' : (error.message || 'Foto del canale non disponibile.'));
+      return;
+    } finally {
+      tgPicking = false;
+      igb.uploading = false;
+      igRefresh();
+    }
+  }
+  haptic('success');
+  if (post.text) $('igText').value = String(post.text).slice(0, 500);
   igRefresh();
   renderPhrases();
   navDir = -1;

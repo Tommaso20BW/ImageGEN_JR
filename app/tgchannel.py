@@ -1,4 +1,5 @@
-"""Storia IG: ultimi post del canale Telegram (pagina pubblica t.me/s/<canale>) come testo della storia.
+"""Storia IG: ultimi post del canale Telegram (pagina pubblica t.me/s/<canale>) come testo della storia,
+con le foto del post (un album ne ha più d'una: si sceglie nella Mini App).
 
 Il testo arriva già pulito come nelle altre grafiche: senza emoji, senza la firma
 "👉 @Juventus_Reborn" e senza la riga della fonte ("📲 Nicolò Schira").
@@ -15,10 +16,15 @@ PAGE = 'https://t.me/s/{channel}'
 LIMIT = 20
 _SOURCE = re.compile(r'^\s*📲')          # riga della fonte, prima di togliere gli emoji
 _HASHTAGS = re.compile(r'^(?:#\w+\s*)+$')
+_PHOTO_URL = re.compile(r"background-image:\s*url\(['\"]?(https://[^'\")]+)")
+PHOTO_HOSTS = ('telesco.pe', 'cdn-telegram.org', 'telegram-cdn.org')
+MAX_PHOTO = 15 * 1024 * 1024
+# Rubriche fisse del canale, non notizie da mettere in storia.
+_RUBRICHE = re.compile(r'^\W*(?:accadde\s+oggi|prime\s+pagine)(?!\w)', re.I)
 
 
 class _Page(HTMLParser):
-    """Post della pagina: id, data e testo (a-capo dai <br>)."""
+    """Post della pagina: id, data, testo (a-capo dai <br>) e foto (indirizzi del CDN di Telegram)."""
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -28,8 +34,12 @@ class _Page(HTMLParser):
         a = dict(attrs)
         cls = a.get('class') or ''
         if tag == 'div' and a.get('data-post'):
-            self._post = {'id': a['data-post'].rsplit('/', 1)[-1], 'date': '', 'text': ''}
+            self._post = {'id': a['data-post'].rsplit('/', 1)[-1], 'date': '', 'text': '', 'photos': []}
             self.posts.append(self._post)
+        elif 'tgme_widget_message_photo_wrap' in cls.split() and self._post is not None:
+            m = _PHOTO_URL.search(a.get('style') or '')
+            if m and m.group(1) not in self._post['photos']:
+                self._post['photos'].append(m.group(1))
         elif tag == 'time' and self._post is not None and a.get('datetime') and not self._post['date']:
             self._post['date'] = a['datetime']
         if self._text is not None:
@@ -62,7 +72,7 @@ class _Page(HTMLParser):
 def parse(page_html: str) -> list[dict]:
     p = _Page()
     p.feed(page_html)
-    return [x for x in p.posts if x['text'].strip()]
+    return [x for x in p.posts if x['text'].strip() or x['photos']]
 
 
 def story_text(raw: str) -> str:
@@ -75,7 +85,7 @@ def story_text(raw: str) -> str:
 
 
 def fetch(channel: str = CHANNEL, limit: int = LIMIT, session=None) -> list[dict]:
-    """Ultimi `limit` post con testo, dal più recente."""
+    """Ultimi `limit` post con testo o foto, dal più recente."""
     session = session or requests.Session()
     url, posts, seen = PAGE.format(channel=channel), [], set()
     params = {}
@@ -94,8 +104,30 @@ def fetch(channel: str = CHANNEL, limit: int = LIMIT, session=None) -> list[dict
     out = []
     for p in posts:
         text = story_text(p['text'])
-        if text:
-            out.append({'id': p['id'], 'date': p['date'], 'text': text})
+        if _RUBRICHE.match(text):
+            continue
+        if text or p['photos']:
+            out.append({'id': p['id'], 'date': p['date'], 'text': text, 'photos': p['photos'][:10]})
         if len(out) >= limit:
             break
     return out
+
+
+def is_photo_url(url) -> bool:
+    """Solo foto del CDN di Telegram (il servizio non scarica indirizzi qualsiasi)."""
+    from urllib.parse import urlparse
+    u = urlparse(str(url or ''))
+    host = (u.hostname or '').lower()
+    return u.scheme == 'https' and any(host == h or host.endswith('.' + h) for h in PHOTO_HOSTS)
+
+
+def download_photo(url, session=None) -> bytes:
+    """Foto di un post del canale (scelta nella Mini App)."""
+    if not is_photo_url(url):
+        raise ValueError('Foto del canale non valida.')
+    session = session or requests.Session()
+    r = session.get(url, timeout=20, headers={'User-Agent': 'Mozilla/5.0'})
+    r.raise_for_status()
+    if len(r.content) > MAX_PHOTO:
+        raise ValueError('Foto del canale troppo grande.')
+    return r.content
