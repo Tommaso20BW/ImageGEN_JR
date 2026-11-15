@@ -7,10 +7,10 @@ Carta stropicciata con grana (le texture del Compleanno) e, in colonna al centro
 - foto (facoltativa): stampa con bordo bianco, inclinata, con due pezzi di nastro adesivo;
 - testo (facoltativo): battuto a macchina (Special Elite), una riga per striscia di carta bianca,
   centrato. La grandezza dipende da quanto è lungo e si riduce finché tutto sta nella zona;
-- in basso il logo JR nero su un adesivo bianco ritagliato a forbici intorno alla forma.
+- in basso il logo JR dritto, stampato come un timbro: senza bordo, un po' sbiadito.
 
-Tutto sta tra SAFE_T e SAFE_B (fuori dalle barre di Instagram). Gli angoli di strisce, foto e
-logo cambiano a ogni grafica (mai capovolti: pochi gradi), decisi da `seed`: la stessa grafica
+Tutto sta tra SAFE_T e SAFE_B (fuori dalle barre di Instagram). Gli angoli di strisce e foto
+cambiano a ogni grafica (mai capovolti: pochi gradi), decisi da `seed`: la stessa grafica
 rifatta con lo stesso seed esce identica.
 
 Dal testo vengono tolti in automatico gli emoji e la firma "👉 @Juventus_Reborn".
@@ -19,7 +19,6 @@ import io
 import re
 from functools import lru_cache
 
-import cv2
 import numpy as np
 from PIL import Image, ImageFilter, ImageOps
 
@@ -44,7 +43,6 @@ FS_SOLO_STEPS = ((80, 84), (150, 72), (240, 64), (10**9, 54))
 PAPER = (226, 220, 206)
 STRIP = (250, 248, 242)
 TAPE = (236, 228, 200)
-STICKER = (247, 245, 239)
 BLACK = cp.INK
 GOLD = cp.GOLD
 CREAM = np.array(cp.CREAM, np.float32) / 255
@@ -303,29 +301,17 @@ def _logo_alpha():
         return a.crop(a.getbbox())
 
 
-def _logo_sticker(img, y_top, angle, seed, size=140, border=14):
-    """Logo JR nero su adesivo bianco: bordo uniforme intorno alla forma, tagliato a forbici
-    (tanti tagli dritti corti), calcolato a 4x per avere i bordi puliti."""
-    S = 4
+def _logo_stamp(img, y_top, seed, size=140, k=.78):
+    """Logo JR dritto stampato sulla carta come un timbro: niente bordo, inchiostro un po'
+    sbiadito e consumato (più chiaro in alcuni punti, cambia con il seed)."""
     lg = _logo_alpha()
     lw = int(lg.width * size / lg.height)
-    a = np.asarray(lg.resize((lw * S, size * S), Image.LANCZOS))
-    a = np.pad(a, (border + 12) * S)
-    k = lambda r: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))
-    blob = cv2.dilate((a > 60).astype(np.uint8) * 255, k(border * S))
-    blob = cv2.morphologyEx(blob, cv2.MORPH_CLOSE, k(4 * S))      # stelle e lettere in un pezzo
-    cnts, _ = cv2.findContours(blob, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    poly = cv2.approxPolyDP(max(cnts, key=cv2.contourArea), 1.6 * S, True).reshape(-1, 2).astype(np.float32)
-    poly += np.random.default_rng(seed).normal(0, 0.35 * S, poly.shape)
-    cut = np.zeros_like(a)
-    cv2.fillPoly(cut, [np.int32(poly)], 255, cv2.LINE_AA)
-    sz = (a.shape[1] // S, a.shape[0] // S)
-    cut = Image.fromarray(cut).resize(sz, Image.LANCZOS).rotate(angle, Image.BICUBIC, expand=True)
-    ink = Image.fromarray(a).resize(sz, Image.LANCZOS).rotate(angle, Image.BICUBIC, expand=True)
-    mg = 30
-    m, t = np.pad(_arr(cut), mg), np.pad(_arr(ink), mg)
-    rgb = (np.array(STICKER, np.float32) / 255)[None, None] * (1 - t[..., None]) + BLACK[None, None] * t[..., None]
-    return _composite(img, W / 2, y_top + sz[1] / 2, m, rgb, _shadow(m, 4, 7, 6, .4) * (1 - m))
+    a = lg.resize((lw, size), Image.LANCZOS).filter(ImageFilter.GaussianBlur(.6))
+    m = np.zeros((H, W), np.float32)
+    x, y = int(W / 2 - lw / 2), int(y_top)
+    m[y:y + size, x:x + lw] = _arr(a)
+    m *= cp._ink_breakup((W, H), seed, .55) * k
+    return img * (1 - m[..., None]) + BLACK[None, None] * m[..., None]
 
 
 def _finish(img, light, grain, seed, vignette=.18):
@@ -387,7 +373,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
                      STRIP, ink, int(rng.integers(1 << 20)), pad=(25, (h - t.height) // 2))
         y += h + _line_gap(size)
 
-    img = _logo_sticker(img, SAFE_B + 20, _tilt(rng, 2, 5), int(rng.integers(1 << 20)))
+    img = _logo_stamp(img, SAFE_B + 46, int(rng.integers(1 << 20)))
     img = _finish(img, light, .035, int(rng.integers(1 << 20)))
     out = Image.fromarray(np.uint8(np.clip(img, 0, 1) * 255 + 0.5))
     buf = io.BytesIO()
