@@ -28,6 +28,20 @@ jobs:
       - name: Checkout ImageGEN JR
         uses: actions/checkout@v6
 
+      # Gli asset privati (~850 MB di foto) sono la parte più lenta dell'avvio (~27 s): si scaricano
+      # in background mentre gli step dopo preparano Python e i modelli; li aspetta "Installa asset privati".
+      - name: Scarica asset privati in background
+        shell: bash
+        env:
+          ASSETS_PAT: ${{ secrets.ASSETS_PAT }}
+        run: |
+          set -euo pipefail
+          AUTH="$(printf 'x-access-token:%s' "$ASSETS_PAT" | base64 -w0)"
+          echo "::add-mask::$AUTH"
+          URL=https://github.com/Tommaso20BW/LiveScore_Assets_JR.git
+          nohup bash -c 'git -c http.extraheader="AUTHORIZATION: basic $0" clone -q --depth 1 --single-branch "$1" _private_assets >"$2" 2>&1; echo $? >"$3"' \
+            "$AUTH" "$URL" "${RUNNER_TEMP}/assets.log" "${RUNNER_TEMP}/assets.status" >/dev/null 2>&1 &
+
       - name: Checkout motore grafico LiveScore JR
         uses: actions/checkout@v6
         with:
@@ -38,42 +52,31 @@ jobs:
             /data/
           sparse-checkout-cone-mode: false
 
-      - name: Checkout asset privati (foto, font, loghi)
-        uses: actions/checkout@v6
-        with:
-          repository: Tommaso20BW/LiveScore_Assets_JR
-          token: ${{ secrets.ASSETS_PAT }}
-          path: _private_assets
-
-      - name: Installa asset privati
-        shell: bash
-        run: |
-          mkdir -p _graphics_core/assets/goal_graphics
-          cp -a _private_assets/players _private_assets/fonts _private_assets/team_logos _private_assets/overlays _private_assets/portrait _private_assets/word_textures _private_assets/canva _graphics_core/assets/goal_graphics/
-          # Correzioni squadre dalla mini app ImageGen (fuori da team_logos/: la sync FCLogo non le tocca).
-          if [ -d _private_assets/team_overrides ]; then cp -a _private_assets/team_overrides _graphics_core/assets/goal_graphics/; fi
-          if [ -d _private_assets/team_emoji ]; then cp -a _private_assets/team_emoji _graphics_core/assets/goal_graphics/; fi
-          # Bandiere delle nazionali (grafica Convocati): flag-icons, licenza MIT.
-          if [ -d _private_assets/flags ]; then cp -a _private_assets/flags _graphics_core/assets/goal_graphics/; fi
-          # Bandiere tonde (grafiche dell'Italia del motore LiveScore).
-          if [ -d _private_assets/flags_round ]; then cp -a _private_assets/flags_round _graphics_core/assets/goal_graphics/; fi
-          # Foto ufficiali dei giocatori dal sito della Lega Serie A (app/foto_lega.py).
-          if [ -d _private_assets/players_lega ]; then cp -a _private_assets/players_lega _graphics_core/assets/goal_graphics/; fi
-          # Pose 3:4 dei giocatori per Matchday e Starting XI ("Scegli giocatore").
-          if [ -d _private_assets/players_matchday ]; then cp -a _private_assets/players_matchday _graphics_core/assets/goal_graphics/; fi
-          # Ultimi invii e frasi pronte della Storia IG (salvati dalla mini app, app/sent_store.py).
-          if [ -d _private_assets/imagegen ]; then cp -a _private_assets/imagegen _graphics_core/assets/goal_graphics/; fi
-
       - name: Configura Python
+        id: py
         uses: actions/setup-python@v6
         with:
           python-version: '3.14'
-          cache: pip
-          cache-dependency-path: requirements.txt
+
+      # Librerie Python già installate (venv) salvate in cache: reinstallarle ogni volta costava ~24 s.
+      # Cambia requirements.txt o la versione di Python -> chiave nuova, si reinstalla una volta sola.
+      - name: Cache librerie Python
+        id: venv
+        uses: actions/cache@v6
+        with:
+          path: ~/venv
+          key: venv-${{ runner.os }}-py${{ steps.py.outputs.python-version }}-${{ hashFiles('requirements.txt') }}-v1
 
       - name: Installa dipendenze Python
+        shell: bash
         run: |
-          python -m pip install --disable-pip-version-check -q -r requirements.txt
+          set -euo pipefail
+          if [ "${{ steps.venv.outputs.cache-hit }}" != "true" ]; then
+            python -m venv ~/venv
+            ~/venv/bin/python -m pip install --disable-pip-version-check -q -r requirements.txt
+          fi
+          echo "$HOME/venv/bin" >> "$GITHUB_PATH"
+          echo "VIRTUAL_ENV=$HOME/venv" >> "$GITHUB_ENV"
 
       # Modello di scontorno (HALF/END/FULL TIME): scaricato una volta, poi dalla cache.
       - name: Cache modello scontorno
@@ -88,6 +91,29 @@ jobs:
         with:
           path: ~/.cache/jr_lama
           key: lama-fp32-v1
+
+      - name: Installa asset privati
+        shell: bash
+        run: |
+          set -euo pipefail
+          log() { printf '[%s] %-6s %-10s | %s\n' "$(TZ=Europe/Rome date +%H:%M:%S)" "$1" "$2" "$3"; }
+          # Aspetta il download partito all'inizio (al massimo 5 minuti).
+          for _ in $(seq 1 600); do [ -f "${RUNNER_TEMP}/assets.status" ] && break; sleep 0.5; done
+          if [ "$(cat "${RUNNER_TEMP}/assets.status" 2>/dev/null || echo 1)" != "0" ]; then
+            cat "${RUNNER_TEMP}/assets.log" 2>/dev/null || true
+            echo "::error title=Asset::Download degli asset privati non riuscito."
+            exit 1
+          fi
+          log INFO ASSET "Asset privati scaricati"
+          mkdir -p _graphics_core/assets/goal_graphics
+          cp -a _private_assets/players _private_assets/fonts _private_assets/team_logos _private_assets/overlays _private_assets/portrait _private_assets/word_textures _private_assets/canva _graphics_core/assets/goal_graphics/
+          # Correzioni squadre dalla mini app ImageGen (fuori da team_logos/: la sync FCLogo non le tocca).
+          # team_emoji; flags: bandiere delle nazionali (Convocati, flag-icons MIT); flags_round: grafiche dell'Italia;
+          # players_lega: foto ufficiali Lega Serie A (app/foto_lega.py); players_matchday: pose 3:4 (Matchday,
+          # Starting XI); imagegen: ultimi invii, frasi della Storia IG, Rinnovi.
+          for d in team_overrides team_emoji flags flags_round players_lega players_matchday imagegen; do
+            if [ -d "_private_assets/$d" ]; then cp -a "_private_assets/$d" _graphics_core/assets/goal_graphics/; fi
+          done
 
       - name: Prepara Chrome per le grafiche
         shell: bash
