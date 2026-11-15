@@ -22,6 +22,7 @@ KINDS = [
     ('STORIE INSTAGRAM - BREAKING NEWS', 'igbn'),
     ('RINNOVI', 'rin'),
     ('COMPLEANNO', 'bday'),
+    ('COMPLEANNO EX GIOCATORE', 'bdold'),
     ('CITAZIONE INSTAGRAM', 'igq'),
     ('CITAZIONE X', 'xq'),
     ('CITAZIONE THREADS', 'thq'),

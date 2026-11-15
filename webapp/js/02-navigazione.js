@@ -274,7 +274,7 @@ function buildFlow() {
   else if (kind === 'conv') flow = ['convlist'];
   else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'rin') flow = ['rincontent'];
-  else if (kind === 'bday') flow = ['bdplayer','bdphoto','bdinfo','bdpos'];
+  else if (kind === 'bday') flow = bd.mode === 'old' ? ['bdmode','bdoname','bdophoto','bdpos'] : ['bdmode','bdplayer','bdphoto','bdinfo','bdpos'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent', {tg:'igtg', phr:'igphr'}[igPicking] || 'igsent'] : ['igcontent'];
   // Storia: niente editor della foto (la storia va intera nel riquadro 9:16).
   // Citazione Instagram: prima si sceglie Post o Storia. X e Threads: solo post.
@@ -596,7 +596,7 @@ function isLastStep() {
 /* ---------- Option groups ---------- */
 // Ricostruisce i bottoni solo se cambiano le opzioni; altrimenti sposta la selezione
 // sugli elementi esistenti, così il passaggio radio→radio è animato.
-const AUTO_OPTS = new Set(['natKindOpts','natPlayOpts','goalTypeOpts','tableCompOpts','tableViewOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts','iqModeOpts']);
+const AUTO_OPTS = new Set(['natKindOpts','natPlayOpts','goalTypeOpts','tableCompOpts','tableViewOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts','iqModeOpts','bdModeOpts']);
 function renderOptions(id, options, value, onSelect) {
   const box = $(id);
   box._options = options;
@@ -678,6 +678,7 @@ function updateScreenValues() {
     buildFlow();
   });
   renderModuleButton();
+  renderOptions('bdModeOpts',BD_MODES,bd.mode,bdSetMode);
   renderOptions('tableCompOpts',TABLE_COMPS,tableComp,v => { tableComp = v; buildFlow(); });
   renderOptions('tableViewOpts',TABLE_VIEWS,tableView,v => { tableView = v; });
   renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); autoCalendar(); });

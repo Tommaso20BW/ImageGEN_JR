@@ -3,7 +3,9 @@
    in Matchday, Starting e Goal, o Saved per i portieri) → Dati (nome sulla striscia, data di nascita
    ed età) → Posizione (trascina il giocatore, due dita per lo zoom). La data arriva da sola (asset o Wikidata) insieme alle foto; si può sempre correggere. */
 const BD_GROUPS = [['matchday','Matchday'],['starting','Starting'],['goal','Goal'],['saved','Saved']];
-const bd = {player:'', photos:[], photo:'', loading:false, key:'', birth:'', page:null,
+// Un solo Compleanno, due tipi: Rosa attuale (pose degli asset) o Ex giocatore (foto caricata).
+const BD_MODES = [['now','Rosa attuale'],['old','Ex giocatore']];
+const bd = {mode:'now', player:'', photos:[], photo:'', loading:false, key:'', birth:'', page:null,
   frame:{x:0, y:0, zoom:1}, ghostKey:'', ghostUrl:''};
 
 function bdAge(iso) {
@@ -15,6 +17,64 @@ function bdSetBirth(iso) {
   $('bdAge').value = bdAge(iso);
 }
 function bdPhotoOf(id) { return bd.photos.find(p => p.id === id); }
+
+/* Ex giocatore (grafica 'bdold' del servizio): Nome → Foto (caricata e scontornata dal servizio)
+   → Posizione (stesso editor: trascina, due dita per lo zoom). */
+const bdo = {id:'', thumb:'', height:0, page:null, loading:false};
+const bdOld = () => kind === 'bday' && bd.mode === 'old';
+function bdSetMode(v) {
+  if (v !== bd.mode) { bd.mode = v; bd.frame = {x:0, y:0, zoom:1}; bd.ghostKey = ''; }
+  buildFlow();
+  renderSteps();
+}
+// Persona e pagina dell'editor: posa degli asset (compleanno) o foto scontornata (storico).
+function bdCur() { return bdOld() ? (bdo.id ? {id:bdo.id, thumb:bdo.thumb, height:bdo.height} : null) : bdPhotoOf(bd.photo); }
+function bdCurPage() { return bdOld() ? bdo.page : bd.page; }
+
+async function bdoUpload(file) {
+  if (!file) return;
+  clearError();
+  if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+  bdo.loading = true;
+  $('bdoStatus').textContent = 'Carico la foto…';
+  renderSteps();
+  try {
+    const {blob,type} = await preparePhoto(file, true);
+    const up = await netFetch(`${directBase}/upload`,{
+      method:'POST', headers:{'Content-Type':type,'X-ImageGEN-Session':session}, body:blob
+    }, 60000);
+    const ub = await up.json().catch(() => ({}));
+    if (!up.ok || !ub.ok) throw new Error(ub.error || 'Caricamento non riuscito.');
+    $('bdoStatus').textContent = 'Scontorno il giocatore…';
+    const cut = await netFetch(`${directBase}/bdoldcut`,{
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify({v:1, session, photo_id:ub.photo_id})
+    }, 120000);
+    const cb = await cut.json().catch(() => ({}));
+    if (!cut.ok || !cb.ok) throw new Error(cb.error || 'Scontorno non riuscito.');
+    Object.assign(bdo,{id:ub.photo_id, thumb:cb.thumb, height:cb.height, page:cb.page});
+    bd.frame = {x:0, y:0, zoom:1};
+    $('bdoPreview').src = cb.thumb;
+    $('bdoPreview').hidden = false;
+    $('bdoStatus').textContent = 'Fatto: tocca la foto per cambiarla.';
+    haptic('success');
+    setTimeout(() => { if (flow[flowIndex] === 'bdophoto') nextField(true); }, 250);
+  } catch (err) {
+    $('bdoStatus').textContent = bdo.id ? 'Tocca la foto per cambiarla.' : '';
+    showError(err && err.message ? err.message : 'Caricamento non riuscito.');
+  } finally {
+    bdo.loading = false;
+    $('bdoFile').value = '';
+    renderSteps();
+  }
+}
+
+function bdoPayload() {
+  const name = $('bdoName').value.trim();
+  if (!name) throw new Error('Scrivi il nome.');
+  if (!bdo.id) throw new Error('Carica la foto.');
+  return {v:1, action:'render', session, data:{kind:'bdold', name, photo_id:bdo.id, frame:{...bd.frame}}};
+}
 
 function bdRender() {
   const q = $('bdPlayerSearch').value;
@@ -108,6 +168,8 @@ function bdValidate(step) {
     if (!bd.photos.length) { if (!bd.loading) bdLoad(); showError('Attendi le foto del giocatore.'); return false; }
   }
   if (step === 'bdphoto' && !bdPhotoOf(bd.photo)) { showError('Tocca una foto.'); return false; }
+  if (step === 'bdoname' && !$('bdoName').value.trim()) { showError('Scrivi il nome.'); return false; }
+  if (step === 'bdophoto' && !bdo.id) { showError(bdo.loading ? 'Attendi lo scontorno.' : 'Carica la foto.'); return false; }
   if (step === 'bdinfo') {
     if (!$('bdName').value.trim()) { showError('Scrivi il nome.'); return false; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test($('bdBirth').value)) { showError('Scrivi la data di nascita.'); return false; }
@@ -121,6 +183,9 @@ function bdStepValue(step) {
     const p = bdPhotoOf(bd.photo);
     return p ? labelOf(BD_GROUPS,p.group) : '';
   }
+  if (step === 'bdmode') return labelOf(BD_MODES,bd.mode);
+  if (step === 'bdoname') return $('bdoName').value.trim().toUpperCase();
+  if (step === 'bdophoto') return bdo.loading ? 'Scontorno…' : bdo.id ? 'Caricata' : '';
   if (step === 'bdpos') {
     const f = bd.frame;
     return f.x || f.y || f.zoom !== 1 ? `Zoom ${Math.round(f.zoom * 100)}%` : 'Automatica';
@@ -143,21 +208,25 @@ function bdPayload() {
 }
 
 function bdReset() {
-  Object.assign(bd,{player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
-  ['bdPlayerSearch','bdName','bdBirth','bdAge'].forEach(id => { $(id).value = ''; });
+  Object.assign(bd,{mode:'now', player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
+  ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName'].forEach(id => { $(id).value = ''; });
+  Object.assign(bdo,{id:'', thumb:'', height:0, page:null, loading:false});
+  $('bdoPreview').hidden = true;
+  $('bdoStatus').textContent = '';
 }
 
 function initBirthday() {
   initBirthdayEditor();
   $('bdPlayerSearch').addEventListener('input',() => bdRender());
   $('bdBirth').addEventListener('change',() => { $('bdAge').value = bdAge($('bdBirth').value); renderSteps(); });
-  ['bdName','bdAge'].forEach(id => $(id).addEventListener('input',() => renderSteps()));
+  ['bdName','bdAge','bdoName'].forEach(id => $(id).addEventListener('input',() => renderSteps()));
+  $('bdoFile').addEventListener('change',e => bdoUpload(e.target.files && e.target.files[0]));
 }
 
 /* --- Posizione: il poster senza giocatore (sagoma del servizio) e sopra la sagoma del giocatore,
    tagliata alla striscia del nome come nella grafica. Stesse misure della pagina 1500x2000. */
 function bdLayout() {
-  const frame = $('bdFrame'), img = $('bdPlayer'), page = bd.page, p = bdPhotoOf(bd.photo);
+  const frame = $('bdFrame'), img = $('bdPlayer'), page = bdCurPage(), p = bdCur();
   if (!frame.offsetParent || !page || !p) return;
   const stage = $('stage');
   const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 34;
@@ -178,8 +247,8 @@ function bdLayout() {
 
 async function bdGhost() {
   let body;
-  try { body = JSON.stringify(bdPayload()); } catch (_) { return; }
-  const key = body.replace(/"frame":\{[^}]*\}/, '').replace(/"photo":"[^"]*"/, '');
+  try { body = JSON.stringify(bdOld() ? bdoPayload() : bdPayload()); } catch (_) { return; }
+  const key = body.replace(/"frame":\{[^}]*\}/, '').replace(/"photo(_id)?":"[^"]*"/, '');
   const ghost = $('bdGhost');
   if (key === bd.ghostKey && bd.ghostUrl) { ghost.src = bd.ghostUrl; ghost.hidden = false; return; }
   bd.ghostKey = key;
@@ -197,12 +266,13 @@ async function bdGhost() {
     ghost.hidden = false;
   } catch (_) {
   } finally {
-    if (bd.ghostKey === key) $('bdPosHint').textContent = 'Il giocatore finisce sotto la striscia del nome.';
+    if (bd.ghostKey === key) $('bdPosHint').textContent = bdOld() ? 'Il giocatore sta davanti a HAPPY BIRTHDAY.' : 'Il giocatore finisce sotto la striscia del nome.';
   }
 }
 
 function bdOpenPos() {
-  const p = bdPhotoOf(bd.photo), img = $('bdPlayer');
+  const p = bdCur(), img = $('bdPlayer');
+  $('bdFrame').classList.toggle('old', bdOld());
   if (p && img.dataset.src !== p.id) {
     img.dataset.src = p.id;
     img.onload = () => bdLayout();

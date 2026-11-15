@@ -318,6 +318,13 @@ class Renderer:
                                      age=data.get('age'), photo=data.get('photo', ''),
                                      frame=data.get('frame'), ghost=ghost)
 
+        if kind == 'bdold':
+            from graphics import compleanno_storico
+
+            person = None if ghost else self.final_cutout(data['photo_id'])
+            return compleanno_storico.render(name=data.get('name', ''), person=person,
+                                             frame=data.get('frame'), ghost=ghost)
+
         if kind == 'jr':
             from graphics import photo_jr
 

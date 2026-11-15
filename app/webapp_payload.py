@@ -403,6 +403,21 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
+    # COMPLEANNO STORICO: foto caricata (scontornata dal servizio), nome sopra il titolo.
+    if kind == 'bdold':
+        from graphics import compleanno
+        label = compleanno.clean_name(incoming.get('name'))
+        if not label:
+            raise ValueError('Scrivi il nome.')
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {'kind': 'bdold', 'name': label, 'photo_id': _photo_id(incoming.get('photo_id')),
+                     'frame': compleanno.clean_frame(incoming.get('frame'))},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
     # FOTO + JR: niente partita, solo foto e colore del logo.
     if kind == 'jr':
         try:

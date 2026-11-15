@@ -303,6 +303,13 @@
             </div>
           </section>
 
+          <section class="screen" data-screen="bdmode">
+            <div class="eyebrow">Compleanno</div>
+            <h1>Di chi?</h1>
+            <p class="lead">Rosa attuale: scegli il giocatore e una sua foto degli asset. Ex giocatore: carichi tu la foto, con scontorno e filtro d'epoca.</p>
+            <div id="bdModeOpts" class="opts" role="radiogroup"></div>
+          </section>
+
           <section class="screen" data-screen="bdplayer">
             <div class="eyebrow">Compleanno</div>
             <h1>Giocatore</h1>
@@ -331,6 +338,27 @@
               <label class="ios-row"><span>Nato il</span><input id="bdBirth" class="ios-in" type="date"></label>
               <label class="ios-row"><span>Anni</span><input id="bdAge" class="ios-in" inputmode="numeric" maxlength="2" placeholder="21"></label>
             </div>
+          </section>
+
+          <section class="screen" data-screen="bdoname">
+            <div class="eyebrow">Compleanno · Ex giocatore</div>
+            <h1>Nome</h1>
+            <p class="lead">Va in oro sopra HAPPY BIRTHDAY.</p>
+            <div class="ios-list">
+              <label class="ios-row"><span>Nome</span><input id="bdoName" class="ios-in" maxlength="28" autocapitalize="characters" spellcheck="false" placeholder="ALESSANDRO DEL PIERO" style="text-transform:uppercase"></label>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="bdophoto">
+            <div class="eyebrow">Compleanno · Ex giocatore</div>
+            <h1>Foto</h1>
+            <p class="lead">Carica la foto del giocatore: scontorno e filtro d'epoca li fa l'app.</p>
+            <label class="bdo-pick">
+              <input id="bdoFile" type="file" accept="image/*" hidden>
+              <img id="bdoPreview" alt="" hidden>
+              <span class="bdo-plus">Scegli foto</span>
+            </label>
+            <div id="bdoStatus" class="hint" style="text-align:center"></div>
           </section>
 
           <section class="screen" data-screen="bdpos">

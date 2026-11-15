@@ -357,7 +357,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/bdayphotos', '/tgposts', '/tgphoto', '/translate'):
+                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/bdayphotos', '/bdoldcut', '/tgposts', '/tgphoto', '/translate'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -406,6 +406,9 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/bdayphotos':
                 self._json(200, {'ok': True, **self.service.bday_photos(envelope)})
+                return
+            if path == '/bdoldcut':
+                self._json(200, {'ok': True, **self.service.bday_old_cut(envelope)})
                 return
 
             if path == '/igpost':
@@ -564,6 +567,29 @@ class Service:
         return {'photos': rows, 'page': {'w': compleanno.W, 'h': compleanno.H, 'cx': compleanno.PLAYER_CX,
                                          'foot': compleanno.PLAYER_FOOT, 'cut': compleanno.STRIP_Y - 105,
                                          'zoom': [compleanno.ZOOM_MIN, compleanno.ZOOM_MAX]}, 'birth': birth.isoformat() if birth else '', 'name': compleanno.clean_name(player.name)}
+
+    def bday_old_cut(self, envelope):
+        """Compleanno storico: scontorna la foto caricata e la rimanda ritagliata stretta per
+        l'editor della posizione (lo scontorno fine per la grafica parte in background)."""
+        import base64
+        from PIL import Image
+        from graphics import compleanno_storico as S
+        photo_id = str((envelope or {}).get('photo_id') or '')
+        if photo_id not in self.photos:
+            raise ValueError('Foto non trovata: ricaricala.')
+        with Image.open(io.BytesIO(self.renderer.cutout(photo_id))) as image:
+            person = S.trim(image)
+        if person.getchannel('A').getbbox() is None:
+            raise ValueError('Nella foto non trovo nessuna persona.')
+        _, _, _, height = S.person_box(person.size)
+        person.thumbnail((900, 1200), Image.Resampling.LANCZOS)
+        buf = io.BytesIO()
+        person.save(buf, 'WEBP', quality=84)
+        self.renderer.start_fine(photo_id)
+        return {'thumb': 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii'),
+                'height': height,
+                'page': {'w': S.W, 'h': S.H, 'cx': S.W / 2, 'foot': S.H, 'cut': S.H,
+                         'zoom': [S.ZOOM_MIN, S.ZOOM_MAX]}}
 
     def store_story_shot(self, raw):
         """Screenshot di una storia (Citazione IG): tiene la storia senza l'interfaccia di Instagram e,
@@ -1592,6 +1618,8 @@ def _send_detail(data):
     if kind == 'bday':
         return {**empty, 'player': str(data.get('player') or data.get('name') or ''),
                 'note': f"{data.get('age', '')} anni"}
+    if kind == 'bdold':
+        return {**empty, 'player': str(data.get('name') or ''), 'note': 'Ex giocatore'}
     if kind == 'conv':
         n = len(data.get('players') or [])
         return {**empty, 'player': f'{n} giocatori',
