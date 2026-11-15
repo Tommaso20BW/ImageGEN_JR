@@ -359,11 +359,15 @@ def clean_frame(frame):
 
 
 def _player_layers(path, frame=None):
-    """(alpha, luminanza) del giocatore: alto secondo la posa x zoom, centro e base spostati di x, y."""
+    """(alpha, luminanza) del giocatore: alto secondo la posa x zoom, centro e base spostati di x, y.
+    path = PNG della posa negli asset, oppure l'immagine (PIL) scontornata di una foto caricata."""
     frame = clean_frame(frame)
-    height = max(50, int(base_height(path.name) * frame['zoom']))
-    with Image.open(path) as im:
-        p = im.convert('RGBA')
+    if isinstance(path, Image.Image):
+        p, base = path.convert('RGBA'), PLAYER_H_DEFAULT
+    else:
+        with Image.open(path) as im:
+            p, base = im.convert('RGBA'), base_height(path.name)
+    height = max(50, int(base * frame['zoom']))
     p = p.crop(p.getbbox())
     p = p.resize((max(1, int(p.width * height / p.height)), height), Image.LANCZOS)
     alpha, lum = _mask(), np.ones((H, W), np.float32)
@@ -472,8 +476,9 @@ def _jr_logo():
 
 
 # ---------------------------------------------------------------- grafica
-def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False):
-    """ghost=True: poster senza giocatore (sfondo dell'editor dove lo si sposta e zooma)."""
+def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False, person=None):
+    """ghost=True: poster senza giocatore (sfondo dell'editor dove lo si sposta e zooma).
+    person = foto scontornata (byte o PIL) di un giocatore aggiunto a mano, al posto di photo."""
     name = clean_name(name)
     born = parse_birth(birth)
     if not name:
@@ -481,7 +486,12 @@ def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False
     if not born:
         raise ValueError('Scrivi la data di nascita.')
     age = int(age) if str(age or '').strip().isdigit() else age_on_birthday(born)
-    path = None if ghost else photo_path(photo, player)
+    if ghost:
+        path = None
+    elif person is not None:
+        path = Image.open(io.BytesIO(person)) if isinstance(person, (bytes, bytearray)) else person
+    else:
+        path = photo_path(photo, player)
 
     paper = _paper((W, H), CREAM, seed=3)
     light = _crumple((W, H), 5, 0.45)
@@ -502,7 +512,7 @@ def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False
     # giocatore ritagliato a forbici: il ritaglio finisce sotto la striscia del nome, lungo il suo
     # bordo alto (anche oltre le estremità della striscia: niente carta che sbuca di lato)
     lab, txt = _label_strip(name, (W / 2, STRIP_Y))
-    alpha, lum = _player_layers(path, frame) if path else (_mask(), np.ones((H, W), np.float32))
+    alpha, lum = _player_layers(path, frame) if path is not None else (_mask(), np.ones((H, W), np.float32))
     cut = _scissor_mask(alpha)
     below = _below_strip(lab)
     alpha *= 1 - below

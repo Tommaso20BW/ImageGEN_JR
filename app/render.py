@@ -314,8 +314,10 @@ class Renderer:
         if kind == 'bday':
             from graphics import compleanno
 
+            # giocatore aggiunto a mano: la sua foto scontornata al posto della posa degli asset
+            person = self.final_cutout(data['photo_id']) if data.get('photo_id') and not ghost else None
             return compleanno.render(name=data.get('name', ''), birth=data.get('birth', ''),
-                                     age=data.get('age'), photo=data.get('photo', ''),
+                                     age=data.get('age'), photo=data.get('photo', ''), person=person,
                                      frame=data.get('frame'), ghost=ghost)
 
         if kind == 'bdold':

@@ -357,7 +357,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/bdayphotos', '/bdoldcut', '/tgposts', '/tgphoto', '/translate'):
+                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/bdayphotos', '/bdaybirths', '/bdoldcut', '/tgposts', '/tgphoto', '/translate'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -406,6 +406,9 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/bdayphotos':
                 self._json(200, {'ok': True, **self.service.bday_photos(envelope)})
+                return
+            if path == '/bdaybirths':
+                self._json(200, {'ok': True, **self.service.bday_births()})
                 return
             if path == '/bdoldcut':
                 self._json(200, {'ok': True, **self.service.bday_old_cut(envelope)})
@@ -568,9 +571,18 @@ class Service:
                                          'foot': compleanno.PLAYER_FOOT, 'cut': compleanno.STRIP_Y - 105,
                                          'zoom': [compleanno.ZOOM_MIN, compleanno.ZOOM_MAX]}, 'birth': birth.isoformat() if birth else '', 'name': compleanno.clean_name(player.name)}
 
+    def bday_births(self):
+        """Compleanno: date di nascita della rosa già negli asset (nome -> AAAA-MM-GG), per ordinare
+        l'elenco dal prossimo compleanno."""
+        from graphics import compleanno
+        from livescore.graphics import goal as g
+        known = compleanno.known_births()
+        return {'births': {p.name: known[p.slug] for p in g.load_players() if p.slug in known}}
+
     def bday_old_cut(self, envelope):
-        """Compleanno storico: scontorna la foto caricata e la rimanda ritagliata stretta per
-        l'editor della posizione (lo scontorno fine per la grafica parte in background)."""
+        """Compleanno con foto caricata (Ex giocatore, o giocatore della rosa aggiunto a mano con
+        mode 'now'): scontorna la foto e la rimanda ritagliata stretta per l'editor della posizione
+        (lo scontorno fine per la grafica parte in background)."""
         import base64
         from PIL import Image
         from graphics import compleanno_storico as S
@@ -586,6 +598,12 @@ class Service:
         buf = io.BytesIO()
         person.save(buf, 'WEBP', quality=84)
         self.renderer.start_fine(photo_id)
+        if (envelope or {}).get('mode') == 'now':
+            from graphics import compleanno as C
+            return {'thumb': 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii'),
+                    'height': C.PLAYER_H_DEFAULT,
+                    'page': {'w': C.W, 'h': C.H, 'cx': C.PLAYER_CX, 'foot': C.PLAYER_FOOT, 'cut': C.STRIP_Y - 105,
+                             'zoom': [C.ZOOM_MIN, C.ZOOM_MAX]}}
         return {'thumb': 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii'),
                 'height': height,
                 'page': {'w': S.W, 'h': S.H, 'cx': S.W / 2, 'foot': S.H, 'cut': S.H,

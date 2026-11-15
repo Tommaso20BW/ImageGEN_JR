@@ -5,8 +5,42 @@
 const BD_GROUPS = [['matchday','Matchday'],['starting','Starting'],['goal','Goal'],['saved','Saved']];
 // Un solo Compleanno, due tipi: Rosa attuale (pose degli asset) o Ex giocatore (foto caricata).
 const BD_MODES = [['now','Rosa attuale'],['old','Ex giocatore']];
-const bd = {mode:'now', player:'', photos:[], photo:'', loading:false, key:'', birth:'', page:null,
-  frame:{x:0, y:0, zoom:1}, ghostKey:'', ghostUrl:''};
+// manual: giocatore non in elenco, aggiunto a mano con una foto caricata (scontornata dal servizio).
+// births: date di nascita della rosa (nome -> AAAA-MM-GG) per ordinare l'elenco dal prossimo compleanno.
+const bd = {mode:'now', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', page:null,
+  frame:{x:0, y:0, zoom:1}, ghostKey:'', ghostUrl:'', births:null, birthsBusy:false};
+const BD_MONTHS = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+
+// Giorni al prossimo compleanno (0 = oggi); Infinity se la data non c'è.
+function bdDaysTo(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if (!m) return Infinity;
+  const today = new Date(); today.setHours(0,0,0,0);
+  let next = new Date(today.getFullYear(), Number(m[2]) - 1, Number(m[3]));
+  if (next < today) next = new Date(today.getFullYear() + 1, Number(m[2]) - 1, Number(m[3]));
+  return Math.round((next - today) / 864e5);
+}
+function bdWhen(iso) {
+  const n = bdDaysTo(iso);
+  if (n === Infinity) return '';
+  const day = `${Number(iso.slice(8,10))} ${BD_MONTHS[Number(iso.slice(5,7)) - 1]}`;
+  return n === 0 ? `${day} · oggi` : n === 1 ? `${day} · domani` : `${day} · tra ${n} giorni`;
+}
+async function bdLoadBirths() {
+  if (bd.births || bd.birthsBusy || !directBase || !session) return;
+  bd.birthsBusy = true;
+  try {
+    const response = await netFetch(`${directBase}/bdaybirths`,{
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:JSON.stringify({v:1, session})
+    }, 20000, 2);
+    const body = await response.json().catch(() => ({}));
+    if (response.ok && body.ok) { bd.births = body.births || {}; bdRender(); }
+  } catch (_) {
+  } finally {
+    bd.birthsBusy = false;
+  }
+}
 
 function bdAge(iso) {
   const m = /^(\d{4})-\d{2}-\d{2}$/.exec(iso || '');
@@ -22,14 +56,45 @@ function bdPhotoOf(id) { return bd.photos.find(p => p.id === id); }
    → Posizione (stesso editor: trascina, due dita per lo zoom). */
 const bdo = {id:'', thumb:'', height:0, page:null, loading:false};
 const bdOld = () => kind === 'bday' && bd.mode === 'old';
+// Foto caricata dall'utente: Ex giocatore, o giocatore della rosa aggiunto a mano.
+const bdUploaded = () => bdOld() || (kind === 'bday' && bd.manual);
+function bdClearUpload() {
+  Object.assign(bdo,{id:'', thumb:'', height:0, page:null, loading:false});
+  $('bdoPreview').hidden = true;
+  $('bdoStatus').textContent = '';
+}
+// Testi della schermata Foto caricata: diversi per Ex giocatore e giocatore aggiunto a mano.
+function bdoTexts() {
+  const old = bd.mode === 'old';
+  $('bdoEyebrow').textContent = old ? 'Compleanno · Ex giocatore' : 'Compleanno · Rosa attuale';
+  $('bdoLead').textContent = old ? "Carica la foto del giocatore: scontorno e filtro d'epoca li fa l'app."
+    : "Carica la foto del giocatore: lo scontorno lo fa l'app.";
+}
 function bdSetMode(v) {
-  if (v !== bd.mode) { bd.mode = v; bd.frame = {x:0, y:0, zoom:1}; bd.ghostKey = ''; }
+  if (v !== bd.mode) { bd.mode = v; bd.frame = {x:0, y:0, zoom:1}; bd.ghostKey = ''; bdClearUpload(); }
+  bdoTexts();
   buildFlow();
   renderSteps();
 }
-// Persona e pagina dell'editor: posa degli asset (compleanno) o foto scontornata (storico).
-function bdCur() { return bdOld() ? (bdo.id ? {id:bdo.id, thumb:bdo.thumb, height:bdo.height} : null) : bdPhotoOf(bd.photo); }
-function bdCurPage() { return bdOld() ? bdo.page : bd.page; }
+// Giocatore non in elenco: si salta la scelta delle pose e si carica la foto.
+function bdManualStart() {
+  haptic('select');
+  clearError();
+  if (!bd.manual) {
+    Object.assign(bd,{manual:true, player:'', photos:[], photo:'', key:'', birth:'', frame:{x:0, y:0, zoom:1}, ghostKey:''});
+    $('bdName').value = '';
+    bdSetBirth('');
+    bdClearUpload();
+  }
+  bdoTexts();
+  buildFlow();
+  bdRender();
+  renderSteps();
+  nextField(true);
+}
+// Persona e pagina dell'editor: posa degli asset o foto caricata e scontornata.
+function bdCur() { return bdUploaded() ? (bdo.id ? {id:bdo.id, thumb:bdo.thumb, height:bdo.height} : null) : bdPhotoOf(bd.photo); }
+function bdCurPage() { return bdUploaded() ? bdo.page : bd.page; }
 
 async function bdoUpload(file) {
   if (!file) return;
@@ -48,7 +113,7 @@ async function bdoUpload(file) {
     $('bdoStatus').textContent = 'Scontorno il giocatore…';
     const cut = await netFetch(`${directBase}/bdoldcut`,{
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-      body:JSON.stringify({v:1, session, photo_id:ub.photo_id})
+      body:JSON.stringify({v:1, session, photo_id:ub.photo_id, mode:bdOld() ? 'old' : 'now'})
     }, 120000);
     const cb = await cut.json().catch(() => ({}));
     if (!cut.ok || !cb.ok) throw new Error(cb.error || 'Scontorno non riuscito.');
@@ -78,15 +143,23 @@ function bdoPayload() {
 
 function bdRender() {
   const q = $('bdPlayerSearch').value;
-  const matches = playersLoaded ? searchItems(players,q) : [];
+  let matches = playersLoaded ? searchItems(players,q) : [];
+  // dal prossimo compleanno (oggi in cima); chi non ha la data in fondo
+  const births = bd.births || {};
+  if (bd.births) matches = matches.map((p,i) => [p,i]).sort((a,b) =>
+    (bdDaysTo(births[a[0].name]) - bdDaysTo(births[b[0].name])) || (a[1] - b[1])).map(r => r[0]);
   const chosen = players.find(p => p.name === bd.player);
   $('bdPlayerSummary').textContent = bd.loading ? 'Caricamento foto…'
     : !playersLoaded ? 'Caricamento giocatori…' : !matches.length ? 'Nessun risultato.'
-    : chosen ? `Selezionato: ${surnameOf(chosen)}` : '';
-  renderResults('bdPlayerList',matches,bd.player,item => surnameOf(item),item => { bdPick(item.name); },null,Infinity);
+    : chosen ? `Selezionato: ${surnameOf(chosen)}` : bd.manual ? 'Aggiunto a mano: carica la sua foto.' : '';
+  renderResults('bdPlayerList',matches,bd.player,item => {
+    const when = bdWhen(births[item.name]);
+    return when ? `${surnameOf(item)}  ·  ${when}` : surnameOf(item);
+  },item => { bdPick(item.name); },null,Infinity);
 }
 
 function bdPick(name) {
+  if (bd.manual) { bd.manual = false; bdClearUpload(); buildFlow(); }
   if (name !== bd.player) {
     Object.assign(bd,{player:name, photos:[], photo:'', key:'', birth:''});
     $('bdName').value = '';
@@ -163,7 +236,7 @@ function bdPhotosRender() {
 }
 
 function bdValidate(step) {
-  if (step === 'bdplayer') {
+  if (step === 'bdplayer' && !bd.manual) {
     if (!bd.player) { showError('Scegli il giocatore.'); return false; }
     if (!bd.photos.length) { if (!bd.loading) bdLoad(); showError('Attendi le foto del giocatore.'); return false; }
   }
@@ -178,7 +251,10 @@ function bdValidate(step) {
 }
 
 function bdStepValue(step) {
-  if (step === 'bdplayer') { const p = players.find(x => x.name === bd.player); return p ? surnameOf(p) : ''; }
+  if (step === 'bdplayer') {
+    if (bd.manual) return 'Aggiunto a mano';
+    const p = players.find(x => x.name === bd.player); return p ? surnameOf(p) : '';
+  }
   if (step === 'bdphoto') {
     const p = bdPhotoOf(bd.photo);
     return p ? labelOf(BD_GROUPS,p.group) : '';
@@ -198,9 +274,16 @@ function bdStepValue(step) {
 }
 
 function bdPayload() {
+  const name = $('bdName').value.trim(), birth = $('bdBirth').value;
+  if (bd.manual) {
+    if (!bdo.id) throw new Error('Carica la foto.');
+    if (!name) throw new Error('Scrivi il nome.');
+    if (!birth) throw new Error('Scrivi la data di nascita.');
+    return {v:1, action:'render', session, data:{kind:'bday', photo_id:bdo.id, name, birth,
+      age:$('bdAge').value.trim(), frame:{...bd.frame}}};
+  }
   if (!bd.player) throw new Error('Scegli il giocatore.');
   if (!bdPhotoOf(bd.photo)) throw new Error('Scegli la foto.');
-  const name = $('bdName').value.trim(), birth = $('bdBirth').value;
   if (!name) throw new Error('Scrivi il nome.');
   if (!birth) throw new Error('Scrivi la data di nascita.');
   return {v:1, action:'render', session, data:{kind:'bday', player:bd.player, photo:bd.photo, name, birth,
@@ -208,11 +291,10 @@ function bdPayload() {
 }
 
 function bdReset() {
-  Object.assign(bd,{mode:'now', player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
+  Object.assign(bd,{mode:'now', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
   ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName'].forEach(id => { $(id).value = ''; });
-  Object.assign(bdo,{id:'', thumb:'', height:0, page:null, loading:false});
-  $('bdoPreview').hidden = true;
-  $('bdoStatus').textContent = '';
+  bdClearUpload();
+  bdoTexts();
 }
 
 function initBirthday() {
@@ -221,6 +303,7 @@ function initBirthday() {
   $('bdBirth').addEventListener('change',() => { $('bdAge').value = bdAge($('bdBirth').value); renderSteps(); });
   ['bdName','bdAge','bdoName'].forEach(id => $(id).addEventListener('input',() => renderSteps()));
   $('bdoFile').addEventListener('change',e => bdoUpload(e.target.files && e.target.files[0]));
+  $('bdManual').addEventListener('click',bdManualStart);
 }
 
 /* --- Posizione: il poster senza giocatore (sagoma del servizio) e sopra la sagoma del giocatore,

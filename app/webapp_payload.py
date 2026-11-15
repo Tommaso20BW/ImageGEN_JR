@@ -380,12 +380,16 @@ def _build_state(envelope, catalog, now, expected_session):
     if kind == 'bday':
         from graphics import compleanno
         from livescore.graphics import goal as g
-        name = _canonical_player(catalog, incoming.get('player'))
-        player = next((p for p in g.load_players() if p.name == name), None)
-        if player is None:
-            raise ValueError('Giocatore non presente nel catalogo.')
-        photo = str(incoming.get('photo') or '')
-        compleanno.photo_path(photo, player)
+        if incoming.get('photo_id'):
+            # giocatore non in elenco: foto caricata a mano (scontornata dal servizio)
+            name, photo, photo_id = '', '', _photo_id(incoming.get('photo_id'))
+        else:
+            name = _canonical_player(catalog, incoming.get('player'))
+            player = next((p for p in g.load_players() if p.name == name), None)
+            if player is None:
+                raise ValueError('Giocatore non presente nel catalogo.')
+            photo, photo_id = str(incoming.get('photo') or ''), ''
+            compleanno.photo_path(photo, player)
         label = compleanno.clean_name(incoming.get('name') or name)
         if not label:
             raise ValueError('Scrivi il nome.')
@@ -397,7 +401,8 @@ def _build_state(envelope, catalog, now, expected_session):
         return {
             'id': uuid.uuid4().hex[:10],
             'data': {'kind': 'bday', 'player': name, 'photo': photo, 'name': label,
-                     'birth': born.isoformat(), 'age': age, 'frame': compleanno.clean_frame(incoming.get('frame'))},
+                     'birth': born.isoformat(), 'age': age, 'frame': compleanno.clean_frame(incoming.get('frame')),
+                     **({'photo_id': photo_id} if photo_id else {})},
             'status': 'ready',
             'updated': now,
             'source': 'webapp-direct',

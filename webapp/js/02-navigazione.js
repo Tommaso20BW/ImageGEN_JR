@@ -274,7 +274,7 @@ function buildFlow() {
   else if (kind === 'conv') flow = ['convlist'];
   else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'rin') flow = ['rincontent'];
-  else if (kind === 'bday') flow = bd.mode === 'old' ? ['bdmode','bdoname','bdophoto','bdpos'] : ['bdmode','bdplayer','bdphoto','bdinfo','bdpos'];
+  else if (kind === 'bday') flow = bd.mode === 'old' ? ['bdmode','bdoname','bdophoto','bdpos'] : ['bdmode','bdplayer',bd.manual ? 'bdophoto' : 'bdphoto','bdinfo','bdpos'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent', {tg:'igtg', phr:'igphr'}[igPicking] || 'igsent'] : ['igcontent'];
   // Storia: niente editor della foto (la storia va intera nel riquadro 9:16).
   // Citazione Instagram: prima si sceglie Post o Storia. X e Threads: solo post.
@@ -524,7 +524,7 @@ function renderFlow() {
   // Matchday / Starting XI: la foto è quella del giocatore scelto, qui solo spostare e zoomare.
   if (screenName === 'photo') { $('photoPick').hidden = kind === 'md' || kind === 'xi'; if (isQuoteKind(kind)) iqSyncPhoto(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
   if (screenName === 'mdplayer') { mdpRender(); mdpLoad(); }
-  if (screenName === 'bdplayer') { bdRender(); bdLoad(); }
+  if (screenName === 'bdplayer') { bdRender(); bdLoad(); bdLoadBirths(); }
   if (screenName === 'bdphoto') bdPhotosRender();
   if (screenName === 'bdpos') bdOpenPos();
   if (screenName === 'jrphotos') renderJrPicker();
