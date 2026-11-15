@@ -231,6 +231,9 @@ body.live .brand-btn{pointer-events:none}
 /* The toggle row should never acquire the glowing selection ring. */
 #pensToggle.selected,#etToggle.selected,#bdoVintage.selected{box-shadow:var(--shadow-soft);border-color:var(--line);background:var(--surface)}
 #pensToggle.selected .opt-label,#etToggle.selected .opt-label,#bdoVintage.selected .opt-label{color:var(--text)}
+/* Ex giocatore: stessa misura della riga Nome (ios-list) sopra. */
+#bdoVintage,#bdoVintage.selected{min-height:50px;height:50px;border:0;box-shadow:none}
+#bdoVintage .opt-label{font-weight:600}
 #pensToggle:focus-visible,#etToggle:focus-visible,#bdoVintage:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 /* Schermata Risultato: selettore un po' piu' in alto (i testi restano dove sono). */
