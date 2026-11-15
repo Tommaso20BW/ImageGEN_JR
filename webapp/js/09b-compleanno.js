@@ -100,8 +100,11 @@ async function bdoUpload(file) {
   clearError();
   if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
   bdo.loading = true;
-  $('bdoStatus').textContent = 'Carico la foto…';
+  $('bdoStatus').textContent = '';
   renderSteps();
+  // stessa schermata di caricamento delle altre grafiche, fino a scontorno finito
+  showBusy('Scontorno il giocatore…', 'Carico la foto…', 'ppcut');
+  const myBusy = busy;
   try {
     const {blob,type} = await preparePhoto(file, true);
     const up = await netFetch(`${directBase}/upload`,{
@@ -109,7 +112,7 @@ async function bdoUpload(file) {
     }, 60000);
     const ub = await up.json().catch(() => ({}));
     if (!up.ok || !ub.ok) throw new Error(ub.error || 'Caricamento non riuscito.');
-    $('bdoStatus').textContent = 'Scontorno il giocatore…';
+    if (busy === myBusy) $('busySub').textContent = 'Separo il giocatore dallo sfondo: ci vogliono alcuni secondi.';
     const cut = await netFetch(`${directBase}/bdoldcut`,{
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
       body:JSON.stringify({v:1, session, photo_id:ub.photo_id, mode:bdOld() ? 'old' : 'now'})
@@ -117,6 +120,7 @@ async function bdoUpload(file) {
     const cb = await cut.json().catch(() => ({}));
     if (!cut.ok || !cb.ok) throw new Error(cb.error || 'Scontorno non riuscito.');
     Object.assign(bdo,{id:ub.photo_id, thumb:cb.thumb, height:cb.height, page:cb.page});
+    if (busy === myBusy) await finishBusy();
     bd.frame = {x:0, y:0, zoom:1};
     $('bdoPreview').src = cb.thumb;
     $('bdoPreview').hidden = false;
@@ -127,6 +131,7 @@ async function bdoUpload(file) {
     $('bdoStatus').textContent = bdo.id ? 'Tocca la foto per cambiarla.' : '';
     showError(err && err.message ? err.message : 'Caricamento non riuscito.');
   } finally {
+    if (busy === myBusy) hideBusy();
     bdo.loading = false;
     $('bdoFile').value = '';
     renderSteps();
