@@ -33,9 +33,9 @@ TOP, BOTTOM = SAFE_T + 20, SAFE_B - 30   # zona del contenuto (sotto c'è il log
 LOGO_Y = SAFE_B + 46                 # cima del logo JR
 GAP = 56                             # tra etichetta, foto e testo
 TEXT_W = 880                         # larghezza massima di una riga di testo
-PHOTO_W = 880                        # larghezza massima della foto
-PHOTO_MIN_H = 300                    # con il testo, alla foto resta almeno questa altezza...
-PHOTO_LOW = 220                      # ...o questa, se il testo è già sceso a FS_KEEP
+PHOTO_W = 960                        # larghezza massima della foto
+PHOTO_MIN_H = 420                    # con il testo, alla foto resta almeno questa altezza...
+PHOTO_LOW = 320                      # ...o questa, se il testo è già sceso a FS_KEEP
 FS_KEEP = 36
 FS_MIN = 28
 # Grandezza del testo in base ai caratteri: (fino a N caratteri, grandezza)
@@ -197,7 +197,7 @@ def layout(text, label, photo_size=None):
         if photo_size:
             pw, phh = photo_size
             natural = PHOTO_W * phh / pw
-            limit = 1100 if not text else 620
+            limit = 1150 if not text else 860
             ph_h = int(min(natural, limit, room - used))
             # prima si rimpicciolisce il testo; sotto FS_KEEP tocca alla foto (fino a PHOTO_LOW)
             if (not text or ph_h >= min(PHOTO_MIN_H, natural) or (size <= FS_KEEP and ph_h >= PHOTO_LOW)
@@ -283,10 +283,12 @@ def _tape(img, center, angle, seed):
     return _composite(img, center[0], center[1], m, rgb, np.zeros_like(m))
 
 
-def _photo(img, raw, cx, cy, ph_h, angle, rng):
+def _photo(img, raw, cx, cy, ph_h, angle, rng, min_ratio=0):
+    """Foto con bordo e nastro. min_ratio: larghezza minima rispetto all'altezza (con il testo una foto
+    verticale si ritaglia un po' più larga, invece di restare stretta)."""
     im = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert('RGB')
     ar = im.height / im.width
-    pw = int(min(PHOTO_W, ph_h / ar))
+    pw = int(min(PHOTO_W, max(ph_h / ar, ph_h * min_ratio)))
     phh = int(min(ph_h, pw * ar))
     im = ImageOps.fit(im, (pw, phh), Image.LANCZOS, centering=(.5, .35))
     border = 18
@@ -372,7 +374,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
         y = content_y(y + GAP - 30, lines, size, ph_h)
 
     if photo is not None:
-        img = _photo(img, photo, W / 2, y + ph_h / 2, ph_h, _tilt(rng, 1.5, 4), rng)
+        img = _photo(img, photo, W / 2, y + ph_h / 2, ph_h, _tilt(rng, 1.5, 4), rng, 1.6 if lines else 0)
         y += ph_h + GAP
 
     ink = _rgb(TEXT_COLORS[text_color(color)])
