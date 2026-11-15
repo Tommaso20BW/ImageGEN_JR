@@ -38,7 +38,8 @@ PLAYER_H = {'point_sky': 1560}
 PLAYER_H_DEFAULT = 1250
 STRIP_Y = H - 205                # centro della striscia del nome (il ritaglio finisce qui)
 NAME_SIZE, NAME_MAX_SIZE = 170, 210
-NAME_MAX_W = W - 2 * 70 - 40     # oltre questa larghezza il nome si rimpicciolisce
+STRIP_MARGIN = 90                 # la striscia nera resta sempre ad almeno 90 px dai bordi
+NAME_MAX_W = W - 2 * STRIP_MARGIN - 2 * 70 - 40   # oltre questa larghezza il nome si rimpicciolisce
 NAME_MAX = 28
 
 GROUPS = (('matchday', 'Matchday'), ('starting', 'Starting'), ('goal', 'Goal'), ('saved', 'Saved'))
@@ -421,6 +422,17 @@ def _label_strip(text, center, angle=-2.5, pad=(70, 46), seed=9, jitter=6):
     return lab, txt
 
 
+def _below_strip(lab, tuck=30):
+    """Maschera di quello che sta sotto il bordo alto della striscia (+ `tuck` px che finiscono
+    sotto la carta nera). Il bordo è la retta che passa per l'alto della striscia, prolungata
+    fino ai lati della pagina."""
+    cols = np.where((lab > 0.5).any(0))[0]
+    tops = np.argmax(lab[:, cols] > 0.5, 0)
+    k, q = np.polyfit(cols, tops, 1)
+    line = k * np.arange(W) + q + tuck
+    return np.float32(np.arange(H)[:, None] >= line[None, :])
+
+
 def _print(paper, inks, seed=0, breakup=0.15):
     out = paper.copy()
     for i, (cov, col) in enumerate(inks):
@@ -473,11 +485,14 @@ def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False
     _put(title, h1, (W / 2, 160), 'mt')
     _put(title, h2, (W / 2, 160 + h1.height + 18), 'mt')
 
-    # giocatore ritagliato a forbici: il ritaglio finisce sotto la striscia del nome
+    # giocatore ritagliato a forbici: il ritaglio finisce sotto la striscia del nome, lungo il suo
+    # bordo alto (anche oltre le estremità della striscia: niente carta che sbuca di lato)
+    lab, txt = _label_strip(name, (W / 2, STRIP_Y))
     alpha, lum = _player_layers(path, frame) if path else (_mask(), np.ones((H, W), np.float32))
     cut = _scissor_mask(alpha)
-    alpha[STRIP_Y:] = 0
-    cut[STRIP_Y:] = 0
+    below = _below_strip(lab)
+    alpha *= 1 - below
+    cut *= 1 - below
     sh = _shift(_blur(cut, 16), 14, 18) * (1 - cut)
 
     black = np.maximum(black, title * (1 - cut))
@@ -488,7 +503,6 @@ def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False
     gold = _shift(gold, 3, -2)          # leggero fuori registro
 
     # striscia nera incollata sopra, con ombra tutt'intorno (più marcata sotto)
-    lab, txt = _label_strip(name, (W / 2, STRIP_Y))
     lb = _blur(lab, 22)
     lsh = np.maximum(_shift(lb, 14, 22) * 1.45, _shift(lb, 0, -12) * 1.5) * (1 - lab)
     black = np.maximum(black * (1 - lab), lab * (1 - txt))
