@@ -395,14 +395,15 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     img = cp._paper((W, H), PAPER, seed=int(rng.integers(1 << 20))).copy()
     light = cp._crumple((W, H), int(rng.integers(1 << 20)), 0.7, folds=3)
 
-    # etichetta: un pezzo di carta nero per parola, affiancati sulla stessa riga, inclinazioni opposte
-    sign = rng.choice((-1, 1))
+    # etichetta: un pezzo di carta nero per parola, affiancati sulla stessa linea (stessa inclinazione)
+    ang = float(rng.choice((-1, 1)) * rng.uniform(1.3, 1.8))
     h = _label_height(parts)
     x = W / 2 - (sum(p.width + 2 * LABEL_PAD for p in parts) + LABEL_SEP * max(len(parts) - 1, 0)) / 2
     for i, p in enumerate(parts):
         pw = p.width + 2 * LABEL_PAD
-        ang = float(sign * (-1) ** i * rng.uniform(1.5, 3) * (1 if len(parts) > 1 else 1.1))
-        img = _piece(img, p, (x + pw / 2, y + h / 2 + rng.uniform(-6, 6)), ang, BLACK, CREAM,
+        cx = x + pw / 2
+        cy = y + h / 2 - np.sin(np.radians(ang)) * (cx - W / 2)   # sulla linea inclinata che passa dal centro
+        img = _piece(img, p, (cx, cy), ang, BLACK, CREAM,
                      int(rng.integers(1 << 20)), pad=(LABEL_PAD, 16 + (h - 32 - p.height) // 2), tear=2,
                      sh=(6, 10, 8, .4), breakup=.08, fringe=True)
         x += pw + LABEL_SEP
