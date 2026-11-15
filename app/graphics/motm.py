@@ -52,6 +52,17 @@ def clean_text(value, limit, upper=True):
     return (text.upper() if upper else text)[:limit].strip()
 
 
+def clean_name(value):
+    """Nome in firma: sempre iniziale maiuscola e resto minuscolo, anche se scritto tutto grande
+    (ogni parola: "jean-claude" -> "Jean-Claude")."""
+    text = clean_text(value, NAME_MAX, upper=False).lower()
+    out, up = [], True
+    for ch in text:
+        out.append(ch.upper() if up and ch.isalpha() else ch)
+        up = not ch.isalpha() and ch != "'"
+    return ''.join(out)
+
+
 def clean_frame(frame):
     """x = spostamento del centro (frazione della larghezza), y = dei piedi (frazione dell'altezza),
     zoom = scala. 0, 0, 1 = posizione automatica. I limiti veri li mette person_box."""
@@ -358,7 +369,7 @@ def _plain(text):
 def render(*, surname, name='', home='', away='', comp='', person=None, frame=None, ghost=False):
     """PNG del poster. person = PNG scontornato (byte o Image); ghost=True: senza giocatore (editor)."""
     surname = clean_text(surname, SURNAME_MAX)
-    name = clean_text(name, NAME_MAX, upper=False)
+    name = clean_name(name)
     home, away = clean_text(home, TEAM_MAX), clean_text(away, TEAM_MAX)
     comp = clean_text(comp, COMP_MAX)
     if not surname:

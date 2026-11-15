@@ -37,6 +37,12 @@ class TextTest(unittest.TestCase):
         self.assertEqual(M.clean_text('  di   gregorio ', 14), 'DI GREGORIO')
         self.assertEqual(M.clean_text('Michele', 16, upper=False), 'Michele')
 
+    def test_name_capitalized_surname_upper(self):
+        self.assertEqual(M.clean_name('MICHELE'), 'Michele')
+        self.assertEqual(M.clean_name('jean-claude'), 'Jean-Claude')
+        self.assertEqual(M.clean_name('kenan'), 'Kenan')
+        self.assertEqual(M.clean_text('bremer', M.SURNAME_MAX), 'BREMER')
+
     def test_frame_defaults(self):
         self.assertEqual(M.clean_frame(None), {'x': 0.0, 'y': 0.0, 'zoom': 1.0})
         self.assertEqual(M.clean_frame({'x': 'a', 'zoom': float('nan')})['zoom'], 1.0)

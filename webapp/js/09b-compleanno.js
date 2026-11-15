@@ -179,12 +179,13 @@ async function motmFill() {
     if (n && motm.key === key) { $('motmComp').value = `${comp} – Matchday ${n}`; renderSteps(); }
   }
 }
+const motmName = v => v.trim().toLowerCase().replace(/(^|[^a-zà-ÿ'])([a-zà-ÿ])/g, (_, a, b) => a + b.toUpperCase());
 function motmPayload() {
   const surname = $('motmSurname').value.trim(), home = $('motmHome').value.trim(), away = $('motmAway').value.trim();
   if (!surname) throw new Error('Scrivi il cognome.');
   if (!home || !away) throw new Error('Scrivi le squadre.');
   if (!bdo.id) throw new Error('Carica la foto.');
-  return {v:1, action:'render', session, data:{kind:'motm', surname, name:$('motmName').value.trim(), home, away,
+  return {v:1, action:'render', session, data:{kind:'motm', surname:surname.toUpperCase(), name:motmName($('motmName').value), home, away,
     comp:$('motmComp').value.trim(), photo_id:bdo.id, frame:{...bd.frame}}};
 }
 
@@ -434,6 +435,8 @@ function initBirthday() {
   $('bdPlayerSearch').addEventListener('input',() => bdRender());
   $('bdBirth').addEventListener('change',() => { $('bdAge').value = bdAge($('bdBirth').value); renderSteps(); });
   ['bdName','bdAge','bdoName',...MOTM_FIELDS].forEach(id => $(id).addEventListener('input',() => renderSteps()));
+  // Nome in firma: iniziale maiuscola e resto minuscolo, come uscirà nel poster.
+  $('motmName').addEventListener('change',() => { $('motmName').value = motmName($('motmName').value); renderSteps(); });
   $('bdoFile').addEventListener('change',e => bdoUpload(e.target.files && e.target.files[0]));
   $('bdManual').addEventListener('click',bdManualStart);
   $('bdoVintage').addEventListener('click',() => {

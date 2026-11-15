@@ -438,7 +438,7 @@ def _build_state(envelope, catalog, now, expected_session):
             raise ValueError('Scrivi le squadre.')
         return {
             'id': uuid.uuid4().hex[:10],
-            'data': {'kind': 'motm', 'surname': surname, 'name': motm.clean_text(incoming.get('name'), motm.NAME_MAX, upper=False),
+            'data': {'kind': 'motm', 'surname': surname, 'name': motm.clean_name(incoming.get('name')),
                      'home': home, 'away': away, 'comp': motm.clean_text(incoming.get('comp'), motm.COMP_MAX),
                      'photo_id': _photo_id(incoming.get('photo_id')), 'frame': motm.clean_frame(incoming.get('frame'))},
             'status': 'ready',
