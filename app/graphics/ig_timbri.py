@@ -16,7 +16,7 @@ from graphics import compleanno as cp
 
 ANTON, MONO = cp.ANTON, cp.MONO
 INK = np.array((0.07, 0.07, 0.075), np.float32)
-STRENGTH = 0.10        # quanto si vedono (0 = niente, 1 = inchiostro pieno)
+STRENGTH = 0.08        # quanto si vedono (0 = niente, 1 = inchiostro pieno)
 
 
 # ---------------------------------------------------------------- pezzi di disegno
@@ -467,9 +467,9 @@ def stamps_mask(size, seed):
     left_top = bool(rng.integers(2))          # diagonale: alto-sinistra/basso-destra o il contrario
     m = np.zeros((H, W), np.float32)
     for k, style in enumerate((first, second)):
-        r = rng.uniform(.19, .23) * W         # grandi: circa 2/5 della larghezza
+        r = rng.uniform(.25, .29) * W         # grandi: circa metà della larghezza
         left = left_top if k == 0 else not left_top
-        cx = rng.uniform(.17, .27) * W
+        cx = rng.uniform(.2, .3) * W
         cx = cx if left else W - cx
         cy = rng.uniform(.13, .2) * H if k == 0 else H - rng.uniform(.17, .24) * H
         _place(m, STYLES[style](int(r), rng), cx, cy, float(rng.uniform(-24, 24)))
