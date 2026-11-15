@@ -152,10 +152,17 @@ function bdRender() {
   $('bdPlayerSummary').textContent = bd.loading ? 'Caricamento foto…'
     : !playersLoaded ? 'Caricamento giocatori…' : !matches.length ? 'Nessun risultato.'
     : chosen ? `Selezionato: ${surnameOf(chosen)}` : bd.manual ? 'Aggiunto a mano: carica la sua foto.' : '';
-  renderResults('bdPlayerList',matches,bd.player,item => {
-    const when = bdWhen(births[item.name]);
-    return when ? `${surnameOf(item)}  ·  ${when}` : surnameOf(item);
-  },item => { bdPick(item.name); },null,Infinity);
+  renderResults('bdPlayerList',matches,bd.player,item => surnameOf(item),item => { bdPick(item.name); },null,Infinity);
+  // data e giorni che mancano: a parte, piccoli e grigi a destra del nome
+  for (const row of $('bdPlayerList').children) {
+    let tag = row.querySelector('.bd-when');
+    if (!tag) {
+      tag = document.createElement('span');
+      tag.className = 'bd-when';
+      row.insertBefore(tag,row.querySelector('.tick'));
+    }
+    tag.textContent = bdWhen(births[row.dataset.name]);
+  }
 }
 
 function bdPick(name) {
