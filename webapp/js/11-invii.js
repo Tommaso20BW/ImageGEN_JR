@@ -360,20 +360,37 @@ const IG_LABELS = [['breaking','Breaking News'],['mercato','Calciomercato'],['uf
 
 function setIgLabel(key) {
   igLabel = IG_LABELS.some(l => l[0] === key) ? key : 'breaking';
-  $('igLabels').querySelectorAll('.opt').forEach(b => {
+  $('igLabels').querySelectorAll('.ig-lab').forEach(b => {
     const on = b.dataset.l === igLabel;
     b.classList.toggle('selected', on);
     b.setAttribute('aria-checked', on ? 'true' : 'false');
   });
 }
 
+// Ogni scelta è una card con la piccola etichetta disegnata come nella grafica
+// (strisce nere e oro, storte); "Nessuna" è un riquadro vuoto tratteggiato.
+const IG_LABEL_ART = {breaking: [['b', 'BREAKING'], ['g', 'NEWS']], mercato: [['b', 'CALCIOMERCATO']],
+  ufficiale: [['b', 'UFFICIALE']], none: []};
+
 IG_LABELS.forEach(([key, name]) => {
   const b = document.createElement('button');
   b.type = 'button';
-  b.className = 'opt';
+  b.className = 'ig-lab';
   b.dataset.l = key;
-  b.textContent = name;
+  const art = document.createElement('span');
+  art.className = 'ig-lab-art' + (key === 'none' ? ' empty' : '');
+  IG_LABEL_ART[key].forEach(([c, w]) => {
+    const st = document.createElement('i');
+    st.className = 'ig-strip ' + c;
+    st.textContent = w;
+    art.appendChild(st);
+  });
+  const cap = document.createElement('span');
+  cap.className = 'ig-lab-name';
+  cap.textContent = name;
+  b.append(art, cap);
   b.setAttribute('role', 'radio');
+  b.setAttribute('aria-label', name);
   b.addEventListener('click', () => { haptic('select'); setIgLabel(key); });
   $('igLabels').appendChild(b);
 });
