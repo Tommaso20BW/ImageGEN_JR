@@ -310,7 +310,7 @@ html[data-theme="dark"] #modSh{background:#2C2C2E}
 #modSh .mod-tile.on{box-shadow:inset 0 0 0 2px var(--tint)}
 /* campi di testo lunghi: più alti (crescono da soli col testo) */
 textarea.field-input{min-height:190px!important;overflow:hidden}
-#igText{min-height:230px!important}
+#igText{min-height:80px!important;overflow-y:auto!important}
 /* Logo: "Originale" solo se c'è un logo fclogo a cui tornare */
 .sp-tiles.two{grid-template-columns:repeat(2,1fr)}
 .sp-link button{color:var(--tint)!important;font-weight:600!important}
@@ -416,7 +416,16 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .iq-tr{margin-top:10px}
 
 /* Storia IG: pagina Contenuto (testo, due riquadri, foto, due riquadri) */
-.ig-text{min-height:150px}
+/* Tutta la pagina in una schermata, senza scorrere: il riquadro del testo prende lo spazio che resta
+   (su telefoni molto bassi scende fino a 80 px e solo allora la pagina scorre). */
+.content:has(> [data-screen="igcontent"].active){height:100%;display:flex;flex-direction:column;box-sizing:border-box}
+[data-screen="igcontent"].active{flex:1;display:flex;flex-direction:column;min-height:0}
+[data-screen="igcontent"] > *{flex-shrink:0}
+.ig-text{flex:1 1 0!important;resize:none}
+/* riquadri più bassi: icona a sinistra, titolo e sottotitolo a destra */
+.ig-tiles .ig-tile{display:grid;grid-template-columns:24px 1fr;column-gap:10px;align-items:center;min-height:62px;padding:10px 12px}
+.ig-tiles .ig-tile svg{grid-row:span 2;margin:0}
+.ig-tiles .ig-tile.has-photo{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end}
 .ig-labels{display:flex;margin:10px 0 16px;padding:2px;border-radius:10px;background:rgba(118,118,128,.14)}
 /* selettore a segmenti stile iOS: quello scelto è bianco in rilievo */
 .ig-seg{flex:1;min-width:0;height:34px;padding:0 2px;border:0;border-radius:8px;background:none;color:var(--text);
@@ -431,7 +440,6 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .ig-tile small{font-size:12.5px;color:var(--muted);line-height:1.25}
 .ig-tile:active{background:var(--accent-soft)}
 .ig-tile:disabled{opacity:.5}
-.ig-foot{margin-top:14px!important}
 .ig-save{margin-top:14px}
 
 /* Storia IG: foto di un album del canale, da scegliere */
