@@ -55,7 +55,7 @@ MAX_TEXT = 500
 
 # Etichetta in alto: chiave della Mini App -> parole (una striscia ciascuna)
 LABELS = {
-    'breaking': ('BREAKING NEWS',),         # notizia (quella di base)
+    'breaking': ('BREAKING', 'NEWS'),       # notizia (quella di base): due pezzi staccati, stessa riga
     'mercato': ('CALCIOMERCATO',),          # trattative e voci di mercato
     'ufficiale': ('UFFICIALE',),            # confermata dal club
     'none': (),
@@ -169,18 +169,21 @@ def text_height(lines, size):
     return sum(_line_h(size) if ln else int(size * 0.6) for ln in lines) + _line_gap(size) * (len(lines) - 1)
 
 
+LABEL_PAD, LABEL_SEP, LABEL_W = 45, 26, 990   # margine nel pezzo, spazio tra i pezzi, larghezza massima
+
+
 def _label_words(words, size):
-    out = []
-    for w in words:
-        t = cp._word(w, size, ANTON, 5)
-        if t.width > 900:
-            t = t.resize((900, max(1, int(t.height * 900 / t.width))), Image.LANCZOS)
-        out.append(t)
+    """Parole dell'etichetta, una per pezzo di carta, tutte sulla stessa riga (rimpicciolite se non ci stanno)."""
+    out = [cp._word(w, size, ANTON, 5) for w in words]
+    total = sum(t.width + 2 * LABEL_PAD for t in out) + LABEL_SEP * max(len(out) - 1, 0)
+    if total > LABEL_W:
+        k = (LABEL_W - (2 * LABEL_PAD * len(out) + LABEL_SEP * (len(out) - 1))) / sum(t.width for t in out)
+        out = [t.resize((max(1, int(t.width * k)), max(1, int(t.height * k))), Image.LANCZOS) for t in out]
     return out
 
 
 def _label_height(parts):
-    return sum(p.height + 32 for p in parts) + 30 * max(len(parts) - 1, 0)
+    return max((p.height for p in parts), default=-32) + 32
 
 
 def layout(text, label, photo_size=None):
@@ -392,18 +395,19 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     img = cp._paper((W, H), PAPER, seed=int(rng.integers(1 << 20))).copy()
     light = cp._crumple((W, H), int(rng.integers(1 << 20)), 0.7, folds=3)
 
-    # etichetta: strisce sfalsate, nero/oro alternati, inclinazioni opposte
+    # etichetta: un pezzo di carta nero per parola, affiancati sulla stessa riga, inclinazioni opposte
     sign = rng.choice((-1, 1))
+    h = _label_height(parts)
+    x = W / 2 - (sum(p.width + 2 * LABEL_PAD for p in parts) + LABEL_SEP * max(len(parts) - 1, 0)) / 2
     for i, p in enumerate(parts):
-        h = p.height + 32
-        dx = rng.uniform(-8, 8)            # centrate: solo un filo di imprecisione
-        col, tcol = BLACK, CREAM           # un solo colore
-        ang = float(sign * (-1) ** i * rng.uniform(1.5, 3.5))
-        img = _piece(img, p, (W / 2 + dx, y + h / 2), ang, col, tcol, int(rng.integers(1 << 20)),
-                     pad=(45, 16), tear=2, sh=(6, 10, 8, .4), breakup=.08, fringe=True)
-        y += h + 30
+        pw = p.width + 2 * LABEL_PAD
+        ang = float(sign * (-1) ** i * rng.uniform(1.5, 3) * (1 if len(parts) > 1 else 1.1))
+        img = _piece(img, p, (x + pw / 2, y + h / 2 + rng.uniform(-6, 6)), ang, BLACK, CREAM,
+                     int(rng.integers(1 << 20)), pad=(LABEL_PAD, 16 + (h - 32 - p.height) // 2), tear=2,
+                     sh=(6, 10, 8, .4), breakup=.08, fringe=True)
+        x += pw + LABEL_SEP
     if parts:
-        y = content_y(y + GAP - 30 + (TILT_PAD if photo is not None else 0), lines, size, ph_h)
+        y = content_y(y + h + GAP + (TILT_PAD if photo is not None else 0), lines, size, ph_h)
 
     if photo is not None:
         img = _photo(img, photo, W / 2, y + ph_h / 2, ph_h, _tilt(rng, 1.5, 4), rng, 1.6 if lines else 0)
