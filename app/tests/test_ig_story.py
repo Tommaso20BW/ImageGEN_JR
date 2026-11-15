@@ -47,6 +47,12 @@ class LayoutTests(unittest.TestCase):
         total = lab + S.text_height(lines, size) + ph_h + S.GAP * max(blocks - 1, 0)
         self.assertGreaterEqual(y, S.TOP)
         self.assertLessEqual(y + total, S.BOTTOM + 1)
+        if parts:   # etichetta in alto, il resto tra etichetta e logo senza uscire dalla zona
+            self.assertEqual(y, S.TOP)
+            top = y + lab + S.GAP
+            cy = S.content_y(top, lines, size, ph_h)
+            self.assertGreaterEqual(cy, top)
+            self.assertLessEqual(cy + total - lab - S.GAP, S.BOTTOM + 1)
         return parts, lines, size, ph_h
 
     def test_everything_fits_in_the_safe_zone(self):

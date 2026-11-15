@@ -30,6 +30,7 @@ from graphics.starting_xi import check_photo
 W, H = 1080, 1920
 SAFE_T, SAFE_B = 230, 1650           # sopra e sotto: barre di Instagram
 TOP, BOTTOM = SAFE_T + 20, SAFE_B - 30   # zona del contenuto (sotto c'è il logo)
+LOGO_Y = SAFE_B + 46                 # cima del logo JR
 GAP = 56                             # tra etichetta, foto e testo
 TEXT_W = 880                         # larghezza massima di una riga di testo
 PHOTO_W = 880                        # larghezza massima della foto
@@ -205,7 +206,14 @@ def layout(text, label, photo_size=None):
             break
         size -= 2
     total = lab_h + text_height(lines, size) + gaps + ph_h
-    return parts, lines, size, ph_h, TOP + max((room - total) / 2, 0)
+    # con l'etichetta: lei fissa in alto (sotto il nome di Instagram), il resto centrato dopo
+    return parts, lines, size, ph_h, TOP if parts else TOP + max((room - total) / 2, 0)
+
+
+def content_y(top, lines, size, ph_h):
+    """y di foto + testo sotto l'etichetta: a metà tra l'etichetta e il logo JR, senza uscire da BOTTOM."""
+    rest = text_height(lines, size) + ph_h + (GAP if lines and ph_h else 0)
+    return top + max(min((LOGO_Y - top - rest) / 2, BOTTOM - top - rest), 0)
 
 
 # ---------------------------------------------------------------- pezzi di carta
@@ -360,7 +368,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
                      pad=(45, 16), tear=2, sh=(6, 10, 8, .4), breakup=.08)
         y += h + 30
     if parts:
-        y += GAP - 30
+        y = content_y(y + GAP - 30, lines, size, ph_h)
 
     if photo is not None:
         img = _photo(img, photo, W / 2, y + ph_h / 2, ph_h, _tilt(rng, 1.5, 4), rng)
@@ -377,7 +385,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
                      STRIP, ink, int(rng.integers(1 << 20)), pad=(25, (h - t.height) // 2))
         y += h + _line_gap(size)
 
-    img = _logo_stamp(img, SAFE_B + 46, int(rng.integers(1 << 20)))
+    img = _logo_stamp(img, LOGO_Y, int(rng.integers(1 << 20)))
     img = _finish(img, light, .035, int(rng.integers(1 << 20)))
     out = Image.fromarray(np.uint8(np.clip(img, 0, 1) * 255 + 0.5))
     buf = io.BytesIO()
