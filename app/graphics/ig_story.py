@@ -363,7 +363,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     sign = rng.choice((-1, 1))
     for i, p in enumerate(parts):
         h = p.height + 32
-        dx = 0 if len(parts) == 1 else (-1) ** (i + 1) * min(90, (980 - p.width) / 2 - 20)
+        dx = rng.uniform(-8, 8)            # centrate: solo un filo di imprecisione
         col, tcol = (BLACK, CREAM) if i % 2 == 0 else (GOLD, BLACK)
         ang = float(sign * (-1) ** i * rng.uniform(1.5, 3.5))
         img = _piece(img, p, (W / 2 + dx, y + h / 2), ang, col, tcol, int(rng.integers(1 << 20)),
