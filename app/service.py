@@ -34,7 +34,7 @@ SESSION_DURATION_SECONDS = 30 * 60
 SESSION_MAX_SECONDS = 60 * 60
 MAX_PHOTOS = 24               # il collage ne usa fino a 9, più quelle dell'altra grafica
 # Campi che spostano o cambiano solo le foto: non cambiano la sagoma dell'editor.
-PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame', 'trail')
+PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame', 'trail', 'photo')
 GHOST_CACHE_SIZE = 12
 
 
@@ -357,7 +357,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/tgposts', '/tgphoto', '/translate'):
+                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/bdayphotos', '/tgposts', '/tgphoto', '/translate'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -402,6 +402,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/playerphoto':
                 self._json(200, {'ok': True, **self.service.player_photo(envelope)})
+                return
+
+            if path == '/bdayphotos':
+                self._json(200, {'ok': True, **self.service.bday_photos(envelope)})
                 return
 
             if path == '/igpost':
@@ -534,6 +538,32 @@ class Service:
         out['preview'] = 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
         log.info('FOTO', f'Posa di {player.name} ({path.name})')
         return out
+
+    def bday_photos(self, envelope):
+        """Compleanno: tutte le pose del giocatore (miniature per gruppo) e la sua data di nascita."""
+        from concurrent.futures import ThreadPoolExecutor
+        from graphics import compleanno
+        from livescore.graphics import goal as g
+        name = str((envelope or {}).get('player') or '')
+        player = next((p for p in g.load_players() if p.name == name), None)
+        if player is None:
+            raise ValueError('Giocatore non trovato.')
+        rows = compleanno.player_photos(player)
+        if not rows:
+            raise ValueError('Nessuna foto di questo giocatore negli asset.')
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            born = pool.submit(compleanno.player_birth, player)
+            thumbs = list(pool.map(compleanno.thumb, [r['id'] for r in rows]))
+            try:
+                birth = born.result(timeout=8)
+            except Exception:
+                birth = None
+        for row, url in zip(rows, thumbs):
+            row['thumb'] = url
+            row['height'] = compleanno.base_height(row['id'])
+        return {'photos': rows, 'page': {'w': compleanno.W, 'h': compleanno.H, 'cx': compleanno.PLAYER_CX,
+                                         'foot': compleanno.PLAYER_FOOT, 'cut': compleanno.STRIP_Y - 105,
+                                         'zoom': [compleanno.ZOOM_MIN, compleanno.ZOOM_MAX]}, 'birth': birth.isoformat() if birth else '', 'name': compleanno.clean_name(player.name)}
 
     def store_story_shot(self, raw):
         """Screenshot di una storia (Citazione IG): tiene la storia senza l'interfaccia di Instagram e,
@@ -1559,6 +1589,9 @@ def _send_detail(data):
         return {**empty, 'player': who, 'note': note}
     if kind == 'rin':
         return {**empty, 'player': str(data.get('name') or ''), 'note': f"Fino al {data.get('year', '')}"}
+    if kind == 'bday':
+        return {**empty, 'player': str(data.get('player') or data.get('name') or ''),
+                'note': f"{data.get('age', '')} anni"}
     if kind == 'conv':
         n = len(data.get('players') or [])
         return {**empty, 'player': f'{n} giocatori',

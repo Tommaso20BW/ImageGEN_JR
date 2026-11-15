@@ -257,6 +257,7 @@ function resetAllData() {
   updateLineupSummary();
   clearPhoto();
   mdpReset();
+  bdReset();
   clearPhase();
   igClearPhoto();
   $('igText').value = '';

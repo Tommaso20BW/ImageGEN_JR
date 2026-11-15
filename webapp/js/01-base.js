@@ -71,6 +71,7 @@ const ICONS = {
   'pxi':'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><circle cx="12" cy="12" r="3"/>',
   'squad':'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   'xi':'<path d="M8.5 3L3 6l2 4.5 2.5-1.2V21h9V9.3l2.5 1.2L21 6l-5.5-3c-.6 1.6-1.9 2.5-3.5 2.5S9.1 4.6 8.5 3z"/>',
+  'bday':'<path d="M4 21h16M5 21v-7a2 2 0 012-2h10a2 2 0 012 2v7M5 16c1.2 1 2.3 1 3.5 0s2.3-1 3.5 0 2.3 1 3.5 0 2.3-1 3.5 0M8 12V9M12 12V9M16 12V9M8 6.5a1 1 0 001-1C9 4.7 8 3.5 8 3.5S7 4.7 7 5.5a1 1 0 001 1zM12 6.5a1 1 0 001-1c0-.8-1-2-1-2s-1 1.2-1 2a1 1 0 001 1zM16 6.5a1 1 0 001-1c0-.8-1-2-1-2s-1 1.2-1 2a1 1 0 001 1z"/>',
   'cal':'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
   'ita':'<path fill="currentColor" stroke-width="1.2" stroke-linejoin="round" d="M7.30 3.50 8.33 6.18 11.20 6.33 8.96 8.14 9.71 10.92 7.30 9.35 4.89 10.92 5.64 8.14 3.40 6.33 6.27 6.18ZM16.70 3.50 17.73 6.18 20.60 6.33 18.36 8.14 19.11 10.92 16.70 9.35 14.29 10.92 15.04 8.14 12.80 6.33 15.67 6.18ZM7.30 12.80 8.33 15.48 11.20 15.63 8.96 17.44 9.71 20.22 7.30 18.65 4.89 20.22 5.64 17.44 3.40 15.63 6.27 15.48ZM16.70 12.80 17.73 15.48 20.60 15.63 18.36 17.44 19.11 20.22 16.70 18.65 14.29 20.22 15.04 17.44 12.80 15.63 15.67 15.48Z"/>',
   'table':'<path d="M3 20h18M4.5 20v-6h5v6M9.5 20V8h5v12M14.5 20v-4h5v4"/>',
@@ -107,6 +108,7 @@ const REQUESTS = [
   {id:'conv',   kind:'conv',  icon:'conv', title:'Convocati',    desc:'Bianconeri convocati in nazionale, con le bandiere'},
   {id:'jr',     kind:'jr',    icon:'jr', title:'Post',         desc:'Foto con il logo JR: classica, sfocata, collage o con titolo'},
   {id:'rin',    kind:'rin',   icon:'rin', title:'Rinnovi',      desc:'Maglia stesa con nome e anno del contratto'},
+  {id:'bday',   kind:'bday',  icon:'bday', title:'Compleanno',   desc:'Poster di auguri con la foto del giocatore'},
   {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia Instagram', desc:'Breaking News in formato storia'},
   {id:'igq',    kind:'igq',   icon:'igq', title:'Citazione Instagram', desc:'Post Instagram: foto, testo e account'},
   {id:'xq',     kind:'xq',    icon:'xq', title:'Citazione X',  desc:'Post X: testo, account e foto (o sfondo)'},
@@ -119,7 +121,7 @@ const HOME_GROUPS = [
   {icon:'g-pre', title:'Pre-gara',              ids:['pxi','squad','md','xi']},
   {icon:'g-events', title:'Fasi della partita', ids:['kick','half','second','end90','full']},
   {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
-  {icon:'jr', title:'Notizie e post',            ids:['igbn','jr','rin']},
+  {icon:'jr', title:'Notizie e post',            ids:['igbn','jr','rin','bday']},
   {icon:'igq', title:'Citazioni',                ids:['igq','xq','thq']},
   {icon:'cal', title:'Calendario e classifiche', ids:['cal','table']},
   {icon:'ita', title:'Nazionale',                ids:['ita','conv']},
@@ -212,7 +214,7 @@ const STEP_NAMES = {
   competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
   player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
   natkind:'Grafica', natxi:'Formazione', natopp:'Avversaria', natplayer:'Giocatore', goaltype:'Tipo di gol',
-  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', rincontent:'Rinnovo', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', igtg:'Notizia', igphr:'Frasi', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
+  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', rincontent:'Rinnovo', bdplayer:'Giocatore', bdphoto:'Foto', bdinfo:'Dati', bdpos:'Posizione', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', igtg:'Notizia', igphr:'Frasi', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
 };
 
 const $ = id => document.getElementById(id);

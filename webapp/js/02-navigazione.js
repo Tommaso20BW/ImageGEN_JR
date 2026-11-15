@@ -274,6 +274,7 @@ function buildFlow() {
   else if (kind === 'conv') flow = ['convlist'];
   else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'rin') flow = ['rincontent'];
+  else if (kind === 'bday') flow = ['bdplayer','bdphoto','bdinfo','bdpos'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent', {tg:'igtg', phr:'igphr'}[igPicking] || 'igsent'] : ['igcontent'];
   // Storia: niente editor della foto (la storia va intera nel riquadro 9:16).
   // Citazione Instagram: prima si sceglie Post o Storia. X e Threads: solo post.
@@ -290,6 +291,8 @@ function stepTitle(step) {
 function stepValue(step) {
   const natValue = natStepValue(step);
   if (natValue !== null) return natValue;
+  const bdValue = bdStepValue(step);
+  if (bdValue !== null) return bdValue;
   switch (step) {
     case 'competition': return labelOf(competitionOptions(),competition);
     case 'side': return labelOf(SIDES,side);
@@ -510,7 +513,7 @@ function renderFlow() {
   });
   if (screen) screen.classList.add('active');
   document.body.classList.toggle('home-mode',screenName === 'home');
-  const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur' || screenName === 'jrlayout';
+  const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur' || screenName === 'jrlayout' || screenName === 'bdpos';
   $('stage').classList.toggle('photo-mode', editing);
   if (editing) $('stage').scrollTop = 0;
   try {
@@ -521,6 +524,9 @@ function renderFlow() {
   // Matchday / Starting XI: la foto è quella del giocatore scelto, qui solo spostare e zoomare.
   if (screenName === 'photo') { $('photoPick').hidden = kind === 'md' || kind === 'xi'; if (isQuoteKind(kind)) iqSyncPhoto(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
   if (screenName === 'mdplayer') { mdpRender(); mdpLoad(); }
+  if (screenName === 'bdplayer') { bdRender(); bdLoad(); }
+  if (screenName === 'bdphoto') bdPhotosRender();
+  if (screenName === 'bdpos') bdOpenPos();
   if (screenName === 'jrphotos') renderJrPicker();
   if (screenName === 'jrlayout') { renderJrLayout(true); requestAnimationFrame(() => { fitColBig(); renderJrLayout(); }); }
   if (screenName === 'jrbg') renderJrBg();

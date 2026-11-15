@@ -303,6 +303,50 @@
             </div>
           </section>
 
+          <section class="screen" data-screen="bdplayer">
+            <div class="eyebrow">Compleanno</div>
+            <h1>Giocatore</h1>
+            <p class="lead">Scegli chi compie gli anni: poi trovi tutte le sue foto e la data di nascita già compilata.</p>
+            <label class="search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="bdPlayerSearch" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Cerca giocatore…">
+            </label>
+            <div id="bdPlayerSummary" class="hint"></div>
+            <div id="bdPlayerList" class="results"></div>
+          </section>
+
+          <section class="screen" data-screen="bdphoto">
+            <div class="eyebrow">Compleanno</div>
+            <h1>Foto</h1>
+            <p id="bdPhotoLead" class="lead">Tocca la foto da mettere nel poster.</p>
+            <div id="bdPhotos"></div>
+          </section>
+
+          <section class="screen" data-screen="bdinfo">
+            <div class="eyebrow">Compleanno</div>
+            <h1>Nome e data</h1>
+            <p class="lead">Il nome va sulla striscia nera (se è lungo si rimpicciolisce da solo). Data di nascita ed età sono già compilate: correggile se serve.</p>
+            <div class="ios-list">
+              <label class="ios-row"><span>Nome</span><input id="bdName" class="ios-in" maxlength="28" autocapitalize="characters" spellcheck="false" placeholder="KENAN YILDIZ" style="text-transform:uppercase"></label>
+              <label class="ios-row"><span>Nato il</span><input id="bdBirth" class="ios-in" type="date"></label>
+              <label class="ios-row"><span>Anni</span><input id="bdAge" class="ios-in" inputmode="numeric" maxlength="2" placeholder="21"></label>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="bdpos">
+            <div class="eyebrow">Compleanno</div>
+            <div class="photo-head">
+              <h1>Posizione</h1>
+              <button id="bdPosReset" class="head-ico" type="button" aria-label="Posizione automatica" title="Posizione automatica"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+            </div>
+            <p class="lead">Trascina il giocatore per spostarlo, due dita per lo zoom.</p>
+            <div id="bdFrame" class="photo-frame bd-frame">
+              <img id="bdGhost" alt="" hidden>
+              <div id="bdClip" class="bd-clip"><img id="bdPlayer" alt=""></div>
+            </div>
+            <div id="bdPosHint" class="hint" style="text-align:center"></div>
+          </section>
+
           <section class="screen" data-screen="igcontent">
             <div class="eyebrow">Storie Instagram · Breaking News</div>
             <div class="photo-head">
@@ -779,7 +823,7 @@
 <script>
   // Codice della Mini App (webapp/js): file caricati in ordine, con la versione della pagina.
   (function () { var v = (new URLSearchParams(location.search).get('v') || Date.now());
-    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '05b-emoji.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '10-avvio.js', '11-invii.js', '12-citazione.js', '13-convocati.js'].forEach(function (f) {
+    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '05b-emoji.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '09b-compleanno.js', '10-avvio.js', '11-invii.js', '12-citazione.js', '13-convocati.js'].forEach(function (f) {
       document.write('<script src="webapp/js/' + f + '?v=' + v + '"><\/script>'); }); })();
 </script>
 </body>

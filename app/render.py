@@ -311,6 +311,13 @@ class Renderer:
 
             return rinnovo.render(name=data.get('name', ''), year=data.get('year', ''))
 
+        if kind == 'bday':
+            from graphics import compleanno
+
+            return compleanno.render(name=data.get('name', ''), birth=data.get('birth', ''),
+                                     age=data.get('age'), photo=data.get('photo', ''),
+                                     frame=data.get('frame'), ghost=ghost)
+
         if kind == 'jr':
             from graphics import photo_jr
 

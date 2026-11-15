@@ -449,3 +449,13 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .ig-tile.has-photo small{color:rgba(255,255,255,.85)}
 .ig-tile-x{position:absolute;top:6px;right:6px;width:28px;height:28px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:19px;line-height:1;cursor:pointer}
 .ig-tile-x[hidden]{display:none}
+/* Compleanno: foto per gruppo e editor della posizione */
+.hm-item[data-id="bday"] .hm-ico{background:#FF9500}
+.bd-group{margin:18px 2px 8px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.bd-group:first-child{margin-top:4px}
+.bd-ph{background-size:contain;background-position:center bottom;background-color:var(--surface2,var(--line))}
+.bd-frame{position:relative;aspect-ratio:3/4;overflow:hidden;touch-action:none;background:#eee8db;margin:0 auto}
+.bd-frame #bdGhost{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.bd-frame #bdGhost[hidden]{display:none}
+.bd-clip{position:absolute;left:0;right:0;top:0;overflow:hidden;pointer-events:none}
+.bd-clip img{position:absolute;max-width:none;filter:grayscale(1) contrast(1.1);opacity:.92;pointer-events:none}

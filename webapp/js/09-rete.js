@@ -28,6 +28,7 @@ function buildPayload(ghost=false) {
       handle:$('iqHandle').value.trim(), verified:!!iq.verified,
       frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}}};
   }
+  if (kind === 'bday') return bdPayload();
   if (kind === 'rin') {
     const name = $('rinName').value.trim(), year = $('rinYear').value.trim();
     if (!name) throw new Error('Scrivi il nome.');

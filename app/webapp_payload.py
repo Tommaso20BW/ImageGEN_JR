@@ -376,6 +376,33 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
+    # COMPLEANNO: giocatore, una sua posa dagli asset, nome scritto sulla striscia, data ed età.
+    if kind == 'bday':
+        from graphics import compleanno
+        from livescore.graphics import goal as g
+        name = _canonical_player(catalog, incoming.get('player'))
+        player = next((p for p in g.load_players() if p.name == name), None)
+        if player is None:
+            raise ValueError('Giocatore non presente nel catalogo.')
+        photo = str(incoming.get('photo') or '')
+        compleanno.photo_path(photo, player)
+        label = compleanno.clean_name(incoming.get('name') or name)
+        if not label:
+            raise ValueError('Scrivi il nome.')
+        born = compleanno.parse_birth(incoming.get('birth'))
+        if not born:
+            raise ValueError('Scrivi la data di nascita.')
+        age = str(incoming.get('age') or '').strip()
+        age = int(age) if age.isdigit() and 0 < int(age) < 100 else compleanno.age_on_birthday(born)
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {'kind': 'bday', 'player': name, 'photo': photo, 'name': label,
+                     'birth': born.isoformat(), 'age': age, 'frame': compleanno.clean_frame(incoming.get('frame'))},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
     # FOTO + JR: niente partita, solo foto e colore del logo.
     if kind == 'jr':
         try:

@@ -98,6 +98,10 @@ def _cases(roster):
     yield 'Post (collage)', {'kind': 'jr', 'style': 'collage', 'color': 'black', 'cells': [
         {'photo_id': 'a' * 16, 'x': 0, 'y': 0, 'w': .5, 'h': 1}, {'photo_id': 'b' * 16, 'x': .5, 'y': 0, 'w': .5, 'h': 1}]}
     yield 'Rinnovo', {'kind': 'rin', 'name': 'N.GONZALEZ', 'year': '2030'}
+    from graphics import compleanno
+    star = next(p for p in roster if p.role == 'outfield' and compleanno.player_photos(p))
+    yield 'Compleanno', {'kind': 'bday', 'player': star.name, 'name': star.name, 'birth': '2005-05-04',
+                         'photo': compleanno.player_photos(star)[-1]['id']}
     yield 'Storia Instagram', {'kind': 'igbn', 'text': 'Breaking news: prova automatica delle grafiche.', **photo}
     quote = {'text': 'Testo di prova della citazione, abbastanza lungo da andare a capo.', 'name': 'Juventus Reborn',
              'handle': 'juventus_reborn', **photo}
