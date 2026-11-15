@@ -476,6 +476,14 @@ def name_word(name):
     return t
 
 
+def strip_angle(name, age):
+    """Inclinazione della striscia del nome: a caso tra 1,5° e 4,5°, verso destra o sinistra.
+    Dipende da nome ed età, così editor e grafica finale coincidono e ogni compleanno cambia."""
+    import zlib
+    rng = np.random.default_rng(zlib.crc32(f'{name}|{age}'.encode('utf-8')))
+    return round(float(rng.uniform(1.5, 4.5)) * (1 if rng.random() < 0.5 else -1), 2)
+
+
 def _label_strip(text, center, angle=-2.5, pad=(70, 46), seed=9, jitter=6):
     """Striscia di carta nera tagliata a forbici con il nome: (striscia, testo), già ruotati."""
     import cv2
@@ -566,7 +574,7 @@ def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False
 
     # giocatore ritagliato a forbici: il ritaglio finisce sotto la striscia del nome, lungo il suo
     # bordo alto (anche oltre le estremità della striscia: niente carta che sbuca di lato)
-    lab, txt = _label_strip(name, (W / 2, STRIP_Y))
+    lab, txt = _label_strip(name, (W / 2, STRIP_Y), angle=strip_angle(name, age))
     alpha, lum = _player_layers(path, frame) if path is not None else (_mask(), np.ones((H, W), np.float32))
     cut = _scissor_mask(alpha)
     below = _below_strip(lab)
