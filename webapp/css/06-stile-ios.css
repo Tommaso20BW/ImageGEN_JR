@@ -467,11 +467,10 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .bdo-pick img:not([hidden])+.bdo-plus{position:absolute;bottom:10px;padding:4px 10px;border-radius:99px;background:rgba(0,0,0,.55);color:#fff;font-size:13px}
 .bdo-plus{font-weight:600;color:var(--accent,#0a84ff)}
 
-.result.bd-add{justify-content:flex-start;margin:0 0 12px;background:var(--surface)!important;border-radius:14px!important;border-bottom:0!important}
-.bd-add-ico{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--surface,#fff);font-size:20px;font-weight:600;line-height:1}
-.bd-add-txt{display:flex;flex-direction:column;min-width:0;line-height:1.2}
-.bd-add-txt b{font-weight:650}
-.bd-add-txt small{font-size:12px;font-weight:500;color:var(--muted)}
+.bd-search{display:flex;align-items:center;gap:10px}
+.bd-search .search{flex:1 1 auto;min-width:0}
+.bd-plus{flex:none;display:grid;place-items:center;width:58px;align-self:stretch;border:0;border-radius:14px;background:var(--surface);color:var(--text,#111);cursor:pointer}
+.bd-plus:active{transform:scale(.94)}
 #bdPlayerList .tick{display:none}
 .bd-when{flex:none;margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;line-height:1.15;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .bd-when b{font-size:13px;font-weight:600}
