@@ -96,7 +96,8 @@ def tidy(value):
     """Niente emoji né firma, a-capo mantenuti, righe vuote di fila ridotte a una (nessun limite)."""
     # NFKC: le lettere "grassetto" Unicode copiate dai post (𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄) diventano lettere
     # normali, che il font sa disegnare
-    text = unicodedata.normalize('NFKC', str(value or ''))
+    # Prima però via gli emoji: NFKC trasformerebbe ‼️ in "!!" e ⁉️ in "!?".
+    text = unicodedata.normalize('NFKC', strip_emoji(str(value or '')))
     text = strip_emoji(text.replace('\r\n', '\n').replace('\r', '\n'))
     lines = [' '.join(line.split()) for line in text.split('\n')]
     return re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()

@@ -16,6 +16,7 @@ PAGE = 'https://t.me/s/{channel}'
 LIMIT = 20
 _SOURCE = re.compile(r'^\s*📲')          # riga della fonte, prima di togliere gli emoji
 _HASHTAGS = re.compile(r'^(?:#\w+\s*)+$')
+_SIGNED = re.compile(r'@Juventus_Reborn\b', re.I)   # si propongono solo i post con la firma del canale
 _PHOTO_URL = re.compile(r"background-image:\s*url\(['\"]?(https://[^'\")]+)")
 PHOTO_HOSTS = ('telesco.pe', 'cdn-telegram.org', 'telegram-cdn.org')
 MAX_PHOTO = 15 * 1024 * 1024
@@ -85,11 +86,11 @@ def story_text(raw: str) -> str:
 
 
 def fetch(channel: str = CHANNEL, limit: int = LIMIT, session=None) -> list[dict]:
-    """Ultimi `limit` post con testo o foto, dal più recente."""
+    """Ultimi `limit` post firmati @Juventus_Reborn (con testo o foto), dal più recente."""
     session = session or requests.Session()
     url, posts, seen = PAGE.format(channel=channel), [], set()
     params = {}
-    for _ in range(4):                         # una pagina ha ~20 post, non tutti con testo
+    for _ in range(10):                        # una pagina ha ~20 post, non tutti firmati (LiveScore)
         r = session.get(url, params=params, timeout=15, headers={'User-Agent': 'Mozilla/5.0'})
         r.raise_for_status()
         page = [p for p in parse(r.text) if p['id'] not in seen]
@@ -97,12 +98,14 @@ def fetch(channel: str = CHANNEL, limit: int = LIMIT, session=None) -> list[dict
             break
         seen.update(p['id'] for p in page)
         posts = page + posts
-        if len(posts) >= limit:
+        if sum(bool(_SIGNED.search(p['text'])) for p in posts) >= limit + 5:   # margine per le rubriche
             break
         params = {'before': min(int(p['id']) for p in page)}
     posts.sort(key=lambda p: int(p['id']), reverse=True)
     out = []
     for p in posts:
+        if not _SIGNED.search(p['text']):      # LiveScore e altri post senza firma: non sono notizie
+            continue
         text = story_text(p['text'])
         if _RUBRICHE.match(text):
             continue

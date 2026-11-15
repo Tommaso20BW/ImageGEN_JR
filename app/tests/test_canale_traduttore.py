@@ -19,7 +19,7 @@ PAGE = '''
 <div class="tgme_widget_message_wrap"><div class="tgme_widget_message" data-post="juventus_reborn/13">
 <div class="tgme_widget_message_grouped_wrap"><a class="tgme_widget_message_photo_wrap grouped_media_wrap js-message_photo" style="width:2px;background-image:url('https://cdn4.telesco.pe/file/a.jpg')"></a>
 <a class="tgme_widget_message_photo_wrap grouped_media_wrap js-message_photo" style="background-image:url('https://cdn4.telesco.pe/file/b.jpg')"></a></div>
-<div class="tgme_widget_message_text js-message_text" dir="auto">Album <b>Juve</b></div></div></div>
+<div class="tgme_widget_message_text js-message_text" dir="auto">Album <b>Juve</b><br/><br/>👉 <a href="https://t.me/juventus_reborn">@Juventus_Reborn</a></div></div></div>
 <div class="tgme_widget_message_wrap"><div class="tgme_widget_message" data-post="juventus_reborn/14">
 <div class="tgme_widget_message_text js-message_text" dir="auto"><i class="emoji"><b>🗞</b></i> PRIME PAGINE | 14/11/2026</div></div></div>
 <div class="tgme_widget_message_wrap"><div class="tgme_widget_message" data-post="juventus_reborn/15">
@@ -49,9 +49,12 @@ class CanaleTests(unittest.TestCase):
                 r._content = (PAGE if not params else '').encode('utf-8')
                 r.encoding = 'utf-8'
                 return r
-        posts = tgchannel.fetch(session=Fake(), limit=2)
-        self.assertEqual([p['id'] for p in posts], ['13', '12'])       # senza PRIME PAGINE e ACCADDE OGGI
+        # solo i post firmati @Juventus_Reborn (niente LiveScore, rubriche, post senza firma)
+        posts = tgchannel.fetch(session=Fake(), limit=5)
+        self.assertEqual([p['id'] for p in posts], ['13', '10'])
         self.assertEqual(len(posts[0]['photos']), 2)
+        self.assertEqual(posts[0]['text'], 'Album Juve')
+        self.assertEqual(len(tgchannel.fetch(session=Fake(), limit=1)), 1)
 
     def test_photo_only_from_telegram_cdn(self):
         self.assertTrue(tgchannel.is_photo_url('https://cdn4.telesco.pe/file/a.jpg'))
