@@ -356,11 +356,10 @@ const cleanPhrase = v => String(v || '').replace(/\r/g, '').split('\n')
 
 /* ----- Storia IG: etichetta in alto ----- */
 // Stesse chiavi di graphics/ig_story.py (LABELS).
-const IG_LABELS = [['ultimora','Ultim’ora'],['news','News'],['ufficiale','Ufficiale'],
-  ['mercato','Calciomercato'],['infortunio','Infortunio'],['none','Nessuna']];
+const IG_LABELS = [['breaking','Breaking News'],['mercato','Calciomercato'],['ufficiale','Ufficiale'],['none','Nessuna']];
 
 function setIgLabel(key) {
-  igLabel = IG_LABELS.some(l => l[0] === key) ? key : 'ultimora';
+  igLabel = IG_LABELS.some(l => l[0] === key) ? key : 'breaking';
   $('igLabels').querySelectorAll('.opt').forEach(b => {
     const on = b.dataset.l === igLabel;
     b.classList.toggle('selected', on);
