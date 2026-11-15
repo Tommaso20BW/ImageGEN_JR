@@ -418,6 +418,7 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 /* Storia IG: pagina Contenuto (testo, due riquadri, foto, due riquadri) */
 .ig-text{min-height:150px}
 .ig-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.ig-tiles + .ig-tiles{margin-top:10px}
 .ig-tile{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-height:88px;padding:13px 14px;border:0;border-radius:12px;
   background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer}
 .ig-tile svg{width:24px;height:24px;margin-bottom:5px;fill:none;stroke:var(--accent);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}

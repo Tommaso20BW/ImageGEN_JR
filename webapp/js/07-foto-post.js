@@ -12,7 +12,7 @@ let igColor = 'black';     // colore del testo (tavolozza in 11-invii.js)
 function igRefresh() {
   // Foto scelta: sta sul riquadro Galleria (tocco = cambiala, × = toglila)
   $('igPick').classList.toggle('has-photo', !!igb.url);
-  $('igPick').style.backgroundImage = igb.url ? `linear-gradient(transparent 35%, rgba(0,0,0,.7)), url("${igb.url}")` : '';
+  $('igPick').style.backgroundImage = igb.url ? `linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.72)), url("${igb.url}")` : '';
   $('igClear').hidden = !igb.id;
   $('igPickLabel').textContent = igb.url ? 'Foto scelta' : 'Galleria';
   $('igPickSub').textContent = igb.url ? 'Tocca per cambiarla' : 'Dal telefono';
