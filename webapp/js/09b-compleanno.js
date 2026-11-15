@@ -55,7 +55,7 @@ function bdPhotoOf(id) { return bd.photos.find(p => p.id === id); }
 const bdo = {id:'', thumb:'', height:0, page:null, loading:false};
 const bdOld = () => kind === 'bday' && bd.mode === 'old';
 // Foto caricata dall'utente: Ex giocatore, o giocatore della rosa aggiunto a mano.
-const bdUploaded = () => bdOld() || (kind === 'bday' && bd.manual);
+const bdUploaded = () => bdOld() || kind === 'motm' || (kind === 'bday' && bd.manual);
 function bdClearUpload() {
   Object.assign(bdo,{id:'', thumb:'', height:0, page:null, loading:false});
   $('bdoPreview').hidden = true;
@@ -63,6 +63,11 @@ function bdClearUpload() {
 }
 // Testi della schermata Foto caricata: diversi per Ex giocatore e giocatore aggiunto a mano.
 function bdoTexts() {
+  if (kind === 'motm') {
+    $('bdoEyebrow').textContent = 'Man of the Match';
+    $('bdoLead').textContent = "Carica la foto del giocatore, meglio se a figura intera: lo scontorno lo fa l'app.";
+    return;
+  }
   const old = bd.mode === 'old';
   $('bdoEyebrow').textContent = old ? 'Compleanno · Ex giocatore' : 'Compleanno · Rosa attuale';
   $('bdoLead').textContent = old ? "Carica la foto del giocatore: scontorno e filtro d'epoca li fa l'app."
@@ -114,7 +119,7 @@ async function bdoUpload(file) {
     if (busy === myBusy) $('busySub').textContent = 'Separo il giocatore dallo sfondo: ci vogliono alcuni secondi.';
     const cut = await netFetch(`${directBase}/bdoldcut`,{
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-      body:JSON.stringify({v:1, session, photo_id:ub.photo_id, mode:bdOld() ? 'old' : 'now'})
+      body:JSON.stringify({v:1, session, photo_id:ub.photo_id, mode:kind === 'motm' ? 'motm' : bdOld() ? 'old' : 'now'})
     }, 120000);
     const cb = await cut.json().catch(() => ({}));
     if (!cut.ok || !cb.ok) throw new Error(cb.error || 'Scontorno non riuscito.');
@@ -143,6 +148,44 @@ function bdoPayload() {
   if (!bdo.id) throw new Error('Carica la foto.');
   return {v:1, action:'render', session, data:{kind:'bdold', name, photo_id:bdo.id, frame:{...bd.frame},
     ...(bdo.vintage === false ? {vintage:false} : {})}};
+}
+
+/* Man of the Match: partita scelta dal calendario (squadre e campionato compilati da soli, sempre
+   modificabili), nome e cognome, foto caricata e scontornata, posizione nello stesso editor. */
+const MOTM_FIELDS = ['motmName','motmSurname','motmHome','motmAway','motmComp'];
+const motm = {key:''};
+// Giornata di Serie A: partite di campionato della Juventus dall'inizio della stagione a quella scelta
+// (ESPN non la dà; con i recuperi può sbagliare, per questo la riga resta modificabile).
+async function motmMatchday(date) {
+  const [y, m] = date.split('-').map(Number);
+  const rows = await fetchFixtures(`${m >= 7 ? y : y - 1}-07-01`, date).catch(() => []);
+  return rows.filter(r => r.competition === 'ita.1' && r.date <= date).length || '';
+}
+async function motmFill() {
+  const opp = selectedTeam ? displayTeamName(selectedTeam.name) : '';
+  const date = $('matchDate').value || '';
+  const key = [mdPick, competition, side, opp, date].join('|');
+  if (key === motm.key) return;
+  motm.key = key;
+  if (opp) {
+    $('motmHome').value = side === 'away' ? opp : 'Juventus';
+    $('motmAway').value = side === 'away' ? 'Juventus' : opp;
+  }
+  const comp = COMP_SHORT[competition] || '';
+  $('motmComp').value = comp;
+  renderSteps();
+  if (competition === 'ita.1' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const n = await motmMatchday(date);
+    if (n && motm.key === key) { $('motmComp').value = `${comp} – Matchday ${n}`; renderSteps(); }
+  }
+}
+function motmPayload() {
+  const surname = $('motmSurname').value.trim(), home = $('motmHome').value.trim(), away = $('motmAway').value.trim();
+  if (!surname) throw new Error('Scrivi il cognome.');
+  if (!home || !away) throw new Error('Scrivi le squadre.');
+  if (!bdo.id) throw new Error('Carica la foto.');
+  return {v:1, action:'render', session, data:{kind:'motm', surname, name:$('motmName').value.trim(), home, away,
+    comp:$('motmComp').value.trim(), photo_id:bdo.id, frame:{...bd.frame}}};
 }
 
 function bdRender() {
@@ -322,6 +365,10 @@ function bdValidate(step) {
   if (step === 'bdphoto' && !bdPhotoOf(bd.photo)) { showError('Tocca una foto.'); return false; }
   if (step === 'bdmode' && !bd.mode) { showError('Scegli il tipo.'); return false; }
   if (step === 'bdoname' && !$('bdoName').value.trim()) { showError('Scrivi il nome.'); return false; }
+  if (step === 'motminfo') {
+    if (!$('motmSurname').value.trim()) { showError('Scrivi il cognome.'); return false; }
+    if (!$('motmHome').value.trim() || !$('motmAway').value.trim()) { showError('Scrivi le squadre.'); return false; }
+  }
   if (step === 'bdophoto' && !bdo.id) { showError(bdo.loading ? 'Attendi lo scontorno.' : 'Carica la foto.'); return false; }
   if (step === 'bdinfo') {
     if (!$('bdName').value.trim()) { showError('Scrivi il nome.'); return false; }
@@ -341,6 +388,7 @@ function bdStepValue(step) {
   }
   if (step === 'bdmode') return labelOf(BD_MODES,bd.mode);
   if (step === 'bdoname') return $('bdoName').value.trim().toUpperCase();
+  if (step === 'motminfo') return $('motmSurname').value.trim().toUpperCase();
   if (step === 'bdophoto') return bdo.loading ? 'Scontorno…' : bdo.id ? 'Caricata' : '';
   if (step === 'bdpos') {
     const f = bd.frame;
@@ -372,7 +420,8 @@ function bdPayload() {
 
 function bdReset() {
   Object.assign(bd,{mode:'', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
-  ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName'].forEach(id => { $(id).value = ''; });
+  ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName',...MOTM_FIELDS].forEach(id => { $(id).value = ''; });
+  motm.key = '';
   bdClearUpload();
   bdoTexts();
   bdo.vintage = true;           // filtro d'epoca acceso a ogni nuova grafica
@@ -384,7 +433,7 @@ function initBirthday() {
   initBirthdayEditor();
   $('bdPlayerSearch').addEventListener('input',() => bdRender());
   $('bdBirth').addEventListener('change',() => { $('bdAge').value = bdAge($('bdBirth').value); renderSteps(); });
-  ['bdName','bdAge','bdoName'].forEach(id => $(id).addEventListener('input',() => renderSteps()));
+  ['bdName','bdAge','bdoName',...MOTM_FIELDS].forEach(id => $(id).addEventListener('input',() => renderSteps()));
   $('bdoFile').addEventListener('change',e => bdoUpload(e.target.files && e.target.files[0]));
   $('bdManual').addEventListener('click',bdManualStart);
   $('bdoVintage').addEventListener('click',() => {
@@ -419,18 +468,24 @@ function bdLayout() {
   f.zoom = Math.min(zmax, Math.max(zmin, f.zoom));
   f.x = Math.min(0.6, Math.max(-0.6, f.x));
   f.y = Math.min(0.6, Math.max(-0.6, f.y));
+  // Man of the Match: testa mai sopra page.top (logo Juventus), piedi mai sotto page.bottom (partita).
+  if (page.top != null && page.bottom != null) {
+    f.zoom = Math.min(f.zoom, (page.bottom - page.top) / p.height);
+    const hh = p.height * f.zoom;
+    f.y = Math.min((page.bottom - page.foot) / page.h, Math.max((page.top + hh - page.foot) / page.h, f.y));
+  }
   const k = frame.clientWidth / page.w;
   const h = p.height * f.zoom, w = h * ((img.naturalWidth || 3) / (img.naturalHeight || 4));
   img.style.width = `${w * k}px`;
   img.style.height = `${h * k}px`;
-  img.style.left = `${(page.cx + f.x * page.w - w / 2) * k}px`;
+  img.style.left = `${(page.cx + f.x * page.w - w * (page.ax != null ? page.ax : 0.5)) * k}px`;   // ax: baricentro
   img.style.top = `${(page.foot + f.y * page.h - h) * k}px`;
   $('bdClip').style.height = `${page.cut / page.h * 100}%`;
 }
 
 async function bdGhost() {
   let body;
-  try { body = JSON.stringify(bdOld() ? bdoPayload() : bdPayload()); } catch (_) { return; }
+  try { body = JSON.stringify(kind === 'motm' ? motmPayload() : bdOld() ? bdoPayload() : bdPayload()); } catch (_) { return; }
   const key = body.replace(/"frame":\{[^}]*\}/, '').replace(/"photo(_id)?":"[^"]*"/, '');
   const ghost = $('bdGhost');
   if (key === bd.ghostKey && bd.ghostUrl) { ghost.src = bd.ghostUrl; ghost.hidden = false; return; }
@@ -452,7 +507,7 @@ async function bdGhost() {
     ghost.hidden = false;
   } catch (_) {
   } finally {
-    if (bd.ghostKey === key) $('bdPosHint').textContent = bdOld() ? 'Il giocatore sta davanti a HAPPY BIRTHDAY.' : 'Il giocatore finisce sotto la striscia del nome.';
+    if (bd.ghostKey === key) $('bdPosHint').textContent = kind === 'motm' ? 'Il giocatore sta davanti al nome, tra il logo Juventus e la partita.' : bdOld() ? 'Il giocatore sta davanti a HAPPY BIRTHDAY.' : 'Il giocatore finisce sotto la striscia del nome.';
   }
 }
 

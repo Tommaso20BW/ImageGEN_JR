@@ -305,6 +305,10 @@ def _other_caption(data):
     kind = data['kind']
     if kind in ('bday', 'bdold'):
         return _bday_caption(data)
+    if kind == 'motm':
+        who = ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip().title()
+        match = f"{str(data.get('home') or '').title()} - {str(data.get('away') or '').title()}"
+        return f"{E_FIRE}<b> Man of the Match</b> | {html.escape(match)}\n\n{E_OFFICIAL} <b>{html.escape(who)}</b>"
     if kind == 'table':
         comp = str(data.get('competition') or '').upper()
         if data.get('view') == 'bracket' or comp == 'CI':

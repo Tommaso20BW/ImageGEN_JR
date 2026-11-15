@@ -329,6 +329,14 @@ class Renderer:
                                              frame=data.get('frame'), ghost=ghost,
                                              vintage=data.get('vintage') is not False)
 
+        if kind == 'motm':
+            from graphics import motm
+
+            person = None if ghost else self.final_cutout(data['photo_id'])
+            return motm.render(surname=data.get('surname', ''), name=data.get('name', ''),
+                               home=data.get('home', ''), away=data.get('away', ''), comp=data.get('comp', ''),
+                               person=person, frame=data.get('frame'), ghost=ghost)
+
         if kind == 'jr':
             from graphics import photo_jr
 

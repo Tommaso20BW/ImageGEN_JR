@@ -29,6 +29,7 @@ function buildPayload(ghost=false) {
       frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}}};
   }
   if (kind === 'bday') return bdOld() ? bdoPayload() : bdPayload();
+  if (kind === 'motm') return motmPayload();
   if (kind === 'rin') {
     const name = $('rinName').value.trim(), year = $('rinYear').value.trim();
     if (!name) throw new Error('Scrivi il nome.');

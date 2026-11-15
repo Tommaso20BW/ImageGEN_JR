@@ -127,6 +127,7 @@ function readyGhostUrl() {
   if (kind === 'jr' && jrb.style === 'title') { name = 'jrtitle'; variant = jrColor || 'black'; }
   else if (isQuoteKind(kind)) { name = 'quote'; variant = kind === 'xq' ? 'x' : kind === 'thq' ? 'threads' : iq.story ? 'igstory' : 'ig'; }
   else if (kind === 'bday') { name = 'compleanno'; variant = bdOld() ? 'old' : 'now'; }
+  else if (kind === 'motm') { name = 'motm'; variant = 'std'; }
   if (!name || !/^[a-z]+$/.test(variant || '')) return '';
   return `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${name}&kit=${variant}`;
 }

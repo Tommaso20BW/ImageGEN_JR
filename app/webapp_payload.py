@@ -427,6 +427,25 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
+    # MAN OF THE MATCH: foto caricata (scontornata dal servizio), cognome, nome in firma e partita.
+    if kind == 'motm':
+        from graphics import motm
+        surname = motm.clean_text(incoming.get('surname'), motm.SURNAME_MAX)
+        if not surname:
+            raise ValueError('Scrivi il cognome.')
+        home, away = motm.clean_text(incoming.get('home'), motm.TEAM_MAX), motm.clean_text(incoming.get('away'), motm.TEAM_MAX)
+        if not home or not away:
+            raise ValueError('Scrivi le squadre.')
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {'kind': 'motm', 'surname': surname, 'name': motm.clean_text(incoming.get('name'), motm.NAME_MAX, upper=False),
+                     'home': home, 'away': away, 'comp': motm.clean_text(incoming.get('comp'), motm.COMP_MAX),
+                     'photo_id': _photo_id(incoming.get('photo_id')), 'frame': motm.clean_frame(incoming.get('frame'))},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
     # FOTO + JR: niente partita, solo foto e colore del logo.
     if kind == 'jr':
         try:

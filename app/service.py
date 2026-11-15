@@ -615,10 +615,16 @@ class Service:
         if person.getchannel('A').getbbox() is None:
             raise ValueError('Nella foto non trovo nessuna persona.')
         _, _, _, height = S.person_box(person.size)
+        full = person.copy()            # thumbnail sotto cambia person
         person.thumbnail((900, 1200), Image.Resampling.LANCZOS)
         buf = io.BytesIO()
         person.save(buf, 'WEBP', quality=84)
         self.renderer.start_fine(photo_id)
+        if (envelope or {}).get('mode') == 'motm':
+            from graphics import motm
+            return {'thumb': 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii'),
+                    'height': round(full.height * motm.base_scale(full.size)),
+                    'page': {**motm.page_info(full), 'ax': round(motm.centroid(full), 4)}}
         if (envelope or {}).get('mode') == 'now':
             from graphics import compleanno as C
             return {'thumb': 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii'),
@@ -1664,6 +1670,9 @@ def _send_detail(data):
                 'note': f"{data.get('age', '')} anni"}
     if kind == 'bdold':
         return {**empty, 'player': str(data.get('name') or ''), 'note': 'Ex giocatore'}
+    if kind == 'motm':
+        return {**empty, 'player': ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip(),
+                'note': f"{data.get('home', '')} vs {data.get('away', '')}"}
     if kind == 'conv':
         n = len(data.get('players') or [])
         return {**empty, 'player': f'{n} giocatori',

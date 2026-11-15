@@ -96,6 +96,13 @@ def compleanno(canva, out):
     _small(bdo.render(name='NOME GIOCATORE', ghost=True), out, 'compleanno_old')
 
 
+def motm(canva, out):
+    """Man of the Match: poster senza giocatore con nome e partita finti."""
+    from graphics import motm as mo
+    _small(mo.render(surname='COGNOME', name='Nome', home='Juventus', away='Avversario',
+                     comp='Serie A - Matchday 1', ghost=True), out, 'motm_std')
+
+
 def main():
     canva = Path(sys.argv[1] if len(sys.argv) > 1 else '../LiveScore_Assets_JR/canva')
     starting_xi(canva, canva)
@@ -104,6 +111,7 @@ def main():
     jr_title(canva, canva)
     quotes(canva, canva)
     compleanno(canva, canva)
+    motm(canva, canva)
 
 
 if __name__ == '__main__':
