@@ -326,7 +326,8 @@ class Renderer:
 
             person = None if ghost else self.final_cutout(data['photo_id'])
             return compleanno_storico.render(name=data.get('name', ''), person=person,
-                                             frame=data.get('frame'), ghost=ghost)
+                                             frame=data.get('frame'), ghost=ghost,
+                                             vintage=data.get('vintage') is not False)
 
         if kind == 'jr':
             from graphics import photo_jr

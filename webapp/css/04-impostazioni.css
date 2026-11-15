@@ -229,9 +229,9 @@ body.live .brand-btn{pointer-events:none}
 .opt.selected .sw::after{transform:translateX(20px);background:var(--accent-ink)}
 .opt.selected:active .sw::after{transform:translateX(17px)}
 /* The toggle row should never acquire the glowing selection ring. */
-#pensToggle.selected,#etToggle.selected{box-shadow:var(--shadow-soft);border-color:var(--line);background:var(--surface)}
-#pensToggle.selected .opt-label,#etToggle.selected .opt-label{color:var(--text)}
-#pensToggle:focus-visible,#etToggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#pensToggle.selected,#etToggle.selected,#bdoVintage.selected{box-shadow:var(--shadow-soft);border-color:var(--line);background:var(--surface)}
+#pensToggle.selected .opt-label,#etToggle.selected .opt-label,#bdoVintage.selected .opt-label{color:var(--text)}
+#pensToggle:focus-visible,#etToggle:focus-visible,#bdoVintage:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 /* Schermata Risultato: selettore un po' piu' in alto (i testi restano dove sono). */
 #scoreLead{margin-bottom:10px}

@@ -136,8 +136,9 @@ def _logo():
     return _gold(alpha.crop(box)), box[:2]
 
 
-def render(*, name, person=None, frame=None, ghost=False):
-    """PNG della grafica. person = PNG scontornato (byte o Image). ghost=True: pagina senza persona (editor)."""
+def render(*, name, person=None, frame=None, ghost=False, vintage=True):
+    """PNG della grafica. person = PNG scontornato (byte o Image). ghost=True: pagina senza persona (editor).
+    vintage=False: senza il filtro d'epoca (colori della foto)."""
     name = clean_name(name)
     if not name:
         raise ValueError('Scrivi il nome.')
@@ -166,7 +167,8 @@ def render(*, name, person=None, frame=None, ghost=False):
         page = Image.alpha_composite(Image.alpha_composite(page, shadow), layer)
 
     # filtro d'epoca su tutta l'immagine (sfondo, nome, logo e persona insieme)
-    page = nostalgia(page)
+    if vintage:
+        page = nostalgia(page)
     out = io.BytesIO()
     page.convert('RGB').save(out, 'PNG')
     return out.getvalue()

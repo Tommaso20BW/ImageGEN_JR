@@ -142,7 +142,8 @@ function bdoPayload() {
   const name = $('bdoName').value.trim();
   if (!name) throw new Error('Scrivi il nome.');
   if (!bdo.id) throw new Error('Carica la foto.');
-  return {v:1, action:'render', session, data:{kind:'bdold', name, photo_id:bdo.id, frame:{...bd.frame}}};
+  return {v:1, action:'render', session, data:{kind:'bdold', name, photo_id:bdo.id, frame:{...bd.frame},
+    ...(bdo.vintage === false ? {vintage:false} : {})}};
 }
 
 function bdRender() {
@@ -381,6 +382,9 @@ function bdReset() {
   ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName'].forEach(id => { $(id).value = ''; });
   bdClearUpload();
   bdoTexts();
+  bdo.vintage = true;           // filtro d'epoca acceso a ogni nuova grafica
+  $('bdoVintage').classList.add('selected');
+  $('bdoVintage').setAttribute('aria-checked','true');
 }
 
 function initBirthday() {
@@ -390,6 +394,12 @@ function initBirthday() {
   ['bdName','bdAge','bdoName'].forEach(id => $(id).addEventListener('input',() => renderSteps()));
   $('bdoFile').addEventListener('change',e => bdoUpload(e.target.files && e.target.files[0]));
   $('bdManual').addEventListener('click',bdManualStart);
+  $('bdoVintage').addEventListener('click',() => {
+    haptic('select');
+    bdo.vintage = bdo.vintage === false;
+    $('bdoVintage').classList.toggle('selected', bdo.vintage);
+    $('bdoVintage').setAttribute('aria-checked', bdo.vintage ? 'true' : 'false');
+  });
   $('bdEmoRow').addEventListener('click',bdEmoOpen);
   $('bdEmoClose').addEventListener('click',() => { $('bdEmoSheet').hidden = true; });
   $('bdEmoSheet').addEventListener('click',e => { if (e.target === $('bdEmoSheet')) $('bdEmoSheet').hidden = true; });

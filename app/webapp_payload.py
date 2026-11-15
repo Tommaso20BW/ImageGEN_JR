@@ -420,7 +420,8 @@ def _build_state(envelope, catalog, now, expected_session):
         return {
             'id': uuid.uuid4().hex[:10],
             'data': {'kind': 'bdold', 'name': label, 'photo_id': _photo_id(incoming.get('photo_id')),
-                     'frame': compleanno.clean_frame(incoming.get('frame'))},
+                     'frame': compleanno.clean_frame(incoming.get('frame')),
+                     'vintage': incoming.get('vintage') is not False},
             'status': 'ready',
             'updated': now,
             'source': 'webapp-direct',
