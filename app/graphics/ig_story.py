@@ -32,6 +32,7 @@ SAFE_T, SAFE_B = 230, 1650           # sopra e sotto: barre di Instagram
 TOP, BOTTOM = SAFE_T + 20, SAFE_B - 30   # zona del contenuto (sotto c'è il logo)
 LOGO_Y = SAFE_B + 46                 # cima del logo JR
 GAP = 56                             # tra etichetta, foto e testo
+TILT_PAD = 34                        # in più tra etichetta e foto: la foto è inclinata e ha il nastro
 TEXT_W = 880                         # larghezza massima di una riga di testo
 PHOTO_W = 960                        # larghezza massima della foto
 PHOTO_MIN_H = 420                    # con il testo, alla foto resta almeno questa altezza...
@@ -54,7 +55,7 @@ MAX_TEXT = 500
 
 # Etichetta in alto: chiave della Mini App -> parole (una striscia ciascuna)
 LABELS = {
-    'breaking': ('BREAKING', 'NEWS'),       # notizia (quella di base)
+    'breaking': ('BREAKING NEWS',),         # notizia (quella di base)
     'mercato': ('CALCIOMERCATO',),          # trattative e voci di mercato
     'ufficiale': ('UFFICIALE',),            # confermata dal club
     'none': (),
@@ -188,7 +189,7 @@ def layout(text, label, photo_size=None):
     parts = _label_words(LABELS[label_key(label)], 150 if photo_size else 200)
     room = BOTTOM - TOP
     lab_h = _label_height(parts)
-    gaps = GAP * max(bool(parts) + bool(photo_size) + bool(text) - 1, 0)
+    gaps = GAP * max(bool(parts) + bool(photo_size) + bool(text) - 1, 0) + (TILT_PAD if parts and photo_size else 0)
     size = font_max(text, bool(photo_size)) if text else 0
     lines, ph_h = [], 0
     while True:
@@ -257,9 +258,16 @@ def _composite(img, cx, cy, cover, rgb, shadow):
     return img
 
 
+def _erode(m, px):
+    return _arr(Image.fromarray(np.uint8(m * 255)).filter(ImageFilter.MinFilter(px * 2 + 1)))
+
+
 def _piece(img, ink, center, angle, paper_col, ink_col, seed, pad=(25, 16), tear=1.5, sh=(3, 5, 4, .3),
-           breakup=.15):
-    """Striscia di carta strappata con l'inchiostro sopra, ruotata e con ombra."""
+           breakup=.15, fringe=False):
+    """Striscia di carta strappata con l'inchiostro sopra, ruotata e con ombra.
+    fringe: bordo bianco e fibroso dello strappo e grana della carta dentro (le etichette)."""
+    if fringe:
+        return _torn_label(img, ink, center, angle, paper_col, ink_col, seed, pad, tear, sh, breakup)
     sw, shh = ink.width + 2 * pad[0], ink.height + 2 * pad[1]
     tl = Image.new('L', (sw, shh), 0)
     tl.paste(ink, pad)
@@ -274,6 +282,30 @@ def _piece(img, ink, center, angle, paper_col, ink_col, seed, pad=(25, 16), tear
     ink_c = np.array(ink_col, np.float32) / (255 if max(ink_col) > 1 else 1)
     rgb = paper_c[None, None] * (1 - t[..., None]) + ink_c[None, None] * t[..., None]
     return _composite(img, center[0], center[1], m, rgb, _shadow(m, *sh) * (1 - m))
+
+
+def _torn_label(img, ink, center, angle, paper_col, ink_col, seed, pad, tear, sh, breakup):
+    sw, shh = ink.width + 2 * pad[0], ink.height + 2 * pad[1]
+    tl = Image.new('L', (sw, shh), 0)
+    tl.paste(ink, pad)
+    mg = 40
+    m0 = np.pad(_arr(Image.new('L', (sw, shh), 255).rotate(angle, Image.BICUBIC, expand=True)), mg)
+    t = np.pad(_arr(tl.rotate(angle, Image.BICUBIC, expand=True)), mg)
+    h, w = m0.shape
+    outer = _torn(m0, seed, tear * 1.6, 110)                       # fin dove arriva la carta
+    core = np.minimum(_torn(_erode(m0, 5), seed + 7, tear, 70), outer)   # dove arriva la stampa
+    t = t * core * cp._ink_breakup((w, h), seed, breakup)
+    pc = np.array(paper_col, np.float32) / (255 if max(paper_col) > 1 else 1)
+    ic = np.array(ink_col, np.float32) / (255 if max(ink_col) > 1 else 1)
+    tex = cp._paper((w, h), (200, 200, 200), seed + 3).mean(-1) / (200 / 255)
+    dark = pc.mean() < .3
+    col = np.clip(pc[None, None] * (1 + (tex - 1)[..., None] * (1.6 if dark else .9))
+                  + (.05 * (tex[..., None] - .95) if dark else 0), 0, 1)
+    rgb = col * (1 - t[..., None]) + ic[None, None] * t[..., None]
+    fr = np.clip(outer - core, 0, 1)[..., None]
+    white = np.array((.95, .93, .88), np.float32)[None, None] * (1 + (tex[..., None] - 1) * .5)
+    rgb = rgb * (1 - fr) + white * fr
+    return _composite(img, center[0], center[1], outer, rgb, _shadow(outer, *sh) * (1 - outer))
 
 
 def _tape(img, center, angle, seed):
@@ -365,13 +397,13 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     for i, p in enumerate(parts):
         h = p.height + 32
         dx = rng.uniform(-8, 8)            # centrate: solo un filo di imprecisione
-        col, tcol = (BLACK, CREAM) if i % 2 == 0 else (GOLD, BLACK)
+        col, tcol = BLACK, CREAM           # un solo colore
         ang = float(sign * (-1) ** i * rng.uniform(1.5, 3.5))
         img = _piece(img, p, (W / 2 + dx, y + h / 2), ang, col, tcol, int(rng.integers(1 << 20)),
-                     pad=(45, 16), tear=2, sh=(6, 10, 8, .4), breakup=.08)
+                     pad=(45, 16), tear=2, sh=(6, 10, 8, .4), breakup=.08, fringe=True)
         y += h + 30
     if parts:
-        y = content_y(y + GAP - 30, lines, size, ph_h)
+        y = content_y(y + GAP - 30 + (TILT_PAD if photo is not None else 0), lines, size, ph_h)
 
     if photo is not None:
         img = _photo(img, photo, W / 2, y + ph_h / 2, ph_h, _tilt(rng, 1.5, 4), rng, 1.6 if lines else 0)
