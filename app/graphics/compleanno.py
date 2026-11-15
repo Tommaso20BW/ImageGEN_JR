@@ -39,7 +39,8 @@ PLAYER_H_DEFAULT = 1250
 STRIP_Y = H - 205                # centro della striscia del nome (il ritaglio finisce qui)
 NAME_SIZE, NAME_MAX_SIZE = 170, 210
 STRIP_MARGIN = 90                 # la striscia nera resta sempre ad almeno 90 px dai bordi
-NAME_MAX_W = W - 2 * STRIP_MARGIN - 2 * 70 - 40   # oltre questa larghezza il nome si rimpicciolisce
+NAME_MAX_W = W - 2 * STRIP_MARGIN - 2 * 70 - 40   # oltre questa larghezza il nome si schiaccia
+NAME_MIN_SQUEEZE = 0.5            # oltre questo schiacciamento il nome si rimpicciolisce anche
 NAME_MAX = 28
 
 GROUPS = (('matchday', 'Matchday'), ('starting', 'Starting'), ('goal', 'Goal'), ('saved', 'Saved'))
@@ -398,15 +399,28 @@ def _scissor_mask(alpha, gap=22, smooth=30, eps=14, jitter=7, seed=4):
 
 
 def name_size(name):
-    """Corpo del nome: grande come nella grafica approvata, più piccolo se il nome è lungo."""
+    """Corpo del nome: grande come nella grafica approvata (più grande se il nome è corto). I nomi
+    lunghi restano a questo corpo e si schiacciano in larghezza (name_word); solo se andrebbero
+    schiacciati oltre NAME_MIN_SQUEEZE si rimpiccioliscono anche."""
     w = _word(name, NAME_SIZE, MONO, 9).width
-    return max(60, min(NAME_MAX_SIZE, int(NAME_SIZE * NAME_MAX_W / max(w, 1))))
+    fit = NAME_SIZE * NAME_MAX_W / max(w, 1)
+    if fit >= NAME_SIZE:
+        return min(NAME_MAX_SIZE, int(fit))
+    return max(60, min(NAME_SIZE, int(fit / NAME_MIN_SQUEEZE)))
+
+
+def name_word(name):
+    """Maschera del nome, schiacciata in larghezza quanto basta per stare in NAME_MAX_W."""
+    t = _word(name, name_size(name), MONO, 9)
+    if t.width > NAME_MAX_W:
+        t = t.resize((NAME_MAX_W, t.height), Image.LANCZOS)
+    return t
 
 
 def _label_strip(text, center, angle=-2.5, pad=(70, 46), seed=9, jitter=6):
     """Striscia di carta nera tagliata a forbici con il nome: (striscia, testo), già ruotati."""
     import cv2
-    t = _word(text, name_size(text), MONO, 9)
+    t = name_word(text)
     w, h = t.width + 2 * pad[0], t.height + 2 * pad[1]
     xs = np.linspace(0, w, 5)
     poly = np.array([(x, 0) for x in xs] + [(x, h) for x in xs[::-1]], np.float32)

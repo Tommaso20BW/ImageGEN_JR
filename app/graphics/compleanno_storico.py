@@ -18,6 +18,7 @@ NAME_FONT = 'DharmaGothicEBold.otf'
 NAME_Y = 196                       # centro del nome, appena sopra HAPPY BIRTHDAY
 NAME_SIZE, NAME_MAX_W = 92, W - 260
 NAME_SQUEEZE = 0.74                # lettere strette e alte come nell'esempio
+NAME_MIN_SQUEEZE = 0.4            # nomi lunghi: si schiacciano fino a qui, poi si rimpiccioliscono
 GOLD_TOP, GOLD_BOTTOM = (226, 192, 128), (186, 146, 84)
 PERSON_H = 1480                    # altezza della persona a zoom 1 (base in fondo alla pagina)
 PERSON_MAX_W = 1560
@@ -33,13 +34,15 @@ def _background():
 
 
 def _name_mask(text):
+    # Nomi lunghi: stesso corpo, lettere schiacciate in larghezza quanto basta per stare in NAME_MAX_W.
     size = NAME_SIZE
     while True:
         fnt = ImageFont.truetype(str(asset_dir() / 'fonts' / NAME_FONT), size)
         track = size * 0.56
         widths = [fnt.getlength(c) for c in text]
         total = sum(widths) + track * (len(text) - 1)
-        if total * NAME_SQUEEZE <= NAME_MAX_W or size <= 40:
+        squeeze = min(NAME_SQUEEZE, NAME_MAX_W / max(total, 1))
+        if squeeze >= NAME_MIN_SQUEEZE or size <= 40:
             break
         size -= 4
     asc, desc = fnt.getmetrics()
@@ -50,7 +53,7 @@ def _name_mask(text):
         d.text((x, 20), c, font=fnt, fill=255)
         x += w + track
     m = m.crop(m.getbbox() or (0, 0, 1, 1))
-    return m.resize((max(1, round(m.width * NAME_SQUEEZE)), m.height), Image.LANCZOS)
+    return m.resize((max(1, min(NAME_MAX_W, round(m.width * squeeze))), m.height), Image.LANCZOS)
 
 
 def nostalgia(person):
