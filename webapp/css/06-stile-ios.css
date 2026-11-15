@@ -469,7 +469,7 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 
 .bd-search{display:flex;align-items:center;gap:10px}
 .bd-search .search{flex:1 1 auto;min-width:0}
-.bd-plus{flex:none;display:grid;place-items:center;width:58px;align-self:stretch;border:0;border-radius:14px;background:var(--surface);color:var(--text,#111);cursor:pointer}
+.bd-plus{flex:none;display:grid;place-items:center;width:34px;height:34px;margin:0 -4px 0 -2px;border:0;border-radius:50%;background:none;color:var(--text,#111);cursor:pointer}
 .bd-plus:active{transform:scale(.94)}
 #bdPlayerList .tick{display:none}
 .bd-when{flex:none;margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;line-height:1.15;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
