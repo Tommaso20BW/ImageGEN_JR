@@ -55,7 +55,7 @@ MAX_TEXT = 500
 # Etichetta in alto: chiave della Mini App -> parole (una striscia ciascuna)
 LABELS = {
     'ultimora': ('ULTIM’ORA',),             # notizia urgente (quella di base)
-    'notizia': ('NOTIZIA',),                # notizia normale
+    'news': ('NEWS',),                      # notizia normale
     'ufficiale': ('UFFICIALE',),            # confermata dal club
     'mercato': ('CALCIOMERCATO',),          # trattative e voci di mercato
     'infortunio': ('INFORTUNIO',),          # aggiornamenti medici

@@ -356,7 +356,7 @@ const cleanPhrase = v => String(v || '').replace(/\r/g, '').split('\n')
 
 /* ----- Storia IG: etichetta in alto ----- */
 // Stesse chiavi di graphics/ig_story.py (LABELS).
-const IG_LABELS = [['ultimora','Ultim’ora'],['notizia','Notizia'],['ufficiale','Ufficiale'],
+const IG_LABELS = [['ultimora','Ultim’ora'],['news','News'],['ufficiale','Ufficiale'],
   ['mercato','Calciomercato'],['infortunio','Infortunio'],['none','Nessuna']];
 
 function setIgLabel(key) {
