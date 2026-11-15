@@ -194,9 +194,16 @@ async function loadPpGhost() {
     return;
   }
   const url = phaseOverlayUrl();
-  if (!url || overlay.getAttribute('src') === url) { overlay.hidden = !url; return; }
+  const valid = () => phaseOverlayUrl() === url;
+  if (!url) { overlay.hidden = true; ppState.overlayFor = ''; return; }
+  // stessa fase e sfondo: resta la sagoma in vista, si aggiorna solo quella vera
+  if (ppState.overlayFor === url && !overlay.hidden) { swapDynamicGhost('phase', overlay, valid); return; }
+  ppState.overlayFor = url;
   overlay.hidden = true;
-  if (await fetchEditorImage(url) && phaseOverlayUrl() === url) { overlay.src = url; overlay.hidden = false; }
+  if (await fetchEditorImage(url) && valid()) {
+    overlay.src = url; overlay.hidden = false;
+    swapDynamicGhost('phase', overlay, valid);
+  }
 }
 
 async function ppSend(blob, type) {

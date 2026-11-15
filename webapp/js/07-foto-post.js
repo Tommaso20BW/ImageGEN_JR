@@ -149,6 +149,38 @@ function preloadEditorImages() {
 }
 
 let editorShown = '';
+// Sagoma vera (con i dati scritti dall'utente) al posto di quella generica: prima compare subito
+// il segnaposto statico, poi arriva questa dal servizio e lo sostituisce. Una per slot, in memoria.
+const dynGhost = {};
+function dynGhostKey(body) {
+  // la foto e la sua posizione non cambiano la sagoma
+  return body.replace(/"(frame|person_frame|trail)":\{[^}]*\},?/g,'').replace(/"(photo_id|person_id|photo)":"[^"]*",?/g,'');
+}
+async function swapDynamicGhost(slot, img, stillValid) {
+  let body;
+  try { body = JSON.stringify(buildPayload(true)); } catch (_) { return; }
+  const key = dynGhostKey(body);
+  const g = dynGhost[slot] || (dynGhost[slot] = {key:'', url:'', busy:''});
+  if (g.key === key && g.url) { if (stillValid()) img.src = g.url; return; }
+  if (g.busy === key) return;
+  g.busy = key;
+  try {
+    const response = await netFetch(`${directBase}/ghost`,{
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body
+    }, 60000, 2);
+    if (!response.ok) return;
+    const url = URL.createObjectURL(await response.blob());
+    const pre = new Image(); pre.src = url;
+    try { await pre.decode(); } catch (_) {}
+    if (g.url) { const old = g.url; setTimeout(() => { try { URL.revokeObjectURL(old); } catch (_) {} }, 1000); }
+    g.key = key; g.url = url;
+    if (stillValid()) img.src = url;
+  } catch (_) {
+  } finally {
+    if (g.busy === key) g.busy = '';
+  }
+}
+
 async function updatePhotoOverlay() {
   const overlay = $('photoOverlay'), frame = $('photoFrame');
   if (!directBase || !session) return;
@@ -166,7 +198,8 @@ async function updatePhotoOverlay() {
   }
   if (isQuoteKind(kind)) { editorShown = ''; frame.style.backgroundImage = ''; iqGhost(overlay); return; }
   const urls = editorImageUrls();
-  if (!urls || editorShown === urls.overlay) return;
+  if (!urls) return;
+  if (editorShown === urls.overlay) { if (overlay.style.visibility !== 'hidden') swapDynamicGhost('photo', overlay, () => editorShown === urls.overlay); return; }
   const key = editorShown = urls.overlay;
   // Niente sagoma o sfondo di un'altra maglia nel frattempo: compaiono solo insieme.
   overlay.style.visibility = 'hidden';
@@ -178,6 +211,7 @@ async function updatePhotoOverlay() {
   if (editorShown !== key) return;
   frame.style.backgroundImage = `url("${urls.bg}")`;
   overlay.style.visibility = '';
+  swapDynamicGhost('photo', overlay, () => editorShown === key);
 }
 
 // Riduce la foto a max 2560 px (lato lungo) in JPEG: qualità piena per la grafica,
