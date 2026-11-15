@@ -94,6 +94,23 @@ def person_box(size, frame=None):
     return round(cx - pw / 2), round(bottom - ph), pw, ph
 
 
+def enhance(person):
+    """Stesso ritocco delle foto del Goal e delle fasi (phase_layers.look: nitidezza e chiarezza),
+    sulla persona già alla misura finale. Sotto la trasparenza si allungano i colori del bordo,
+    così la chiarezza non fa aloni scuri attorno allo scontorno; trasparenza intatta."""
+    from livescore.graphics import phase_layers
+
+    person = person.convert('RGBA')
+    alpha = person.getchannel('A')
+    rgb = np.asarray(person.convert('RGB').filter(ImageFilter.GaussianBlur(12)), np.float32)
+    weight = np.asarray(alpha.filter(ImageFilter.GaussianBlur(12)), np.float32)[..., None] / 255
+    base = Image.fromarray(np.clip(rgb / np.maximum(weight, 1e-3), 0, 255).astype(np.uint8), 'RGB')
+    base.paste(person.convert('RGB'), (0, 0), alpha)
+    out = phase_layers.look(base.convert('RGBA'), clarity=True)
+    out.putalpha(alpha)
+    return out
+
+
 def trim(person):
     """Persona ritagliata stretta sulla sua trasparenza."""
     person = person.convert('RGBA')
@@ -139,7 +156,7 @@ def render(*, name, person=None, frame=None, ghost=False):
             person = Image.open(io.BytesIO(person))
         p = trim(person)
         x, y, pw, ph = person_box(p.size, frame)
-        p = p.resize((pw, ph), Image.LANCZOS)
+        p = enhance(p.resize((pw, ph), Image.LANCZOS))     # nitida come le foto del Goal
         layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
         layer.paste(p, (x, y), p)
         # ombra morbida dietro la persona, per staccarla dal titolo
