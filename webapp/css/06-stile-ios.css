@@ -440,11 +440,11 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .tg-post .tg-pics{display:none}
 .tg-post.tg-open .tg-pics{display:flex}
 .tg-post.tg-open .hm-go{transform:rotate(90deg)}
-/* Storia IG: foto scelta in una riga piccola */
-.ig-photo{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 12px 8px 8px;margin-bottom:2px;border-radius:12px;background:var(--surface)}
-.ig-photo[hidden]{display:none}
-.ig-photo-img{flex:0 0 auto;width:38px;height:38px;border-radius:8px;background:var(--surface2) center/cover no-repeat}
-.ig-photo-txt{flex:1;font-size:15px;font-weight:600}
-.ig-photo-x{border:0;background:none;padding:6px 4px;font:inherit;font-size:14.5px;color:#d70015;cursor:pointer}
-.ig-photo-x[hidden]{display:none}
-.ig-photo + .ig-tiles{margin-top:10px}
+/* Storia IG: foto scelta sul riquadro Galleria */
+.ig-tile-wrap{position:relative;display:flex}
+.ig-tile-wrap .ig-tile{flex:1}
+.ig-tile.has-photo{justify-content:flex-end;background-color:var(--surface2);background-size:cover;background-position:center;color:#fff}
+.ig-tile.has-photo svg{display:none}
+.ig-tile.has-photo small{color:rgba(255,255,255,.85)}
+.ig-tile-x{position:absolute;top:6px;right:6px;width:28px;height:28px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:19px;line-height:1;cursor:pointer}
+.ig-tile-x[hidden]{display:none}

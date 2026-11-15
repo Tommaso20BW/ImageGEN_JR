@@ -10,10 +10,12 @@ const photoState = {id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, uploading:false};
 const igb = {id:'', url:'', uploading:false};
 let igColor = 'black';     // colore del testo (tavolozza in 11-invii.js)
 function igRefresh() {
-  $('igThumb').hidden = !igb.url;
-  $('igThumbImg').style.backgroundImage = igb.url ? `url("${igb.url}")` : '';
+  // Foto scelta: sta sul riquadro Galleria (tocco = cambiala, × = toglila)
+  $('igPick').classList.toggle('has-photo', !!igb.url);
+  $('igPick').style.backgroundImage = igb.url ? `linear-gradient(transparent 35%, rgba(0,0,0,.7)), url("${igb.url}")` : '';
   $('igClear').hidden = !igb.id;
-  $('igPickLabel').textContent = igb.id ? 'Cambia foto' : 'Galleria';
+  $('igPickLabel').textContent = igb.url ? 'Foto scelta' : 'Galleria';
+  $('igPickSub').textContent = igb.url ? 'Tocca per cambiarla' : 'Dal telefono';
   const n = $('igText').value.length;
   $('igCount').textContent = `${n} / 500`;
   $('igHint').textContent = igb.uploading ? 'Caricamento foto…' : '';
