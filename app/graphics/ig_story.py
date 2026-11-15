@@ -55,7 +55,7 @@ MAX_TEXT = 500
 
 # Etichetta in alto: chiave della Mini App -> parole (una striscia ciascuna)
 LABELS = {
-    'breaking': ('BREAKING', 'NEWS'),       # notizia (quella di base): due pezzi staccati, stessa riga
+    'breaking': ('BREAKING', 'NEWS'),       # notizia (quella di base): due pezzi, uno sotto l'altro sfalsati
     'mercato': ('CALCIOMERCATO',),          # trattative e voci di mercato
     'ufficiale': ('UFFICIALE',),            # confermata dal club
     'none': (),
@@ -169,21 +169,24 @@ def text_height(lines, size):
     return sum(_line_h(size) if ln else int(size * 0.6) for ln in lines) + _line_gap(size) * (len(lines) - 1)
 
 
-LABEL_PAD, LABEL_SEP, LABEL_W = 45, 26, 990   # margine nel pezzo, spazio tra i pezzi, larghezza massima
+LABEL_PAD = 45      # margine orizzontale dentro il pezzo di carta
+LABEL_VSEP = 10     # spazio tra un pezzo e quello sotto
+LABEL_STEP = 150    # ogni pezzo sotto sporge di tanto a destra rispetto a quello sopra
 
 
 def _label_words(words, size):
-    """Parole dell'etichetta, una per pezzo di carta, tutte sulla stessa riga (rimpicciolite se non ci stanno)."""
-    out = [cp._word(w, size, ANTON, 5) for w in words]
-    total = sum(t.width + 2 * LABEL_PAD for t in out) + LABEL_SEP * max(len(out) - 1, 0)
-    if total > LABEL_W:
-        k = (LABEL_W - (2 * LABEL_PAD * len(out) + LABEL_SEP * (len(out) - 1))) / sum(t.width for t in out)
-        out = [t.resize((max(1, int(t.width * k)), max(1, int(t.height * k))), Image.LANCZOS) for t in out]
+    """Parole dell'etichetta, una per pezzo di carta, uno sotto l'altro."""
+    out = []
+    for w in words:
+        t = cp._word(w, size, ANTON, 5)
+        if t.width > 900:
+            t = t.resize((900, max(1, int(t.height * 900 / t.width))), Image.LANCZOS)
+        out.append(t)
     return out
 
 
 def _label_height(parts):
-    return max((p.height for p in parts), default=-32) + 32
+    return sum(p.height + 32 for p in parts) + LABEL_VSEP * max(len(parts) - 1, 0)
 
 
 def layout(text, label, photo_size=None):
@@ -395,18 +398,21 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     img = cp._paper((W, H), PAPER, seed=int(rng.integers(1 << 20))).copy()
     light = cp._crumple((W, H), int(rng.integers(1 << 20)), 0.7, folds=3)
 
-    # etichetta: un pezzo di carta nero per parola, affiancati sulla stessa linea (stessa inclinazione)
-    ang = float(rng.choice((-1, 1)) * rng.uniform(1.3, 1.8))
+    # etichetta: un pezzo di carta nero per parola, uno sotto l'altro, sfalsati verso destra
+    sign = rng.choice((-1, 1))
     h = _label_height(parts)
-    x = W / 2 - (sum(p.width + 2 * LABEL_PAD for p in parts) + LABEL_SEP * max(len(parts) - 1, 0)) / 2
+    rights = [i * LABEL_STEP for i in range(len(parts))]   # bordo destro: quello sotto sporge di LABEL_STEP
+    lefts = [r - (p.width + 2 * LABEL_PAD) for r, p in zip(rights, parts)]
+    shift = W / 2 - (min(lefts) + max(rights)) / 2 if parts else 0   # il gruppo resta centrato
+    yy = y
     for i, p in enumerate(parts):
+        ph = p.height + 32
         pw = p.width + 2 * LABEL_PAD
-        cx = x + pw / 2
-        cy = y + h / 2 - np.sin(np.radians(ang)) * (cx - W / 2)   # sulla linea inclinata che passa dal centro
-        img = _piece(img, p, (cx, cy), ang, BLACK, CREAM,
-                     int(rng.integers(1 << 20)), pad=(LABEL_PAD, 16 + (h - 32 - p.height) // 2), tear=2,
+        ang = float(sign * (-1) ** i * rng.uniform(1.5, 2.5))
+        img = _piece(img, p, (shift + rights[i] - pw / 2, yy + ph / 2), ang, BLACK, CREAM,
+                     int(rng.integers(1 << 20)), pad=(LABEL_PAD, 16), tear=2,
                      sh=(6, 10, 8, .4), breakup=.08, fringe=True)
-        x += pw + LABEL_SEP
+        yy += ph + LABEL_VSEP
     if parts:
         y = content_y(y + h + GAP + (TILT_PAD if photo is not None else 0), lines, size, ph_h)
 
