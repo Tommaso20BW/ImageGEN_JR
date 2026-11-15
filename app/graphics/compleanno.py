@@ -170,27 +170,82 @@ def _claim_date(entity):
 
 
 @lru_cache(maxsize=128)
-def birth_date(name, timeout=6.0):
-    """Data di nascita del calciatore da Wikidata (preferendo chi ha giocato nella Juventus), o None."""
-    try:
-        found = _wd_get({'action': 'wbsearchentities', 'search': name, 'language': 'en', 'type': 'item',
-                         'limit': 7}, timeout).get('search', [])
-        ids = [r['id'] for r in found if r.get('id')]
-        if not ids:
-            return None
-        ents = _wd_get({'action': 'wbgetentities', 'ids': '|'.join(ids), 'props': 'claims'}, timeout).get('entities', {})
-    except Exception:            # rete, risposta strana: la data si scrive a mano
+def _footballer_cached(name, timeout):
+    # gli errori di rete escono come eccezioni: cosi' non restano in memoria e si riprova la volta dopo
+    found = _wd_get({'action': 'wbsearchentities', 'search': name, 'language': 'en', 'type': 'item',
+                     'limit': 7}, timeout).get('search', [])
+    ids = [r['id'] for r in found if r.get('id')]
+    if not ids:
         return None
+    ents = _wd_get({'action': 'wbgetentities', 'ids': '|'.join(ids), 'props': 'claims'}, timeout).get('entities', {})
     best = None
     for qid in ids:
         e = ents.get(qid) or {}
-        born = _claim_date(e)
-        if not born or FOOTBALLER not in _claim_ids(e, 'P106'):
+        if not _claim_date(e) or FOOTBALLER not in _claim_ids(e, 'P106'):
             continue
         if JUVENTUS in _claim_ids(e, 'P54'):
-            return born
-        best = best or born
+            return e
+        best = best or e
     return best
+
+
+def _footballer(name, timeout=6.0):
+    """Scheda Wikidata del calciatore (preferendo chi ha giocato nella Juventus), o None."""
+    try:
+        return _footballer_cached(name, timeout)
+    except Exception:            # rete, risposta strana: la data si scrive a mano
+        return None
+
+
+def birth_date(name, timeout=6.0):
+    """Data di nascita del calciatore da Wikidata, o None."""
+    e = _footballer(name, timeout)
+    return _claim_date(e) if e else None
+
+
+# Nazionali senza codice ISO di stato (Regno Unito): codice della bandiera emoji.
+HOME_NATIONS = {'Q21': 'GB-ENG', 'Q22': 'GB-SCT', 'Q25': 'GB-WLS'}
+
+
+def _claim_list(entity, prop):
+    out = []
+    for c in entity.get('claims', {}).get(prop, []):
+        v = c.get('mainsnak', {}).get('datavalue', {}).get('value')
+        if isinstance(v, dict) and v.get('id') and v['id'] not in out:
+            out.append(v['id'])
+    return out
+
+
+@lru_cache(maxsize=128)
+def _nationality_cached(name, timeout):
+    e = _footballer_cached(name, timeout)
+    if not e:
+        return None
+    # prima la nazionale per cui gioca (P1532), poi la cittadinanza (P27)
+    candidates = _claim_list(e, 'P1532') + _claim_list(e, 'P27')
+    if not candidates:
+        return None
+    countries = _wd_get({'action': 'wbgetentities', 'ids': '|'.join(candidates[:20]), 'props': 'claims'},
+                        timeout).get('entities', {})
+    for qid in candidates:
+        if qid in HOME_NATIONS:
+            return HOME_NATIONS[qid]
+        c = countries.get(qid) or {}
+        if c.get('claims', {}).get('P576'):      # nazione che non c'e' piu' (es. Cecoslovacchia)
+            continue
+        for claim in c.get('claims', {}).get('P297', []):
+            code = str(claim.get('mainsnak', {}).get('datavalue', {}).get('value') or '')
+            if len(code) == 2:
+                return code.upper()
+    return None
+
+
+def nationality(name, timeout=6.0):
+    """Nazionale del calciatore (codice ISO, es. 'AR', o 'GB-ENG') da Wikidata; None se non si trova."""
+    try:
+        return _nationality_cached(name, timeout)
+    except Exception:
+        return None
 
 
 def known_births():

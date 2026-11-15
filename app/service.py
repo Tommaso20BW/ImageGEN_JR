@@ -993,6 +993,11 @@ class Service:
             return {'teams': team_settings.names_list(asset_dir())}
         if action == 'name_save':
             return team_settings.save_name(envelope.get('team') or {}, asset_dir())
+        if action in ('player_emoji', 'player_emoji_save'):   # Compleanno: faccia del giocatore negli auguri
+            import player_emoji
+            if action == 'player_emoji':
+                return player_emoji.detail(str(envelope.get('name') or ''), asset_dir())
+            return player_emoji.save(envelope.get('emoji') or {}, asset_dir())
         if action in ('emoji_team', 'emoji_pack', 'emoji_save'):   # Impostazioni › squadra › Emoji
             import team_emoji
             if action == 'emoji_team':

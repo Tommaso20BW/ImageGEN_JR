@@ -472,3 +472,19 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .bd-when b{font-size:13px;font-weight:600}
 .bd-when small{font-size:11px;font-weight:500;opacity:.8}
 .bd-when small.today{color:var(--accent);opacity:1;font-weight:700}
+
+/* Compleanno: emoji del giocatore negli auguri */
+.bd-emo-list{margin-top:14px}
+.bd-emo-row{width:100%;border:0;background:none;color:inherit;font:inherit;font-size:16px;font-weight:600;text-align:left;cursor:pointer}
+.bd-emo-row .sp-chev{margin-left:0}
+.bd-emo-val{margin-left:auto;display:flex;align-items:center;color:var(--muted);font-weight:500}
+.bd-emo-miss{color:#d33;font-weight:600}
+.bd-emo-warn{color:#d33}
+.bd-emo-sheet{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center}
+.bd-emo-sheet[hidden]{display:none}
+.bd-emo-card{width:100%;max-width:520px;max-height:75vh;overflow:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:14px 14px calc(18px + env(safe-area-inset-bottom))}
+.bd-emo-head{display:flex;align-items:center;justify-content:space-between;margin:0 4px 10px;font-size:16px}
+.bd-emo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:4px}
+.bd-emo-grid .emo-cell{display:grid;place-items:center;height:50px;border:0;border-radius:10px;background:none;cursor:pointer}
+.bd-emo-grid .emo-cell.on{background:var(--line)}
+.bd-emo-reset{display:block;margin:12px auto 0}

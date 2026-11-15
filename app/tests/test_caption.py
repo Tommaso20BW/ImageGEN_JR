@@ -159,3 +159,28 @@ class PhotoCaptionTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class BirthdayCaptionTest(unittest.TestCase):
+    """Auguri come sul canale: faccia del JR Pack e torta, oppure torta e bandiera."""
+
+    def test_current_player_face_then_cake(self):
+        with mock.patch('player_emoji.manual_rows', return_value={}):
+            text = caption.build({'kind': 'bday', 'player': 'Weston McKennie', 'name': 'MCKENNIE'})
+        self.assertTrue(text.startswith('<tg-emoji emoji-id="5789765362690039962">'))
+        self.assertEqual(plain(text), '🇺🇸🎂 Tanti auguri a <b>Weston McKennie!</b>\n\n👉 @Juventus_Reborn')
+
+    def test_former_player_cake_then_flag(self):
+        with mock.patch('graphics.compleanno.nationality', return_value='IT'):
+            text = caption.build({'kind': 'bdold', 'name': 'ALESSANDRO DEL PIERO'})
+        self.assertIn('emoji-id="5449723275628259037"', text)
+        self.assertEqual(plain(text), '🎂🇮🇹 Tanti auguri ad <b>Alessandro Del Piero!</b>\n\n👉 @Juventus_Reborn')
+
+    def test_no_network_no_flag(self):
+        with mock.patch('graphics.compleanno.nationality', return_value=None):
+            text = caption.build({'kind': 'bdold', 'name': 'PAVEL NEDVED'})
+        self.assertEqual(plain(text), '🎂 Tanti auguri a <b>Pavel Nedved!</b>\n\n👉 @Juventus_Reborn')
+
+    def test_flag_without_custom_emoji(self):
+        self.assertEqual(caption.flag('JP'), '🇯🇵')
+        self.assertEqual(caption.flag(''), '')

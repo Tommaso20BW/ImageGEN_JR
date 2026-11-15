@@ -4,7 +4,7 @@ Grafiche della partita (Gol, Half Time, Full Time, Statistiche...): stesso testo
 di LiveScore (nomi italiani e hashtag di Impostazioni › Nomi). Le altre (Matchday, XI,
 Classifica, Convocati...) seguono i post fatti a mano, con le emoji personalizzate del canale.
 Queste ultime finiscono con la firma 👉 @Juventus_Reborn; quelle della diretta no, come sul canale.
-Post, Storie e Citazioni partono senza testo.
+Compleanni: auguri con torta e bandiera della nazionale. Post, Storie e Citazioni partono senza testo.
 """
 import html
 
@@ -37,6 +37,19 @@ E_NEW = emoji('5361979468887893611', '🆕')
 E_CHECK = emoji('5454096630372379732', '☑️')
 E_NOTE = emoji('5334882760735598374', '📝')
 E_WORLD = emoji('5399898266265475100', '🌍')
+E_CAKE = emoji('5370999492914976897', '🎂')
+
+# Bandiere animate del canale (codice ISO -> emoji personalizzata); le altre nazioni hanno la bandiera normale.
+FLAGS = {
+    'IT': '5449723275628259037', 'AR': '5262873863036872166', 'BR': '5202074005346983800',
+    'FR': '5202132623060640759', 'PT': '5382075788369605892', 'NL': '5411124743841524806',
+    'NO': '5382300771641470186', 'DK': '5381854399985366436', 'CA': '5382084502858249131',
+    'DE': '5409360418520967565', 'ES': '5201957744877248121', 'BE': '5411564862025244994',
+    'SE': '5384542551296455687', 'TR': '5226948110873278599', 'ME': '5440827745523216914',
+    'GR': '5381889099026149370', 'HU': '5409065547541260699', 'BA': '5382033281078275575',
+    'CL': '5222427035023977899', 'CO': '5341564321098907092', 'UY': '5269256068474616775',
+    'CZ': '5429496861587156146',
+}
 
 # Testi delle fasi come LiveScore (livescore/constants.py e match/*.py).
 PHASES = {
@@ -241,8 +254,57 @@ def _giornata(comp):
     return value or None
 
 
+def flag(code):
+    """Bandiera della nazione (codice ISO o GB-ENG/GB-SCT/GB-WLS): animata se il canale ce l'ha."""
+    code = str(code or '').upper()
+    if code.startswith('GB-'):
+        plain = '\U0001F3F4' + ''.join(chr(0xE0000 + ord(ch)) for ch in ('gb' + code[3:]).lower()) + '\U000E007F'
+    elif len(code) == 2 and code.isalpha():
+        plain = ''.join(chr(0x1F1E6 + ord(ch) - ord('A')) for ch in code)
+    else:
+        return ''
+    return emoji(FLAGS[code], plain) if code in FLAGS else plain
+
+
+def _face(name):
+    """Faccia del tesserato nel JR Pack (scelta a mano o di base), o ''."""
+    try:
+        import player_emoji
+        hit = player_emoji.find(name)
+    except Exception:  # noqa: BLE001
+        hit = None
+    return emoji(hit[0], hit[1]) if hit else ''
+
+
+def _person_name(text):
+    """Nome per il testo: quello della rosa così com'è, quello scritto sulla grafica (maiuscolo) in Title Case."""
+    text = ' '.join(str(text or '').split())
+    return text.title() if text.isupper() else text
+
+
+def _bday_caption(data):
+    """Come gli auguri del canale: 🎂🇦🇷 Tanti auguri a <b>Paulo Dybala!</b>"""
+    name = _person_name(data.get('player') or data.get('name'))
+    if not name:
+        return ''
+    prep = 'ad' if name[:1].lower() == 'a' else 'a'
+    face = _face(name)
+    if face:
+        icons = face + E_CAKE
+    else:
+        try:
+            from graphics import compleanno
+            code = compleanno.nationality(name)
+        except Exception:  # noqa: BLE001 - senza rete si manda senza bandiera
+            code = None
+        icons = E_CAKE + flag(code)
+    return f"{icons} Tanti auguri {prep} <b>{html.escape(name)}!</b>"
+
+
 def _other_caption(data):
     kind = data['kind']
+    if kind in ('bday', 'bdold'):
+        return _bday_caption(data)
     if kind == 'table':
         comp = str(data.get('competition') or '').upper()
         if data.get('view') == 'bracket' or comp == 'CI':
@@ -270,7 +332,7 @@ LIVE_KINDS = {'goal', 'saved', 'kick', 'half', 'second', 'end_of_90', 'full', 's
 
 
 # Post (testo scritto ogni volta a mano), Storie e Citazioni (per Instagram, X, Threads): niente testo.
-NO_CAPTION = {'jr', 'igbn', 'igq', 'xq', 'thq', 'rin', 'bday', 'bdold'}
+NO_CAPTION = {'jr', 'igbn', 'igq', 'xq', 'thq', 'rin'}
 
 
 def _live(data):

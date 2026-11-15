@@ -343,6 +343,19 @@
               <label class="ios-row"><span>Nato il</span><input id="bdBirth" class="ios-in" type="date"></label>
               <label class="ios-row"><span>Anni</span><input id="bdAge" class="ios-in" inputmode="numeric" maxlength="2" placeholder="21"></label>
             </div>
+            <div id="bdEmoBox" hidden>
+              <div class="ios-list bd-emo-list">
+                <button id="bdEmoRow" class="ios-row bd-emo-row" type="button"><span>Emoji</span><span id="bdEmoVal" class="bd-emo-val"></span><span class="sp-chev">›</span></button>
+              </div>
+              <p id="bdEmoNote" class="hint"></p>
+            </div>
+            <div id="bdEmoSheet" class="bd-emo-sheet" hidden>
+              <div class="bd-emo-card">
+                <div class="bd-emo-head"><b>JR Pack</b><button id="bdEmoClose" class="link-btn" type="button">Chiudi</button></div>
+                <div id="bdEmoGrid" class="bd-emo-grid"></div>
+                <button id="bdEmoReset" class="link-btn bd-emo-reset" type="button" hidden>Torna a quella di base</button>
+              </div>
+            </div>
           </section>
 
           <section class="screen" data-screen="bdoname">

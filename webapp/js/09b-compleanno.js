@@ -177,6 +177,73 @@ function bdRender() {
   }
 }
 
+// ---- Emoji del giocatore negli auguri (faccia del JR Pack) ----
+// Se manca si avvisa e la si sceglie dal pack: resta salvata per sempre (si può cambiare).
+let bdEmo = null, bdEmoBusy = false;
+function bdEmoLoad() {
+  const name = bd.player;
+  if (kind !== 'bday' || bd.manual || !name) { bdEmo = null; bdEmoRender(); return; }
+  if (bdEmo && bdEmo.name === name && !bdEmo.error) { bdEmoRender(); return; }
+  bdEmo = {name, loading:true};
+  bdEmoRender();
+  setPost({action:'player_emoji', name})
+    .then(body => { if (bd.player === name) { bdEmo = body; bdEmoRender(); if (!body.current) haptic('warning'); } })
+    .catch(() => { if (bd.player === name) { bdEmo = {name, error:true}; bdEmoRender(); } });
+}
+function bdEmoRender() {
+  const box = $('bdEmoBox');
+  if (!box) return;
+  box.hidden = !bdEmo;
+  if (!bdEmo) return;
+  const E = bdEmo, cur = E.current, note = $('bdEmoNote');
+  const p = players.find(x => x.name === E.name), who = p ? surnameOf(p) : E.name;
+  $('bdEmoVal').innerHTML = E.loading ? '…' : E.error ? 'Non disponibile'
+    : cur && cur.thumb ? `<span class="emo-th" style="width:28px;height:28px;background-image:url('${cur.thumb}')"></span>`
+    : cur ? setEsc(cur.emoji || '') : '<span class="bd-emo-miss">Manca</span>';
+  note.classList.toggle('bd-emo-warn', !!(!E.loading && !E.error && !cur));
+  note.textContent = E.loading || E.error ? '' : !cur
+    ? `Manca l'emoji personalizzata di ${who}: toccala e sceglila dal JR Pack (resta salvata).`
+    : E.manual ? 'Scelta da te: va prima della torta negli auguri. Toccala per cambiarla.'
+    : 'Va prima della torta negli auguri. Toccala per cambiarla.';
+}
+async function bdEmoOpen() {
+  if (!bdEmo || bdEmo.loading || bdEmo.error || bdEmoBusy) return;
+  haptic('select');
+  $('bdEmoSheet').hidden = false;
+  $('bdEmoReset').hidden = !bdEmo.manual;
+  const grid = $('bdEmoGrid');
+  grid.innerHTML = '<div class="hint">Carico…</div>';
+  try {
+    const sheet = await emoSheet(bdEmo.pack || 'AroundJuventus');
+    const cur = bdEmo.current;
+    grid.innerHTML = sheet.items.map((e, n) =>
+      `<button type="button" class="emo-cell${cur && cur.pack === sheet.pack && cur.index === e.index ? ' on' : ''}" data-n="${n}" aria-label="Emoji ${e.index}">
+        <span class="emo-th" style="width:38px;height:38px;${emoCellStyle(sheet, n)}"></span></button>`).join('');
+  } catch (err) {
+    grid.innerHTML = `<div class="hint">${setEsc(err.message || 'Pack non disponibile.')}</div>`;
+  }
+}
+async function bdEmoSave(change) {
+  const name = bdEmo && bdEmo.name;
+  if (!name || bdEmoBusy) return;
+  bdEmoBusy = true;
+  $('bdEmoSheet').hidden = true;
+  $('bdEmoVal').textContent = '…';
+  try {
+    const body = await setPost({action:'player_emoji_save', emoji:{name, ...change}});
+    haptic('success');
+    if (bd.player === name) bdEmo = body;
+    bdEmoRender();
+    if (!body.remote) $('bdEmoNote').textContent = `Salvata solo per questa sessione: ${body.warning || 'GitHub non raggiungibile'}.`;
+  } catch (err) {
+    haptic('error');
+    bdEmoRender();
+    $('bdEmoNote').textContent = err.message || String(err);
+  } finally {
+    bdEmoBusy = false;
+  }
+}
+
 function bdPick(name) {
   if (bd.manual) { bd.manual = false; bdClearUpload(); buildFlow(); }
   if (name !== bd.player) {
@@ -323,6 +390,17 @@ function initBirthday() {
   ['bdName','bdAge','bdoName'].forEach(id => $(id).addEventListener('input',() => renderSteps()));
   $('bdoFile').addEventListener('change',e => bdoUpload(e.target.files && e.target.files[0]));
   $('bdManual').addEventListener('click',bdManualStart);
+  $('bdEmoRow').addEventListener('click',bdEmoOpen);
+  $('bdEmoClose').addEventListener('click',() => { $('bdEmoSheet').hidden = true; });
+  $('bdEmoSheet').addEventListener('click',e => { if (e.target === $('bdEmoSheet')) $('bdEmoSheet').hidden = true; });
+  $('bdEmoReset').addEventListener('click',() => bdEmoSave({reset:true}));
+  $('bdEmoGrid').addEventListener('click',e => {
+    const btn = e.target.closest('[data-n]');
+    const sheet = emoSheets[(bdEmo && bdEmo.pack) || 'AroundJuventus'];
+    if (!btn || !sheet) return;
+    haptic('select');
+    bdEmoSave({pack:sheet.pack, index:sheet.items[Number(btn.dataset.n)].index});
+  });
 }
 
 /* --- Posizione: il poster senza giocatore (sagoma del servizio) e sopra la sagoma del giocatore,

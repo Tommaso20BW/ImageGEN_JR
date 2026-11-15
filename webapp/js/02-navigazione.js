@@ -525,6 +525,7 @@ function renderFlow() {
   if (screenName === 'photo') { $('photoPick').hidden = kind === 'md' || kind === 'xi'; if (isQuoteKind(kind)) iqSyncPhoto(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
   if (screenName === 'mdplayer') { mdpRender(); mdpLoad(); }
   if (screenName === 'bdplayer') { bdRender(); bdLoad(); bdLoadBirths(); }
+  if (screenName === 'bdinfo') bdEmoLoad();
   if (screenName === 'bdphoto') bdPhotosRender();
   if (screenName === 'bdpos') bdOpenPos();
   if (screenName === 'jrphotos') renderJrPicker();
