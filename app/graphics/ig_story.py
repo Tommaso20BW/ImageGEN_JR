@@ -35,11 +35,11 @@ TEXT_W = 880                         # larghezza massima di una riga di testo
 PHOTO_W = 880                        # larghezza massima della foto
 PHOTO_MIN_H = 300                    # con il testo, alla foto resta almeno questa altezza...
 PHOTO_LOW = 220                      # ...o questa, se il testo è già sceso a FS_KEEP
-FS_KEEP = 40
-FS_MIN = 30
+FS_KEEP = 36
+FS_MIN = 28
 # Grandezza del testo in base ai caratteri: (fino a N caratteri, grandezza)
-FS_PHOTO_STEPS = ((120, 54), (240, 48), (10**9, 42))
-FS_SOLO_STEPS = ((80, 72), (150, 62), (240, 56), (10**9, 48))
+FS_PHOTO_STEPS = ((120, 46), (240, 42), (10**9, 38))
+FS_SOLO_STEPS = ((80, 62), (150, 54), (240, 48), (10**9, 42))
 
 PAPER = (226, 220, 206)
 STRIP = (250, 248, 242)
