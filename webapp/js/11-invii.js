@@ -430,8 +430,8 @@ if (!LIVE) updateEndNotice();
 
 /* ----- Storia IG: testo dagli ultimi post del canale Telegram (app/tgchannel.py) -----
    "Dal canale" apre l'elenco degli ultimi 20 post, già senza emoji, fonte e firma: il tocco su una
-   notizia mette testo e foto nella storia e si torna al Contenuto. Un album mostra le sue foto:
-   si tocca quella da usare (o "Solo testo"). */
+   notizia mette testo e foto nella storia e si torna al Contenuto. Niente miniature nell'elenco:
+   solo un album, al tocco, apre le sue foto per scegliere quale usare (o "Solo testo"). */
 let tgPosts = null, tgLoading = false;
 function openIgTg() {
   haptic('select');
@@ -476,15 +476,23 @@ function renderIgTg() {
   posts.forEach(post => {
     const photos = Array.isArray(post.photos) ? post.photos : [];
     const many = photos.length > 1;
-    const b = document.createElement(many ? 'div' : 'button');
-    if (!many) b.type = 'button';
-    b.className = 'hm-item tg-post' + (many ? ' tg-album' : '');
-    b.innerHTML = '<span class="hm-txt"><span class="hm-top"><span class="hm-name"></span><span class="hm-time"></span></span></span>' +
-      (photos.length === 1 ? '<span class="tg-one"></span>' : many ? '' : '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>');
+    const b = document.createElement('div');
+    b.className = 'hm-item tg-post';
+    b.setAttribute('role', 'button');
+    b.tabIndex = 0;
+    b.innerHTML = '<span class="hm-txt"><span class="hm-top"><span class="hm-name"></span><span class="hm-time"></span></span>' +
+      '<span class="tg-meta"></span></span>' +
+      '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
     b.querySelector('.hm-name').textContent = post.text || 'Solo foto';
     b.querySelector('.hm-time').textContent = tgWhen(post.date);
-    if (photos.length === 1) b.querySelector('.tg-one').style.backgroundImage = `url("${photos[0]}")`;
+    b.querySelector('.tg-meta').textContent = photos.length === 1 ? 'Con foto' : many ? `${photos.length} foto · tocca per scegliere` : '';
     if (many) {
+      b.addEventListener('click', event => {
+        if (event.target.closest('.tg-pic')) return;
+        haptic('select');
+        list.querySelectorAll('.tg-open').forEach(x => { if (x !== b) x.classList.remove('tg-open'); });
+        b.classList.toggle('tg-open');
+      });
       const row = document.createElement('div');
       row.className = 'tg-pics';
       photos.forEach((url, i) => {
@@ -500,7 +508,7 @@ function renderIgTg() {
         const t = document.createElement('button');
         t.type = 'button';
         t.className = 'tg-pic tg-nopic';
-        t.textContent = 'Solo testo';
+        t.textContent = 'Solo testo, senza foto';
         t.addEventListener('click', () => pickIgTg(post, ''));
         row.appendChild(t);
       }

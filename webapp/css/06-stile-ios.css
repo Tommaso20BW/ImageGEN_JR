@@ -425,19 +425,26 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .ig-tile small{font-size:12.5px;color:var(--muted);line-height:1.25}
 .ig-tile:active{background:var(--accent-soft)}
 .ig-tile:disabled{opacity:.5}
-.ig-thumb{position:relative;width:100%;height:220px;margin-top:2px;border-radius:12px;background:var(--surface2) center/cover no-repeat}
-.ig-thumb[hidden]{display:none}
-.ig-thumb + .ig-tiles{margin-top:10px}
-.ig-thumb-x{position:absolute;top:8px;right:8px;width:32px;height:32px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;
-  font-size:21px;line-height:1;cursor:pointer}
-.ig-thumb-x[hidden]{display:none}
 .ig-foot{margin-top:14px!important}
 .ig-save{margin-top:14px}
 
-/* Storia IG: foto dei post del canale (una: miniatura a destra; album: si sceglie) */
-.tg-one{flex:0 0 auto;width:58px;height:58px;margin-left:10px;border-radius:9px;background:var(--surface2) center/cover no-repeat}
-.tg-album{cursor:default}
+/* Storia IG: foto di un album del canale, da scegliere */
 .tg-pics{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .tg-pic{width:64px;height:64px;padding:0;border:0;border-radius:9px;background:var(--surface2) center/cover no-repeat;cursor:pointer}
 .tg-pic:active{outline:2px solid var(--accent);outline-offset:1px}
-.tg-nopic{width:auto;padding:0 12px;font:inherit;font-size:13px;font-weight:600;color:var(--text)}
+.tg-nopic{flex-basis:100%;width:auto;height:34px;padding:0;background:none;text-align:left;font:inherit;font-size:14px;font-weight:600;color:var(--muted)}
+
+/* Storia IG: niente miniature nell'elenco del canale; l'album le apre solo al tocco */
+.tg-meta{display:block;margin-top:4px;font-size:12.5px;color:var(--muted)}
+.tg-meta:empty{display:none}
+.tg-post .tg-pics{display:none}
+.tg-post.tg-open .tg-pics{display:flex}
+.tg-post.tg-open .hm-go{transform:rotate(90deg)}
+/* Storia IG: foto scelta in una riga piccola */
+.ig-photo{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 12px 8px 8px;margin-bottom:2px;border-radius:12px;background:var(--surface)}
+.ig-photo[hidden]{display:none}
+.ig-photo-img{flex:0 0 auto;width:38px;height:38px;border-radius:8px;background:var(--surface2) center/cover no-repeat}
+.ig-photo-txt{flex:1;font-size:15px;font-weight:600}
+.ig-photo-x{border:0;background:none;padding:6px 4px;font:inherit;font-size:14.5px;color:#d70015;cursor:pointer}
+.ig-photo-x[hidden]{display:none}
+.ig-photo + .ig-tiles{margin-top:10px}

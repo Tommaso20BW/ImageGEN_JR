@@ -11,7 +11,7 @@ const igb = {id:'', url:'', uploading:false};
 let igColor = 'black';     // colore del testo (tavolozza in 11-invii.js)
 function igRefresh() {
   $('igThumb').hidden = !igb.url;
-  $('igThumb').style.backgroundImage = igb.url ? `url("${igb.url}")` : '';
+  $('igThumbImg').style.backgroundImage = igb.url ? `url("${igb.url}")` : '';
   $('igClear').hidden = !igb.id;
   $('igPickLabel').textContent = igb.id ? 'Cambia foto' : 'Galleria';
   const n = $('igText').value.length;
