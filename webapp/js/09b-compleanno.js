@@ -1,5 +1,5 @@
 /* ---------- Compleanno ----------
-   Passi: Giocatore (lista con ricerca) → Foto (tutte le sue pose degli asset in quadretti, divise
+   Passi: Giocatore (lista con ricerca) → Foto (le sue pose con la maglia home in quadretti, divise
    in Matchday, Starting e Goal, o Saved per i portieri) → Dati (nome sulla striscia, data di nascita
    ed età) → Posizione (trascina il giocatore, due dita per lo zoom). La data arriva da sola (asset o Wikidata) insieme alle foto; si può sempre correggere. */
 const BD_GROUPS = [['matchday','Matchday'],['starting','Starting'],['goal','Goal'],['saved','Saved']];
@@ -87,9 +87,7 @@ function bdPhotosRender() {
       b.type = 'button';
       b.className = 'iq-ph bd-ph' + (p.id === bd.photo ? ' on' : '');
       b.style.backgroundImage = `url("${p.thumb}")`;
-      b.setAttribute('aria-label',`${label} · ${p.kit}`);
-      b.innerHTML = '<span class="bg"></span>';
-      b.querySelector('span').textContent = p.kit;
+      b.setAttribute('aria-label',label);
       b.addEventListener('click',() => {
         haptic('select');
         if (bd.photo !== p.id) bd.frame = {x:0, y:0, zoom:1};
@@ -121,7 +119,7 @@ function bdStepValue(step) {
   if (step === 'bdplayer') { const p = players.find(x => x.name === bd.player); return p ? surnameOf(p) : ''; }
   if (step === 'bdphoto') {
     const p = bdPhotoOf(bd.photo);
-    return p ? `${labelOf(BD_GROUPS,p.group)} · ${p.kit}` : '';
+    return p ? labelOf(BD_GROUPS,p.group) : '';
   }
   if (step === 'bdpos') {
     const f = bd.frame;

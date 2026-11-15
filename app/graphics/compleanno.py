@@ -98,6 +98,8 @@ def player_photos(player):
             else:
                 group = 'saved' if keeper else 'goal'
             kit = m['kit'] or ''
+            if kit_label.get(kit, 'Home') != 'Home':
+                continue  # solo la maglia home: away e third non servono
             rows.append({'id': f'{folder}/{player.slug}/{path.name}', 'group': group,
                          'kit': kit_label.get(kit, 'Home'), 'pose': m['pose'],
                          '_k': ([g for g, _ in GROUPS].index(group), int(m['num']), kit_order.get(kit, 0))})

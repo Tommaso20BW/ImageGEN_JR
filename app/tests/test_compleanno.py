@@ -53,15 +53,14 @@ class PhotoTests(unittest.TestCase):
         self.env.stop()
         self.tmp.cleanup()
 
-    def test_groups_in_order(self):
+    def test_only_home_kit_in_order(self):
         rows = C.player_photos(Player('kenan_yildiz'))
         self.assertEqual([(r['group'], r['kit'], r['pose']) for r in rows], [
-            ('matchday', 'Third', 'pointing'), ('starting', 'Home', 'arms_crossed'),
-            ('goal', 'Away', 'scream'), ('goal', 'Home', 'point_sky')])
+            ('starting', 'Home', 'arms_crossed'), ('goal', 'Home', 'point_sky')])
 
     def test_goalkeeper_poses_are_saved(self):
         rows = C.player_photos(Player('kenan_yildiz', 'goalkeeper'))
-        self.assertEqual({r['group'] for r in rows}, {'matchday', 'starting', 'saved'})
+        self.assertEqual({r['group'] for r in rows}, {'starting', 'saved'})
 
     def test_photo_path_is_checked(self):
         ok = 'players/kenan_yildiz/kenan_yildiz_pose_04_point_sky.png'
