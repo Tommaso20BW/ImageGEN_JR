@@ -49,11 +49,11 @@ function rememberSent(messageId) {
   }
 }
 
-// Scelta una partita (04-dati-partita.js): se è quella dell'ultimo invio, maglia e risultato tornano.
+// Scelta una partita (04-dati-partita.js): se è quella dell'ultimo invio, torna il risultato.
+// La maglia no: non si spunta mai nulla in automatico, la si sceglie ogni volta.
 function applyLastChoices(id) {
   const last = readJson(LAST_KEY);
   if (!last || last.match !== id || Date.now() - last.at > LAST_TTL) return;
-  if (!kitFromMatch && !kit && !uefaAuto() && ['home','away','third'].includes(last.kit)) kit = last.kit;
   const untouched = ids => ids.every(i => ['', '0'].includes($(i).value.trim()));
   if (Array.isArray(last.score) && last.score.every(v => /^\d{1,2}$/.test(String(v)))) {
     [['evHomeScore','evAwayScore'], ['homeScore','awayScore']].forEach(([h, a]) => {
