@@ -277,7 +277,7 @@ function buildFlow() {
   else if (kind === 'award') flow = ['awkind'];                     // MOTM e POTM: prima si sceglie quale
   else if (kind === 'potm') flow = ['awkind','awplayer','potminfo','bdophoto'];
   else if (kind === 'af') flow = ['afinfo','bdophoto','bdpos'];
-  else if (kind === 'free') flow = ['frtpl','fredit'];
+  else if (kind === 'free') flow = ['fredit'];
   else if (kind === 'motm') flow = ['awkind',...pick(base),'awplayer','motminfo','bdophoto','bdpos'];
   else if (kind === 'bday') flow = bd.mode === 'old' ? ['bdmode','bdoname','bdophoto','bdpos'] : ['bdmode','bdplayer',bd.manual ? 'bdophoto' : 'bdphoto','bdinfo','bdpos'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent', {tg:'igtg', phr:'igphr'}[igPicking] || 'igsent'] : ['igcontent'];
@@ -541,7 +541,6 @@ function renderFlow() {
   if (screenName === 'awplayer') awRender();
   if (screenName === 'motminfo' || screenName === 'potminfo') awNameBoxes();
   if (screenName === 'bdophoto') bdoTexts();
-  if (screenName === 'frtpl') frOpenTemplates();
   if (screenName === 'fredit') frOpenEditor();
   if (screenName === 'jrphotos') renderJrPicker();
   if (screenName === 'jrlayout') { renderJrLayout(true); requestAnimationFrame(() => { fitColBig(); renderJrLayout(); }); }

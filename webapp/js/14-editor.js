@@ -15,7 +15,7 @@ const FR_FONTS = [
 const FR_FORMATS = [['3:4', 1500, 2000], ['4:5', 1600, 2000], ['1:1', 1500, 1500], ['9:16', 1125, 2000]];
 const FR_TYPE_NAMES = {photo:'Foto', text:'Testo', logo:'Logo JR', shade:'Sfumatura', rect:'Forma'};
 
-const fr = {doc:null, sel:'', tplId:'', tplName:'', images:{}, cuts:{}, cutBusy:{}, undo:{}, brush:null, brushSize:44, erasing:false, cache:{}, fonts:{}, logo:null, templates:null,
+const fr = {doc:null, pickTpl:'', sel:'', tplId:'', tplName:'', images:{}, cuts:{}, cutBusy:{}, undo:{}, brush:null, brushSize:44, erasing:false, cache:{}, fonts:{}, logo:null, templates:null,
   exportKey:'', exportId:'', drawQueued:false, guides:[0, 0]};
 
 let frSeq = 0;
@@ -554,9 +554,9 @@ function initFreeCanvas() {
     const l = frLayer(fr.sel);
     // tocco senza spostare: testo già scelto = scrivi; foto vuota = scegli la foto
     if (!moved && l && mode === 'move') {
-      if (l.type === 'photo' && !fr.images[l.id]) { fr.photoFor = l.id; $('frFile').click(); }
+      if (l.type === 'photo' && !fr.images[l.id]) { frPick(l.id); }
       else if (l.type === 'text' && wasSel) frTool('edit', true);
-    }
+    } else if (!moved && !l && !fr.doc.layers.length && mode !== 'pinch') frPick('new');
     mode = ''; fr.dragging = ''; fr.guides = [0, 0];
     frDraw();
     if (moved && fr.tool) frPanel();
@@ -603,12 +603,15 @@ const FR_SVG = {
   erase:'<path d="M8.5 19.5L3.8 14.8a1.6 1.6 0 0 1 0-2.3l8.7-8.7a1.6 1.6 0 0 1 2.3 0l5.4 5.4a1.6 1.6 0 0 1 0 2.3L13 19.5z"/><path d="M8.5 19.5H20M9 9.5l5.5 5.5"/>',
   cutout:'<circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.6-3.6 3.2-5.6 6.5-5.6s5.9 2 6.5 5.6"/><path d="M3 3l2 2M21 3l-2 2" opacity=".7"/><path d="M3 12h1.5M19.5 12H21"/>',
   dup:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
-  del:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'
+  del:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff:'<path d="M4 4l16 16M9.9 5.8A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3 3.6M6.5 7.6A17 17 0 0 0 2.5 12S6 18.5 12 18.5a9 9 0 0 0 4-.9M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  grip:'<path d="M5 8h14M5 12h14M5 16h14"/>'
 };
 const FR_TOOLS = {
-  page:[['add-text', 'Testo', 'text'], ['add-photo', 'Foto', 'photo'], ['add-logo', 'Logo', 'logo'], ['add-rect', 'Forma', 'rect'],
+  page:[['tpl', 'Modelli', 'tpl'], '|', ['add-text', 'Testo', 'text'], ['add-photo', 'Foto', 'photo'], ['add-logo', 'Logo', 'logo'], ['add-rect', 'Forma', 'rect'],
     ['add-shade', 'Sfumatura', 'shade'], '|', ['bg', 'Sfondo', 'bg'], ['fmt', 'Formato', 'fmt'], ['layers', 'Livelli', 'layers'],
-    ['caption', 'Didascalia', 'caption'], ['tpl', 'Modello', 'tpl']],
+    ['caption', 'Didascalia', 'caption']],
   text:[['edit', 'Modifica', 'edit'], ['font', 'Font', null], ['color', 'Colore', null], ['format', 'Formato', 'format'],
     ['fx', 'Effetti', 'fx'], ['opacity', 'Trasparenza', 'opacity'], ['pos', 'Posizione', 'pos']],
   photo:[['replace', 'Sostituisci', 'replace'], ['cutout', 'Rimuovi sfondo', 'cutout'], ['erase', 'Gomma', 'erase'], ['filter', 'Filtri', 'filter'], ['adjust', 'Regola', 'adjust'], ['fx', 'Effetti', 'fx'],
@@ -642,6 +645,9 @@ function frLayerName(l) {
 // Striscia degli strumenti (e barretta sopra l'elemento).
 function frLayers() {
   const bar = $('frTools');
+  const emptyTip = 'Tocca la pagina per scegliere una foto.';
+  if (fr.doc && !fr.doc.layers.length) showToastSafe(emptyTip, 0);
+  else if ($('frStatus').textContent === emptyTip) showToastSafe('');
   bar.innerHTML = '';
   const l = frLayer(fr.sel);
   if (l) {
@@ -689,7 +695,7 @@ function frFloatButtons() {
     f.appendChild(b);
   };
   if (l.type === 'text') add('edit', 'Modifica il testo', () => frTool('edit', true));
-  if (l.type === 'photo') add('replace', 'Sostituisci la foto', () => { fr.photoFor = l.id; $('frFile').click(); });
+  if (l.type === 'photo') add('replace', 'Sostituisci la foto', () => { frPick(l.id); });
   add('dup', 'Duplica', () => frDuplicate(l));
   add('del', 'Elimina', () => frDelete(l));
 }
@@ -698,10 +704,11 @@ function frTool(key, open) {
   haptic('select');
   const l = frLayer(fr.sel);
   if (key.startsWith('add-')) { frAdd(key.slice(4)); return; }
-  if (key === 'layers') { frSheet('layers'); return; }
-  if (key === 'replace') { fr.photoFor = l.id; $('frFile').click(); return; }
+  if (key === 'layers') { frSheet(); return; }
+  if (key === 'tpl') { frTplSheet(); return; }
+  if (key === 'replace') { frPick(l.id); return; }
   if (key === 'cutout') { frCutoutToggle(l); return; }
-  if (key === 'erase' && !fr.images[l.id]) { fr.photoFor = l.id; $('frFile').click(); return; }
+  if (key === 'erase' && !fr.images[l.id]) { frPick(l.id); return; }
   if (fr.erasing) return;
   fr.tool = fr.tool === key && !open ? '' : key;
   fr.brush = fr.tool === 'erase' ? {id:l.id, strokes:[]} : null;
@@ -712,35 +719,124 @@ function frTool(key, open) {
   if (key === 'font') FR_FONTS.forEach(f => frFont(f[0]));
 }
 
-// Elenco dei livelli (dal basso).
-function frSheet(which) {
-  haptic('select');
+// Livelli, come in Canva: in cima quello davanti; anteprima, occhio, maniglia per trascinare.
+function frSheet() {
   const sheet = $('frSheet'), body = $('frSheetBody');
   body.innerHTML = '';
   $('frSheetTitle').textContent = 'Livelli';
-  const row = (title, sub, on, fn, extra) => {
+  const layers = [...fr.doc.layers].reverse();
+  if (!layers.length) {
+    const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Ancora niente: aggiungi un testo o una foto.'; body.appendChild(p);
+  } else {
+    const tip = document.createElement('p');
+    tip.className = 'hint fr-ltip';
+    tip.textContent = 'In cima c\'è quello davanti. Tieni premuto ≡ e trascina per cambiare l\'ordine.';
+    body.appendChild(tip);
+  }
+  const list = document.createElement('div');
+  list.className = 'fr-llist';
+  layers.forEach(l => {
     const r = document.createElement('div');
-    r.className = 'fr-srow' + (on ? ' on' : '');
+    r.className = 'fr-lrow' + (l.id === fr.sel ? ' on' : '') + (l.hidden ? ' off' : '');
+    r.dataset.id = l.id;
     r.setAttribute('role', 'button');
-    r.innerHTML = '<span><b></b><small></small></span>';
-    r.querySelector('b').textContent = title;
-    r.querySelector('small').textContent = sub;
-    r.addEventListener('click', () => { frSheetClose(); fn(); });
-    if (extra) r.appendChild(extra);
-    body.appendChild(r);
-    return r;
-  };
-  [...fr.doc.layers].reverse().forEach(l => {
+    const thumb = document.createElement('canvas');
+    thumb.className = 'fr-lthumb';
+    const txt = document.createElement('span');
+    txt.className = 'fr-ltxt';
+    txt.innerHTML = '<b></b><small></small>';
+    txt.querySelector('b').textContent = frLayerName(l);
+    const kind = FR_TYPE_NAMES[l.type] || '';
+    txt.querySelector('small').textContent = kind === frLayerName(l) ? '' : kind;
     const eye = document.createElement('button');
-    eye.type = 'button'; eye.className = 'fr-eye link-btn';
-    eye.textContent = l.hidden ? 'Mostra' : 'Nascondi';
-    eye.addEventListener('click', e => { e.stopPropagation(); l.hidden = !l.hidden; eye.textContent = l.hidden ? 'Mostra' : 'Nascondi'; eye.closest('.fr-srow').classList.toggle('off', !!l.hidden); frDraw(); });
-    const r = row(frLayerName(l), frLayerName(l) === FR_TYPE_NAMES[l.type] ? '' : FR_TYPE_NAMES[l.type], l.id === fr.sel, () => frSelect(l.id), eye);
-    if (l.hidden) r.classList.add('off');
+    eye.type = 'button'; eye.className = 'fr-lbtn';
+    const setEye = () => { eye.innerHTML = frSvg(l.hidden ? 'eyeoff' : 'eye'); eye.setAttribute('aria-label', l.hidden ? 'Mostra' : 'Nascondi'); };
+    setEye();
+    eye.addEventListener('click', e => {
+      e.stopPropagation(); haptic('select');
+      l.hidden = !l.hidden; setEye(); r.classList.toggle('off', !!l.hidden);
+      if (l.hidden && fr.sel === l.id) { fr.sel = ''; fr.tool = ''; fr.brush = null; frLayers(); frPanel(); }
+      frDraw();
+    });
+    const grip = document.createElement('span');
+    grip.className = 'fr-lgrip'; grip.setAttribute('aria-label', 'Trascina per spostare');
+    grip.innerHTML = frSvg('grip');
+    grip.addEventListener('pointerdown', e => frLayerDrag(e, r, list));
+    grip.addEventListener('click', e => e.stopPropagation());
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'fr-lbtn fr-ldel'; del.setAttribute('aria-label', 'Elimina');
+    del.innerHTML = frSvg('del');
+    del.addEventListener('click', e => { e.stopPropagation(); haptic('select'); frDelete(l); frSheet(); });
+    r.append(thumb, txt, eye, del, grip);
+    r.addEventListener('click', () => {
+      if (l.hidden) { l.hidden = false; frDraw(); }
+      frSheetClose(); frSelect(l.id);
+    });
+    list.appendChild(r);
+    frLayerThumb(thumb, l);
   });
-  if (!fr.doc.layers.length) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Ancora niente: aggiungi un testo o una foto.'; body.appendChild(p); }
+  body.appendChild(list);
   sheet.hidden = false;
   requestAnimationFrame(() => sheet.classList.add('open'));
+}
+
+// Anteprima di un livello da solo, ingrandito su quell'elemento (la sfumatura: tutta la pagina), sulla scacchiera.
+function frLayerThumb(canvas, l) {
+  const S = 40, dpr = 2;
+  canvas.width = S * dpr; canvas.height = S * dpr;
+  canvas.style.width = `${S}px`; canvas.style.height = `${S}px`;
+  let cx = fr.doc.w / 2, cy = fr.doc.h / 2, size = Math.max(fr.doc.w, fr.doc.h);
+  if (l.type !== 'shade') {
+    try { const g = frGeom(l); cx = l.x; cy = l.y; size = Math.max(g.w, g.h) * 1.08; } catch (_) {}
+  }
+  const ctx = canvas.getContext('2d');
+  const keep = [fr.k, fr.editing];
+  fr.k = S * dpr / Math.max(1, size); fr.editing = true;
+  ctx.setTransform(fr.k, 0, 0, fr.k, S * dpr / 2 - cx * fr.k, S * dpr / 2 - cy * fr.k);
+  try { frDrawLayer(ctx, l); } catch (_) {}
+  [fr.k, fr.editing] = keep;
+}
+
+// Trascina un livello nell'elenco: le altre righe si spostano, al rilascio cambia l'ordine.
+function frLayerDrag(e, row, list) {
+  e.preventDefault(); e.stopPropagation();
+  const grip = e.currentTarget;
+  const rows = [...list.children], from = rows.indexOf(row);
+  const step = rows.length > 1 ? rows[1].offsetTop - rows[0].offsetTop : row.offsetHeight;
+  const y0 = e.clientY;
+  let to = from;
+  grip.setPointerCapture(e.pointerId);
+  row.classList.add('drag');
+  haptic('select');
+  const move = ev => {
+    const dy = Math.max(-from * step - 6, Math.min((rows.length - 1 - from) * step + 6, ev.clientY - y0));
+    row.style.transform = `translateY(${dy}px)`;
+    const nt = Math.max(0, Math.min(rows.length - 1, from + Math.round(dy / step)));
+    if (nt === to) return;
+    to = nt; haptic('select');
+    rows.forEach((r, i) => {
+      if (r === row) return;
+      const s = from < to && i > from && i <= to ? -step : from > to && i < from && i >= to ? step : 0;
+      r.style.transform = s ? `translateY(${s}px)` : '';
+    });
+  };
+  const up = () => {
+    grip.removeEventListener('pointermove', move);
+    grip.removeEventListener('pointerup', up);
+    grip.removeEventListener('pointercancel', up);
+    row.classList.remove('drag');
+    rows.forEach(r => { r.style.transform = ''; });
+    if (to === from) return;
+    const ids = rows.map(r => r.dataset.id);
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    const byId = Object.fromEntries(fr.doc.layers.map(l => [l.id, l]));
+    fr.doc.layers = ids.reverse().map(id => byId[id]);
+    haptic('success');
+    frLayers(); frDraw(); frSheet();
+  };
+  grip.addEventListener('pointermove', move);
+  grip.addEventListener('pointerup', up);
+  grip.addEventListener('pointercancel', up);
 }
 
 function frSheetClose() {
@@ -868,14 +964,6 @@ function frPanel() {
       const holder = {_fmt:(FR_FORMATS.find(f => f[1] === fr.doc.w && f[2] === fr.doc.h) || FR_FORMATS[0])[0]};
       put(frCard(holder, [{key:'_fmt', label:'Formato', type:'seg', options:FR_FORMATS.map(f => [f[0], f[0]]), after:v => frFormat(v)}]));
     } else if (t === 'caption') put(frCard(fr.doc, [{key:'caption', label:'Testo del post (facoltativo)', type:'textarea', rows:3, max:900, wide:true, placeholder:'Scrivi la didascalia…'}]));
-    else if (t === 'tpl') {
-      const p = document.createElement('p');
-      p.className = 'hint fr-note';
-      p.textContent = 'Il modello tiene testi, stili e posizioni; le foto le rimetti ogni volta.';
-      put(p);
-      put(frButton(fr.tplId ? `Salva "${fr.tplName}"` : 'Salva come modello', () => frSaveTemplate(), 'btn fr-save'));
-      if (fr.tplId) put(frButton('Salva come nuovo modello', () => frSaveTemplate(true), 'link-btn fr-save2'));
-    }
     return;
   }
   if (t === 'edit') put(frCard(l, [{key:'text', label:'', type:'textarea', wide:true, rows:2, placeholder:'Scrivi…'}]));
@@ -940,7 +1028,7 @@ function frPanel() {
     const i = fr.doc.layers.indexOf(l);
     [['Avanti', () => frMove(l, 1), i === fr.doc.layers.length - 1], ['Indietro', () => frMove(l, -1), i === 0],
       ['Centra', () => { l.x = fr.doc.w / 2; l.y = fr.doc.h / 2; frDraw(); }, l.type === 'shade'],
-      ['Raddrizza', () => { l.rot = 0; frDraw(); }, l.type === 'shade' || !l.rot], ['Livelli', () => frSheet('layers'), false],
+      ['Raddrizza', () => { l.rot = 0; frDraw(); }, l.type === 'shade' || !l.rot], ['Livelli', () => frSheet(), false],
       ['Duplica', () => frDuplicate(l), false], ['Elimina', () => frDelete(l), false]]
       .forEach(([text, fn, off]) => { const b = frButton(text, () => { haptic('select'); fn(); frPanel(); }, 'fr-act' + (text === 'Elimina' ? ' danger' : '')); b.disabled = off; row.appendChild(b); });
     put(row);
@@ -949,6 +1037,7 @@ function frPanel() {
 
 function frAdd(type) {
   haptic('select');
+  if (type === 'photo') { frPick('new'); return; }    // il livello nasce solo con una foto vera
   const l = frNew(type);
   fr.doc.layers.push(l);
   if (type === 'text') frFont(l.font);
@@ -956,7 +1045,6 @@ function frAdd(type) {
   fr.sel = l.id; fr.tool = type === 'text' ? 'edit' : '';
   frLayers(); frPanel(); frDraw();
   if (type === 'text') setTimeout(() => { const ta = $('frPanel').querySelector('textarea'); if (ta) { ta.focus(); ta.select(); } }, 60);
-  if (type === 'photo') { fr.photoFor = l.id; $('frFile').click(); }
 }
 
 function frMove(l, dir) {
@@ -991,22 +1079,34 @@ function frFormat(name) {
   frDraw();
 }
 
+// Apre la galleria. target: id del livello foto, 'new' = livello nuovo; tpl = modello da aprire con questa foto.
+// Se non scegli niente non succede niente: nessun posto vuoto.
+function frPick(target, tpl='') {
+  fr.photoFor = target || 'new'; fr.pickTpl = tpl;
+  $('frFile').click();
+}
+
 async function frPhotoPicked(file) {
+  const target = fr.photoFor, tpl = fr.pickTpl;
+  fr.photoFor = ''; fr.pickTpl = '';
   if (!file) return;
-  // la foto va nel livello scelto, altrimenti nel primo posto vuoto del modello, altrimenti in un livello nuovo
-  const sel = frLayer(fr.sel);
-  const l = frLayer(fr.photoFor) || (sel && sel.type === 'photo' ? sel : null)
-    || fr.doc.layers.find(x => x.type === 'photo' && !fr.images[x.id])
-    || (() => { const n = frNew('photo'); fr.doc.layers.unshift(n); return n; })();
-  fr.photoFor = '';
+  let img;
+  try { img = await frReadPhoto(file); } catch (_) { showError('Foto non leggibile.'); $('frFile').value = ''; return; }
+  $('frFile').value = '';
+  if (tpl) { frApplyTpl(tpl, img); return; }
+  // la foto va nel livello scelto, altrimenti in un livello nuovo (la prima fa da sfondo, le altre sopra)
+  let l = target !== 'new' ? frLayer(target) : null;
+  if (!l) {
+    l = frNew('photo');
+    if (fr.doc.layers.some(x => x.type === 'photo')) fr.doc.layers.push(l); else fr.doc.layers.unshift(l);
+  }
   try {
-    fr.images[l.id] = await frReadPhoto(file);
+    fr.images[l.id] = img;
     delete fr.cuts[l.id]; delete fr.undo[l.id]; delete fr.cache[l.id];
     fr.sel = l.id;
     haptic('success');
     if (l.cutout) frCutout(l);              // modello con la foto senza sfondo: lo tolgo anche da questa
   } catch (_) { showError('Foto non leggibile.'); }
-  $('frFile').value = '';
   frLayers(); frPanel(); frDraw(); renderSteps();
 }
 
@@ -1103,7 +1203,7 @@ function frEraseUndo(l) {
    richieste brevi e scarico il PNG trasparente, riportato alle misure della foto: posizione,
    zoom ed effetti restano uguali. Si può riaccendere/spegnere senza rifarlo. */
 function frCutoutToggle(l) {
-  if (!fr.images[l.id]) { fr.photoFor = l.id; $('frFile').click(); return; }
+  if (!fr.images[l.id]) { frPick(l.id); return; }
   if (fr.cutBusy[l.id]) return;
   if (l.cutout && fr.cuts[l.id]) l.cutout = false;
   else if (fr.cuts[l.id]) l.cutout = true;
@@ -1190,7 +1290,7 @@ function frSaveTemplate(asNew) {
     if (!name) return;
     const id = !asNew && fr.tplId ? fr.tplId : Math.random().toString(36).slice(2, 12).padEnd(8, '0');
     frTemplatesCall({action:'save', template:{id, name, doc:frDocForTemplate()}})
-      .then(() => { fr.tplId = id; fr.tplName = name; haptic('success'); frPanel(); showToastSafe('Modello salvato.'); })
+      .then(() => { fr.tplId = id; fr.tplName = name; haptic('success'); if (!$('frSheet').hidden) frTplSheet(); showToastSafe('Modello salvato.'); })
       .catch(err => showError(err.message));
   };
   if (!asNew && fr.tplId) { doSave(fr.tplName); return; }
@@ -1221,12 +1321,17 @@ function frOpenDoc(doc, tpl) {
   fr.exportKey = ''; fr.exportId = '';
   fr.doc.layers.forEach(l => { if (l.type === 'text') frFont(l.font); });
   frLogo();
-  // con un modello si parte dalla prima foto da inserire
-  const empty = fr.doc.layers.find(l => l.type === 'photo');
-  if (empty) fr.sel = empty.id;
 }
 
-function frChoose(choice) {
+function frTplDoc(choice) {
+  if (choice === 'new') return frBlank();
+  if (choice === 'lutto') return frLuttoDocStatic();
+  const t = (fr.templates || []).find(x => x.id === choice);
+  return t ? t.doc : null;
+}
+
+// Apre un modello con la foto: la prima foto del modello prende questa, i posti foto senza foto spariscono.
+function frApplyTpl(choice, img) {
   haptic('select');
   if (choice === 'new') frOpenDoc(frBlank());
   else if (choice === 'lutto') frOpenDoc(frLuttoDoc(), null);
@@ -1236,8 +1341,46 @@ function frChoose(choice) {
     frOpenDoc(t.doc, t);
   }
   fr.choice = choice;
+  const first = fr.doc.layers.find(l => l.type === 'photo');
+  if (first && img) fr.images[first.id] = img;
+  fr.doc.layers = fr.doc.layers.filter(l => l.type !== 'photo' || fr.images[l.id]);
+  fr.sel = '';
+  if (first && img && first.cutout) frCutout(first);
+  frSheetClose();
+  frLayers(); frPanel(); frDraw(); renderSteps();
+}
+
+function frChoose(choice) {
+  const doc = frTplDoc(choice);
+  if (!doc) return;
+  const photo = fr.doc && fr.doc.layers.find(l => l.type === 'photo' && fr.images[l.id]);
+  const img = photo ? fr.images[photo.id] : null;
+  // il modello vuole una foto e non ce n'è ancora: prima la galleria (se annulli, resta tutto com'è)
+  if (!img && doc.layers.some(l => l.type === 'photo')) { frPick('', choice); return; }
+  if (fr.doc && fr.doc.layers.length) askConfirm('Aprire il modello? Testi e livelli di adesso si perdono (la foto resta).', () => frApplyTpl(choice, img));
+  else frApplyTpl(choice, img);
+}
+
+// Modelli, dentro l'editor: salva la pagina, apri un modello, elimina quelli salvati.
+function frTplSheet() {
+  const sheet = $('frSheet'), body = $('frSheetBody');
+  body.innerHTML = '';
+  $('frSheetTitle').textContent = 'Modelli';
+  const save = frButton(fr.tplId ? `Salva "${fr.tplName}"` : 'Salva questa pagina come modello', () => frSaveTemplate(), 'btn fr-save');
+  save.disabled = !fr.doc.layers.length;
+  body.appendChild(save);
+  if (fr.tplId) body.appendChild(frButton('Salva come nuovo modello', () => frSaveTemplate(true), 'link-btn fr-save2'));
+  const tip = document.createElement('p');
+  tip.className = 'hint fr-ltip fr-tpltip';
+  tip.textContent = 'Tocca un modello per aprirlo: tornano testi, stili e posizioni; la foto che hai messo resta.';
+  const box = document.createElement('div');
+  box.id = 'frTplList'; box.className = 'fr-tpls';
+  body.append(tip, box);
   frTplRender();
-  nextField(true);
+  sheet.hidden = false;
+  requestAnimationFrame(() => sheet.classList.add('open'));
+  if (fr.templates === null && directBase && session)
+    frTemplatesCall({action:'list'}).then(frTplRender).catch(() => { fr.templates = []; frTplRender(); });
 }
 
 function frTplRender() {
@@ -1264,7 +1407,9 @@ function frTplRender() {
       del.type = 'button'; del.className = 'link-btn fr-del'; del.textContent = 'Elimina';
       del.addEventListener('click', e => {
         e.stopPropagation();
-        askConfirm(`Eliminare il modello "${t.name}"?`, () => frTemplatesCall({action:'delete', id:t.id}).then(frTplRender).catch(err => showError(err.message)));
+        askConfirm(`Eliminare il modello "${t.name}"?`, () => frTemplatesCall({action:'delete', id:t.id})
+          .then(() => { if (fr.tplId === t.id) { fr.tplId = ''; fr.tplName = ''; } haptic('success'); frTplSheet(); })
+          .catch(err => showError(err.message)));
       });
       b.appendChild(del);
     }
@@ -1294,20 +1439,17 @@ function frThumb(canvas, doc) {
 }
 function frThumbLater(canvas, doc) { clearTimeout(canvas._t); canvas._t = setTimeout(() => frThumb(canvas, doc), 60); }
 
-function frOpenTemplates() {
-  frTplRender();
-  if (directBase && session) frTemplatesCall({action:'list'}).then(frTplRender).catch(() => { fr.templates = []; frTplRender(); });
-  frLogo();
-}
-
 function frOpenEditor() {
-  if (!fr.doc) frOpenDoc(frBlank());
+  if (!fr.doc) {                                     // i modelli si scelgono da dentro (Modelli)
+    frOpenDoc(frBlank()); fr.choice = 'new';
+    frPick('new');                                    // per prima cosa la foto (annulli = pagina vuota)
+  }
+  if (fr.templates === null && directBase && session) frTemplatesCall({action:'list'}).catch(() => { fr.templates = []; });
   frLayers(); frPanel(); frDraw();
 }
 
 /* ---------- passi, anteprima, invio ---------- */
 function frValidate(step) {
-  if (step === 'frtpl' && !fr.doc) { showError('Scegli da dove partire.'); return false; }
   if (step === 'fredit') {
     const empty = fr.doc && fr.doc.layers.find(l => l.type === 'photo' && !l.hidden && !fr.images[l.id]);
     if (empty) { frSelect(empty.id); showError('Inserisci la foto (o elimina il livello vuoto).'); return false; }
@@ -1319,7 +1461,6 @@ function frValidate(step) {
 }
 
 function frStepValue(step) {
-  if (step === 'frtpl') return !fr.doc ? '' : fr.choice === 'new' ? 'Vuota' : fr.choice === 'lutto' ? 'Lutto' : fr.tplName;
   if (step === 'fredit') return fr.doc ? `${fr.doc.layers.length} livelli` : '';
   return null;
 }

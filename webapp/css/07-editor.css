@@ -1,5 +1,7 @@
 /* Editor libero: modelli e pagina a livelli gestita come in Canva (maniglie, barretta sopra, strumenti sotto). */
-.fr-tpls{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.fr-tpls{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.fr-sheet .fr-save{width:100%}
+.fr-tpltip{margin-top:14px}
 .fr-tpl{display:flex;align-items:center;gap:14px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);
   background:var(--surface);cursor:pointer;transition:border-color .2s,background .2s}
 .fr-tpl.selected{border-color:var(--accent);background:var(--accent-soft)}
@@ -113,14 +115,26 @@
 .fr-sheet.open .fr-sheet-card{transform:none}
 .fr-sheet-head{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 8px}
 .fr-sheet-head b{font-size:17px}
-.fr-srow{display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:6px;border-radius:12px;background:var(--surface);
-  border:1px solid var(--line);cursor:pointer}
-.fr-srow span{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
-.fr-srow b{font-size:15.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fr-srow small{font-size:12.5px;color:var(--muted)}
-.fr-srow.on{border-color:var(--accent)}
-.fr-srow.off b{opacity:.45;text-decoration:line-through}
-.fr-eye{flex:none;font-size:13.5px}
+.fr-ltip{margin:0 2px 10px;font-size:13px}
+.fr-llist{display:flex;flex-direction:column;gap:6px}
+.fr-lrow{display:flex;align-items:center;gap:12px;padding:8px 6px 8px 10px;border-radius:12px;background:var(--surface);
+  border:1.5px solid var(--line);cursor:pointer;transition:transform .15s ease;position:relative;-webkit-tap-highlight-color:transparent}
+.fr-lrow.on{border-color:#8b3dff;box-shadow:0 0 0 1px #8b3dff inset}
+.fr-lrow.drag{transition:none;z-index:2;box-shadow:0 8px 24px rgba(0,0,0,.22);background:var(--surface)}
+.fr-lthumb{flex:none;border-radius:4px;box-shadow:0 0 0 1px var(--line);
+  background:repeating-conic-gradient(#3a3a3c 0 25%,#4a4a4d 0 50%) 0 0/8px 8px}
+.fr-ltxt small:empty{display:none}
+.fr-ltxt{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.fr-ltxt b{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fr-ltxt small{font-size:12.5px;color:var(--muted)}
+.fr-lrow.off .fr-ltxt,.fr-lrow.off .fr-lthumb{opacity:.4}
+.fr-lbtn,.fr-lgrip{flex:none;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:0;background:none;
+  color:var(--muted);border-radius:10px;padding:0}
+.fr-lbtn svg,.fr-lgrip svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.fr-lrow.off .fr-lbtn{color:var(--text)}
+.fr-ldel{color:#ff3b30!important;width:36px}
+.fr-lgrip{touch-action:none;cursor:grab}
+.fr-lgrip:active{cursor:grabbing}
 
 /* Home: icona dell'Editor libero colorata (non nera) */
 .hm-item[data-id="free"] .hm-ico{background:linear-gradient(135deg,#00C4CC,#7D2AE8)}
