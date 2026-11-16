@@ -97,7 +97,7 @@ const REQUESTS = [
   {id:'goal',   kind:'goal',  icon:'goal', title:'Gol',          desc:'Giocatore, minuto e risultato'},
   {id:'saved',  kind:'saved', icon:'saved', title:'Parata',       desc:'Il portiere protagonista'},
   {id:'stats',  kind:'stats', icon:'stats', title:'Statistiche',  desc:'Possesso, tiri, xG e altri numeri'},
-  {id:'awards', kind:'award', icon:'motm', title:'MOTM e POTM', desc:'Man of the Match o Player of the Month'},
+  {id:'awards', kind:'award', icon:'motm', title:'Premi', desc:'Man of the Match o Player of the Month'},
   {id:'potm',   kind:'potm',  icon:'potm', title:'Player of the Month', desc:'Poster oro del giocatore del mese, con la sua foto'},
   {id:'motm',   kind:'motm',  icon:'motm', title:'Man of the Match', desc:'Poster del migliore in campo, con la sua foto'},
   {id:'kick',   kind:'match', phase:'kick',       icon:'kick', title:'Kick Off',    desc:'Si parte: la partita sta per iniziare'},
