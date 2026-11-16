@@ -14,6 +14,8 @@ cambiano a ogni grafica (mai capovolti: pochi gradi), decisi da `seed`: la stess
 rifatta con lo stesso seed esce identica.
 
 Dal testo vengono tolti in automatico gli emoji e la firma "👉 @Juventus_Reborn".
+La fonte (righe "📰 ilBianconero", "📲 Giovanni Albanese - Gazzetta dello Sport" dei post del canale)
+va in un blocco nero a parte sotto il testo, scritta in crema.
 """
 import io
 import re
@@ -52,6 +54,12 @@ CREAM = np.array(cp.CREAM, np.float32) / 255
 ANTON, MONO = cp.ANTON, cp.MONO
 FONT_FILE = 'Poppins-Medium.ttf'     # usato dalle citazioni (ig_quote)
 MAX_TEXT = 500
+MAX_SOURCE = 90
+SRC_SIZE = 46                        # fonte: grandezza del testo nel blocco nero (fissa)
+SRC_PAD = (34, 14)
+SRC_GAP = 54                         # tra il testo e il blocco della fonte
+# Riga della fonte nei post del canale: 📰 / 📲 / 🗞 seguiti dal nome (solo il simbolo non basta)
+_SOURCE_LINE = re.compile('^[ \t]*(?:\U0001F4F0|\U0001F4F2|\U0001F5DE)\uFE0F?[ \t]*(\\S[^\n]*)$', re.M)
 
 # Etichetta in alto: chiave della Mini App -> parole (una striscia ciascuna)
 LABELS = {
@@ -102,6 +110,22 @@ def tidy(value):
     text = strip_emoji(text.replace('\r\n', '\n').replace('\r', '\n'))
     lines = [' '.join(line.split()) for line in text.split('\n')]
     return re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()
+
+
+def split_source(value):
+    """(testo senza le righe della fonte, fonte). Più righe di fonte: unite con " · "."""
+    text = str(value or '').replace('\r\n', '\n').replace('\r', '\n')
+    found = [m.group(1).strip() for m in _SOURCE_LINE.finditer(text)]
+    return _SOURCE_LINE.sub('', text), ' · '.join(f for f in found if f)
+
+
+def clean_source(value):
+    """Fonte su una riga, senza emoji (al massimo MAX_SOURCE caratteri)."""
+    _, inside = split_source(value)
+    src = ' '.join(tidy(inside or value).split())
+    if len(src) > MAX_SOURCE:
+        raise ValueError(f'Fonte troppo lunga (massimo {MAX_SOURCE} caratteri).')
+    return src
 
 
 def clean_text(value):
@@ -189,11 +213,25 @@ def _label_height(parts):
     return sum(p.height + 32 for p in parts) + LABEL_VSEP * max(len(parts) - 1, 0)
 
 
-def layout(text, label, photo_size=None):
+def source_word(source):
+    """Maschera della fonte su una riga, o None. Se è troppo lunga resta alta uguale e si stringe."""
+    if not source:
+        return None
+    t = cp._word(source, SRC_SIZE, MONO, 1)
+    room = TEXT_W - 2 * SRC_PAD[0]
+    return t.resize((room, t.height), Image.LANCZOS) if t.width > room else t
+
+
+def source_height(source):
+    t = source_word(source)
+    return t.height + 2 * SRC_PAD[1] + SRC_GAP if t else 0
+
+
+def layout(text, label, photo_size=None, source=''):
     """Misure della colonna: (parole etichetta, righe del testo, grandezza, altezza foto, y di partenza).
-    photo_size = (larghezza, altezza) della foto o None."""
+    photo_size = (larghezza, altezza) della foto o None. source: fonte (blocco nero sotto il testo)."""
     parts = _label_words(LABELS[label_key(label)], 150 if photo_size else 200)
-    room = BOTTOM - TOP
+    room = BOTTOM - TOP - source_height(source)
     lab_h = _label_height(parts)
     gaps = GAP * max(bool(parts) + bool(photo_size) + bool(text) - 1, 0) + (TILT_PAD if parts and photo_size else 0)
     size = font_max(text, bool(photo_size)) if text else 0
@@ -213,14 +251,14 @@ def layout(text, label, photo_size=None):
         elif used <= room or not text or size <= FS_MIN:
             break
         size -= 2
-    total = lab_h + text_height(lines, size) + gaps + ph_h
+    total = lab_h + text_height(lines, size) + gaps + ph_h + source_height(source)
     # con l'etichetta: lei fissa in alto (sotto il nome di Instagram), il resto centrato dopo
     return parts, lines, size, ph_h, TOP if parts else TOP + max((room - total) / 2, 0)
 
 
-def content_y(top, lines, size, ph_h):
+def content_y(top, lines, size, ph_h, source=''):
     """y di foto + testo sotto l'etichetta: a metà tra l'etichetta e il logo JR, senza uscire da BOTTOM."""
-    rest = text_height(lines, size) + ph_h + (GAP if lines and ph_h else 0)
+    rest = text_height(lines, size) + ph_h + (GAP if lines and ph_h else 0) + source_height(source)
     return top + max(min((LOGO_Y - top - rest) / 2, BOTTOM - top - rest), 0)
 
 
@@ -381,8 +419,10 @@ def _tilt(rng, lo, hi):
 
 
 # ---------------------------------------------------------------- grafica
-def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None):
+def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None, source=''):
+    text, found = split_source(text)
     text = clean_text(text)
+    source = clean_source(source or found)
     if not text and photo is None:
         raise ValueError('Scrivi un testo o scegli una foto.')
     psize = None
@@ -393,7 +433,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     if seed is None:
         seed = int(np.random.default_rng().integers(1 << 30))
     rng = np.random.default_rng(seed)
-    parts, lines, size, ph_h, y = layout(text, label, psize)
+    parts, lines, size, ph_h, y = layout(text, label, psize, source)
 
     img = cp._paper((W, H), PAPER, seed=int(rng.integers(1 << 20))).copy()
     light = cp._crumple((W, H), int(rng.integers(1 << 20)), 0.7, folds=3)
@@ -414,7 +454,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
                      sh=(6, 10, 8, .4), breakup=.08, fringe=True)
         yy += ph + LABEL_VSEP
     if parts:
-        y = content_y(y + h + GAP + (TILT_PAD if photo is not None else 0), lines, size, ph_h)
+        y = content_y(y + h + GAP + (TILT_PAD if photo is not None else 0), lines, size, ph_h, source)
 
     if photo is not None:
         img = _photo(img, photo, W / 2, y + ph_h / 2, ph_h, _tilt(rng, 1.5, 4), rng, 1.6 if lines else 0)
@@ -430,6 +470,16 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
         img = _piece(img, t, (W / 2 + rng.uniform(-8, 8), y + h / 2), float(rng.uniform(-1.2, 1.2)),
                      STRIP, ink, int(rng.integers(1 << 20)), pad=(25, (h - t.height) // 2))
         y += h + _line_gap(size)
+
+    # fonte: blocco di carta nero strappato (come l'etichetta), scritta crema
+    src = source_word(source)
+    if src is not None:
+        y += SRC_GAP - (_line_gap(size) if lines else 0)
+        bh = src.height + 2 * SRC_PAD[1]
+        img = _piece(img, src, (W / 2 + rng.uniform(-6, 6), y + bh / 2), float(rng.uniform(-1.5, 1.5)),
+                     BLACK, CREAM, int(rng.integers(1 << 20)), pad=SRC_PAD, tear=1.5,
+                     sh=(4, 7, 6, .35), breakup=.06, fringe=True)
+        y += bh
 
     img = _logo_stamp(img, LOGO_Y, int(rng.integers(1 << 20)))
     img = _finish(img, light, .035, int(rng.integers(1 << 20)))

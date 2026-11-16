@@ -305,7 +305,7 @@ class Renderer:
             return ig_story.render(text=data.get('text', ''),
                                    photo=self._photo(data) if data.get('photo_id') else None,
                                    color=data.get('color', 'black'), label=data.get('label', 'breaking'),
-                                   seed=data.get('seed'))
+                                   seed=data.get('seed'), source=data.get('source', ''))
 
         if kind == 'rin':
             from graphics import rinnovo

@@ -346,13 +346,17 @@ def _build_state(envelope, catalog, now, expected_session):
 
     # STORIE IG - Breaking News: niente partita, solo testo e/o foto (almeno uno dei due).
     if kind == 'igbn':
-        text = ig_story.clean_text(incoming.get('text'))
+        raw, found = ig_story.split_source(incoming.get('text'))
+        text = ig_story.clean_text(raw)
+        source = ig_story.clean_source(incoming.get('source') or found)
         photo_id = incoming.get('photo_id')
         if not text and not photo_id:
             raise ValueError('Scrivi un testo o scegli una foto.')
         # seed: gli angoli delle strisce cambiano a ogni grafica, ma la stessa grafica rifatta resta uguale
         data = {'kind': 'igbn', 'text': text, 'color': ig_story.text_color(incoming.get('color')),
                 'label': ig_story.label_key(incoming.get('label')), 'seed': random.randrange(1 << 30)}
+        if source:
+            data['source'] = source
         if photo_id:
             data['photo_id'] = _photo_id(photo_id)
         return {

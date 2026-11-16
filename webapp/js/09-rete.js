@@ -39,7 +39,8 @@ function buildPayload(ghost=false) {
   if (kind === 'igbn') {
     const text = $('igText').value.trim();
     if (!text && !igb.id) throw new Error('Scrivi un testo o scegli una foto.');
-    return {v:1, action:'render', session, data:{kind:'igbn', text, color:igColor, label:igLabel, ...(igb.id ? {photo_id:igb.id} : {})}};
+    const source = $('igSource').value.trim();
+    return {v:1, action:'render', session, data:{kind:'igbn', text, color:igColor, label:igLabel, ...(source ? {source} : {}), ...(igb.id ? {photo_id:igb.id} : {})}};
   }
   if (kind === 'conv') return convPayload();
   if (kind === 'table') {

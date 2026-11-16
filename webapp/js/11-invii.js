@@ -433,6 +433,20 @@ $('igOpenPhr').addEventListener('click', openIgPhrases);
 $('igPhraseSave').addEventListener('click', savePhrase);
 $('igText').addEventListener('input', renderPhrases);
 
+// Fonte della notizia: le righe "📰 ilBianconero" / "📲 Nome - Testata" (anche incollate o prese dal
+// canale) escono dal testo e vanno nel campo Fonte, che diventa un blocco nero nella grafica.
+const IG_SOURCE_LINE = /^[ \t]*(?:\u{1F4F0}|\u{1F4F2}|\u{1F5DE})\uFE0F?[ \t]*(\S[^\n]*)$/gmu;
+function igSplitSource() {
+  const box = $('igText'), text = box.value, found = [];
+  const rest = text.replace(IG_SOURCE_LINE, (_, name) => { found.push(name.trim()); return ''; });
+  if (!found.length) return;
+  box.value = rest.replace(/\n{3,}/g, '\n\n').trim();
+  $('igSource').value = found.join(' · ').slice(0, 90);
+  haptic('select');
+  igRefresh();
+}
+$('igText').addEventListener('input', igSplitSource);
+
 /* ----- ImageGEN sta per spegnersi ----- */
 // Ultimi 5 minuti: riquadro come quelli di errore ma neutro, in alto su ogni pagina, fino alla
 // chiusura. Se c'è ancora margine, ricorda che dal cronometro si arriva a 60 minuti.
@@ -577,7 +591,7 @@ async function pickIgTg(post, photoUrl) {
     }
   }
   haptic('success');
-  if (post.text) $('igText').value = String(post.text).slice(0, 500);
+  if (post.text) { $('igText').value = String(post.text).slice(0, 500); igSplitSource(); }
   igRefresh();
   renderPhrases();
   navDir = -1;

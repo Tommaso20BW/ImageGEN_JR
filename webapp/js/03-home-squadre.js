@@ -261,6 +261,7 @@ function resetAllData() {
   clearPhase();
   igClearPhoto();
   $('igText').value = '';
+  $('igSource').value = '';
   igColor = 'black';
   igLabel = 'breaking';
   if (typeof setIgLabel === 'function') setIgLabel(igLabel);
