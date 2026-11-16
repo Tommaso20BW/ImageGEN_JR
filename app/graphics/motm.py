@@ -305,6 +305,7 @@ def _runs(xs, gap):
 
 
 GRAIN = .03          # grana del giocatore (0 = niente)
+BACK_SHADOW = (16, .09, 8, 10)   # ombra dietro il giocatore: sfocatura, forza, spostamento x, y
 
 
 def _place_player(c, person, frame):
@@ -342,6 +343,16 @@ def _place_player(c, person, frame):
                 halo = np.maximum(halo, np.exp(-e2 * 2) * .18)
             sh = np.maximum(gaussian_filter(sh, 2 * K), halo)
             c.a[sy0:sy1, sx0:sx1] *= 1 - sh[..., None]
+    # ombra leggera dietro il giocatore: sagoma sfocata, spostata un po' in basso a destra
+    pad = int(60 * K)
+    big = np.pad(a, pad)
+    soft = gaussian_filter(big, BACK_SHADOW[0] * K) * BACK_SHADOW[1]
+    dx, dy = int(BACK_SHADOW[2] * K), int(BACK_SHADOW[3] * K)
+    bx0, by0 = x - pad + dx, y - pad + dy
+    cx0, cy0 = max(bx0, 0), max(by0, 0)
+    cx1, cy1 = min(bx0 + soft.shape[1], W), min(by0 + soft.shape[0], H)
+    if cx1 > cx0 and cy1 > cy0:
+        c.a[cy0:cy1, cx0:cx1] *= 1 - soft[cy0 - by0:cy1 - by0, cx0 - bx0:cx1 - bx0, None]
     # grana leggera sul giocatore (fissa, uguale a ogni render)
     g = gaussian_filter(np.random.default_rng(9).normal(0, 1, a.shape).astype(np.float32), .6 * K)
     c.layer(np.clip(_arr(p.convert('RGB')) + g[..., None] * GRAIN, 0, 1), a, x, y)
