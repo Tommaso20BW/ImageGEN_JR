@@ -54,6 +54,8 @@ class CanaleTests(unittest.TestCase):
         self.assertEqual([p['id'] for p in posts], ['13', '10'])
         self.assertEqual(len(posts[0]['photos']), 2)
         self.assertEqual(posts[0]['text'], 'Album Juve')
+        self.assertEqual(posts[0]['source'], '')
+        self.assertEqual(posts[1]['source'], 'Nicolò Schira')
         self.assertEqual(len(tgchannel.fetch(session=Fake(), limit=1)), 1)
 
     def test_photo_only_from_telegram_cdn(self):

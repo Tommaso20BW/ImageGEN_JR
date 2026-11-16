@@ -435,7 +435,7 @@ $('igText').addEventListener('input', renderPhrases);
 
 // Fonte della notizia: le righe "📰 ilBianconero" / "📲 Nome - Testata" (anche incollate o prese dal
 // canale) escono dal testo e vanno nel campo Fonte, che diventa un blocco nero nella grafica.
-const IG_SOURCE_LINE = /^[ \t]*(?:\u{1F4F0}|\u{1F4F2}|\u{1F5DE})\uFE0F?[ \t]*(\S[^\n]*)$/gmu;
+const IG_SOURCE_LINE = /^[ \t]*(?:\u{1F4F0}|\u{1F4F2})\uFE0F?[ \t]*(\S[^\n]*)$/gmu;
 function igSplitSource() {
   const box = $('igText'), text = box.value, found = [];
   const rest = text.replace(IG_SOURCE_LINE, (_, name) => { found.push(name.trim()); return ''; });
@@ -592,6 +592,7 @@ async function pickIgTg(post, photoUrl) {
   }
   haptic('success');
   if (post.text) { $('igText').value = String(post.text).slice(0, 500); igSplitSource(); }
+  if (post.text || post.source) $('igSource').value = String(post.source || '').slice(0, 90);
   igRefresh();
   renderPhrases();
   navDir = -1;

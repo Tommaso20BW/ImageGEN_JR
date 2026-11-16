@@ -1,8 +1,9 @@
 """Storia IG: ultimi post del canale Telegram (pagina pubblica t.me/s/<canale>) come testo della storia,
 con le foto del post (un album ne ha più d'una: si sceglie nella Mini App).
 
-Il testo arriva già pulito come nelle altre grafiche: senza emoji, senza la firma
-"👉 @Juventus_Reborn" e senza la riga della fonte ("📲 Nicolò Schira").
+Il testo arriva già pulito come nelle altre grafiche: senza emoji e senza la firma
+"👉 @Juventus_Reborn". La riga della fonte ("📲 Nicolò Schira", "📰 ilBianconero") esce dal testo
+e arriva a parte in "source" (blocco nero sotto il testo della storia).
 """
 from __future__ import annotations
 
@@ -14,7 +15,6 @@ import requests
 CHANNEL = 'juventus_reborn'
 PAGE = 'https://t.me/s/{channel}'
 LIMIT = 20
-_SOURCE = re.compile(r'^\s*📲')          # riga della fonte, prima di togliere gli emoji
 _HASHTAGS = re.compile(r'^(?:#\w+\s*)+$')
 _SIGNED = re.compile(r'@Juventus_Reborn\b', re.I)   # si propongono solo i post con la firma del canale
 _PHOTO_URL = re.compile(r"background-image:\s*url\(['\"]?(https://[^'\")]+)")
@@ -79,14 +79,20 @@ def parse(page_html: str) -> list[dict]:
 def story_text(raw: str) -> str:
     """Testo per la storia: niente fonte, firma, hashtag finali ed emoji."""
     from graphics.ig_quote import tidy
-    lines = [l for l in str(raw or '').replace('\r', '').split('\n') if not _SOURCE.match(l)]
-    text = tidy('\n'.join(lines))
+    text = tidy(story_source(raw)[0])
     lines = [l for l in text.split('\n') if not _HASHTAGS.match(l.strip())]
     return re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()
 
 
+def story_source(raw: str) -> tuple[str, str]:
+    """(testo senza le righe della fonte, fonte): va letta prima di togliere gli emoji."""
+    from graphics.ig_story import split_source
+    return split_source(raw)
+
+
 def fetch(channel: str = CHANNEL, limit: int = LIMIT, session=None) -> list[dict]:
     """Ultimi `limit` post firmati @Juventus_Reborn (con testo o foto), dal più recente."""
+    from graphics.ig_quote import tidy
     session = session or requests.Session()
     url, posts, seen = PAGE.format(channel=channel), [], set()
     params = {}
@@ -107,10 +113,12 @@ def fetch(channel: str = CHANNEL, limit: int = LIMIT, session=None) -> list[dict
         if not _SIGNED.search(p['text']):      # LiveScore e altri post senza firma: non sono notizie
             continue
         text = story_text(p['text'])
-        if _RUBRICHE.match(text):
+        source = story_source(p['text'])[1]
+        if _RUBRICHE.match(text) or _RUBRICHE.match(source):   # 📰☀️ PRIME PAGINE: il simbolo è quello della fonte
             continue
         if text or p['photos']:
-            out.append({'id': p['id'], 'date': p['date'], 'text': text, 'photos': p['photos'][:10]})
+            out.append({'id': p['id'], 'date': p['date'], 'text': text, 'source': tidy(source),
+                        'photos': p['photos'][:10]})
         if len(out) >= limit:
             break
     return out

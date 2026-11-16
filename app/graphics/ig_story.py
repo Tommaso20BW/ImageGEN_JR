@@ -58,8 +58,8 @@ MAX_SOURCE = 90
 SRC_SIZE = 46                        # fonte: grandezza del testo nel blocco nero (fissa)
 SRC_PAD = (34, 14)
 SRC_GAP = 54                         # tra il testo e il blocco della fonte
-# Riga della fonte nei post del canale: 📰 / 📲 / 🗞 seguiti dal nome (solo il simbolo non basta)
-_SOURCE_LINE = re.compile('^[ \t]*(?:\U0001F4F0|\U0001F4F2|\U0001F5DE)\uFE0F?[ \t]*(\\S[^\n]*)$', re.M)
+# Riga della fonte nei post del canale: 📰 / 📲 seguiti dal nome (solo il simbolo non basta)
+_SOURCE_LINE = re.compile('^[ \t]*(?:\U0001F4F0|\U0001F4F2)\uFE0F?[ \t]*(\\S[^\n]*)$', re.M)
 
 # Etichetta in alto: chiave della Mini App -> parole (una striscia ciascuna)
 LABELS = {
