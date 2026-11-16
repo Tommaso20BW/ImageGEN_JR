@@ -432,7 +432,7 @@ function bdPhotosRender() {
 
 /* MOTM e POTM: giocatore scelto dalla rosa (nome e cognome li compila l'app) oppure, con +, un nome
    momentaneo scritto a mano solo per questa grafica: non finisce in nessuna lista. */
-const aw = {player:'', manual:false};
+const aw = {player:'', manual:false, names:[], name:''};
 const awFields = () => kind === 'potm' ? ['potmName','potmSurname'] : ['motmName','motmSurname'];
 // Nome e cognome dal nome completo della rosa: il cognome è quello che l'app usa ovunque.
 // Se il cognome dell'app è un soprannome (es. NICO GONZALEZ) si usa il cognome vero del nome completo.
@@ -453,19 +453,33 @@ function awRender() {
   $('awPlayerSummary').textContent = !playersLoaded ? 'Caricamento giocatori…' : !matches.length ? 'Nessun risultato.'
     : chosen ? `Selezionato: ${surnameOf(chosen)}` : aw.manual ? 'Nome momentaneo: lo scrivi nel passo dopo.' : '';
   renderResults('awPlayerList', matches, aw.player, item => surnameOf(item), awPick, null, Infinity);
+  awNameAsk();
+}
+// Più di un nome (es. Juan David): si chiede quale mettere, niente scelta già fatta.
+function awNameAsk() {
+  $('awNameAsk').hidden = aw.names.length < 2;
+  if (aw.names.length < 2) return;
+  const sur = $(awFields()[1]).value;
+  renderOptions('awNameOpts', aw.names.map((n, i) => [String(i), `${n} ${sur}`]), aw.name, v => {
+    clearError();
+    aw.name = v; $(awFields()[0]).value = aw.names[+v];
+    setTimeout(() => { if (flow[flowIndex] === 'awplayer') nextField(true); }, 180);
+  });
 }
 function awPick(item) {
   clearError();
-  aw.player = item.name; aw.manual = false;
-  const [first, sur] = awSplit(item), [nId, sId] = awFields();
-  $(nId).value = first; $(sId).value = sur;
+  aw.player = item.name; aw.manual = false; aw.name = '';
+  const [first, sur] = awSplit(item), [nId, sId] = awFields(), words = first.split(' ').filter(Boolean);
+  aw.names = words.length > 1 ? [first, ...words] : [];
+  $(nId).value = aw.names.length ? '' : first; $(sId).value = sur;
   awRender(); renderSteps();
+  if (aw.names.length) { $('awNameAsk').scrollIntoView({behavior:'smooth', block:'center'}); return; }
   setTimeout(() => { if (flow[flowIndex] === 'awplayer') nextField(true); }, 180);
 }
 function awManualStart() {
   haptic('select');
   clearError();
-  if (!aw.manual) { aw.manual = true; aw.player = ''; awFields().forEach(id => { $(id).value = ''; }); }
+  if (!aw.manual) { Object.assign(aw, {manual:true, player:'', names:[], name:''}); awFields().forEach(id => { $(id).value = ''; }); }
   awRender(); renderSteps();
   if (flow[flowIndex] === 'awplayer') nextField(true);
 }
@@ -477,13 +491,14 @@ function awNameBoxes() {
     : 'Il mese va in verticale a sinistra: puoi sceglierne più di uno.';
 }
 function awReset() {
-  Object.assign(aw, {player:'', manual:false});
+  Object.assign(aw, {player:'', manual:false, names:[], name:''});
   $('awPlayerSearch').value = '';
 }
 
 function bdValidate(step) {
   if (step === 'awkind' && kind === 'award') { showError('Scegli la grafica.'); return false; }
   if (step === 'awplayer' && !aw.player && !aw.manual) { showError('Scegli il giocatore.'); return false; }
+  if (step === 'awplayer' && aw.names.length && aw.name === '') { showError('Scegli quale nome mettere.'); return false; }
   if (step === 'bdplayer' && !bd.manual) {
     if (!bd.player) { showError('Scegli il giocatore.'); return false; }
     if (!bd.photos.length) { if (!bd.loading) bdLoad(); showError('Attendi le foto del giocatore.'); return false; }
