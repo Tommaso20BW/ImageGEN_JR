@@ -359,7 +359,7 @@ const cleanPhrase = v => String(v || '').replace(/\r/g, '').split('\n')
 const IG_LABELS = [['breaking','Breaking News'],['mercato','Calciomercato'],['ufficiale','Ufficiale'],['none','Nessuna']];
 
 function setIgLabel(key) {
-  igLabel = IG_LABELS.some(l => l[0] === key) ? key : 'breaking';
+  igLabel = IG_LABELS.some(l => l[0] === key) ? key : '';
   $('igLabels').querySelectorAll('.ig-seg').forEach(b => {
     const on = b.dataset.l === igLabel;
     b.classList.toggle('selected', on);

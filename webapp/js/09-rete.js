@@ -40,6 +40,7 @@ function buildPayload(ghost=false) {
   if (kind === 'igbn') {
     const text = $('igText').value.trim();
     if (!text && !igb.id) throw new Error('Scrivi un testo o scegli una foto.');
+    if (!igLabel) throw new Error("Scegli l'etichetta.");
     const source = $('igSource').value.trim();
     return {v:1, action:'render', session, data:{kind:'igbn', text, color:igColor, label:igLabel, ...(source ? {source} : {}), ...(igb.id ? {photo_id:igb.id} : {})}};
   }

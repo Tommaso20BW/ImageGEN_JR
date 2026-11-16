@@ -148,7 +148,7 @@ function bdoPayload() {
   if (!name) throw new Error('Scrivi il nome.');
   if (!bdo.id) throw new Error('Carica la foto.');
   return {v:1, action:'render', session, data:{kind:'bdold', name, photo_id:bdo.id, frame:{...bd.frame},
-    ...(bdo.vintage === false ? {vintage:false} : {})}};
+    vintage:!!bdo.vintage}};
 }
 
 /* Man of the Match: partita scelta dal calendario (squadre e campionato compilati da soli, sempre
@@ -468,9 +468,9 @@ function bdReset() {
   potmSel.clear(); potmMonthRender();
   bdClearUpload();
   bdoTexts();
-  bdo.vintage = true;           // filtro d'epoca acceso a ogni nuova grafica
-  $('bdoVintage').classList.add('selected');
-  $('bdoVintage').setAttribute('aria-checked','true');
+  bdo.vintage = false;          // filtro d'epoca spento a ogni nuova grafica: si accende a mano
+  $('bdoVintage').classList.remove('selected');
+  $('bdoVintage').setAttribute('aria-checked','false');
 }
 
 function initBirthday() {
@@ -485,7 +485,7 @@ function initBirthday() {
   $('bdManual').addEventListener('click',bdManualStart);
   $('bdoVintage').addEventListener('click',() => {
     haptic('select');
-    bdo.vintage = bdo.vintage === false;
+    bdo.vintage = !bdo.vintage;
     $('bdoVintage').classList.toggle('selected', bdo.vintage);
     $('bdoVintage').setAttribute('aria-checked', bdo.vintage ? 'true' : 'false');
   });
