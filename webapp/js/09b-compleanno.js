@@ -430,8 +430,60 @@ function bdPhotosRender() {
   box.appendChild(grid);
 }
 
+/* MOTM e POTM: giocatore scelto dalla rosa (nome e cognome li compila l'app) oppure, con +, un nome
+   momentaneo scritto a mano solo per questa grafica: non finisce in nessuna lista. */
+const aw = {player:'', manual:false};
+const awFields = () => kind === 'potm' ? ['potmName','potmSurname'] : ['motmName','motmSurname'];
+// Nome e cognome dal nome completo della rosa: il cognome è quello che l'app usa ovunque.
+// Se il cognome dell'app è un soprannome (es. NICO GONZALEZ) si usa il cognome vero del nome completo.
+function awSplit(p) {
+  const sur = surnameOf(p), surW = norm(sur).split(/\s+/).filter(Boolean);
+  const words = String(p.name || '').split(/\s+/).filter(Boolean);
+  const hit = (w, x) => norm(w) === x || norm(w).split(' ').includes(x);
+  const isSur = w => surW.some(x => hit(w, x));
+  let last = sur;
+  if (surW.some(x => !words.some(w => hit(w, x)))) { const m = words.filter(isSur); if (m.length) last = m.join(' '); }
+  return [motmName(words.filter(w => !isSur(w)).join(' ')), last.toUpperCase()];
+}
+function awRender() {
+  if (!playersLoaded) loadCatalogs().then(() => { if (flow[flowIndex] === 'awplayer') awRender(); }).catch(() => {});
+  $('awEyebrow').textContent = kind === 'potm' ? 'Player of the Month' : 'Man of the Match';
+  const matches = playersLoaded ? searchItems(players, $('awPlayerSearch').value) : [];
+  const chosen = players.find(p => p.name === aw.player);
+  $('awPlayerSummary').textContent = !playersLoaded ? 'Caricamento giocatori…' : !matches.length ? 'Nessun risultato.'
+    : chosen ? `Selezionato: ${surnameOf(chosen)}` : aw.manual ? 'Nome momentaneo: lo scrivi nel passo dopo.' : '';
+  renderResults('awPlayerList', matches, aw.player, item => surnameOf(item), awPick, null, Infinity);
+}
+function awPick(item) {
+  clearError();
+  aw.player = item.name; aw.manual = false;
+  const [first, sur] = awSplit(item), [nId, sId] = awFields();
+  $(nId).value = first; $(sId).value = sur;
+  awRender(); renderSteps();
+  setTimeout(() => { if (flow[flowIndex] === 'awplayer') nextField(true); }, 180);
+}
+function awManualStart() {
+  haptic('select');
+  clearError();
+  if (!aw.manual) { aw.manual = true; aw.player = ''; awFields().forEach(id => { $(id).value = ''; }); }
+  awRender(); renderSteps();
+  if (flow[flowIndex] === 'awplayer') nextField(true);
+}
+// Nome e cognome a mano solo col +: col giocatore della rosa restano nascosti (già compilati).
+function awNameBoxes() {
+  $('potmNameBox').hidden = $('motmNameBox').hidden = !aw.manual;
+  $('potmMonthHint').style.marginTop = aw.manual ? '14px' : '0';
+  $('potmLead').textContent = aw.manual ? 'Nome e cognome vanno in verticale a destra, il mese a sinistra.'
+    : 'Il mese va in verticale a sinistra: puoi sceglierne più di uno.';
+}
+function awReset() {
+  Object.assign(aw, {player:'', manual:false});
+  $('awPlayerSearch').value = '';
+}
+
 function bdValidate(step) {
   if (step === 'awkind' && kind === 'award') { showError('Scegli la grafica.'); return false; }
+  if (step === 'awplayer' && !aw.player && !aw.manual) { showError('Scegli il giocatore.'); return false; }
   if (step === 'bdplayer' && !bd.manual) {
     if (!bd.player) { showError('Scegli il giocatore.'); return false; }
     if (!bd.photos.length) { if (!bd.loading) bdLoad(); showError('Attendi le foto del giocatore.'); return false; }
@@ -466,6 +518,10 @@ function bdStepValue(step) {
   }
   if (step === 'bdmode') return labelOf(BD_MODES,bd.mode);
   if (step === 'bdoname') return $('bdoName').value.trim().toUpperCase();
+  if (step === 'awplayer') {
+    if (aw.manual) return 'Nome momentaneo';
+    const p = players.find(x => x.name === aw.player); return p ? surnameOf(p) : '';
+  }
   if (step === 'motminfo') return $('motmSurname').value.trim().toUpperCase();
   if (step === 'potminfo') return [$('potmSurname').value.trim().toUpperCase(), potmMonths().join('/')].filter(Boolean).join(' · ');
   if (step === 'bdophoto') return bdo.loading ? 'Scontorno…' : bdo.id ? 'Caricata' : '';
@@ -501,6 +557,7 @@ function bdReset() {
   Object.assign(bd,{mode:'', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
   ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName',...MOTM_FIELDS,...POTM_FIELDS].forEach(id => { $(id).value = ''; });
   motm.key = '';
+  awReset();
   potmSel.clear(); potmMonthRender();
   bdClearUpload();
   bdoTexts();
@@ -519,6 +576,8 @@ function initBirthday() {
   ['motmName','potmName'].forEach(id => $(id).addEventListener('change',() => { $(id).value = motmName($(id).value); renderSteps(); }));
   $('bdoFile').addEventListener('change',e => bdoUpload(e.target.files && e.target.files[0]));
   $('bdManual').addEventListener('click',bdManualStart);
+  $('awManual').addEventListener('click',awManualStart);
+  $('awPlayerSearch').addEventListener('input',() => awRender());
   $('bdoVintage').addEventListener('click',() => {
     haptic('select');
     bdo.vintage = !bdo.vintage;
