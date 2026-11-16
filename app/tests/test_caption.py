@@ -104,12 +104,7 @@ class CaptionTest(unittest.TestCase):
 
 
 class AwardsCaptionTest(unittest.TestCase):
-    """MOTM, POTM e Here We Go come gli ultimi post del canale (bandiera finta: niente rete)."""
-
-    def setUp(self):
-        p = mock.patch.object(caption, '_nation', lambda name: '[F]')
-        p.start()
-        self.addCleanup(p.stop)
+    """MOTM, POTM e Here We Go come gli ultimi post del canale (Here We Go senza bandiera)."""
 
     def plain(self, data):
         return re.sub(r'<tg-emoji emoji-id="\d+">(.*?)</tg-emoji>', r'\1', caption.build(data))
@@ -131,7 +126,7 @@ class AwardsCaptionTest(unittest.TestCase):
 
     def test_here_we_go(self):
         text = self.plain({'kind': 'af', 'name': '', 'surname': 'NETO'})
-        self.assertTrue(text.startswith('✅[F] HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.\n\n<i>📲 Fabrizio Romano</i>'), text)
+        self.assertTrue(text.startswith('✅ HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.\n\n<i>📲 Fabrizio Romano</i>'), text)
         self.assertTrue(text.endswith('@Juventus_Reborn'))
 
 

@@ -310,15 +310,6 @@ def _who(data):
     return _person_name(' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip())
 
 
-def _nation(name):
-    """Bandiera della nazionale del giocatore ('' se non si trova o non c'è rete)."""
-    try:
-        from graphics import compleanno
-        return flag(compleanno.nationality(name))
-    except Exception:  # noqa: BLE001
-        return ''
-
-
 def _poll_year(months, today=None):
     """Anno dei mesi del sondaggio: quello di oggi, o il precedente se i mesi devono ancora venire
     (sondaggio di dicembre pubblicato a gennaio)."""
@@ -354,9 +345,9 @@ def _other_caption(data):
         return (f"{E_STATS}{E_EYES} Il verdetto del sondaggio su <i>Telegram</i> è netto: <b>{html.escape(_who(data))}</b> "
                 f"è stato eletto miglior giocatore della <b>Juventus</b> {html.escape(span)} {_poll_year(months)}.")
     if kind == 'af':
-        # come sul canale: ✅🇧🇷 HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.  +  📲 Fabrizio Romano
+        # ✅ HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.  +  📲 Fabrizio Romano (senza bandiera)
         who = _who(data)
-        return (f"{E_OFFICIAL}{_nation(who)} HERE WE GO: <b>{html.escape(who)}</b> alla <b>Juventus</b>.\n\n"
+        return (f"{E_OFFICIAL} HERE WE GO: <b>{html.escape(who)}</b> alla <b>Juventus</b>.\n\n"
                 f"<i>{E_SOURCE} Fabrizio Romano</i>")
     if kind == 'table':
         comp = str(data.get('competition') or '').upper()
