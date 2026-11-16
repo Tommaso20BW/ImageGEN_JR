@@ -40,6 +40,7 @@ E_WORLD = emoji('5399898266265475100', '🌍')
 E_CAKE = emoji('5370999492914976897', '🎂')
 E_STAR = emoji('5438496463044752972', '⭐️')
 E_TOP = emoji('5422354988103901774', '🔝')
+E_EYES = emoji('5424885441100782420', '👀')
 E_SOURCE = emoji('5785366354106261925', '📲')     # fonte del mercato (📲 Fabrizio Romano)
 
 # Bandiere animate del canale (codice ISO -> emoji personalizzata); le altre nazioni hanno la bandiera normale.
@@ -318,6 +319,15 @@ def _nation(name):
         return ''
 
 
+def _poll_year(months, today=None):
+    """Anno dei mesi del sondaggio: quello di oggi, o il precedente se i mesi devono ancora venire
+    (sondaggio di dicembre pubblicato a gennaio)."""
+    import datetime
+    today = today or datetime.date.today()
+    nums = [MONTHS.index(m.upper()) + 1 for m in months if m.upper() in MONTHS]
+    return today.year - 1 if nums and min(nums) > today.month else today.year
+
+
 def _motm_tag(data):
     """Hashtag della partita del MOTM (#JuveNapoli) dalle squadre scritte nella grafica."""
     from livescore.core import team_names
@@ -336,11 +346,13 @@ def _other_caption(data):
         # come sul canale: ⭐️🔝 𝐌𝐎𝐓𝐌 #JuveNapoli: <b>Kerim Alajbegovic</b>
         return f"{E_STAR}{E_TOP} 𝐌𝐎𝐓𝐌 {_motm_tag(data)}: <b>{html.escape(_who(data))}</b>"
     if kind == 'potm':
-        # come sul canale: 🇩🇪🔝 <b>Nick Woltemade</b> è l’MVP di ottobre, eletto dai tifosi!
-        who = _who(data)
+        # come sul canale: 📊👀 Il verdetto del sondaggio su <i>Telegram</i> è netto: <b>Nico Gonzalez</b> è stato
+        # eletto miglior giocatore della <b>Juventus</b> nei mesi di agosto e settembre 2026.
         months = [m.strip().lower() for m in str(data.get('month') or '').split('/') if m.strip()]
         when = ' e '.join(filter(None, [', '.join(months[:-1]), months[-1] if months else '']))
-        return f"{_nation(who)}{E_TOP} <b>{html.escape(who)}</b> è l’MVP di {html.escape(when)}, eletto dai tifosi!"
+        span = f"nei mesi di {when}" if len(months) > 1 else f"nel mese di {when}"
+        return (f"{E_STATS}{E_EYES} Il verdetto del sondaggio su <i>Telegram</i> è netto: <b>{html.escape(_who(data))}</b> "
+                f"è stato eletto miglior giocatore della <b>Juventus</b> {html.escape(span)} {_poll_year(months)}.")
     if kind == 'af':
         # come sul canale: ✅🇧🇷 HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.  +  📲 Fabrizio Romano
         who = _who(data)

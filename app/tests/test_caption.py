@@ -120,8 +120,14 @@ class AwardsCaptionTest(unittest.TestCase):
         self.assertIn('#JuveMilan', self.plain({'kind': 'motm', 'name': 'K', 'surname': 'Y', 'home': 'JUVENTUS', 'away': 'AC MILAN'}))
 
     def test_potm(self):
+        y = caption._poll_year(['agosto', 'settembre'])
         text = self.plain({'kind': 'potm', 'name': 'NICO', 'surname': 'GONZALEZ', 'month': 'AGOSTO/SETTEMBRE'})
-        self.assertTrue(text.startswith('[F]🔝 <b>Nico Gonzalez</b> è l’MVP di agosto e settembre, eletto dai tifosi!'), text)
+        self.assertTrue(text.startswith('📊👀 Il verdetto del sondaggio su <i>Telegram</i> è netto: <b>Nico Gonzalez</b> è stato '
+                                        f'eletto miglior giocatore della <b>Juventus</b> nei mesi di agosto e settembre {y}.'), text)
+        self.assertIn('nel mese di ottobre', self.plain({'kind': 'potm', 'name': 'G', 'surname': 'V', 'month': 'OTTOBRE'}))
+        import datetime
+        self.assertEqual(caption._poll_year(['dicembre'], datetime.date(2027, 1, 3)), 2026)
+        self.assertEqual(caption._poll_year(['ottobre'], datetime.date(2026, 11, 2)), 2026)
 
     def test_here_we_go(self):
         text = self.plain({'kind': 'af', 'name': '', 'surname': 'NETO'})
