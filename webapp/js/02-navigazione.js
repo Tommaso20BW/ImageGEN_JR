@@ -274,8 +274,9 @@ function buildFlow() {
   else if (kind === 'conv') flow = ['convlist'];
   else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'rin') flow = ['rincontent'];
-  else if (kind === 'potm') flow = ['potminfo','bdophoto'];
-  else if (kind === 'motm') flow = [...pick(base),'motminfo','bdophoto','bdpos'];
+  else if (kind === 'award') flow = ['awkind'];                     // MOTM e POTM: prima si sceglie quale
+  else if (kind === 'potm') flow = ['awkind','potminfo','bdophoto'];
+  else if (kind === 'motm') flow = ['awkind',...pick(base),'motminfo','bdophoto','bdpos'];
   else if (kind === 'bday') flow = bd.mode === 'old' ? ['bdmode','bdoname','bdophoto','bdpos'] : ['bdmode','bdplayer',bd.manual ? 'bdophoto' : 'bdphoto','bdinfo','bdpos'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent', {tg:'igtg', phr:'igphr'}[igPicking] || 'igsent'] : ['igcontent'];
   // Storia: niente editor della foto (la storia va intera nel riquadro 9:16).
@@ -360,6 +361,7 @@ function stepValue(step) {
       const t = $('igText').value.trim().length;
       return [t ? 'Testo' : '', igb.id ? 'Foto' : ''].filter(Boolean).join(' + ');
     }
+    case 'awkind': return (AW_KINDS.find(([v]) => v === kind) || ['',''])[1];
     case 'calmonth': return calMonth ? `${CAL_MONTHS[calMonth - 1]} ${$('calYear').value}` : '';
     case 'calrows': { const n = calRows.length; return n ? `${n} partit${n === 1 ? 'a' : 'e'}` : ''; }
     case 'xi11': { const n = pxiPicks.filter(Boolean).length; return n ? `${pxiModule || '?'} · ${n} / 11` : ''; }
@@ -595,13 +597,14 @@ function renderFlow() {
 }
 
 function isLastStep() {
-  return flowIndex === flow.length - 1;
+  // MOTM e POTM prima della scelta: dopo il passo "Grafica" arrivano gli altri.
+  return flowIndex === flow.length - 1 && kind !== 'award';
 }
 
 /* ---------- Option groups ---------- */
 // Ricostruisce i bottoni solo se cambiano le opzioni; altrimenti sposta la selezione
 // sugli elementi esistenti, così il passaggio radio→radio è animato.
-const AUTO_OPTS = new Set(['natKindOpts','natPlayOpts','goalTypeOpts','tableCompOpts','tableViewOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts','iqModeOpts','bdModeOpts']);
+const AUTO_OPTS = new Set(['natKindOpts','natPlayOpts','goalTypeOpts','tableCompOpts','tableViewOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts','iqModeOpts','bdModeOpts','awKindOpts']);
 function renderOptions(id, options, value, onSelect) {
   const box = $(id);
   box._options = options;
@@ -684,6 +687,8 @@ function updateScreenValues() {
   });
   renderModuleButton();
   renderOptions('bdModeOpts',BD_MODES,bd.mode,bdSetMode);
+  // MOTM e POTM: scegliendo la grafica si passa a quel tipo (nessuna scelta all'inizio).
+  renderOptions('awKindOpts',AW_KINDS,AW_KINDS.some(([v]) => v === kind) ? kind : '',v => { if (v !== kind) changeKind(v,true,true); });
   renderOptions('tableCompOpts',TABLE_COMPS,tableComp,v => { tableComp = v; buildFlow(); });
   renderOptions('tableViewOpts',TABLE_VIEWS,tableView,v => { tableView = v; });
   renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); autoCalendar(); });

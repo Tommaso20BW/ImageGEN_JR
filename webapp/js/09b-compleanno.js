@@ -4,6 +4,7 @@
    ed età) → Posizione (trascina il giocatore, due dita per lo zoom). La data arriva da sola (asset o Wikidata) insieme alle foto; si può sempre correggere. */
 // Un solo Compleanno, due tipi: Rosa attuale (pose degli asset) o Ex giocatore (foto caricata).
 const BD_MODES = [['now','Rosa attuale'],['old','Ex giocatore']];
+const AW_KINDS = [['motm','Man of the Match'],['potm','Player of the Month']];
 // manual: giocatore non in elenco, aggiunto a mano con una foto caricata (scontornata dal servizio).
 // births: date di nascita della rosa (nome -> AAAA-MM-GG) per ordinare l'elenco dal prossimo compleanno.
 const bd = {mode:'', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', page:null,
@@ -394,6 +395,7 @@ function bdPhotosRender() {
 }
 
 function bdValidate(step) {
+  if (step === 'awkind' && kind === 'award') { showError('Scegli la grafica.'); return false; }
   if (step === 'bdplayer' && !bd.manual) {
     if (!bd.player) { showError('Scegli il giocatore.'); return false; }
     if (!bd.photos.length) { if (!bd.loading) bdLoad(); showError('Attendi le foto del giocatore.'); return false; }
