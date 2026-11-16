@@ -276,6 +276,7 @@ function buildFlow() {
   else if (kind === 'rin') flow = ['rincontent'];
   else if (kind === 'award') flow = ['awkind'];                     // MOTM e POTM: prima si sceglie quale
   else if (kind === 'potm') flow = ['awkind','awplayer','potminfo','bdophoto'];
+  else if (kind === 'af') flow = ['awplayer','afinfo','bdophoto','bdpos'];
   else if (kind === 'motm') flow = ['awkind',...pick(base),'awplayer','motminfo','bdophoto','bdpos'];
   else if (kind === 'bday') flow = bd.mode === 'old' ? ['bdmode','bdoname','bdophoto','bdpos'] : ['bdmode','bdplayer',bd.manual ? 'bdophoto' : 'bdphoto','bdinfo','bdpos'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent', {tg:'igtg', phr:'igphr'}[igPicking] || 'igsent'] : ['igcontent'];

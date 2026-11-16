@@ -56,7 +56,7 @@ function bdPhotoOf(id) { return bd.photos.find(p => p.id === id); }
 const bdo = {id:'', thumb:'', height:0, page:null, loading:false};
 const bdOld = () => kind === 'bday' && bd.mode === 'old';
 // Foto caricata dall'utente: Ex giocatore, o giocatore della rosa aggiunto a mano.
-const bdUploaded = () => bdOld() || kind === 'motm' || kind === 'potm' || (kind === 'bday' && bd.manual);
+const bdUploaded = () => bdOld() || kind === 'motm' || kind === 'potm' || kind === 'af' || (kind === 'bday' && bd.manual);
 function bdClearUpload() {
   Object.assign(bdo,{id:'', thumb:'', height:0, page:null, loading:false});
   $('bdoPreview').hidden = true;
@@ -64,8 +64,8 @@ function bdClearUpload() {
 }
 // Testi della schermata Foto caricata: diversi per Ex giocatore e giocatore aggiunto a mano.
 function bdoTexts() {
-  if (kind === 'motm' || kind === 'potm') {
-    $('bdoEyebrow').textContent = kind === 'potm' ? 'Player of the Month' : 'Man of the Match';
+  if (kind === 'motm' || kind === 'potm' || kind === 'af') {
+    $('bdoEyebrow').textContent = awTitle();
     $('bdoLead').textContent = "Carica la foto del giocatore, meglio se a figura intera: lo scontorno lo fa l'app.";
     return;
   }
@@ -121,7 +121,7 @@ async function bdoUpload(file) {
     if (busy === myBusy) $('busySub').textContent = 'Separo il giocatore dallo sfondo: ci vogliono alcuni secondi.';
     const cut = await netFetch(`${directBase}/bdoldcut`,{
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-      body:JSON.stringify({v:1, session, photo_id:ub.photo_id, mode:kind === 'motm' || kind === 'potm' ? kind : bdOld() ? 'old' : 'now'})
+      body:JSON.stringify({v:1, session, photo_id:ub.photo_id, mode:kind === 'motm' || kind === 'potm' || kind === 'af' ? kind : bdOld() ? 'old' : 'now'})
     }, 120000);
     const cb = await cut.json().catch(() => ({}));
     if (!cut.ok || !cb.ok) throw new Error(cb.error || 'Scontorno non riuscito.');
@@ -259,6 +259,17 @@ function motmPayload() {
   if (!bdo.id) throw new Error('Carica la foto.');
   return {v:1, action:'render', session, data:{kind:'motm', surname:surname.toUpperCase(), name:motmName($('motmName').value), home, away,
     comp:$('motmComp').value.trim(), photo_id:bdo.id, frame:{...bd.frame}}};
+}
+
+/* Affare fatto: giocatore dalla rosa o con + a mano, nome e cognome (sempre modificabili),
+   foto caricata e scontornata, posizione libera nello stesso editor. */
+const AF_FIELDS = ['afName','afSurname'];
+function afPayload() {
+  const surname = $('afSurname').value.trim();
+  if (!surname) throw new Error('Scrivi il cognome.');
+  if (!bdo.id) throw new Error('Carica la foto.');
+  return {v:1, action:'render', session, data:{kind:'af', surname:surname.toUpperCase(),
+    name:$('afName').value.trim().toUpperCase(), photo_id:bdo.id, frame:{...bd.frame}}};
 }
 
 function bdRender() {
@@ -433,7 +444,8 @@ function bdPhotosRender() {
 /* MOTM e POTM: giocatore scelto dalla rosa (nome e cognome li compila l'app) oppure, con +, un nome
    momentaneo scritto a mano solo per questa grafica: non finisce in nessuna lista. */
 const aw = {player:'', manual:false, names:[], name:''};
-const awFields = () => kind === 'potm' ? ['potmName','potmSurname'] : ['motmName','motmSurname'];
+const awFields = () => kind === 'potm' ? ['potmName','potmSurname'] : kind === 'af' ? AF_FIELDS : ['motmName','motmSurname'];
+const awTitle = () => ({potm:'Player of the Month', af:'Here We Go'})[kind] || 'Man of the Match';
 // Nome e cognome dal nome completo della rosa: il cognome è quello che l'app usa ovunque.
 // Se il cognome dell'app è un soprannome (es. NICO GONZALEZ) si usa il cognome vero del nome completo.
 function awSplit(p) {
@@ -447,7 +459,7 @@ function awSplit(p) {
 }
 function awRender() {
   if (!playersLoaded) loadCatalogs().then(() => { if (flow[flowIndex] === 'awplayer') awRender(); }).catch(() => {});
-  $('awEyebrow').textContent = kind === 'potm' ? 'Player of the Month' : 'Man of the Match';
+  $('awEyebrow').textContent = awTitle();
   const matches = playersLoaded ? searchItems(players, $('awPlayerSearch').value) : [];
   const chosen = players.find(p => p.name === aw.player);
   $('awPlayerSummary').textContent = !playersLoaded ? 'Caricamento giocatori…' : !matches.length ? 'Nessun risultato.'
@@ -510,6 +522,7 @@ function bdValidate(step) {
     if (!$('potmSurname').value.trim()) { showError('Scrivi il cognome.'); return false; }
     if (!potmSel.size) { showError('Scegli il mese.'); return false; }
   }
+  if (step === 'afinfo' && !$('afSurname').value.trim()) { showError('Scrivi il cognome.'); return false; }
   if (step === 'motminfo') {
     if (!$('motmSurname').value.trim()) { showError('Scrivi il cognome.'); return false; }
     if (!$('motmHome').value.trim() || !$('motmAway').value.trim()) { showError('Scrivi le squadre.'); return false; }
@@ -538,6 +551,7 @@ function bdStepValue(step) {
     const p = players.find(x => x.name === aw.player); return p ? surnameOf(p) : '';
   }
   if (step === 'motminfo') return $('motmSurname').value.trim().toUpperCase();
+  if (step === 'afinfo') return $('afSurname').value.trim().toUpperCase();
   if (step === 'potminfo') return [$('potmSurname').value.trim().toUpperCase(), potmMonths().join('/')].filter(Boolean).join(' · ');
   if (step === 'bdophoto') return bdo.loading ? 'Scontorno…' : bdo.id ? 'Caricata' : '';
   if (step === 'bdpos') {
@@ -570,7 +584,7 @@ function bdPayload() {
 
 function bdReset() {
   Object.assign(bd,{mode:'', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
-  ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName',...MOTM_FIELDS,...POTM_FIELDS].forEach(id => { $(id).value = ''; });
+  ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName',...MOTM_FIELDS,...POTM_FIELDS,...AF_FIELDS].forEach(id => { $(id).value = ''; });
   motm.key = '';
   awReset();
   potmSel.clear(); potmMonthRender();
@@ -586,7 +600,7 @@ function initBirthday() {
   potmMonthRender();
   $('bdPlayerSearch').addEventListener('input',() => bdRender());
   $('bdBirth').addEventListener('change',() => { $('bdAge').value = bdAge($('bdBirth').value); renderSteps(); });
-  ['bdName','bdAge','bdoName',...MOTM_FIELDS,...POTM_FIELDS].forEach(id => $(id).addEventListener('input',() => renderSteps()));
+  ['bdName','bdAge','bdoName',...MOTM_FIELDS,...POTM_FIELDS,...AF_FIELDS].forEach(id => $(id).addEventListener('input',() => renderSteps()));
   // Nome in firma: iniziale maiuscola e resto minuscolo, come uscirà nel poster.
   ['motmName','potmName'].forEach(id => $(id).addEventListener('change',() => { $(id).value = motmName($(id).value); renderSteps(); }));
   $('bdoFile').addEventListener('change',e => bdoUpload(e.target.files && e.target.files[0]));
@@ -623,8 +637,9 @@ function bdLayout() {
   const [zmin, zmax] = page.zoom || [0.4, 2.5];
   const f = bd.frame;
   f.zoom = Math.min(zmax, Math.max(zmin, f.zoom));
-  f.x = Math.min(0.6, Math.max(-0.6, f.x));
-  f.y = Math.min(0.6, Math.max(-0.6, f.y));
+  const mv = page.move || 0.6;                    // Affare fatto: spostamento libero
+  f.x = Math.min(mv, Math.max(-mv, f.x));
+  f.y = Math.min(mv, Math.max(-mv, f.y));
   // Man of the Match: testa mai sopra page.top (logo Juventus), piedi mai sotto page.bottom (partita).
   if (page.top != null && page.bottom != null) {
     f.zoom = Math.min(f.zoom, (page.bottom - page.top) / p.height);
@@ -642,7 +657,7 @@ function bdLayout() {
 
 async function bdGhost() {
   let body;
-  try { body = JSON.stringify(kind === 'motm' ? motmPayload() : bdOld() ? bdoPayload() : bdPayload()); } catch (_) { return; }
+  try { body = JSON.stringify(kind === 'motm' ? motmPayload() : kind === 'af' ? afPayload() : bdOld() ? bdoPayload() : bdPayload()); } catch (_) { return; }
   const key = body.replace(/"frame":\{[^}]*\}/, '').replace(/"photo(_id)?":"[^"]*"/, '');
   const ghost = $('bdGhost');
   if (key === bd.ghostKey && bd.ghostUrl) { ghost.src = bd.ghostUrl; ghost.hidden = false; return; }
@@ -664,7 +679,7 @@ async function bdGhost() {
     ghost.hidden = false;
   } catch (_) {
   } finally {
-    if (bd.ghostKey === key) $('bdPosHint').textContent = kind === 'motm' ? 'Il giocatore sta davanti al nome, tra il logo Juventus e la partita.' : bdOld() ? 'Il giocatore sta davanti a HAPPY BIRTHDAY.' : 'Il giocatore finisce sotto la striscia del nome.';
+    if (bd.ghostKey === key) $('bdPosHint').textContent = kind === 'motm' ? 'Il giocatore sta davanti al nome, tra il logo Juventus e la partita.' : kind === 'af' ? 'Spostalo e zoomalo come vuoi: sta davanti al cognome.' : bdOld() ? 'Il giocatore sta davanti a HAPPY BIRTHDAY.' : 'Il giocatore finisce sotto la striscia del nome.';
   }
 }
 

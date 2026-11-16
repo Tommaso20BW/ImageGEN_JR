@@ -347,6 +347,13 @@ class Renderer:
             return potm.render(surname=data.get('surname', ''), name=data.get('name', ''),
                                month=data.get('month', ''), person=person, photo=photo, ghost=ghost)
 
+        if kind == 'af':
+            from graphics import affare_fatto
+
+            person = None if ghost else self.final_cutout(data['photo_id'])
+            return affare_fatto.render(surname=data.get('surname', ''), name=data.get('name', ''),
+                                       person=person, frame=data.get('frame'), ghost=ghost)
+
         if kind == 'jr':
             from graphics import photo_jr
 

@@ -468,6 +468,21 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
+    # AFFARE FATTO: foto caricata (scontornata dal servizio) e spostata a mano, nome e cognome.
+    if kind == 'af':
+        from graphics import affare_fatto as af
+        surname = af.M.clean_text(incoming.get('surname'), af.SURNAME_MAX)
+        if not surname:
+            raise ValueError('Scrivi il cognome.')
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {'kind': 'af', 'surname': surname, 'name': af.M.clean_text(incoming.get('name'), af.NAME_MAX),
+                     'photo_id': _photo_id(incoming.get('photo_id')), 'frame': af.clean_frame(incoming.get('frame'))},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
     # FOTO + JR: niente partita, solo foto e colore del logo.
     if kind == 'jr':
         try:

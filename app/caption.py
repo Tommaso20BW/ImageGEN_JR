@@ -313,6 +313,9 @@ def _other_caption(data):
         who = ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip().title()
         month = str(data.get('month') or '').title()
         return f"{E_FIRE}<b> Player of the Month</b> | {html.escape(month)}\n\n{E_OFFICIAL} <b>{html.escape(who)}</b>"
+    if kind == 'af':
+        who = ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip().title()
+        return f"{E_OFFICIAL}<b> Here We Go!</b>\n\n{E_NEW} <b>{html.escape(who)}</b> è un nuovo giocatore della Juventus."
     if kind == 'table':
         comp = str(data.get('competition') or '').upper()
         if data.get('view') == 'bracket' or comp == 'CI':

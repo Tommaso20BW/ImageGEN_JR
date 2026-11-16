@@ -208,6 +208,7 @@ button.sp-item:active{background:var(--accent-soft)}
 .ios-in::-webkit-inner-spin-button,.ios-in::-webkit-clear-button{display:none}
 /* home: icone colorate come nelle Impostazioni di iPhone */
 .hm-item[data-id="md"] .hm-ico{background:#FF9500}
+.hm-item[data-id="af"] .hm-ico{background:#34C759}
 .hm-item[data-id="pxi"] .hm-ico{background:#34C759}
 .hm-item[data-id="squad"] .hm-ico{background:#007AFF}
 .hm-item[data-id="xi"] .hm-ico{background:#5856D6}

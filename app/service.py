@@ -625,6 +625,11 @@ class Service:
             return {'thumb': 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii'),
                     'height': round(full.height * motm.base_scale(full.size)),
                     'page': {**motm.page_info(full), 'ax': round(motm.centroid(full), 4)}}
+        if (envelope or {}).get('mode') == 'af':
+            from graphics import affare_fatto as AF, motm
+            return {'thumb': 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii'),
+                    'height': round(full.height * AF.base_scale(full.size)),
+                    'page': {**AF.page_info(full), 'ax': round(motm.centroid(full), 4)}}
         if (envelope or {}).get('mode') == 'now':
             from graphics import compleanno as C
             return {'thumb': 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii'),
@@ -1676,6 +1681,9 @@ def _send_detail(data):
     if kind == 'potm':
         return {**empty, 'player': ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip(),
                 'note': f"Player of the Month · {data.get('month', '')}"}
+    if kind == 'af':
+        return {**empty, 'player': ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip(),
+                'note': 'Here We Go'}
     if kind == 'conv':
         n = len(data.get('players') or [])
         return {**empty, 'player': f'{n} giocatori',
