@@ -5,6 +5,7 @@ AFFARE FATTO tra due fili in fondo, logo JR oro in alto a destra, grana fine su 
 L'utente carica la foto (scontornata dal servizio) e la sposta a mano nell'editor.
 Asset: imagegen/affare_fatto/stadio.jpg e pennellate.png, fonts GFSDidot-Regular e BebasNeue2014."""
 import io
+import random
 import unicodedata
 from functools import lru_cache
 
@@ -22,8 +23,9 @@ FOG = (247, 224, 195)                     # crema della sfumatura in basso
 INK = (196, 146, 70)                      # oro di AFFARE FATTO e dei fili
 ARROWS = (190, 136, 56)
 # firma in basso a sinistra, sopra il filo di AFFARE FATTO: dentro il riquadro, appoggiata in basso,
-# nome rientrato un po' a destra, tutto inclinato di SIGN_TILT gradi (in salita)
-SIGN_X0, SIGN_X1, SIGN_BOTTOM, SIGN_MAX_H, SIGN_NAME_IN, SIGN_TILT = 50, 360, 1885, 135, 40, 7
+# nome sopra e cognome sotto centrati o allineati a sinistra (a caso), inclinata di SIGN_TILT gradi (in salita)
+SIGN_X0, SIGN_X1, SIGN_BOTTOM, SIGN_MAX_H, SIGN_TILT = 50, 360, 1885, 135, 7
+SIGN_ALIGNS = ('center', 'left')
 NAME_MAX, SURNAME_MAX = 16, M.SURNAME_MAX
 
 # cognome: maiuscole da TITLE_TOP a TITLE_BASE, largo da TITLE_X0 a TITLE_X1
@@ -223,10 +225,11 @@ def _fill_nonzero(mask, pts):
                 row[c0:c1] = True
 
 
-def _signature(name, surname, style=None):
+def _signature(name, surname, style=None, align=None):
     """Firma scritta a mano (calligrapher.ai, graphics/firma.py): nome sopra e cognome sotto, piena e
     piatta nell'oro di AFFARE FATTO, appena inclinata in salita, in basso a sinistra. Sempre diversa
-    (stile a caso, uguale per nome e cognome). Maschera 0..1; vuota se il sito non risponde."""
+    (stile a caso, uguale per nome e cognome). align: 'center' (righe centrate una sotto l'altra) o
+    'left' (allineate a sinistra); None = a caso. Maschera 0..1; vuota se il sito non risponde."""
     from graphics import firma
 
     m = np.zeros((H, W), np.float32)
@@ -245,6 +248,7 @@ def _signature(name, surname, style=None):
     if all(b is None for b in boxes):
         return m
     widths = [np.ptp(b[:, 0]) if b is not None else 0 for b in boxes]
+    align = align if align in SIGN_ALIGNS else random.choice(SIGN_ALIGNS)
     heights = [np.ptp(b[:, 1]) if b is not None else 0 for b in boxes]
     gap = .1 * max(heights)
     k = min((SIGN_X1 - SIGN_X0) / max(widths), SIGN_MAX_H / (sum(heights) + gap))
@@ -255,7 +259,7 @@ def _signature(name, surname, style=None):
         if bx is None:
             continue
         x0, y0 = bx[:, 0].min(), bx[:, 1].min()
-        ox = SIGN_X0 + (SIGN_NAME_IN if i == 0 else 0)
+        ox = SIGN_X0 + ((max(widths) - widths[i]) * k / 2 if align == 'center' else 0)
         for p in ps:
             q = [(((px - x0) * k + ox) * up, ((py - y0) * k + y) * up) for px, py in p]
             _fill_nonzero(big, np.array(q, np.float64))

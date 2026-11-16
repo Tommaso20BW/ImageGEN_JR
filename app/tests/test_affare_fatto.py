@@ -69,6 +69,27 @@ class RenderTest(unittest.TestCase):
         finally:
             setUpModule()
 
+    def test_signature_align(self):
+        """Nome e cognome centrati uno sotto l'altro, o allineati a sinistra; a caso solo tra i due."""
+        wide = 'M 0,0 C 30 -20, 90 -20, 120 0 C 90 5, 30 5, 0,0'
+        firma.paths = lambda lines, style=None: [[FAKE], [wide]]
+        tilt, A.SIGN_TILT = A.SIGN_TILT, 0
+        try:
+            def rows(align):
+                m = A._signature('Ab', 'Cdefgh', align=align) > .3
+                ys = np.where(m.any(1))[0]
+                mid = (ys.min() + ys.max()) // 2
+                top, bottom = np.where(m[:mid].any(0))[0], np.where(m[mid:].any(0))[0]
+                return (top.min() + top.max()) / 2, (bottom.min() + bottom.max()) / 2, top.min(), bottom.min()
+            tc, bc, _, _ = rows('center')
+            self.assertLess(abs(tc - bc), 3)
+            _, _, tl, bl = rows('left')
+            self.assertLess(abs(tl - bl), 3)
+            self.assertEqual(set(A.SIGN_ALIGNS), {'center', 'left'})
+        finally:
+            A.SIGN_TILT = tilt
+            setUpModule()
+
     def test_signature_fill_no_holes(self):
         """Tratto che ripassa su sé stesso (quadrato percorso due volte): pieno, non bucato."""
         m = np.zeros((40, 40), bool)
