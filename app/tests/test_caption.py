@@ -103,6 +103,32 @@ class CaptionTest(unittest.TestCase):
         self.assertEqual(caption.safe_build({'kind': 'full', 'side': 'home', 'opponent': FIO}), '')
 
 
+class AwardsCaptionTest(unittest.TestCase):
+    """MOTM, POTM e Here We Go come gli ultimi post del canale (bandiera finta: niente rete)."""
+
+    def setUp(self):
+        p = mock.patch.object(caption, '_nation', lambda name: '[F]')
+        p.start()
+        self.addCleanup(p.stop)
+
+    def plain(self, data):
+        return re.sub(r'<tg-emoji emoji-id="\d+">(.*?)</tg-emoji>', r'\1', caption.build(data))
+
+    def test_motm(self):
+        text = self.plain({'kind': 'motm', 'name': 'KERIM', 'surname': 'ALAJBEGOVIĆ', 'home': 'JUVENTUS', 'away': 'NAPOLI'})
+        self.assertTrue(text.startswith('⭐️🔝 𝐌𝐎𝐓𝐌 #JuveNapoli: <b>Kerim Alajbegović</b>'), text)
+        self.assertIn('#JuveMilan', self.plain({'kind': 'motm', 'name': 'K', 'surname': 'Y', 'home': 'JUVENTUS', 'away': 'AC MILAN'}))
+
+    def test_potm(self):
+        text = self.plain({'kind': 'potm', 'name': 'NICO', 'surname': 'GONZALEZ', 'month': 'AGOSTO/SETTEMBRE'})
+        self.assertTrue(text.startswith('[F]🔝 <b>Nico Gonzalez</b> è l’MVP di agosto e settembre, eletto dai tifosi!'), text)
+
+    def test_here_we_go(self):
+        text = self.plain({'kind': 'af', 'name': '', 'surname': 'NETO'})
+        self.assertTrue(text.startswith('✅[F] HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.\n\n<i>📲 Fabrizio Romano</i>'), text)
+        self.assertTrue(text.endswith('@Juventus_Reborn'))
+
+
 class FakeResponse:
     def __init__(self, status, body):
         self.status_code, self.body = status, body

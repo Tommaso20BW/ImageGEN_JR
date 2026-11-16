@@ -38,6 +38,9 @@ E_CHECK = emoji('5454096630372379732', '☑️')
 E_NOTE = emoji('5334882760735598374', '📝')
 E_WORLD = emoji('5399898266265475100', '🌍')
 E_CAKE = emoji('5370999492914976897', '🎂')
+E_STAR = emoji('5438496463044752972', '⭐️')
+E_TOP = emoji('5422354988103901774', '🔝')
+E_SOURCE = emoji('5785366354106261925', '📲')     # fonte del mercato (📲 Fabrizio Romano)
 
 # Bandiere animate del canale (codice ISO -> emoji personalizzata); le altre nazioni hanno la bandiera normale.
 FLAGS = {
@@ -301,21 +304,48 @@ def _bday_caption(data):
     return f"{icons} Tanti auguri {prep} <b>{html.escape(name)}!</b>"
 
 
+def _who(data):
+    """Nome e cognome della grafica (scritti in maiuscolo) in Title Case: KERIM ALAJBEGOVIĆ -> Kerim Alajbegović."""
+    return _person_name(' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip())
+
+
+def _nation(name):
+    """Bandiera della nazionale del giocatore ('' se non si trova o non c'è rete)."""
+    try:
+        from graphics import compleanno
+        return flag(compleanno.nationality(name))
+    except Exception:  # noqa: BLE001
+        return ''
+
+
+def _motm_tag(data):
+    """Hashtag della partita del MOTM (#JuveNapoli) dalle squadre scritte nella grafica."""
+    from livescore.core import team_names
+    teams = []
+    for side in ('home', 'away'):
+        name = ' '.join(str(data.get(side) or '').split())
+        teams.append(_espn_key([name, name.title()]) or name.title())
+    return team_names.build_hashtag(*teams)
+
+
 def _other_caption(data):
     kind = data['kind']
     if kind in ('bday', 'bdold'):
         return _bday_caption(data)
     if kind == 'motm':
-        who = ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip().title()
-        match = f"{str(data.get('home') or '').title()} - {str(data.get('away') or '').title()}"
-        return f"{E_FIRE}<b> Man of the Match</b> | {html.escape(match)}\n\n{E_OFFICIAL} <b>{html.escape(who)}</b>"
+        # come sul canale: ⭐️🔝 𝐌𝐎𝐓𝐌 #JuveNapoli: <b>Kerim Alajbegovic</b>
+        return f"{E_STAR}{E_TOP} 𝐌𝐎𝐓𝐌 {_motm_tag(data)}: <b>{html.escape(_who(data))}</b>"
     if kind == 'potm':
-        who = ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip().title()
-        month = str(data.get('month') or '').title()
-        return f"{E_FIRE}<b> Player of the Month</b> | {html.escape(month)}\n\n{E_OFFICIAL} <b>{html.escape(who)}</b>"
+        # come sul canale: 🇩🇪🔝 <b>Nick Woltemade</b> è l’MVP di ottobre, eletto dai tifosi!
+        who = _who(data)
+        months = [m.strip().lower() for m in str(data.get('month') or '').split('/') if m.strip()]
+        when = ' e '.join(filter(None, [', '.join(months[:-1]), months[-1] if months else '']))
+        return f"{_nation(who)}{E_TOP} <b>{html.escape(who)}</b> è l’MVP di {html.escape(when)}, eletto dai tifosi!"
     if kind == 'af':
-        who = ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip().title()
-        return f"{E_OFFICIAL}<b> Here We Go!</b>\n\n{E_NEW} <b>{html.escape(who)}</b> è un nuovo giocatore della Juventus."
+        # come sul canale: ✅🇧🇷 HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.  +  📲 Fabrizio Romano
+        who = _who(data)
+        return (f"{E_OFFICIAL}{_nation(who)} HERE WE GO: <b>{html.escape(who)}</b> alla <b>Juventus</b>.\n\n"
+                f"<i>{E_SOURCE} Fabrizio Romano</i>")
     if kind == 'table':
         comp = str(data.get('competition') or '').upper()
         if data.get('view') == 'bracket' or comp == 'CI':
