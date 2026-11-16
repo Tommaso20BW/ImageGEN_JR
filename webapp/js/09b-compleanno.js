@@ -687,6 +687,7 @@ function bdOpenPos() {
   const p = bdCur(), img = $('bdPlayer');
   $('bdFrame').classList.toggle('old', bdOld());
   $('bdFrame').classList.toggle('af', kind === 'af');               // poster a colori: niente bianco e nero
+  $('bdFrame').classList.toggle('color', kind === 'motm');          // MOTM: colori veri come nel poster
   if (p && img.dataset.src !== p.id) {
     img.dataset.src = p.id;
     img.onload = () => bdLayout();

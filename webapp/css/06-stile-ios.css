@@ -480,6 +480,7 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .bd-frame.old{background:#14110e}
 .bd-frame.old .bd-clip img{filter:sepia(.25) saturate(.8);opacity:1}
 .bd-frame.af .bd-clip img{filter:sepia(.3) saturate(1.15) contrast(1.05);opacity:1}   /* Here We Go: a colori, caldo come nel poster */
+.bd-frame.color .bd-clip img{filter:none;opacity:1}   /* MOTM: colori veri, come nel poster */
 .bdo-pick{position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:3/4;max-height:56vh;margin:0 auto;border-radius:14px;border:2px dashed var(--line);overflow:hidden;cursor:pointer}
 .bdo-pick img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center bottom}
 .bdo-pick img[hidden]{display:none}
