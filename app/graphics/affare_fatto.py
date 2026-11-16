@@ -193,6 +193,36 @@ def _label():
     return m
 
 
+def _fill_nonzero(mask, pts):
+    """Riempie il contorno con la regola nonzero (come i browser per l'SVG): dove il tratto passa sopra
+    sé stesso resta pieno. ImageDraw.polygon usa pari/dispari e lì lascia dei buchi."""
+    h, w = mask.shape
+    a, b = pts, np.roll(pts, -1, 0)
+    keep = a[:, 1] != b[:, 1]
+    a, b = a[keep], b[keep]
+    if not len(a):
+        return
+    y0 = max(int(np.floor(min(pts[:, 1].min(), h))), 0)
+    y1 = min(int(np.ceil(pts[:, 1].max())) + 1, h)
+    if y1 <= y0:
+        return
+    ys = np.arange(y0, y1) + .5
+    lo, hi = np.minimum(a[:, 1], b[:, 1]), np.maximum(a[:, 1], b[:, 1])
+    hit = (ys[:, None] >= lo) & (ys[:, None] < hi)                      # righe x lati
+    t = (ys[:, None] - a[:, 1]) / (b[:, 1] - a[:, 1])
+    xs = a[:, 0] + t * (b[:, 0] - a[:, 0])
+    dirs = np.sign(b[:, 1] - a[:, 1])
+    for r in np.where(hit.any(1))[0]:
+        m = hit[r]
+        order = np.argsort(xs[r, m])
+        x, wnd = xs[r, m][order], np.cumsum(dirs[m][order])
+        row = mask[y0 + r]
+        for i in np.where(wnd[:-1] != 0)[0]:
+            c0, c1 = max(int(np.ceil(x[i] - .5)), 0), min(int(np.floor(x[i + 1] - .5)) + 1, w)
+            if c1 > c0:
+                row[c0:c1] = True
+
+
 def _signature(name, surname, style=None):
     """Firma scritta a mano (calligrapher.ai, graphics/firma.py): nome sopra e cognome sotto, piena e
     piatta nell'oro di AFFARE FATTO, appena inclinata in salita, in basso a sinistra. Sempre diversa
@@ -219,8 +249,7 @@ def _signature(name, surname, style=None):
     gap = .1 * max(heights)
     k = min((SIGN_X1 - SIGN_X0) / max(widths), SIGN_MAX_H / (sum(heights) + gap))
     up = 3                                                   # disegnata grande e ridotta: bordi morbidi
-    big = Image.new('L', (W * up, H * up), 0)
-    d = ImageDraw.Draw(big)
+    big = np.zeros((H * up, W * up), bool)
     y = SIGN_BOTTOM - (sum(heights) + gap) * k
     for i, (ps, bx) in enumerate(zip(polys, boxes)):
         if bx is None:
@@ -229,10 +258,10 @@ def _signature(name, surname, style=None):
         ox = SIGN_X0 + (SIGN_NAME_IN if i == 0 else 0)
         for p in ps:
             q = [(((px - x0) * k + ox) * up, ((py - y0) * k + y) * up) for px, py in p]
-            d.polygon(q, fill=255, outline=255)
+            _fill_nonzero(big, np.array(q, np.float64))
         y += heights[i] * k + gap * k
     cx, cy = (SIGN_X0 + SIGN_X1) / 2 * up, (SIGN_BOTTOM - SIGN_MAX_H / 2) * up
-    big = big.rotate(SIGN_TILT, resample=Image.BICUBIC, center=(cx, cy))
+    big = Image.fromarray(np.uint8(big) * 255).rotate(SIGN_TILT, resample=Image.BICUBIC, center=(cx, cy))
     return _f32(big.resize((W, H), Image.LANCZOS)) / 255
 
 

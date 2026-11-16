@@ -69,6 +69,14 @@ class RenderTest(unittest.TestCase):
         finally:
             setUpModule()
 
+    def test_signature_fill_no_holes(self):
+        """Tratto che ripassa su sé stesso (quadrato percorso due volte): pieno, non bucato."""
+        m = np.zeros((40, 40), bool)
+        sq = [(5, 5), (30, 5), (30, 30), (5, 30)]
+        A._fill_nonzero(m, np.array(sq + sq, np.float64))
+        self.assertTrue(m[8:28, 8:28].all())
+        self.assertFalse(m[:4].any() or m[32:].any())
+
     def test_split_words(self):
         """Nome Cognome scritti insieme si dividono nello spazio tra le parole."""
         ds = ['M 0,0 C 10 1, 20 2, 30 0', 'M 35,0 C 40 1, 50 2, 60 0', 'M 90,0 C 100 1, 110 2, 120 0', 'M 125,5 C 150 1, 170 2, 200 0']
