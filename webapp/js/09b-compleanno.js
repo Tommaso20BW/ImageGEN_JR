@@ -104,6 +104,7 @@ async function bdoUpload(file) {
   if (!file) return;
   clearError();
   if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+  if (kind === 'potm') { potmUpload(file); return; }
   bdo.loading = true;
   $('bdoStatus').textContent = '';
   renderSteps();
@@ -141,6 +142,41 @@ async function bdoUpload(file) {
     $('bdoFile').value = '';
     renderSteps();
   }
+}
+
+// POTM: niente editor della posizione, quindi niente scontorno a parte. Un solo caricamento:
+// carica la foto e apre subito l'anteprima (lo scontorno lo fa il render).
+async function potmUpload(file) {
+  bdo.loading = true;
+  $('bdoStatus').textContent = '';
+  renderSteps();
+  showBusy('Genero l’anteprima…', 'Carico la foto…', 'potmall');   // caricamento + scontorno + render
+  const myBusy = busy;
+  let ok = false;
+  try {
+    const {blob,type} = await preparePhoto(file, true);
+    const up = await netFetch(`${directBase}/upload`,{
+      method:'POST', headers:{'Content-Type':type,'X-ImageGEN-Session':session}, body:blob
+    }, 60000);
+    const ub = await up.json().catch(() => ({}));
+    if (!up.ok || !ub.ok) throw new Error(ub.error || 'Caricamento non riuscito.');
+    Object.assign(bdo,{id:ub.photo_id, thumb:'', height:0, page:null});
+    $('bdoPreview').src = URL.createObjectURL(blob);
+    $('bdoPreview').hidden = false;
+    $('bdoStatus').textContent = 'Fatto: tocca la foto per cambiarla.';
+    if (busy === myBusy) $('busySub').textContent = 'Scontorno il giocatore e compongo la grafica.';
+    ok = true;
+  } catch (err) {
+    if (busy === myBusy) hideBusy();
+    $('bdoStatus').textContent = bdo.id ? 'Tocca la foto per cambiarla.' : '';
+    showError(err && err.message ? err.message : 'Caricamento non riuscito.');
+  } finally {
+    bdo.loading = false;
+    $('bdoFile').value = '';
+    renderSteps();
+  }
+  if (ok && flow[flowIndex] === 'bdophoto' && validateCurrent()) previewGraphic(true);
+  else if (busy === myBusy) hideBusy();
 }
 
 function bdoPayload() {

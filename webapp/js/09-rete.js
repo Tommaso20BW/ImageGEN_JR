@@ -416,7 +416,7 @@ function initLayoutEditor() {
   $('lay').addEventListener('touchmove',e => { if (e.target.closest('#layFrame')) e.preventDefault(); },{passive:false});
 }
 
-async function previewGraphic() {
+async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caricamento già aperto (POTM)
   clearError();
   try {
     if (!directBase) throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
@@ -429,7 +429,7 @@ async function previewGraphic() {
     $('backButton').disabled = true;
     $('nextButton').textContent = 'Anteprima…';
     const bracket = kind === 'table' && tableViewOf() === 'bracket';    // tempi e testo a parte: ci mette di più
-    showBusy('Genero l’anteprima…',bracket ? 'Leggo il tabellone aggiornato da Diretta.it.' : BUSY_SUB[realKind()] || '',bracket ? 'bracket' : realKind());
+    if (!(keepBusy && busy)) showBusy('Genero l’anteprima…',bracket ? 'Leggo il tabellone aggiornato da Diretta.it.' : BUSY_SUB[realKind()] || '',bracket ? 'bracket' : realKind());
 
     // Il servizio può aspettare un'altra richiesta (fino a 75 s) e poi fare il render.
     const response = await netFetch(`${directBase}/preview`, {
