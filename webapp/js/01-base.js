@@ -96,6 +96,7 @@ const REQUESTS = [
   {id:'goal',   kind:'goal',  icon:'goal', title:'Gol',          desc:'Giocatore, minuto e risultato'},
   {id:'saved',  kind:'saved', icon:'saved', title:'Parata',       desc:'Il portiere protagonista'},
   {id:'stats',  kind:'stats', icon:'stats', title:'Statistiche',  desc:'Possesso, tiri, xG e altri numeri'},
+  {id:'awards', kind:'',      icon:'motm', title:'MOTM e POTM', desc:'Man of the Match o Player of the Month', pick:['motm','potm']},
   {id:'potm',   kind:'potm',  icon:'potm', title:'Player of the Month', desc:'Poster oro del giocatore del mese, con la sua foto'},
   {id:'motm',   kind:'motm',  icon:'motm', title:'Man of the Match', desc:'Poster del migliore in campo, con la sua foto'},
   {id:'kick',   kind:'match', phase:'kick',       icon:'kick', title:'Kick Off',    desc:'Si parte: la partita sta per iniziare'},
@@ -124,8 +125,8 @@ const REQUESTS = [
 const HOME_GROUPS = [
   {icon:'g-pre', title:'Pre-gara',              ids:['pxi','squad','md','xi']},
   {icon:'g-events', title:'Fasi della partita', ids:['kick','half','second','end90','full']},
-  {icon:'g-play', title:'In partita',            ids:['goal','saved','stats','motm']},
-  {icon:'jr', title:'Notizie e post',            ids:['igbn','jr','rin','bday','potm']},
+  {icon:'g-play', title:'In partita',            ids:['goal','saved','stats','awards']},
+  {icon:'jr', title:'Notizie e post',            ids:['igbn','jr','rin','bday']},
   {icon:'igq', title:'Citazioni',                ids:['igq','xq','thq']},
   {icon:'cal', title:'Calendario e classifiche', ids:['cal','table']},
   {icon:'ita', title:'Nazionale',                ids:['ita','conv']},

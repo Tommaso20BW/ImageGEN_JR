@@ -180,7 +180,7 @@ function renderHome() {
         '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
       b.querySelector('.hm-name').textContent = r.title;
       b.querySelector('.hm-desc').textContent = r.desc;
-      b.addEventListener('click',() => openRequest(r));
+      b.addEventListener('click',() => r.pick ? openPickSheet(r) : openRequest(r));
       list.appendChild(b);
     });
     box.appendChild(sec);
@@ -195,6 +195,30 @@ function applyEyebrows(screenName) {
   const req = currentRequest();
   if (!eb || !req) return;
   eb.textContent = screenName === 'preview' ? `${req.title} · Anteprima` : req.title;
+}
+
+// Voce della home che raccoglie più grafiche (MOTM e POTM): si sceglie quale in un foglio.
+function openPickSheet(r) {
+  haptic('select');
+  const sh = $('modSh');
+  sh.innerHTML = `<div class="mod-bar"></div><div class="mod-top"><b></b></div><div class="hm-list pick-list"></div>`;
+  sh.querySelector('.mod-top b').textContent = r.title;
+  const list = sh.querySelector('.pick-list');
+  r.pick.forEach(id => {
+    const x = REQUESTS.find(q => q.id === id);
+    if (!x) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'hm-item';
+    b.dataset.id = x.id;
+    b.innerHTML = svgIcon(x.icon,'hm-ico') + '<span class="hm-txt"><span class="hm-name"></span><span class="hm-desc"></span></span>' +
+      '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+    b.querySelector('.hm-name').textContent = x.title;
+    b.querySelector('.hm-desc').textContent = x.desc;
+    b.addEventListener('click',() => { closeModSheet(); openRequest(x); });
+    list.appendChild(b);
+  });
+  $('modOv').classList.add('open');
 }
 
 function openRequest(r) {
