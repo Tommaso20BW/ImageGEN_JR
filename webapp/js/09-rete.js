@@ -30,6 +30,7 @@ function buildPayload(ghost=false) {
   }
   if (kind === 'bday') return bdOld() ? bdoPayload() : bdPayload();
   if (kind === 'motm') return motmPayload();
+  if (kind === 'potm') return potmPayload();
   if (kind === 'rin') {
     const name = $('rinName').value.trim(), year = $('rinYear').value.trim();
     if (!name) throw new Error('Scrivi il nome.');

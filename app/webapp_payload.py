@@ -450,6 +450,24 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
+    # PLAYER OF THE MONTH: foto intera caricata (scontornata dal servizio), cognome, nome e uno o più mesi.
+    if kind == 'potm':
+        from graphics import motm, potm
+        surname = motm.clean_text(incoming.get('surname'), motm.SURNAME_MAX)
+        if not surname:
+            raise ValueError('Scrivi il cognome.')
+        month = potm.clean_month(incoming.get('months') or incoming.get('month'))
+        if not month:
+            raise ValueError('Scegli il mese.')
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {'kind': 'potm', 'surname': surname, 'name': motm.clean_name(incoming.get('name')),
+                     'month': month, 'photo_id': _photo_id(incoming.get('photo_id'))},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
     # FOTO + JR: niente partita, solo foto e colore del logo.
     if kind == 'jr':
         try:

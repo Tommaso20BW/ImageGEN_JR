@@ -337,6 +337,16 @@ class Renderer:
                                home=data.get('home', ''), away=data.get('away', ''), comp=data.get('comp', ''),
                                person=person, frame=data.get('frame'), ghost=ghost)
 
+        if kind == 'potm':
+            from graphics import potm
+
+            person = photo = None
+            if not ghost:
+                person = self.final_cutout(data['photo_id'])      # stessa misura della foto intera
+                photo = self.photos.get(data['photo_id'])
+            return potm.render(surname=data.get('surname', ''), name=data.get('name', ''),
+                               month=data.get('month', ''), person=person, photo=photo, ghost=ghost)
+
         if kind == 'jr':
             from graphics import photo_jr
 

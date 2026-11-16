@@ -309,6 +309,10 @@ def _other_caption(data):
         who = ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip().title()
         match = f"{str(data.get('home') or '').title()} - {str(data.get('away') or '').title()}"
         return f"{E_FIRE}<b> Man of the Match</b> | {html.escape(match)}\n\n{E_OFFICIAL} <b>{html.escape(who)}</b>"
+    if kind == 'potm':
+        who = ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip().title()
+        month = str(data.get('month') or '').title()
+        return f"{E_FIRE}<b> Player of the Month</b> | {html.escape(month)}\n\n{E_OFFICIAL} <b>{html.escape(who)}</b>"
     if kind == 'table':
         comp = str(data.get('competition') or '').upper()
         if data.get('view') == 'bracket' or comp == 'CI':

@@ -220,6 +220,7 @@ button.sp-item:active{background:var(--accent-soft)}
 .hm-item[data-id="saved"] .hm-ico{background:#007AFF}
 .hm-item[data-id="stats"] .hm-ico{background:#5856D6}
 .hm-item[data-id="motm"] .hm-ico{background:#FFCC00}
+.hm-item[data-id="potm"] .hm-ico{background:#C8A04A}
 .hm-item[data-id="jr"] .hm-ico{background:#FF2D55}
 .hm-item[data-id="igbn"] .hm-ico{background:#AF52DE}
 .hm-item[data-id="rin"] .hm-ico{background:#34C759}

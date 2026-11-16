@@ -1673,6 +1673,9 @@ def _send_detail(data):
     if kind == 'motm':
         return {**empty, 'player': ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip(),
                 'note': f"{data.get('home', '')} vs {data.get('away', '')}"}
+    if kind == 'potm':
+        return {**empty, 'player': ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip(),
+                'note': f"Player of the Month · {data.get('month', '')}"}
     if kind == 'conv':
         n = len(data.get('players') or [])
         return {**empty, 'player': f'{n} giocatori',

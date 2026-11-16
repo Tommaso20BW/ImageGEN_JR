@@ -128,6 +128,7 @@ function readyGhostUrl() {
   else if (isQuoteKind(kind)) { name = 'quote'; variant = kind === 'xq' ? 'x' : kind === 'thq' ? 'threads' : iq.story ? 'igstory' : 'ig'; }
   else if (kind === 'bday') { name = 'compleanno'; variant = bdOld() ? 'old' : 'now'; }
   else if (kind === 'motm') { name = 'motm'; variant = 'std'; }
+  else if (kind === 'potm') { name = 'potm'; variant = 'gold'; }
   if (!name || !/^[a-z]+$/.test(variant || '')) return '';
   return `${directBase}/overlay?session=${encodeURIComponent(session)}&name=${name}&kit=${variant}`;
 }

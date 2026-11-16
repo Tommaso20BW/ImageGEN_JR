@@ -24,6 +24,7 @@ KINDS = [
     ('COMPLEANNO', 'bday'),
     ('COMPLEANNO EX GIOCATORE', 'bdold'),
     ('MAN OF THE MATCH', 'motm'),
+    ('PLAYER OF THE MONTH', 'potm'),
     ('CITAZIONE INSTAGRAM', 'igq'),
     ('CITAZIONE X', 'xq'),
     ('CITAZIONE THREADS', 'thq'),

@@ -103,6 +103,13 @@ def motm(canva, out):
                      comp='Serie A - Matchday 1', ghost=True), out, 'motm_std')
 
 
+
+def potm(canva, out):
+    """Player of the Month: poster senza giocatore con nome e mese finti."""
+    from graphics import potm as po
+    _small(po.render(surname='COGNOME', name='Nome', month='Mese', ghost=True), out, 'potm_gold')
+
+
 def main():
     canva = Path(sys.argv[1] if len(sys.argv) > 1 else '../LiveScore_Assets_JR/canva')
     starting_xi(canva, canva)
@@ -112,6 +119,7 @@ def main():
     quotes(canva, canva)
     compleanno(canva, canva)
     motm(canva, canva)
+    potm(canva, canva)
 
 
 if __name__ == '__main__':

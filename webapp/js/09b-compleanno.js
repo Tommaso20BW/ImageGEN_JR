@@ -55,7 +55,7 @@ function bdPhotoOf(id) { return bd.photos.find(p => p.id === id); }
 const bdo = {id:'', thumb:'', height:0, page:null, loading:false};
 const bdOld = () => kind === 'bday' && bd.mode === 'old';
 // Foto caricata dall'utente: Ex giocatore, o giocatore della rosa aggiunto a mano.
-const bdUploaded = () => bdOld() || kind === 'motm' || (kind === 'bday' && bd.manual);
+const bdUploaded = () => bdOld() || kind === 'motm' || kind === 'potm' || (kind === 'bday' && bd.manual);
 function bdClearUpload() {
   Object.assign(bdo,{id:'', thumb:'', height:0, page:null, loading:false});
   $('bdoPreview').hidden = true;
@@ -63,8 +63,8 @@ function bdClearUpload() {
 }
 // Testi della schermata Foto caricata: diversi per Ex giocatore e giocatore aggiunto a mano.
 function bdoTexts() {
-  if (kind === 'motm') {
-    $('bdoEyebrow').textContent = 'Man of the Match';
+  if (kind === 'motm' || kind === 'potm') {
+    $('bdoEyebrow').textContent = kind === 'potm' ? 'Player of the Month' : 'Man of the Match';
     $('bdoLead').textContent = "Carica la foto del giocatore, meglio se a figura intera: lo scontorno lo fa l'app.";
     return;
   }
@@ -119,7 +119,7 @@ async function bdoUpload(file) {
     if (busy === myBusy) $('busySub').textContent = 'Separo il giocatore dallo sfondo: ci vogliono alcuni secondi.';
     const cut = await netFetch(`${directBase}/bdoldcut`,{
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-      body:JSON.stringify({v:1, session, photo_id:ub.photo_id, mode:kind === 'motm' ? 'motm' : bdOld() ? 'old' : 'now'})
+      body:JSON.stringify({v:1, session, photo_id:ub.photo_id, mode:kind === 'motm' || kind === 'potm' ? kind : bdOld() ? 'old' : 'now'})
     }, 120000);
     const cb = await cut.json().catch(() => ({}));
     if (!cut.ok || !cb.ok) throw new Error(cb.error || 'Scontorno non riuscito.');
@@ -180,6 +180,41 @@ async function motmFill() {
   }
 }
 const motmName = v => v.trim().toLowerCase().replace(/(^|[^a-zà-ÿ'])([a-zà-ÿ])/g, (_, a, b) => a + b.toUpperCase());
+const POTM_FIELDS = ['potmName','potmSurname'];
+// Mesi in ordine di stagione; se ne possono scegliere più di uno (nessuno scelto all'inizio).
+const POTM_MONTHS = ['Agosto','Settembre','Ottobre','Novembre','Dicembre','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio'];
+const potmSel = new Set();
+const potmMonths = () => POTM_MONTHS.filter(m => potmSel.has(m)).map(m => m.toUpperCase());
+function potmMonthRender() {
+  const box = $('potmMonthOpts');
+  if (!box.childElementCount) {
+    POTM_MONTHS.forEach(m => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'opt'; b.dataset.v = m; b.setAttribute('role','checkbox');
+      b.innerHTML = '<span class="radio"></span><span class="opt-label"></span>';
+      b.querySelector('.opt-label').textContent = m;
+      b.addEventListener('click',() => {
+        haptic('select');
+        potmSel.has(m) ? potmSel.delete(m) : potmSel.add(m);
+        potmMonthRender(); renderSteps();
+      });
+      box.appendChild(b);
+    });
+  }
+  box.querySelectorAll('.opt').forEach(b => {
+    const on = potmSel.has(b.dataset.v);
+    b.classList.toggle('selected',on);
+    b.setAttribute('aria-checked',on ? 'true' : 'false');
+  });
+}
+function potmPayload() {
+  const surname = $('potmSurname').value.trim(), months = potmMonths();
+  if (!surname) throw new Error('Scrivi il cognome.');
+  if (!months.length) throw new Error('Scegli il mese.');
+  if (!bdo.id) throw new Error('Carica la foto.');
+  return {v:1, action:'render', session, data:{kind:'potm', surname:surname.toUpperCase(), name:motmName($('potmName').value),
+    months, photo_id:bdo.id}};
+}
 function motmPayload() {
   const surname = $('motmSurname').value.trim(), home = $('motmHome').value.trim(), away = $('motmAway').value.trim();
   if (!surname) throw new Error('Scrivi il cognome.');
@@ -366,6 +401,10 @@ function bdValidate(step) {
   if (step === 'bdphoto' && !bdPhotoOf(bd.photo)) { showError('Tocca una foto.'); return false; }
   if (step === 'bdmode' && !bd.mode) { showError('Scegli il tipo.'); return false; }
   if (step === 'bdoname' && !$('bdoName').value.trim()) { showError('Scrivi il nome.'); return false; }
+  if (step === 'potminfo') {
+    if (!$('potmSurname').value.trim()) { showError('Scrivi il cognome.'); return false; }
+    if (!potmSel.size) { showError('Scegli il mese.'); return false; }
+  }
   if (step === 'motminfo') {
     if (!$('motmSurname').value.trim()) { showError('Scrivi il cognome.'); return false; }
     if (!$('motmHome').value.trim() || !$('motmAway').value.trim()) { showError('Scrivi le squadre.'); return false; }
@@ -390,6 +429,7 @@ function bdStepValue(step) {
   if (step === 'bdmode') return labelOf(BD_MODES,bd.mode);
   if (step === 'bdoname') return $('bdoName').value.trim().toUpperCase();
   if (step === 'motminfo') return $('motmSurname').value.trim().toUpperCase();
+  if (step === 'potminfo') return [$('potmSurname').value.trim().toUpperCase(), potmMonths().join('/')].filter(Boolean).join(' · ');
   if (step === 'bdophoto') return bdo.loading ? 'Scontorno…' : bdo.id ? 'Caricata' : '';
   if (step === 'bdpos') {
     const f = bd.frame;
@@ -421,8 +461,9 @@ function bdPayload() {
 
 function bdReset() {
   Object.assign(bd,{mode:'', manual:false, player:'', photos:[], photo:'', loading:false, key:'', birth:'', frame:{x:0, y:0, zoom:1}});
-  ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName',...MOTM_FIELDS].forEach(id => { $(id).value = ''; });
+  ['bdPlayerSearch','bdName','bdBirth','bdAge','bdoName',...MOTM_FIELDS,...POTM_FIELDS].forEach(id => { $(id).value = ''; });
   motm.key = '';
+  potmSel.clear(); potmMonthRender();
   bdClearUpload();
   bdoTexts();
   bdo.vintage = true;           // filtro d'epoca acceso a ogni nuova grafica
@@ -432,11 +473,12 @@ function bdReset() {
 
 function initBirthday() {
   initBirthdayEditor();
+  potmMonthRender();
   $('bdPlayerSearch').addEventListener('input',() => bdRender());
   $('bdBirth').addEventListener('change',() => { $('bdAge').value = bdAge($('bdBirth').value); renderSteps(); });
-  ['bdName','bdAge','bdoName',...MOTM_FIELDS].forEach(id => $(id).addEventListener('input',() => renderSteps()));
+  ['bdName','bdAge','bdoName',...MOTM_FIELDS,...POTM_FIELDS].forEach(id => $(id).addEventListener('input',() => renderSteps()));
   // Nome in firma: iniziale maiuscola e resto minuscolo, come uscirà nel poster.
-  $('motmName').addEventListener('change',() => { $('motmName').value = motmName($('motmName').value); renderSteps(); });
+  ['motmName','potmName'].forEach(id => $(id).addEventListener('change',() => { $(id).value = motmName($(id).value); renderSteps(); }));
   $('bdoFile').addEventListener('change',e => bdoUpload(e.target.files && e.target.files[0]));
   $('bdManual').addEventListener('click',bdManualStart);
   $('bdoVintage').addEventListener('click',() => {

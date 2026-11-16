@@ -62,6 +62,7 @@ const ICONS = {
   'goal':'<circle cx="12" cy="12" r="9"/><path d="M12 8.2l3.4 2.5-1.3 4h-4.2l-1.3-4zM12 8.2V3.1M15.4 10.7l5-1.9M14.1 14.7l3.4 4.4M9.9 14.7l-3.4 4.4M8.6 10.7l-5-1.9"/>',
   'saved':'<path d="M7 14V8a1.5 1.5 0 013 0v3.5M10 11V5.5a1.5 1.5 0 013 0V11M13 11V6.5a1.5 1.5 0 013 0V12M16 12V9.5a1.5 1.5 0 013 0V15c0 4-3 6.5-7 6.5-2.6 0-4.3-1-5.6-2.6l-3-3.6a1.5 1.5 0 012.3-1.9L7 15"/>',
   'stats':'<path d="M5 20v-9M12 20V5M19 20v-6"/>',
+  'potm':'<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4v3h-4z"/>',
   'motm':'<path d="M12 3.2l2.6 5.3 5.8.85-4.2 4.1 1 5.8L12 16.5l-5.2 2.75 1-5.8-4.2-4.1 5.8-.85z"/>',
   'kick':'<path d="M6 21V4M6 4h12l-3 4.5L18 13H6"/>',
   'half':'<path d="M9 5v14M15 5v14"/>',
@@ -95,6 +96,7 @@ const REQUESTS = [
   {id:'goal',   kind:'goal',  icon:'goal', title:'Gol',          desc:'Giocatore, minuto e risultato'},
   {id:'saved',  kind:'saved', icon:'saved', title:'Parata',       desc:'Il portiere protagonista'},
   {id:'stats',  kind:'stats', icon:'stats', title:'Statistiche',  desc:'Possesso, tiri, xG e altri numeri'},
+  {id:'potm',   kind:'potm',  icon:'potm', title:'Player of the Month', desc:'Poster oro del giocatore del mese, con la sua foto'},
   {id:'motm',   kind:'motm',  icon:'motm', title:'Man of the Match', desc:'Poster del migliore in campo, con la sua foto'},
   {id:'kick',   kind:'match', phase:'kick',       icon:'kick', title:'Kick Off',    desc:'Si parte: la partita sta per iniziare'},
   {id:'half',   kind:'match', phase:'half',       icon:'half', title:'Half Time',   desc:'Risultato dell’intervallo, con foto'},
@@ -123,7 +125,7 @@ const HOME_GROUPS = [
   {icon:'g-pre', title:'Pre-gara',              ids:['pxi','squad','md','xi']},
   {icon:'g-events', title:'Fasi della partita', ids:['kick','half','second','end90','full']},
   {icon:'g-play', title:'In partita',            ids:['goal','saved','stats','motm']},
-  {icon:'jr', title:'Notizie e post',            ids:['igbn','jr','rin','bday']},
+  {icon:'jr', title:'Notizie e post',            ids:['igbn','jr','rin','bday','potm']},
   {icon:'igq', title:'Citazioni',                ids:['igq','xq','thq']},
   {icon:'cal', title:'Calendario e classifiche', ids:['cal','table']},
   {icon:'ita', title:'Nazionale',                ids:['ita','conv']},
@@ -216,7 +218,7 @@ const STEP_NAMES = {
   competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
   player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
   natkind:'Grafica', natxi:'Formazione', natopp:'Avversaria', natplayer:'Giocatore', goaltype:'Tipo di gol',
-  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', rincontent:'Rinnovo', bdplayer:'Giocatore', bdphoto:'Foto', bdinfo:'Dati', bdpos:'Posizione', bdmode:'Tipo', bdoname:'Nome', motminfo:'Dati', bdophoto:'Foto', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', igtg:'Notizia', igphr:'Frasi', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
+  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', rincontent:'Rinnovo', bdplayer:'Giocatore', bdphoto:'Foto', bdinfo:'Dati', bdpos:'Posizione', bdmode:'Tipo', bdoname:'Nome', motminfo:'Dati', potminfo:'Dati', bdophoto:'Foto', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', igtg:'Notizia', igphr:'Frasi', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
 };
 
 const $ = id => document.getElementById(id);
