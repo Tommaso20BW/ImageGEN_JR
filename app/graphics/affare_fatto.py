@@ -21,6 +21,9 @@ CREAM = (252, 235, 211)
 FOG = (247, 224, 195)                     # crema della sfumatura in basso
 INK = (196, 146, 70)                      # oro di AFFARE FATTO e dei fili
 ARROWS = (190, 136, 56)
+# firma in basso a sinistra, sopra il filo di AFFARE FATTO: dentro il riquadro, appoggiata in basso,
+# nome rientrato un po' a destra, tutto inclinato di SIGN_TILT gradi (in salita)
+SIGN_X0, SIGN_X1, SIGN_BOTTOM, SIGN_MAX_H, SIGN_NAME_IN, SIGN_TILT = 50, 360, 1885, 135, 40, 7
 NAME_MAX, SURNAME_MAX = 16, M.SURNAME_MAX
 
 # cognome: maiuscole da TITLE_TOP a TITLE_BASE, largo da TITLE_X0 a TITLE_X1
@@ -190,6 +193,49 @@ def _label():
     return m
 
 
+def _signature(name, surname, style=None):
+    """Firma scritta a mano (calligrapher.ai, graphics/firma.py): nome sopra e cognome sotto, piena e
+    piatta nell'oro di AFFARE FATTO, appena inclinata in salita, in basso a sinistra. Sempre diversa
+    (stile a caso, uguale per nome e cognome). Maschera 0..1; vuota se il sito non risponde."""
+    from graphics import firma
+
+    m = np.zeros((H, W), np.float32)
+    lines = [name.title(), surname.title()]
+    try:
+        data = firma.paths(lines, style)
+    except Exception as exc:                                 # noqa: BLE001 - senza firma, ma la grafica esce
+        try:
+            from log import warn
+            warn('FIRMA', f'Firma non creata ({exc}): poster senza firma')
+        except Exception:                                    # noqa: BLE001
+            pass
+        return m
+    polys = [[p for p in (firma.polygons(d) for d in ds) if len(p) > 2] for ds in data]
+    boxes = [np.concatenate([np.array(p) for p in ps]) if ps else None for ps in polys]
+    if all(b is None for b in boxes):
+        return m
+    widths = [np.ptp(b[:, 0]) if b is not None else 0 for b in boxes]
+    heights = [np.ptp(b[:, 1]) if b is not None else 0 for b in boxes]
+    gap = .1 * max(heights)
+    k = min((SIGN_X1 - SIGN_X0) / max(widths), SIGN_MAX_H / (sum(heights) + gap))
+    up = 3                                                   # disegnata grande e ridotta: bordi morbidi
+    big = Image.new('L', (W * up, H * up), 0)
+    d = ImageDraw.Draw(big)
+    y = SIGN_BOTTOM - (sum(heights) + gap) * k
+    for i, (ps, bx) in enumerate(zip(polys, boxes)):
+        if bx is None:
+            continue
+        x0, y0 = bx[:, 0].min(), bx[:, 1].min()
+        ox = SIGN_X0 + (SIGN_NAME_IN if i == 0 else 0)
+        for p in ps:
+            q = [(((px - x0) * k + ox) * up, ((py - y0) * k + y) * up) for px, py in p]
+            d.polygon(q, fill=255, outline=255)
+        y += heights[i] * k + gap * k
+    cx, cy = (SIGN_X0 + SIGN_X1) / 2 * up, (SIGN_BOTTOM - SIGN_MAX_H / 2) * up
+    big = big.rotate(SIGN_TILT, resample=Image.BICUBIC, center=(cx, cy))
+    return _f32(big.resize((W, H), Image.LANCZOS)) / 255
+
+
 @lru_cache(maxsize=1)
 def _jr_logo():
     from graphics.photo_jr import _meta
@@ -317,6 +363,8 @@ def render(*, surname, name='', person=None, frame=None, ghost=False):
     # parte bassa sfumata nel crema (niente sfocatura), così AFFARE FATTO si legge
     img = _over(img, FOG, np.broadcast_to(np.clip((yy - 1560) / 340, 0, 1) ** 1.1 * .97, (H, W)))
     img = _over(img, INK, _label())
+    if not ghost:                                            # nell'editor niente firma: è a caso a ogni invio
+        img = _over(img, INK, _signature(name, surname))
     img = _over(img, ARROWS, _arrows())
 
     out = Image.fromarray(np.uint8(np.clip(img, 0, 255))).convert('RGBA')
