@@ -212,7 +212,8 @@ def _surname(surname):
         m = m.crop((sb[0], 0, sb[2], m.height)).resize((w, int(m.height * ky)), Image.LANCZOS)
         a = _f32(m) / 255
         for _ in range(2):                                   # aste un filo più piene, solo in orizzontale
-            a = np.maximum(a, np.maximum(np.roll(a, 1, 1), np.roll(a, -1, 1)))
+            p = np.pad(a, ((0, 0), (1, 1)))                  # senza far rientrare il bordo dall'altro lato
+            a = np.maximum(a, np.maximum(p[:, :-2], p[:, 2:]))
         return a
 
     sa, pa = stretch(full), stretch(plain)

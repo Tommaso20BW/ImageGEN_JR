@@ -33,6 +33,13 @@ class RenderTest(unittest.TestCase):
             xs = np.where(mask.max(0) > .3)[0]
             self.assertLessEqual(abs(xs[0] - (A.W - 1 - xs[-1])), 3)
 
+    def test_surname_clean(self):
+        """La J resta sulla riga e niente righine dal bordo opposto (es. dalla E finale accanto alla J)."""
+        m = A._surname('JANE')
+        self.assertLessEqual(np.where(m.max(1) > .3)[0][-1], A.TITLE_BASE + 8)
+        left = m[:, :A.TITLE_X0 + 12]
+        self.assertLess(left[A.TITLE_BASE - 300:A.TITLE_BASE - 120].max(), .3)
+
     def test_long_first_name_fits(self):
         xs = np.where(A._first('MAXIMILIANO JOSÉ').max(0) > .3)[0]
         self.assertLessEqual(xs[-1] - xs[0], A.FIRST_MAX_W)
