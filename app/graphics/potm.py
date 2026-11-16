@@ -8,7 +8,6 @@ import math
 
 import numpy as np
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageOps
-from scipy.ndimage import binary_dilation, gaussian_filter
 
 from graphics import motm as M
 
@@ -106,19 +105,6 @@ def _background():
     return Image.fromarray(np.uint8(np.repeat(v[..., None], 3, 2))).convert('RGBA'), v
 
 
-def _skin_bw(c):
-    """Viso, braccia e gambe in bianco e nero; maglia e scarpini restano a colori."""
-    hsv = np.asarray(c.convert('RGB').convert('HSV')).astype(np.float32)
-    hh, ss, vv = hsv[..., 0], hsv[..., 1], hsv[..., 2]
-    skin = binary_dilation(((hh <= 38) | (hh >= 235)) & (ss > 22) & (vv > 25), iterations=3)
-    sm = np.clip(gaussian_filter(skin.astype(np.float32), 2.5) * 1.4, 0, 1)[..., None]
-    rgb = np.asarray(c.convert('RGB')).astype(np.float32)
-    grey = (rgb @ np.array([.299, .587, .114], np.float32))[..., None]
-    out = Image.fromarray(np.uint8(np.clip(rgb * (1 - sm) + grey * sm, 0, 255))).convert('RGBA')
-    out.putalpha(c.getchannel('A'))
-    return out
-
-
 def _star(d, cx, cy, r, fill):
     pts = [(cx + (r if k % 2 == 0 else r * .42) * math.sin(k * math.pi / 5),
             cy - (r if k % 2 == 0 else r * .42) * math.cos(k * math.pi / 5)) for k in range(10)]
@@ -132,7 +118,7 @@ def _side_line(d, x, y0, y1, stars_at):
 
 
 def _photo_layers(photo, cut, frame_box):
-    """Foto in B/N dentro il rettangolo e livello del giocatore a colori, stesso taglio."""
+    """Foto in B/N dentro il rettangolo e giocatore tutto a colori sopra, stesso taglio."""
     fx0, fy0, fx1, fy1 = frame_box
     fw, fh = fx1 - fx0, fy1 - fy0
     if cut.size != photo.size:
@@ -154,7 +140,7 @@ def _photo_layers(photo, cut, frame_box):
     bw = Image.fromarray(np.uint8(np.clip(g, 0, 255))).convert('RGBA')
     lay = Image.new('RGBA', (W, H), (0, 0, 0, 0)); lay.alpha_composite(bw, (ox, oy))
     cl = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    cl.alpha_composite(_skin_bw(cut.resize((pw, ph), Image.LANCZOS)), (ox, oy))
+    cl.alpha_composite(cut.convert('RGBA').resize((pw, ph), Image.LANCZOS), (ox, oy))   # giocatore tutto a colori
     return lay, cl
 
 
