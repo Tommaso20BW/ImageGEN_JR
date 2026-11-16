@@ -121,3 +121,6 @@
 .fr-srow.on{border-color:var(--accent)}
 .fr-srow.off b{opacity:.45;text-decoration:line-through}
 .fr-eye{flex:none;font-size:13.5px}
+
+/* Home: icona dell'Editor libero colorata (non nera) */
+.hm-item[data-id="free"] .hm-ico{background:linear-gradient(135deg,#00C4CC,#7D2AE8)}
