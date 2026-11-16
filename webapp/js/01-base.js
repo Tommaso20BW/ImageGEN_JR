@@ -135,7 +135,7 @@ const HOME_GROUPS = [
   {icon:'igq', title:'Citazioni',                ids:['igq','xq','thq']},
   {icon:'cal', title:'Calendario e classifiche', ids:['cal','table']},
   {icon:'ita', title:'Nazionale',                ids:['ita','conv']},
-  {icon:'sent', title:'Altro',                   ids:['sent','free']}
+  {icon:'sent', title:'Altro',                   ids:['free','sent']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
 const COMPETITIONS_UEFA = [
