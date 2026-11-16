@@ -686,6 +686,7 @@ async function bdGhost() {
 function bdOpenPos() {
   const p = bdCur(), img = $('bdPlayer');
   $('bdFrame').classList.toggle('old', bdOld());
+  $('bdFrame').classList.toggle('af', kind === 'af');               // poster a colori: niente bianco e nero
   if (p && img.dataset.src !== p.id) {
     img.dataset.src = p.id;
     img.onload = () => bdLayout();
