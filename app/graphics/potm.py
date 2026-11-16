@@ -18,6 +18,7 @@ GOLD, INK, LINE_INK = (190, 152, 82), (16, 16, 16), (40, 40, 40)
 FRAME = (.161, .138, .869, .889)           # rettangolo della foto (frazioni di W e H)
 PLAYER_FILL, PLAYER_TOP = 1.13, -.07       # giocatore più alto del rettangolo: esce sopra e sotto
 MONTH_MAX = 30                             # "AGOSTO/SETTEMBRE"
+PHOTO_DARK, PHOTO_GRAIN = .72, 16          # foto nel rettangolo: luminosità e grana in più
 # ordine della stagione: più mesi si scrivono in quest'ordine, separati da "/"
 MONTHS = ['AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE', 'GENNAIO',
           'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO']
@@ -120,7 +121,11 @@ def _photo_layers(photo, cut, frame_box):
     oy = round(fy0 + fh * PLAYER_TOP - by0 * sc)
     ox, oy = min(fx0, max(fx1 - pw, ox)), min(fy0, max(fy1 - ph, oy))   # la foto copre sempre il rettangolo
     bw = ImageOps.grayscale(photo.convert('RGB').resize((pw, ph), Image.LANCZOS))
-    bw = ImageEnhance.Contrast(bw).enhance(1.15).filter(ImageFilter.GaussianBlur(3)).convert('RGBA')
+    bw = ImageEnhance.Contrast(bw).enhance(1.15).filter(ImageFilter.GaussianBlur(3))
+    bw = ImageEnhance.Brightness(bw).enhance(PHOTO_DARK)                        # foto più scura
+    g = np.asarray(bw).astype(np.float32)
+    g += np.random.default_rng(7).normal(0, PHOTO_GRAIN, g.shape).astype(np.float32)   # più grana solo sulla foto
+    bw = Image.fromarray(np.uint8(np.clip(g, 0, 255))).convert('RGBA')
     lay = Image.new('RGBA', (W, H), (0, 0, 0, 0)); lay.alpha_composite(bw, (ox, oy))
     cl = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     cl.alpha_composite(_skin_bw(cut.resize((pw, ph), Image.LANCZOS)), (ox, oy))
