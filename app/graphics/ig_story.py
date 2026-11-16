@@ -483,7 +483,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
                      STRIP, ink, int(rng.integers(1 << 20)), pad=(25, (h - t.height) // 2))
         y += h + _line_gap(size)
 
-    # fonte: blocco del colore scelto (nero = quello dell'etichetta) con bordi dritti, scritta crema,
+    # fonte: blocco del colore scelto (nero = quello dell'etichetta), bordo di carta come le strisce del testo,
     # inclinato a caso a destra o a sinistra
     src = source_word(source)
     if src is not None:
@@ -491,8 +491,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
         bh = src.height + 2 * SRC_PAD[1]
         block, letters = source_colors(color)
         img = _piece(img, src, (W / 2 + rng.uniform(-8, 8), y + bh / 2), _tilt(rng, 1.5, 2.5),
-                     block, letters, int(rng.integers(1 << 20)), pad=SRC_PAD, tear=0,
-                     sh=(6, 10, 8, .4), breakup=.04)
+                     block, letters, int(rng.integers(1 << 20)), pad=SRC_PAD)
         y += bh
 
     img = _logo_stamp(img, LOGO_Y, int(rng.integers(1 << 20)))
