@@ -78,6 +78,17 @@ TEXT_COLORS = {
 }
 
 
+def source_colors(color):
+    """(blocco, scritta) della fonte: il blocco prende il colore scelto (nero = quello dell'etichetta);
+    sui colori chiari (giallo, verde, arancio) la scritta è scura invece che crema."""
+    key = text_color(color)
+    if key == 'black':
+        return BLACK, CREAM
+    block = _rgb(TEXT_COLORS[key])
+    light = float(block @ np.array([.299, .587, .114], np.float32)) > .6
+    return block, (_rgb(TEXT_COLOR) if light else CREAM)
+
+
 def text_color(value):
     """Nome del colore valido ('black' se manca o non è nella tavolozza)."""
     return value if value in TEXT_COLORS else 'black'
@@ -472,14 +483,15 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
                      STRIP, ink, int(rng.integers(1 << 20)), pad=(25, (h - t.height) // 2))
         y += h + _line_gap(size)
 
-    # fonte: blocco nero (lo stesso nero dell'etichetta) con bordi dritti, scritta crema,
+    # fonte: blocco del colore scelto (nero = quello dell'etichetta) con bordi dritti, scritta crema,
     # inclinato a caso a destra o a sinistra
     src = source_word(source)
     if src is not None:
         y += SRC_GAP - (_line_gap(size) if lines else 0)
         bh = src.height + 2 * SRC_PAD[1]
+        block, letters = source_colors(color)
         img = _piece(img, src, (W / 2 + rng.uniform(-8, 8), y + bh / 2), _tilt(rng, 1.5, 2.5),
-                     BLACK, CREAM, int(rng.integers(1 << 20)), pad=SRC_PAD, tear=0,
+                     block, letters, int(rng.integers(1 << 20)), pad=SRC_PAD, tear=0,
                      sh=(6, 10, 8, .4), breakup=.04)
         y += bh
 
