@@ -455,7 +455,7 @@ function awRender() {
   renderResults('awPlayerList', matches, aw.player, item => surnameOf(item), awPick, null, Infinity);
   awNameAsk();
 }
-// MOTM con più di un nome (es. Juan David): si chiede quale mettere, niente scelta già fatta.
+// Più di un nome (es. Juan David): si chiede quale mettere, niente scelta già fatta.
 function awNameAsk() {
   $('awNameAsk').hidden = aw.names.length < 2;
   if (aw.names.length < 2) return;
@@ -470,7 +470,7 @@ function awPick(item) {
   clearError();
   aw.player = item.name; aw.manual = false; aw.name = '';
   const [first, sur] = awSplit(item), [nId, sId] = awFields(), words = first.split(' ').filter(Boolean);
-  aw.names = kind === 'motm' && words.length > 1 ? [first, ...words] : [];   // solo MOTM: il POTM mette tutti i nomi
+  aw.names = words.length > 1 ? [first, ...words] : [];
   $(nId).value = aw.names.length ? '' : first; $(sId).value = sur;
   awRender(); renderSteps();
   if (aw.names.length) { $('awNameAsk').scrollIntoView({behavior:'smooth', block:'center'}); return; }
