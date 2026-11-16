@@ -13,7 +13,10 @@ from scipy.ndimage import binary_dilation, gaussian_filter
 from graphics import motm as M
 
 W, H = M.W, M.H
-TITLE_FONT, SMALL_FONT = 'DharmaGothicEBold.otf', 'Teko-Regular.ttf'
+TITLE_FONT, SMALL_FONT = 'DharmaGothicEBold.otf', 'Inter-Medium.ttf'
+TITLE_SQUEEZE = 1          # titoli stretti e alti come nel riferimento
+SMALL_TITLE_H = round(H * .03)      # OF e THE: stessa altezza, OF in cima a PLAYER e THE in fondo a MONTH
+TITLE_BOLD = 0            # quanto ingrossare il tratto dei titoli (in proporzione all'altezza)
 GOLD, INK, LINE_INK = (190, 152, 82), (16, 16, 16), (40, 40, 40)
 FRAME = (.161, .138, .869, .889)           # rettangolo della foto (frazioni di W e H)
 PLAYER_FILL, PLAYER_TOP = 1.13, -.07       # giocatore più alto del rettangolo: esce sopra e sotto
@@ -52,6 +55,19 @@ def _text(txt, f, fill, spacing=0):
     return lay.crop(box) if box else lay
 
 
+def _title(txt, height, fill, gap):
+    """Titolo alto e stretto: Bebas schiacciato in larghezza, lettere distanziate di gap pixel."""
+    t = _text(txt, _fit_h(txt, TITLE_FONT, height), fill, spacing=round(gap / TITLE_SQUEEZE))
+    if TITLE_SQUEEZE == 1 and not TITLE_BOLD:
+        return t
+    t = t.resize((round(t.width * TITLE_SQUEEZE), t.height), Image.LANCZOS)
+    k = max(3, round(height * TITLE_BOLD) | 1)                     # tratto più pieno, come nel riferimento
+    a = t.getchannel('A').filter(ImageFilter.MaxFilter(k)).filter(ImageFilter.GaussianBlur(.6))
+    out = Image.new('RGBA', t.size, tuple(fill) + (0,))
+    out.putalpha(a)
+    return out
+
+
 def _fit_h(txt, name, height):
     """Font con altezza delle lettere = height."""
     lo, hi = 10, 2000
@@ -77,6 +93,16 @@ def _background():
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
     r = np.hypot((xx - W * .25) / W, (yy - H * .2) / H)
     v = 246 - np.clip(r, 0, 1.1) * 34
+    # facce di luce spigolose come nel riferimento: piani appena più chiari o più scuri, bordi netti
+    m = Image.new('L', (W, H), 128)
+    d = ImageDraw.Draw(m)
+    for pts, tone in (([(.42, 0), (.62, .055), (.80, 0)], 140),                 # punta chiara in alto
+                      ([(.62, .055), (1, .17), (1, 0), (.80, 0)], 136),
+                      ([(0, .50), (.20, .58), (0, .70)], 137),                  # cuneo a sinistra
+                      ([(0, .70), (.20, .58), (.32, .66), (0, .86)], 122),
+                      ([(1, .45), (.84, .55), (1, .62)], 121)):                # cuneo scuro a destra
+        d.polygon([(x * W, y * H) for x, y in pts], fill=tone)
+    v = v + (np.asarray(m.filter(ImageFilter.GaussianBlur(2))).astype(np.float32) - 128)
     return Image.fromarray(np.uint8(np.repeat(v[..., None], 3, 2))).convert('RGBA'), v
 
 
@@ -100,7 +126,7 @@ def _star(d, cx, cy, r, fill):
 
 
 def _side_line(d, x, y0, y1, stars_at):
-    d.line((x, y0, x, y1), fill=LINE_INK, width=3)
+    d.line((x, y0, x, y1), fill=LINE_INK, width=4)
     for k in range(3):                                         # le tre stelle
         _star(d, x, stars_at + (k - 1) * 30, 11, GOLD)
 
@@ -193,32 +219,43 @@ def render(*, surname, name='', month='', person=None, photo=None, ghost=False, 
         shl = _out_shadow(cl, frame_m)
 
     # PLAYER oro in alto (dietro al giocatore), OF nero
-    f = _fit_h('PLAYER', TITLE_FONT, round(H * .152))
-    t1 = _text('PLAYER', f, GOLD, spacing=round(W * .006))
-    _place(img, t1, W * .119, H * .028)
-    sf = _fit_h('OF', TITLE_FONT, round(H * .028))
-    _place(img, _text('OF', sf, INK, spacing=4), W * .119 + t1.width + W * .022, H * .040)
+    t1 = _title('PLAYER', round(H * .152), GOLD, W * .006)
+    _place(img, t1, W * .116, H * .04)
+    # OF in alto allineato all'inizio di PLAYER (come nel riferimento)
+    _place(img, _title('OF', SMALL_TITLE_H, INK, 4), W * .116 + t1.width + W * .022, H * .04 + 2)   # 2 px più in basso
     if cl is not None:
         img.alpha_composite(shl)
         img.alpha_composite(cl)
     # MONTH oro in basso a destra (davanti al giocatore), THE nero
-    t2 = _text('MONTH', f, GOLD, spacing=round(W * .006))
-    _place(img, t2, fx1, H * .962, 'rb')
-    _place(img, _text('THE', sf, INK, spacing=4), fx1 - t2.width - W * .022, H * .962, 'rb')
+    t2 = _title('MONTH', round(H * .152), GOLD, W * .006)
+    mx = fx1 + W * .035                   # MONTH esce un po' a destra del rettangolo, come PLAYER a sinistra
+    _place(img, t2, mx, H * .95, 'rb')
+    _place(img, _title('THE', SMALL_TITLE_H, INK, 4), mx - t2.width - W * .022, H * .95 - 2, 'rb')   # 2 px più in alto
 
-    # linee con le tre stelle, mese a sinistra e nome a destra in verticale (fuori dal rettangolo)
+    # come il riferimento: ogni scritta parte dal bordo del rettangolo (mese a sinistra finisce sul
+    # bordo in basso, nome a destra parte dal bordo in alto) e la linea con le stelle continua da lì
     d = ImageDraw.Draw(img)
-    gap = round(W * .042)
+    gap = round(W * .022)
     lx, rx = fx0 - gap, fx1 + gap
-    _side_line(d, lx, H * .30, H * .865, H * .30 - 52)
-    _side_line(d, rx, H * .155, H * .72, H * .72 + 52)
-    small = M._font(SMALL_FONT, round(H * .022))
-    bgcol = lambda x, y: (int(bg[int(y), int(x)]),) * 3 + (255,)
+    small = M._font(SMALL_FONT, round(H * .016))
     who = ' '.join(p for p in (name.upper(), surname) if p)
-    for txt, x, y, rot in ((month, lx, H * .68, 90), (who, rx, H * .33, -90)):
-        t = _text(txt, small, LINE_INK, spacing=round(H * .006)).rotate(rot, expand=True)
-        _place(img, Image.new('RGBA', (t.width + 24, t.height + 30), bgcol(x, y)), x, y, 'mm')
-        _place(img, t, x, y, 'mm')
+
+    def side(txt, rot):
+        sp = round(H * .006)               # spazio tra le lettere delle scritte laterali
+        while True:                       # lettere larghe come nel riferimento, ma mai oltre metà pagina
+            t = _text(txt, small, LINE_INK, spacing=sp).rotate(rot, expand=True)
+            if t.height <= H * .45 or sp <= 2:
+                return t
+            sp -= 1
+
+    sep = round(H * .026)                 # spazio tra scritta e linea
+    inset = round(H * .008)               # la scritta parte poco dentro il bordo
+    tm = side(month, 90)
+    _place(img, tm, lx, fy1 - inset, 'mb')
+    _side_line(d, lx, H * .26, fy1 - inset - tm.height - sep, H * .26 - 52)
+    tw = side(who, -90)
+    _place(img, tw, rx, fy0 + inset, 'mt')
+    _side_line(d, rx, fy0 + inset + tw.height + sep, H * .69, H * .69 + 52)
 
     # grana su tutto (sfondo e giocatore), poi il logo JR
     a = np.asarray(img.convert('RGB')).astype(np.float32)
