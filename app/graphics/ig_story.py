@@ -55,8 +55,8 @@ ANTON, MONO = cp.ANTON, cp.MONO
 FONT_FILE = 'Poppins-Medium.ttf'     # usato dalle citazioni (ig_quote)
 MAX_TEXT = 500
 MAX_SOURCE = 90
-SRC_SIZE = 46                        # fonte: grandezza del testo nel blocco nero (fissa)
-SRC_PAD = (34, 14)
+SRC_SIZE = 54                        # fonte: grandezza del testo nel blocco nero (fissa)
+SRC_PAD = (34, 16)
 SRC_GAP = 54                         # tra il testo e il blocco della fonte
 # Riga della fonte nei post del canale: 📰 / 📲 seguiti dal nome (solo il simbolo non basta)
 _SOURCE_LINE = re.compile('^[ \t]*(?:\U0001F4F0|\U0001F4F2)\uFE0F?[ \t]*(\\S[^\n]*)$', re.M)
@@ -309,7 +309,8 @@ def _erode(m, px):
 def _piece(img, ink, center, angle, paper_col, ink_col, seed, pad=(25, 16), tear=1.5, sh=(3, 5, 4, .3),
            breakup=.15, fringe=False):
     """Striscia di carta strappata con l'inchiostro sopra, ruotata e con ombra.
-    fringe: bordo bianco e fibroso dello strappo e grana della carta dentro (le etichette)."""
+    fringe: bordo bianco e fibroso dello strappo e grana della carta dentro (le etichette).
+    tear=0: bordi dritti, senza strappo (la fonte)."""
     if fringe:
         return _torn_label(img, ink, center, angle, paper_col, ink_col, seed, pad, tear, sh, breakup)
     sw, shh = ink.width + 2 * pad[0], ink.height + 2 * pad[1]
@@ -320,7 +321,7 @@ def _piece(img, ink, center, angle, paper_col, ink_col, seed, pad=(25, 16), tear
     mg = 40
     m = np.pad(_arr(m), mg)
     t = np.pad(_arr(t), mg)
-    m = _torn(m, seed, tear, 70)
+    m = _torn(m, seed, tear, 70) if tear else m
     t = t * m * cp._ink_breakup((t.shape[1], t.shape[0]), seed, breakup)
     paper_c = np.array(paper_col, np.float32) / (255 if max(paper_col) > 1 else 1)
     ink_c = np.array(ink_col, np.float32) / (255 if max(ink_col) > 1 else 1)
@@ -471,14 +472,15 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
                      STRIP, ink, int(rng.integers(1 << 20)), pad=(25, (h - t.height) // 2))
         y += h + _line_gap(size)
 
-    # fonte: blocco di carta nero strappato (come l'etichetta), scritta crema
+    # fonte: blocco nero (lo stesso nero dell'etichetta) con bordi dritti, scritta crema,
+    # inclinato a caso a destra o a sinistra
     src = source_word(source)
     if src is not None:
         y += SRC_GAP - (_line_gap(size) if lines else 0)
         bh = src.height + 2 * SRC_PAD[1]
-        img = _piece(img, src, (W / 2 + rng.uniform(-6, 6), y + bh / 2), float(rng.uniform(-1.5, 1.5)),
-                     BLACK, CREAM, int(rng.integers(1 << 20)), pad=SRC_PAD, tear=1.5,
-                     sh=(4, 7, 6, .35), breakup=.06, fringe=True)
+        img = _piece(img, src, (W / 2 + rng.uniform(-8, 8), y + bh / 2), _tilt(rng, 1.5, 2.5),
+                     BLACK, CREAM, int(rng.integers(1 << 20)), pad=SRC_PAD, tear=0,
+                     sh=(6, 10, 8, .4), breakup=.04)
         y += bh
 
     img = _logo_stamp(img, LOGO_Y, int(rng.integers(1 << 20)))
