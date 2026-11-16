@@ -44,6 +44,9 @@ FS_MIN = 28
 # Grandezza del testo in base ai caratteri: (fino a N caratteri, grandezza)
 FS_PHOTO_STEPS = ((120, 46), (240, 42), (10**9, 38))
 FS_SOLO_STEPS = ((80, 62), (150, 54), (240, 48), (10**9, 42))
+# Solo testo con l'etichetta: il testo cresce fino a riempire bene lo spazio tra etichetta e logo
+FS_GROW_MAX = 64
+FS_GROW_FILL = .8                    # quota dello spazio libero che il testo può occupare
 
 PAPER = (226, 220, 206)
 STRIP = (250, 248, 242)
@@ -262,15 +265,22 @@ def layout(text, label, photo_size=None, source=''):
         elif used <= room or not text or size <= FS_MIN:
             break
         size -= 2
+    if text and parts and not photo_size:
+        free = (LOGO_Y - GAP - TOP - lab_h - GAP - source_height(source)) * FS_GROW_FILL
+        while size < FS_GROW_MAX and text_height(wrap(text, size + 2), size + 2) <= free:
+            size += 2
+            lines = wrap(text, size)
     total = lab_h + text_height(lines, size) + gaps + ph_h + source_height(source)
     # con l'etichetta: lei fissa in alto (sotto il nome di Instagram), il resto centrato dopo
     return parts, lines, size, ph_h, TOP if parts else TOP + max((room - total) / 2, 0)
 
 
 def content_y(top, lines, size, ph_h, source=''):
-    """y di foto + testo sotto l'etichetta: a metà tra l'etichetta e il logo JR, senza uscire da BOTTOM."""
+    """y di foto + testo sotto l'etichetta: stesso spazio sopra (dall'etichetta) e sotto (fino al logo JR),
+    almeno GAP dall'etichetta e senza uscire da BOTTOM."""
     rest = text_height(lines, size) + ph_h + (GAP if lines and ph_h else 0) + source_height(source)
-    return top + max(min((LOGO_Y - top - rest) / 2, BOTTOM - top - rest), 0)
+    mid = (top - GAP) + (LOGO_Y - (top - GAP) - rest) / 2
+    return max(min(mid, BOTTOM - rest), top)
 
 
 # ---------------------------------------------------------------- pezzi di carta
