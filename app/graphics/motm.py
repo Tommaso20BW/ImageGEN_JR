@@ -304,6 +304,9 @@ def _runs(xs, gap):
     return out
 
 
+GRAIN = .03          # grana del giocatore (0 = niente)
+
+
 def _place_player(c, person, frame):
     from graphics.compleanno_storico import enhance
     p = trim(person)
@@ -339,7 +342,9 @@ def _place_player(c, person, frame):
                 halo = np.maximum(halo, np.exp(-e2 * 2) * .18)
             sh = np.maximum(gaussian_filter(sh, 2 * K), halo)
             c.a[sy0:sy1, sx0:sx1] *= 1 - sh[..., None]
-    c.layer(_arr(p.convert('RGB')), a, x, y)
+    # grana leggera sul giocatore (fissa, uguale a ogni render)
+    g = gaussian_filter(np.random.default_rng(9).normal(0, 1, a.shape).astype(np.float32), .6 * K)
+    c.layer(np.clip(_arr(p.convert('RGB')) + g[..., None] * GRAIN, 0, 1), a, x, y)
 
 
 # ---------------------------------------------------------------- pagina
