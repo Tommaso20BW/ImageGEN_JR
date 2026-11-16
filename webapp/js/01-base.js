@@ -125,14 +125,14 @@ const REQUESTS = [
 ];
 // In ordine di uso: prima della partita, durante, dopo; poi notizie, social, classifiche.
 const HOME_GROUPS = [
-  {icon:'sent', title:'Ultimi invii',             ids:['sent']},
   {icon:'g-pre', title:'Prima della partita',     ids:['md','squad','pxi','xi','kick']},
   {icon:'g-play', title:'Durante la partita',     ids:['goal','saved','half','second','stats']},
   {icon:'g-events', title:'Fine partita',         ids:['end90','full','awards']},
   {icon:'motm', title:'Giocatori',                ids:['af','rin','bday']},
   {icon:'jr', title:'Post e citazioni',           ids:['jr','igbn','igq','xq','thq']},
   {icon:'cal', title:'Calendario e classifiche',  ids:['cal','table']},
-  {icon:'ita', title:'Nazionale',                 ids:['ita','conv']}
+  {icon:'ita', title:'Nazionale',                 ids:['ita','conv']},
+  {icon:'sent', title:'Ultimi invii',             ids:['sent']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
 const COMPETITIONS_UEFA = [
