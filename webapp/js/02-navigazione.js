@@ -604,7 +604,7 @@ function isLastStep() {
 /* ---------- Option groups ---------- */
 // Ricostruisce i bottoni solo se cambiano le opzioni; altrimenti sposta la selezione
 // sugli elementi esistenti, così il passaggio radio→radio è animato.
-const AUTO_OPTS = new Set(['natKindOpts','natPlayOpts','goalTypeOpts','tableCompOpts','tableViewOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts','iqModeOpts','bdModeOpts','awKindOpts']);
+const AUTO_OPTS = new Set(['natPreOpts','natKindOpts','natPlayOpts','goalTypeOpts','tableCompOpts','tableViewOpts','competitionOpts','sideOpts','kitOpts','jrRatioOpts','jrStyleOpts','calMonthOpts','poseOpts','momentOpts','iqModeOpts','bdModeOpts','awKindOpts']);
 function renderOptions(id, options, value, onSelect) {
   const box = $(id);
   box._options = options;
