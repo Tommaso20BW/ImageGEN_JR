@@ -483,6 +483,18 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
+    # EDITOR LIBERO: immagine già disegnata nella Mini App, didascalia scritta a mano (facoltativa).
+    if kind == 'free':
+        caption = '\n'.join(' '.join(line.split()) for line in str(incoming.get('caption') or '').replace('\r', '').split('\n')).strip()
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': {'kind': 'free', 'photo_id': _photo_id(incoming.get('photo_id')),
+                     'title': ' '.join(str(incoming.get('title') or '').split())[:40], 'caption': caption[:900]},
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
     # FOTO + JR: niente partita, solo foto e colore del logo.
     if kind == 'jr':
         try:

@@ -354,6 +354,18 @@ class Renderer:
             return affare_fatto.render(surname=data.get('surname', ''), name=data.get('name', ''),
                                        person=person, frame=data.get('frame'), ghost=ghost)
 
+        if kind == 'free':
+            # Editor libero: l'immagine finita arriva dalla Mini App (quello che vedi è quello che invii)
+            from PIL import Image
+
+            raw = self.photos.get(data.get('photo_id'))
+            if not raw:
+                raise ValueError('Immagine non trovata: rifai l\'anteprima.')
+            with Image.open(io.BytesIO(raw)) as image:
+                out = io.BytesIO()
+                image.convert('RGB').save(out, 'PNG')
+                return out.getvalue()
+
         if kind == 'jr':
             from graphics import photo_jr
 

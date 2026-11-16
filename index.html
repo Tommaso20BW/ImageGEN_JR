@@ -9,7 +9,7 @@
   <script>
     // Stile della Mini App (webapp/css), con la versione della pagina per evitare file vecchi in cache.
     (function () { var v = (new URLSearchParams(location.search).get('v') || Date.now());
-      ['01-base.css', '02-componenti.css', '03-schermate.css', '04-impostazioni.css', '05-anteprima.css', '06-stile-ios.css'].forEach(function (f) {
+      ['01-base.css', '02-componenti.css', '03-schermate.css', '04-impostazioni.css', '05-anteprima.css', '06-stile-ios.css', '07-editor.css'].forEach(function (f) {
         document.write('<link rel="stylesheet" href="webapp/css/' + f + '?v=' + v + '">'); }); })();
   </script>
 </head>
@@ -419,6 +419,27 @@
             <div class="ios-list">
               <label class="ios-row"><span>Nome</span><input id="afName" class="ios-in" maxlength="16" autocapitalize="characters" spellcheck="false" placeholder="KERIM" style="text-transform:uppercase"></label>
               <label class="ios-row"><span>Cognome</span><input id="afSurname" class="ios-in" maxlength="14" autocapitalize="characters" spellcheck="false" placeholder="ALAJBEGOVIĆ" style="text-transform:uppercase"></label>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="frtpl">
+            <div class="eyebrow">Editor libero</div>
+            <h1>Da dove parti?</h1>
+            <p class="lead">Una pagina vuota o un modello: dai modelli tornano testi, stili e posizioni, la foto la rimetti tu.</p>
+            <div id="frTplList" class="fr-tpls"></div>
+          </section>
+
+          <section class="screen fr-screen" data-screen="fredit">
+            <div id="frStageBox" class="fr-stage"><canvas id="frCanvas" class="fr-canvas"></canvas><canvas id="frOver" class="fr-over" aria-hidden="true"></canvas><div id="frFloat" class="fr-float" hidden></div></div>
+            <div id="frPanel" class="fr-panel" hidden></div>
+            <div id="frTools" class="fr-tools"></div>
+            <p id="frStatus" class="hint fr-status" aria-live="polite"></p>
+            <input id="frFile" type="file" accept="image/*" hidden>
+            <div id="frSheet" class="fr-sheet" hidden>
+              <div class="fr-sheet-card" role="dialog" aria-modal="true" aria-labelledby="frSheetTitle">
+                <div class="fr-sheet-head"><b id="frSheetTitle"></b><button id="frSheetClose" type="button" class="link-btn">Chiudi</button></div>
+                <div id="frSheetBody"></div>
+              </div>
             </div>
           </section>
 
@@ -945,7 +966,7 @@
 <script>
   // Codice della Mini App (webapp/js): file caricati in ordine, con la versione della pagina.
   (function () { var v = (new URLSearchParams(location.search).get('v') || Date.now());
-    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '05b-emoji.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '09b-compleanno.js', '10-avvio.js', '11-invii.js', '12-citazione.js', '13-convocati.js'].forEach(function (f) {
+    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '05b-emoji.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '09b-compleanno.js', '14-editor.js', '10-avvio.js', '11-invii.js', '12-citazione.js', '13-convocati.js'].forEach(function (f) {
       document.write('<script src="webapp/js/' + f + '?v=' + v + '"><\/script>'); }); })();
 </script>
 </body>

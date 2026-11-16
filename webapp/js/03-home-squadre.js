@@ -258,6 +258,7 @@ function resetAllData() {
   clearPhoto();
   mdpReset();
   bdReset();
+  frReset();
   clearPhase();
   igClearPhoto();
   $('igText').value = '';

@@ -63,6 +63,7 @@ const ICONS = {
   'saved':'<path d="M7 14V8a1.5 1.5 0 013 0v3.5M10 11V5.5a1.5 1.5 0 013 0V11M13 11V6.5a1.5 1.5 0 013 0V12M16 12V9.5a1.5 1.5 0 013 0V15c0 4-3 6.5-7 6.5-2.6 0-4.3-1-5.6-2.6l-3-3.6a1.5 1.5 0 012.3-1.9L7 15"/>',
   'stats':'<path d="M5 20v-9M12 20V5M19 20v-6"/>',
   'af':'<path d="M5.5 12.6l4.3 4.3L18.6 7.6" stroke-width="2.8"/>',     // spunta del ✅, bianca sul verde
+  'free':'<path d="M4 20l1.2-4.6L15.8 4.8a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M13.8 6.8l3.4 3.4"/>',
   'potm':'<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4v3h-4z"/>',
   'motm':'<path d="M12 3.2l2.6 5.3 5.8.85-4.2 4.1 1 5.8L12 16.5l-5.2 2.75 1-5.8-4.2-4.1 5.8-.85z"/>',
   'kick':'<path d="M6 21V4M6 4h12l-3 4.5L18 13H6"/>',
@@ -116,6 +117,7 @@ const REQUESTS = [
   {id:'rin',    kind:'rin',   icon:'rin', title:'Rinnovi',      desc:'Maglia stesa con nome e anno del contratto'},
   {id:'af',     kind:'af',    icon:'af', title:'Here We Go', desc:'Acquisto ufficiale: poster oro AFFARE FATTO con la foto'},
   {id:'bday',   kind:'bday',  icon:'bday', title:'Compleanno',   desc:'Auguri a un giocatore della rosa o a un ex'},
+  {id:'free',   kind:'free',  icon:'free', title:'Editor libero', desc:'Foto, testi e logo dove vuoi; modelli salvati come Lutto'},
   {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia Instagram', desc:'Notizia in formato storia'},
   {id:'igq',    kind:'igq',   icon:'igq', title:'Citazione Instagram', desc:'Post Instagram: foto, testo e account'},
   {id:'xq',     kind:'xq',    icon:'xq', title:'Citazione X',  desc:'Post X: testo, account e foto (o sfondo)'},
@@ -133,7 +135,7 @@ const HOME_GROUPS = [
   {icon:'igq', title:'Citazioni',                ids:['igq','xq','thq']},
   {icon:'cal', title:'Calendario e classifiche', ids:['cal','table']},
   {icon:'ita', title:'Nazionale',                ids:['ita','conv']},
-  {icon:'sent', title:'Ultimi invii',            ids:['sent']}
+  {icon:'sent', title:'Altro',                   ids:['sent','free']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
 const COMPETITIONS_UEFA = [
@@ -222,7 +224,7 @@ const STEP_NAMES = {
   competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
   player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
   natkind:'Grafica', natxi:'Formazione', natopp:'Avversaria', natplayer:'Giocatore', goaltype:'Tipo di gol',
-  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', rincontent:'Rinnovo', bdplayer:'Giocatore', bdphoto:'Foto', bdinfo:'Dati', bdpos:'Posizione', bdmode:'Tipo', bdoname:'Nome', motminfo:'Dati', potminfo:'Dati', afinfo:'Dati', awkind:'Grafica', awplayer:'Giocatore', bdophoto:'Foto', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', igtg:'Notizia', igphr:'Frasi', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
+  phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', rincontent:'Rinnovo', bdplayer:'Giocatore', bdphoto:'Foto', bdinfo:'Dati', bdpos:'Posizione', bdmode:'Tipo', bdoname:'Nome', motminfo:'Dati', potminfo:'Dati', afinfo:'Dati', frtpl:'Modello', fredit:'Editor', awkind:'Grafica', awplayer:'Giocatore', bdophoto:'Foto', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', igtg:'Notizia', igphr:'Frasi', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
 };
 
 const $ = id => document.getElementById(id);

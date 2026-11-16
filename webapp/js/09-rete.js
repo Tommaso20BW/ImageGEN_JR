@@ -31,6 +31,7 @@ function buildPayload(ghost=false) {
   if (kind === 'bday') return bdOld() ? bdoPayload() : bdPayload();
   if (kind === 'motm') return motmPayload();
   if (kind === 'af') return afPayload();
+  if (kind === 'free') return frPayload();
   if (kind === 'potm') return potmPayload();
   if (kind === 'rin') {
     const name = $('rinName').value.trim(), year = $('rinYear').value.trim();
@@ -423,6 +424,11 @@ async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caric
     if (!directBase) throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
 
     if (kind === 'pxi') await loadLayouts();
+    if (kind === 'free') {              // editor libero: la pagina si disegna qui e si carica come immagine finita
+      showBusy('Preparo l’immagine…', 'Disegno la pagina a piena risoluzione.', 'free');
+      keepBusy = true;
+      await frExport();
+    }
     const raw = JSON.stringify(buildPayload());
     if (new TextEncoder().encode(raw).length > 4096) throw new Error('Troppi dati per ImageGEN.');
 

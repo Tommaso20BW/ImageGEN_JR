@@ -10,6 +10,7 @@ import copy
 import hashlib
 import io
 import json
+import re
 import os
 import secrets
 import signal
@@ -163,6 +164,16 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
                 return
             self._json(200, {'ok': True, 'kit': self.service.kit(query.get('event', ''), query.get('league', ''))})
+            return
+        if parts.path.rstrip('/') == '/editorfile':
+            query = dict(parse_qsl(parts.query))
+            if query.get('session', '') != self.service.session:
+                self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
+                return
+            try:
+                self._png(*self.service.editor_file(query.get('name', '')))
+            except (ValueError, OSError):
+                self._json(404, {'ok': False, 'error': 'File non trovato.'})
             return
         if parts.path.rstrip('/') == '/overlay':
             query = dict(parse_qsl(parts.query))
@@ -357,7 +368,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost', '/colors', '/playerphoto', '/posethumbs', '/bdayphotos', '/bdaybirths', '/bdoldcut', '/tgposts', '/tgphoto', '/translate'):
+                        '/usesent', '/phrases', '/igpost', '/colors', '/templates', '/playerphoto', '/posethumbs', '/bdayphotos', '/bdaybirths', '/bdoldcut', '/erase', '/tgposts', '/tgphoto', '/translate'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -398,6 +409,14 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/colors':
                 self._json(200, {'ok': True, **self.service.colors(envelope)})
+                return
+
+            if path == '/templates':
+                self._json(200, {'ok': True, **self.service.templates(envelope)})
+                return
+
+            if path == '/erase':
+                self._json(200, {'ok': True, **self.service.erase(envelope)})
                 return
 
             if path == '/playerphoto':
@@ -506,6 +525,8 @@ class Service:
         # Scontorni in corso/finiti (id foto -> stato), per chiedere lo stato con richieste brevi.
         self.cutout_jobs = {}
         self.cutout_jobs_lock = threading.Lock()
+        self.erase_jobs = {}
+        self.erase_jobs_lock = threading.Lock()
         self.preview_jpeg_cache = {}
         self.ghost_cache = {}
         self.recent_sends = {}
@@ -516,6 +537,7 @@ class Service:
         self.last_resend = None
         self.ig_phrases = []
         self.saved_colors = {'title': [], 'jr': []}
+        self.editor_templates = []
 
     def store_photo(self, raw):
         width, height = check_photo(raw)
@@ -1381,6 +1403,114 @@ class Service:
                                     f'({len(self.ig_phrases)} in tutto)')
         return {'phrases': self.ig_phrases}
 
+    def erase(self, envelope):
+        """POST /erase: la gomma è un lavoro in background, come lo scontorno.
+
+        La Mini App ripete la stessa richiesta ogni pochi secondi: la prima avvia il lavoro,
+        le altre dicono 'running', poi arriva l'immagine. Una sola richiesta lunga cade
+        (tunnel, e il processore diviso con lo scontorno fine)."""
+        envelope = envelope or {}
+        key = '|'.join((str(envelope.get('photo_id') or ''), str(envelope.get('mask_id') or ''),
+                        '1' if envelope.get('subject') is True else '0'))
+        with self.erase_jobs_lock:
+            job = self.erase_jobs.get(key)
+            if job is None:
+                job = {'state': 'running', 'error': '', 'image': ''}
+                self.erase_jobs[key] = job
+                while len(self.erase_jobs) > 4:
+                    self.erase_jobs.pop(next(iter(self.erase_jobs)))
+                threading.Thread(target=self._erase_job, args=(envelope, job), daemon=True).start()
+            elif job['state'] != 'running':
+                self.erase_jobs.pop(key, None)        # consegnato: la prossima uguale riparte da capo
+            return {'state': job['state'], 'error': job['error'], 'image': job['image']}
+
+    def _erase_job(self, envelope, job):
+        _lower_priority()
+        try:
+            job['image'] = self.erase_image(envelope)['image']
+            job['state'] = 'ready'
+        except Exception as exc:  # noqa: BLE001 - l'errore va alla Mini App, non al server
+            job['error'] = str(exc) if isinstance(exc, ValueError) else 'Cancellazione non riuscita.'
+            job['state'] = 'error'
+            log.warn('FOTO', f'Gomma non riuscita: {type(exc).__name__}: {exc}')
+
+    def erase_image(self, envelope):
+        """Editor libero, gomma: cancella dalla foto la zona dipinta col dito e ricostruisce
+        il dietro (LaMa, lo stesso di quando si sposta la persona in HALF/END/FULL).
+        photo_id = foto; mask_id = maschera della stessa misura (bianco = da cancellare);
+        subject = True: cancella anche la persona scontornata (lo scontorno già pronto, se c'è).
+        Serve almeno uno dei due."""
+        import base64
+        from PIL import Image, ImageChops
+        from livescore.graphics import inpaint
+        envelope = envelope or {}
+        photo_id, mask_id = str(envelope.get('photo_id') or ''), str(envelope.get('mask_id') or '')
+        subject = envelope.get('subject') is True
+        if photo_id not in self.photos or (mask_id and mask_id not in self.photos):
+            raise ValueError('Foto non trovata: riprova.')
+        with Image.open(io.BytesIO(self.photos[photo_id])) as image:
+            photo = image.convert('RGB')
+        mask = Image.new('L', photo.size, 0)
+        if mask_id:
+            with Image.open(io.BytesIO(self.photos[mask_id])) as image:
+                mask = image.convert('L').resize(photo.size)
+        if subject:
+            with Image.open(io.BytesIO(self.renderer.cutout(photo_id))) as image:
+                person = image.convert('RGBA').getchannel('A').resize(photo.size)
+            if person.point(lambda v: 255 if v > 24 else 0).getbbox() is None:
+                raise ValueError('Nella foto non trovo nessuna persona.')
+            mask = ImageChops.lighter(mask, person)
+        if mask.point(lambda v: 255 if v > 24 else 0).getbbox() is None:
+            raise ValueError('Passa il dito su quello che vuoi cancellare.')
+        out = inpaint.remove(photo, mask)
+        buf = io.BytesIO()
+        out.convert('RGB').save(buf, 'JPEG', quality=93)
+        what = 'persona tolta' if subject else 'zona cancellata con la gomma'
+        log.info('FOTO', f'Editor libero: {what} ({inpaint.last_engine or "niente"})')
+        return {'image': 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')}
+
+    def templates(self, envelope):
+        """Editor libero: modelli salvati. Elenco, salva (stesso id = sovrascrive), cancella; nel repo degli asset."""
+        envelope = envelope or {}
+        action = envelope.get('action')
+        with self.history_lock:
+            rows = list(self.editor_templates)
+            if action == 'save':
+                tpl = sent_store.clean_template(envelope.get('template'))
+                rows = [tpl] + [t for t in rows if t['id'] != tpl['id']]
+            elif action == 'delete':
+                tid = str(envelope.get('id') or '')
+                rows = [t for t in rows if t['id'] != tid]
+            elif action != 'list':
+                raise ValueError('Richiesta non valida.')
+            rows = rows[:sent_store.TEMPLATES_KEEP]
+            changed = rows != self.editor_templates
+            self.editor_templates = rows
+        if changed:
+            sent_store.save_templates(rows)
+            log.info('SALVATAGGIO', f"Editor libero: modello {'salvato' if action == 'save' else 'cancellato'} ({len(rows)} in tutto)")
+        return {'templates': self.editor_templates}
+
+    def editor_file(self, name):
+        """Editor libero: font degli asset e logo JR (nero, ritagliato), da usare nella Mini App."""
+        from graphics.common import asset_dir
+        if name == 'jrlogo':
+            if 'jrlogo' not in self.overlays:
+                from PIL import Image
+                with Image.open(asset_dir() / 'overlays' / 'jr.png') as im:
+                    im = im.convert('RGBA')
+                    im = im.crop(im.getchannel('A').getbbox())
+                    buf = io.BytesIO()
+                    im.save(buf, 'PNG')
+                self.overlays['jrlogo'] = buf.getvalue()
+            return self.overlays['jrlogo'], 'image/png'
+        if not re.fullmatch(r'[A-Za-z0-9_-]+\.(ttf|otf)', name or ''):
+            raise ValueError('File non valido.')
+        path = asset_dir() / 'fonts' / name
+        if not path.is_file():
+            raise ValueError('Font non trovato.')
+        return path.read_bytes(), 'font/otf' if name.endswith('.otf') else 'font/ttf'
+
     def colors(self, envelope):
         """Post: colori aggiunti con il + (titolo e logo JR). Elenco, aggiungi, togli; nel repo degli asset."""
         from graphics import photo_jr
@@ -1590,6 +1720,7 @@ class Service:
             self.history = sent_store.load_history()
             self.ig_phrases = sent_store.load_phrases()
             self.saved_colors = sent_store.load_colors()
+            self.editor_templates = sent_store.load_templates()
         if self.history or self.ig_phrases:
             log.info('AVVIO', f'Ultimi invii: {len(self.history)} · frasi pronte: {len(self.ig_phrases)}')
 
@@ -1684,6 +1815,8 @@ def _send_detail(data):
     if kind == 'af':
         return {**empty, 'player': ' '.join(str(data.get(k) or '') for k in ('name', 'surname')).strip(),
                 'note': 'Here We Go'}
+    if kind == 'free':
+        return {**empty, 'player': str(data.get('title') or 'Editor libero'), 'note': 'Editor libero'}
     if kind == 'conv':
         n = len(data.get('players') or [])
         return {**empty, 'player': f'{n} giocatori',

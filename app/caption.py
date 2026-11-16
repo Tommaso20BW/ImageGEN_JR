@@ -349,6 +349,8 @@ def _other_caption(data):
         who = _who(data)
         return (f"{E_OFFICIAL} HERE WE GO: <b>{html.escape(who)}</b> alla <b>Juventus</b>.\n\n"
                 f"<i>{E_SOURCE} Fabrizio Romano</i>")
+    if kind == 'free':
+        return html.escape(str(data.get('caption') or '').strip())      # testo scritto a mano, o niente
     if kind == 'table':
         comp = str(data.get('competition') or '').upper()
         if data.get('view') == 'bracket' or comp == 'CI':

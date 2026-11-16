@@ -26,6 +26,7 @@ KINDS = [
     ('MAN OF THE MATCH', 'motm'),
     ('PLAYER OF THE MONTH', 'potm'),
     ('HERE WE GO', 'af'),
+    ('EDITOR LIBERO', 'free'),
     ('CITAZIONE INSTAGRAM', 'igq'),
     ('CITAZIONE X', 'xq'),
     ('CITAZIONE THREADS', 'thq'),

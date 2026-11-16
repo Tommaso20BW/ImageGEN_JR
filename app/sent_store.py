@@ -5,6 +5,7 @@
                           file_id si rimandano e si riscaricano anche dopo la sessione.
 - imagegen/ig_phrases.json Storia IG: frasi pronte.
 - imagegen/colors.json     Post: colori aggiunti con il + ({'title': ['#rrggbb'], 'jr': [colore JR]}).
+- imagegen/editor_templates.json  Editor libero: modelli salvati ([{'id', 'name', 'doc'}], senza foto).
 
 Il workflow copia la cartella imagegen/ nella cartella asset all'avvio (lettura subito, senza
 rete); ogni modifica si scrive in locale e poi con un commit (team_settings._commit), in un
@@ -21,6 +22,9 @@ HISTORY = 'history.json'
 PHRASES = 'ig_phrases.json'
 COLORS = 'colors.json'
 COLORS_KEEP = 24
+TEMPLATES = 'editor_templates.json'
+TEMPLATES_KEEP = 40
+TEMPLATE_MAX = 12000             # byte del modello (JSON): livelli, testi e stili, mai le foto
 NAMES = 'ig_names.json'          # Citazione IG: nome scritto a mano per ogni account ({username: nome})
 HISTORY_KEEP = 20
 PHRASES_KEEP = 40
@@ -85,6 +89,43 @@ def load_colors():
         if isinstance(color, dict):
             out['jr'].append(color)
     return {k: v[:COLORS_KEEP] for k, v in out.items()}
+
+
+def clean_template(value):
+    """Modello dell'editor libero: {'id', 'name', 'doc'}; doc = pagina e livelli (le foto restano da
+    inserire). ValueError se non è un modello valido."""
+    import re
+    if not isinstance(value, dict):
+        raise ValueError('Modello non valido.')
+    name = ' '.join(str(value.get('name') or '').split())[:40]
+    doc = value.get('doc')
+    if not name:
+        raise ValueError('Scrivi il nome del modello.')
+    if not isinstance(doc, dict) or not isinstance(doc.get('layers'), list):
+        raise ValueError('Modello non valido.')
+    for layer in doc['layers']:
+        if isinstance(layer, dict):
+            layer.pop('src', None)                       # niente foto nel modello
+    if len(json.dumps(doc, ensure_ascii=False)) > TEMPLATE_MAX:
+        raise ValueError('Modello troppo grande.')
+    tid = str(value.get('id') or '')
+    if not re.fullmatch(r'[a-z0-9]{6,16}', tid):
+        raise ValueError('Modello non valido.')
+    return {'id': tid, 'name': name, 'doc': doc}
+
+
+def load_templates():
+    out = []
+    for item in _read(TEMPLATES, []):
+        try:
+            out.append(clean_template(item))
+        except ValueError:
+            pass
+    return out[:TEMPLATES_KEEP]
+
+
+def save_templates(templates):
+    _save(TEMPLATES, templates[:TEMPLATES_KEEP], 'ImageGen: modelli dell\'editor libero')
 
 
 def save_colors(colors):

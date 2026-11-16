@@ -277,6 +277,7 @@ function buildFlow() {
   else if (kind === 'award') flow = ['awkind'];                     // MOTM e POTM: prima si sceglie quale
   else if (kind === 'potm') flow = ['awkind','awplayer','potminfo','bdophoto'];
   else if (kind === 'af') flow = ['afinfo','bdophoto','bdpos'];
+  else if (kind === 'free') flow = ['frtpl','fredit'];
   else if (kind === 'motm') flow = ['awkind',...pick(base),'awplayer','motminfo','bdophoto','bdpos'];
   else if (kind === 'bday') flow = bd.mode === 'old' ? ['bdmode','bdoname','bdophoto','bdpos'] : ['bdmode','bdplayer',bd.manual ? 'bdophoto' : 'bdphoto','bdinfo','bdpos'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent', {tg:'igtg', phr:'igphr'}[igPicking] || 'igsent'] : ['igcontent'];
@@ -297,6 +298,8 @@ function stepValue(step) {
   if (natValue !== null) return natValue;
   const bdValue = bdStepValue(step);
   if (bdValue !== null) return bdValue;
+  const frValue = frStepValue(step);
+  if (frValue !== null) return frValue;
   switch (step) {
     case 'competition': return labelOf(competitionOptions(),competition);
     case 'side': return labelOf(SIDES,side);
@@ -518,8 +521,9 @@ function renderFlow() {
   });
   if (screen) screen.classList.add('active');
   document.body.classList.toggle('home-mode',screenName === 'home');
-  const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur' || screenName === 'jrlayout' || screenName === 'bdpos';
+  const editing = screenName === 'photo' || screenName === 'phasephoto' || screenName === 'jrblur' || screenName === 'jrlayout' || screenName === 'bdpos' || screenName === 'fredit';
   $('stage').classList.toggle('photo-mode', editing);
+  $('stage').classList.toggle('fr-mode', screenName === 'fredit');
   if (editing) $('stage').scrollTop = 0;
   try {
     if (tg && tg.disableVerticalSwipes) editing ? tg.disableVerticalSwipes() : tg.enableVerticalSwipes();
@@ -537,6 +541,8 @@ function renderFlow() {
   if (screenName === 'awplayer') awRender();
   if (screenName === 'motminfo' || screenName === 'potminfo') awNameBoxes();
   if (screenName === 'bdophoto') bdoTexts();
+  if (screenName === 'frtpl') frOpenTemplates();
+  if (screenName === 'fredit') frOpenEditor();
   if (screenName === 'jrphotos') renderJrPicker();
   if (screenName === 'jrlayout') { renderJrLayout(true); requestAnimationFrame(() => { fitColBig(); renderJrLayout(); }); }
   if (screenName === 'jrbg') renderJrBg();
