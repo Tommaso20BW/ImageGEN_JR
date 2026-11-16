@@ -1,4 +1,4 @@
-"""Sagome fisse per gli editor foto (Starting XI, Matchday, Foto + JR, Titolo JR, Citazioni, Compleanno).
+"""Sagome fisse per gli editor foto (Starting XI, Matchday, Foto + JR, Titolo JR, Citazioni, Compleanno, MOTM, POTM, Here We Go).
 
 Non contengono i dati inseriti: la grafica vera senza foto con dati finti fissi
 (Juve storica, stemmi Juventus, partita qualunque). Servono a posizionare la foto.
@@ -110,6 +110,12 @@ def potm(canva, out):
     _small(po.render(surname='COGNOME', name='Nome', month='Mese', ghost=True), out, 'potm_gold')
 
 
+def af(canva, out):
+    """Here We Go: poster AFFARE FATTO senza giocatore con nome e cognome finti."""
+    from graphics import affare_fatto
+    _small(affare_fatto.render(surname='COGNOME', name='NOME', ghost=True), out, 'af_gold')
+
+
 def main():
     canva = Path(sys.argv[1] if len(sys.argv) > 1 else '../LiveScore_Assets_JR/canva')
     starting_xi(canva, canva)
@@ -120,6 +126,7 @@ def main():
     compleanno(canva, canva)
     motm(canva, canva)
     potm(canva, canva)
+    af(canva, canva)
 
 
 if __name__ == '__main__':

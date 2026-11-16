@@ -125,10 +125,11 @@ const REQUESTS = [
 ];
 // In ordine di uso: prima della partita, durante, dopo; poi notizie, social, classifiche.
 const HOME_GROUPS = [
-  {icon:'g-pre', title:'Pre-gara',              ids:['pxi','squad','md','xi']},
+  {icon:'g-pre', title:'Pre-gara',              ids:['md','squad','pxi','xi']},
   {icon:'g-events', title:'Fasi della partita', ids:['kick','half','second','end90','full']},
-  {icon:'g-play', title:'In partita',            ids:['goal','saved','stats','awards']},
-  {icon:'jr', title:'Notizie e post',            ids:['igbn','jr','rin','af','bday']},
+  {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
+  {icon:'motm', title:'Giocatori',               ids:['awards','af','rin','bday']},
+  {icon:'jr', title:'Post e storie',             ids:['jr','igbn']},
   {icon:'igq', title:'Citazioni',                ids:['igq','xq','thq']},
   {icon:'cal', title:'Calendario e classifiche', ids:['cal','table']},
   {icon:'ita', title:'Nazionale',                ids:['ita','conv']},
