@@ -125,14 +125,15 @@ const REQUESTS = [
 ];
 // In ordine di uso: prima della partita, durante, dopo; poi notizie, social, classifiche.
 const HOME_GROUPS = [
-  {icon:'g-pre', title:'Prima della partita',     ids:['md','squad','pxi','xi','kick']},
-  {icon:'g-play', title:'Durante la partita',     ids:['goal','saved','half','second','stats']},
-  {icon:'g-events', title:'Fine partita',         ids:['end90','full','awards']},
-  {icon:'motm', title:'Giocatori',                ids:['af','rin','bday']},
-  {icon:'jr', title:'Post e citazioni',           ids:['jr','igbn','igq','xq','thq']},
-  {icon:'cal', title:'Calendario e classifiche',  ids:['cal','table']},
-  {icon:'ita', title:'Nazionale',                 ids:['ita','conv']},
-  {icon:'sent', title:'Ultimi invii',             ids:['sent']}
+  {icon:'g-pre', title:'Pre-gara',              ids:['md','squad','pxi','xi']},
+  {icon:'g-events', title:'Fasi della partita', ids:['kick','half','second','end90','full']},
+  {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
+  {icon:'motm', title:'Giocatori',               ids:['awards','af','rin','bday']},
+  {icon:'jr', title:'Post e storie',             ids:['jr','igbn']},
+  {icon:'igq', title:'Citazioni',                ids:['igq','xq','thq']},
+  {icon:'cal', title:'Calendario e classifiche', ids:['cal','table']},
+  {icon:'ita', title:'Nazionale',                ids:['ita','conv']},
+  {icon:'sent', title:'Ultimi invii',            ids:['sent']}
 ];
 const currentRequest = () => REQUESTS.find(r => r.kind === kind && (kind !== 'match' || r.phase === phase));
 const COMPETITIONS_UEFA = [
