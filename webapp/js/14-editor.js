@@ -31,10 +31,19 @@ function frNew(type) {
   if (type === 'photo') return {...base, bw:false, bright:0, contrast:0, sharpen:false, blur:0, ...frEffects()};
   if (type === 'text') return {...base, text:'Testo', font:'Poppins', size:120, color:'#ffffff', align:'center',
     upper:false, spacing:0, line:110, fit:0, ...frEffects()};
-  if (type === 'logo') return {...base, x:W - 110, y:110, size:150, color:'#ffffff', ...frEffects()};
+  if (type === 'logo') return {...base, ...frLogoSpot(W), color:'auto', ...frEffects()};
   if (type === 'shade') return {...base, dir:'bottom', color:'#000000', from:55, strength:80};
   return {...base, w:900, h:180, color:'#000000', radius:0, ...frEffects()};
 }
+
+// Il posto di sempre del logo JR, come nelle altre grafiche (overlay 3:4 della FOTO + JR): in alto a
+// destra, alto 94 e a 24 dal bordo destro e 18 da quello alto su una pagina larga 1500 (in proporzione).
+function frLogoSpot(W) {
+  const size = W * 94 / 1500;
+  const asp = fr.logoImg ? fr.logoImg.width / fr.logoImg.height : 0.69;
+  return {x:W - W * 24 / 1500 - size * asp / 2, y:W * 18 / 1500 + size / 2, size, scale:1, rot:0};
+}
+function frLogoHome(l) { Object.assign(l, frLogoSpot(fr.doc.w)); }
 
 function frBlank(w=1500, h=2000) { return {v:1, w, h, bg:'#000000', caption:'', layers:[]}; }
 
@@ -48,7 +57,7 @@ function frLuttoDoc() {
   const glow = {on:true, color:'#ffffff', blur:18, strength:18};   // bagliore minimo
   const name = {...frNew('text'), text:'Nome Cognome', y:1785, size:140, fit:1300, glow:{...glow}};
   const years = {...frNew('text'), text:'1960-2026', y:1865, size:62, color:'#e8e8e8', glow:{...glow}};
-  const logo = {...frNew('logo'), x:1443, y:65, size:94, color:'auto'};
+  const logo = frNew('logo');                       // al suo posto di sempre
   d.layers = [photo, shade, name, years, logo];
   return d;
 }
@@ -1029,6 +1038,7 @@ function frPanel() {
     [['Avanti', () => frMove(l, 1), i === fr.doc.layers.length - 1], ['Indietro', () => frMove(l, -1), i === 0],
       ['Centra', () => { l.x = fr.doc.w / 2; l.y = fr.doc.h / 2; frDraw(); }, l.type === 'shade'],
       ['Raddrizza', () => { l.rot = 0; frDraw(); }, l.type === 'shade' || !l.rot], ['Livelli', () => frSheet(), false],
+      ...(l.type === 'logo' ? [['Al suo posto', () => { frLogoHome(l); frDraw(); }, false]] : []),
       ['Duplica', () => frDuplicate(l), false], ['Elimina', () => frDelete(l), false]]
       .forEach(([text, fn, off]) => { const b = frButton(text, () => { haptic('select'); fn(); frPanel(); }, 'fr-act' + (text === 'Elimina' ? ' danger' : '')); b.disabled = off; row.appendChild(b); });
     put(row);
@@ -1038,10 +1048,17 @@ function frPanel() {
 function frAdd(type) {
   haptic('select');
   if (type === 'photo') { frPick('new'); return; }    // il livello nasce solo con una foto vera
+  const had = type === 'logo' && fr.doc.layers.find(x => x.type === 'logo');
+  if (had) {                                          // il logo è uno: lo rimetto al suo posto e lo scelgo
+    had.hidden = false; frLogoHome(had);
+    fr.sel = had.id; fr.tool = '';
+    frLayers(); frPanel(); frDraw();
+    return;
+  }
   const l = frNew(type);
   fr.doc.layers.push(l);
   if (type === 'text') frFont(l.font);
-  if (type === 'logo') frLogo();
+  if (type === 'logo') frLogo().then(() => { frLogoHome(l); frDraw(); }).catch(() => {});
   fr.sel = l.id; fr.tool = type === 'text' ? 'edit' : '';
   frLayers(); frPanel(); frDraw();
   if (type === 'text') setTimeout(() => { const ta = $('frPanel').querySelector('textarea'); if (ta) { ta.focus(); ta.select(); } }, 60);
@@ -1076,6 +1093,7 @@ function frFormat(name) {
   const kx = f[1] / fr.doc.w, ky = f[2] / fr.doc.h;
   fr.doc.layers.forEach(l => { l.x *= kx; l.y *= ky; });
   fr.doc.w = f[1]; fr.doc.h = f[2];
+  fr.doc.layers.forEach(l => { if (l.type === 'logo') frLogoHome(l); });   // il logo resta al suo posto
   frDraw();
 }
 
