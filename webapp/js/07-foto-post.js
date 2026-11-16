@@ -1129,7 +1129,7 @@ function jrCollageCells() {
 function colCellsHtml(t, order, sel) {
   return t.cells.map((c,i) => {
     const card = jrb.cards[order[i]];
-    return `<div class="col-cell${i === sel ? ' sel' : ''}" data-i="${i}" style="left:${c.x * 100}%;top:${c.y * 100}%;width:${c.w * 100}%;height:${c.h * 100}%"><img alt="" draggable="false" src="${card.small || card.url}" style="${colImgStyle(card,c)}"></div>`;
+    return `<div class="col-cell${i === sel ? ' sel' : ''}" data-i="${i}" style="left:${c.x * 100}%;top:${c.y * 100}%;width:${c.w * 100}%;height:${c.h * 100}%"><img alt="" draggable="false" src="${card.small || card.url}" style="${colImgStyle(card,c)}"><div class="guides" aria-hidden="true"><i class="v mid" style="left:50%"></i><i class="h mid" style="top:50%"></i></div></div>`;
   }).join('');
 }
 
@@ -1157,11 +1157,25 @@ function colZoomTo(i, z, ax = .5, ay = .5) {
   colPaint(i);
 }
 
+// Spostando la foto nel riquadro: aggancio al centro del riquadro (linea rosa e vibrazione).
 function colPan(i, dx, dy, rect) {
   const card = colCrop(colCardAt(i)), b = colImgBox(card, colCellAt(i));
-  if (b.w - 100 > 1e-6) card.cpx = jrcClamp((b.l + dx / rect.width * 100) / (100 - b.w));
-  if (b.h - 100 > 1e-6) card.cpy = jrcClamp((b.t + dy / rect.height * 100) / (100 - b.h));
+  const canX = b.w - 100 > 1e-6, canY = b.h - 100 > 1e-6;
+  const o = card._snap || (card._snap = {x:card.cpx, y:card.cpy});
+  const hit = snapMove(o, canX ? dx / rect.width * 100 / (100 - b.w) : 0, canY ? dy / rect.height * 100 / (100 - b.h) : 0,
+    canX ? SNAP_PX / rect.width * 100 / (b.w - 100) : 0, canY ? SNAP_PX / rect.height * 100 / (b.h - 100) : 0, .5, .5);
+  if (canX) card.cpx = jrcClamp(o.x);
+  if (canY) card.cpy = jrcClamp(o.y);
+  o.x = card.cpx; o.y = card.cpy;
+  const shown = [canX && hit[0], canY && hit[1]];
+  snapSync(o, shown);
   colPaint(i);
+  const cell = $('colBig').querySelector(`.col-cell[data-i="${i}"]`);
+  if (cell) snapShow(cell, shown);
+}
+function colPanEnd() {
+  jrb.cards.forEach(c => { if (c) delete c._snap; });
+  $('colBig').querySelectorAll('.col-cell').forEach(snapClear);
 }
 
 // Anteprima grande quanto lo spazio libero: titolo, anteprima, frase e pulsante layout stanno in una sola pagina.
@@ -1276,6 +1290,7 @@ function initJrCollage() {
       return;
     }
     if (ptrs.size) { g.last = snap(); return; }
+    colPanEnd();
     if (g.dirty) renderColGrid();
     g = null;
   };

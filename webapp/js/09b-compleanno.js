@@ -546,16 +546,22 @@ function initBirthdayEditor() {
     if (!pointers.has(e.pointerId) || !last) return;
     pointers.set(e.pointerId,{x:e.clientX, y:e.clientY});
     const now = snapshot();
-    bd.frame.x += (now.x - last.x) / frame.clientWidth;
-    bd.frame.y += (now.y - last.y) / frame.clientHeight;
+    const fw = frame.clientWidth, fh = frame.clientHeight, page = bdCurPage(), p = bdCur();
+    // Aggancio al centro come negli altri editor: il baricentro del giocatore sulla linea verticale
+    // di mezzo, il centro della sagoma su quella orizzontale (linea rosa e vibrazione).
+    const cx = page ? (page.w / 2 - page.cx) / page.w : 0;
+    const cy = page && p ? (page.h / 2 + p.height * bd.frame.zoom / 2 - page.foot) / page.h : 0;
+    const hit = snapMove(bd.frame, (now.x - last.x) / fw, (now.y - last.y) / fh, SNAP_PX / fw, SNAP_PX / fh, cx, cy);
     if (now.d && last.d) bd.frame.zoom *= now.d / last.d;
     last = now;
     bdLayout();
+    snapSync(bd.frame, hit);
+    snapShow(frame, hit);
   });
   const end = e => {
     pointers.delete(e.pointerId);
     last = pointers.size ? snapshot() : null;
-    if (!pointers.size) { frame.classList.remove('dragging'); renderSteps(); }
+    if (!pointers.size) { frame.classList.remove('dragging'); snapEnd(bd.frame); snapClear(frame); renderSteps(); }
   };
   frame.addEventListener('pointerup',end);
   frame.addEventListener('pointercancel',end);

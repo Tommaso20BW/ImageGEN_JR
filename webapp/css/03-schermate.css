@@ -152,3 +152,8 @@ button.parsed-row{width:100%;text-align:left;color:inherit;font:inherit;font-wei
 .xi-row{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center}
 .xi-row .field-input{min-height:48px;font-size:16px;font-weight:700;padding:0 12px;min-width:0}
 .xi-num{text-align:center}
+
+/* Collage: nel riquadro scelto solo le linee di mezzo, visibili quando la foto si aggancia al centro */
+.col-cell .guides i{opacity:0}
+.col-cell.snap-x .guides i.v.mid,.col-cell.snap-y .guides i.h.mid{opacity:1}
+.col-th .col-cell .guides{display:none}
