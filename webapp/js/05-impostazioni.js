@@ -134,7 +134,8 @@ function renderSetMenu() {
   const box = $('setMenu');
   box.innerHTML = '';
   const n = unmatchedEspn().length;
-  [['Messaggi', 'Testo sotto le grafiche', openMessages],
+  [['Ultimi invii', 'Rimanda o modifica le grafiche già inviate', () => { closeSettings(); openRequest(REQUESTS.find(r => r.id === 'sent')); }],
+   ['Messaggi', 'Testo sotto le grafiche', openMessages],
    ['Matchday', 'Canale TV di ogni competizione', () => openXtra('tv')],
    ['Squadre', n ? `${n} da sistemare` : 'Logo, nome, hashtag, nomi ESPN', () => { haptic('select'); showSetView('teams'); }],
    ['Frasi pronte', 'Storia IG', () => openXtra('phr')],
