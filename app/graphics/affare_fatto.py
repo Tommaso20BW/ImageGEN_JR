@@ -24,7 +24,7 @@ INK = (196, 146, 70)                      # oro di AFFARE FATTO e dei fili
 ARROWS = (190, 136, 56)
 # firma in basso a sinistra, sopra il filo di AFFARE FATTO: dentro il riquadro, appoggiata in basso,
 # nome sopra e cognome sotto centrati o allineati a sinistra (a caso), inclinata di SIGN_TILT gradi (in salita)
-SIGN_X0, SIGN_X1, SIGN_BOTTOM, SIGN_MAX_H, SIGN_TILT = 50, 360, 1885, 135, 7
+SIGN_X0, SIGN_X1, SIGN_BOTTOM, SIGN_MAX_H, SIGN_TILT = 72, 243, 1862, 75, 7   # piccola
 SIGN_ALIGNS = ('center', 'left')
 NAME_MAX, SURNAME_MAX = 16, M.SURNAME_MAX
 
