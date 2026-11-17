@@ -150,6 +150,12 @@ class TemplateCaptionTest(unittest.TestCase):
         self.assertIn('emoji-id="5427009714745517609"', caption.build({'kind': 'pxi', 'competition': 'ita.1',
                                                                         'side': 'home', 'opponent': FIO}))
 
+    def test_renewal_has_text_only_when_written(self):
+        data = {'kind': 'rin', 'name': 'YILDIZ', 'year': '2030'}
+        self.assertEqual(caption.build(data), '')
+        caption.CUSTOM = {'rin': '✍️ **{giocatore}** rinnova fino al {anno}.'}
+        self.assertEqual(plain(caption.build(data)), '✍️ <b>Yildiz</b> rinnova fino al 2030.\n\n👉 @Juventus_Reborn')
+
     def test_templates_list(self):
         caption.CUSTOM = {'af': 'HERE WE GO {giocatore}'}
         rows = {r['kind']: r for r in caption.templates_list()}

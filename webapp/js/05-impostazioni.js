@@ -755,8 +755,8 @@ async function nmSave(reset) {
    Il servizio li tiene in imagegen/captions.json (repo degli asset). **grassetto**, __corsivo__,
    {segnaposto}; le emoji del canale diventano animate da sole e la firma si aggiunge sempre. */
 let msgList = null;
-const MSG_SAMPLE = {hashtag:'#JuveNapoli', avversario:'Napoli', giocatore:'Kenan Yildiz', mesi:'nel mese di ottobre 2026'};
-const MSG_FIELD = {hashtag:'Hashtag partita', avversario:'Avversario', giocatore:'Giocatore', mesi:'Mesi del sondaggio'};
+const MSG_SAMPLE = {hashtag:'#JuveNapoli', avversario:'Napoli', giocatore:'Kenan Yildiz', mesi:'nel mese di ottobre 2026', anno:'2030'};
+const MSG_FIELD = {hashtag:'Hashtag partita', avversario:'Avversario', giocatore:'Giocatore', mesi:'Mesi del sondaggio', anno:'Anno di scadenza'};
 
 async function openMessages() {
   haptic('select');
@@ -778,6 +778,7 @@ function msgOpen(kind) {
 
 // Anteprima come su Telegram (emoji normali al posto di quelle animate, valori d'esempio).
 function msgPreview(text) {
+  if (!text.trim()) return '<span class="msg-none">Nessun testo: la grafica parte da sola.</span>';
   const h = setEsc(text).replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>').replace(/__([\s\S]+?)__/g, '<i>$1</i>')
     .replace(/\{(\w+)\}/g, (all, k) => MSG_SAMPLE[k.toLowerCase()] ? setEsc(MSG_SAMPLE[k.toLowerCase()]) : all);
   return `${h}\n\n👉 @Juventus_Reborn`;
@@ -787,7 +788,7 @@ function msgRender(page) {
   const box = $('setPage'), D = setDraft;
   if (page === 'msg') {
     const rows = (msgList || []).map(m => `<button type="button" class="sp-item" data-sp="msg-open" data-k="${setEsc(m.kind)}">
-      <span>${setEsc(m.name)}</span><span class="sp-v">${m.custom ? 'Tuo' : 'Di base'}</span><span class="sp-chev">›</span></button>`).join('');
+      <span>${setEsc(m.name)}</span><span class="sp-v">${m.custom ? 'Tuo' : m.default ? 'Di base' : 'Nessun testo'}</span><span class="sp-chev">›</span></button>`).join('');
     box.innerHTML = spNav('Messaggi') + `<div class="sp-body">
       <p class="sp-note">Il testo che ImageGEN mette sotto la grafica quando la invia sul canale.</p>
       ${msgList ? `<div class="sp-list">${rows}</div>` : '<p class="sp-note">Carico…</p>'}</div>`;
@@ -796,13 +797,13 @@ function msgRender(page) {
   const M = D.m;
   box.innerHTML = spNav(M.name, {save:true, cancel:true, saveOff:D.text.trim() === M.text}) + `<div class="sp-body">
     <div class="sp-lbl">Testo</div>
-    <div class="sp-list"><textarea id="msgText" class="sp-field msg-ta" maxlength="900" rows="3" spellcheck="false">${setEsc(D.text)}</textarea></div>
+    <div class="sp-list"><textarea id="msgText" class="sp-field msg-ta" maxlength="900" rows="3" spellcheck="false" placeholder="${M.default ? '' : 'Nessun testo: scrivi qui per aggiungerlo'}">${setEsc(D.text)}</textarea></div>
     ${M.fields.length ? `<div class="sp-lbl">Tocca per inserire</div>
     <div class="msg-chips">${M.fields.map(f => `<button type="button" data-sp="msg-ins" data-f="${f}"><b>{${f}}</b><small>${setEsc(MSG_FIELD[f] || '')}</small></button>`).join('')}</div>` : ''}
     <p class="sp-note">**grassetto** · __corsivo__ · le emoji del canale (✅ ☑️ 📝 🆕 🌍 📲 ⭐️ 🔝 📊 👀) diventano animate da sole. La firma si aggiunge sempre.</p>
     <div class="sp-lbl">Anteprima</div>
     <div id="msgPrev" class="msg-prev">${msgPreview(D.text)}</div>
-    ${D.text !== M.default ? '<div class="sp-list msg-base"><button type="button" class="sp-item sp-act" data-sp="msg-base">Torna al testo di base</button></div>' : ''}
+    ${D.text !== M.default ? `<div class="sp-list msg-base"><button type="button" class="sp-item sp-act" data-sp="msg-base">${M.default ? 'Torna al testo di base' : 'Togli il testo'}</button></div>` : ''}
     <div id="setErr" class="sp-err"></div></div>`;
   const ta = $('msgText');
   fitTextarea(ta);
@@ -827,7 +828,7 @@ function msgInsert(field) {
 
 async function msgSave() {
   const D = setDraft;
-  if (!D.text.trim()) { $('setErr').textContent = 'Scrivi il testo (o torna a quello di base).'; return; }
+  if (!D.text.trim() && D.m.default) { $('setErr').textContent = 'Scrivi il testo (o torna a quello di base).'; return; }
   setBusy = true; renderSetPage();
   try {
     const body = await setPost({action:'caption_save', kind:D.m.kind, text:D.text});

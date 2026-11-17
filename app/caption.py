@@ -4,7 +4,8 @@ Grafiche della partita (Gol, Half Time, Full Time, Statistiche...): stesso testo
 di LiveScore (nomi italiani e hashtag di Impostazioni › Nomi). Le altre (Matchday, XI,
 Classifica, Convocati...) seguono i post fatti a mano, con le emoji personalizzate del canale.
 Queste ultime finiscono con la firma 👉 @Juventus_Reborn; quelle della diretta no, come sul canale.
-Compleanni: auguri con torta e bandiera della nazionale. Post, Storie e Citazioni partono senza testo.
+Compleanni: auguri con torta e bandiera della nazionale. Post, Storie e Citazioni partono senza testo,
+il Rinnovo solo finché non gli scrivi un modello.
 Convocati, XI, Here We Go, MOTM e POTM seguono i modelli di Impostazioni › Messaggi (TEMPLATE_KINDS).
 """
 import html
@@ -57,6 +58,8 @@ TEMPLATE_KINDS = {   # tipo -> (nome nella Mini App, testo di base, segnaposto)
     'motm': ('MOTM', '⭐️🔝 𝐌𝐎𝐓𝐌 {hashtag}: **{giocatore}**', ('hashtag', 'giocatore')),
     'potm': ('POTM', '📊👀 Il verdetto del sondaggio su __Telegram__ è netto: **{giocatore}** è stato eletto '
                      'miglior giocatore della **Juventus** {mesi}.', ('giocatore', 'mesi')),
+    # Testo di base vuoto = la grafica parte senza testo finché non ne scrivi uno.
+    'rin': ('Rinnovo', '', ('giocatore', 'anno')),
 }
 TEMPLATE_MAX = 900                 # caratteri: la didascalia di Telegram arriva a 1024, firma compresa
 CUSTOM = {}                        # tipo -> testo scritto nella Mini App (lo carica il servizio)
@@ -407,6 +410,8 @@ def _other_caption(data):
     if kind == 'af':
         # ✅ HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.  +  📲 Fabrizio Romano (senza bandiera)
         return _from_template('af', giocatore=html.escape(_who(data)))
+    if kind == 'rin':
+        return _from_template('rin', giocatore=esc(_person_name(data.get('name'))), anno=esc(data.get('year')))
     if kind == 'free':
         return html.escape(str(data.get('caption') or '').strip())      # testo scritto a mano, o niente
     if kind == 'table':
@@ -436,7 +441,7 @@ LIVE_KINDS = {'goal', 'saved', 'kick', 'half', 'second', 'end_of_90', 'full', 's
 
 
 # Post (testo scritto ogni volta a mano), Storie e Citazioni (per Instagram, X, Threads): niente testo.
-NO_CAPTION = {'jr', 'igbn', 'igq', 'xq', 'thq', 'rin'}
+NO_CAPTION = {'jr', 'igbn', 'igq', 'xq', 'thq'}
 
 
 def _live(data):
