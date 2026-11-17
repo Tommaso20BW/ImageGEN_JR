@@ -131,21 +131,34 @@ const closeSettings = () => { closeSetSheet(); $('setOv').classList.remove('open
 // Prima pagina: elenco semplice delle sezioni; Squadre apre ricerca ed elenco delle squadre.
 let setView = 'menu';
 function renderSetMenu() {
+  // Elenco a gruppi: un riquadro per gruppo, righe corte (solo il nome), titoletto sopra.
   const box = $('setMenu');
   box.innerHTML = '';
   const n = unmatchedEspn().length;
-  [['Ultimi invii', 'Rimanda o modifica le grafiche già inviate', () => { closeSettings(); openRequest(REQUESTS.find(r => r.id === 'sent')); }],
-   ['Messaggi', 'Testo sotto le grafiche', openMessages],
-   ['Matchday', 'Canale TV di ogni competizione', () => openXtra('tv')],
-   ['Squadre', n ? `${n} da sistemare` : 'Logo, nome, hashtag, nomi ESPN', () => { haptic('select'); showSetView('teams'); }],
-   ['Frasi pronte', 'Storia IG', () => openXtra('phr')],
-   ['Colori', 'Titolo e logo JR del Post', () => openXtra('col')],
-   ['Nomi Instagram', 'Citazione IG', () => openXtra('ign')]]
-    .forEach(([title, sub, open]) => {
-      const r = setRow(null, title, sub);
-      r.classList.add('nm');                    // senza icona
-      r.addEventListener('click', open);
-      box.appendChild(r);
+  [[null, [['Ultimi invii', () => { closeSettings(); openRequest(REQUESTS.find(r => r.id === 'sent')); }]]],
+   ['Testi', [['Messaggi', openMessages], ['Canale TV del Matchday', () => openXtra('tv')]]],
+   ['Squadre', [['Loghi, nomi e hashtag', () => { haptic('select'); showSetView('teams'); }, n]]],
+   ['Salvati', [['Frasi pronte', () => openXtra('phr')], ['Colori', () => openXtra('col')],
+                ['Nomi Instagram', () => openXtra('ign')]]]]
+    .forEach(([head, rows]) => {
+      if (head) {
+        const h = document.createElement('div');
+        h.className = 'set-grp';
+        h.textContent = head;
+        box.appendChild(h);
+      }
+      const card = document.createElement('div');
+      card.className = 'set-card';
+      rows.forEach(([title, open, count]) => {
+        const r = document.createElement('button');
+        r.type = 'button';
+        r.className = 'set-mi';
+        r.innerHTML = `<span></span>${count ? `<span class="set-cnt">${count} da sistemare</span>` : ''}<span class="chev">›</span>`;
+        r.firstChild.textContent = title;
+        r.addEventListener('click', open);
+        card.appendChild(r);
+      });
+      box.appendChild(card);
     });
 }
 function showSetView(view) {

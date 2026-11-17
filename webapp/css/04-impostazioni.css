@@ -310,6 +310,15 @@ body.live .brand-btn{pointer-events:none}
 .msg-base{margin-top:14px}
 .msg-none{color:var(--muted);font-style:italic}
 #setMenu{margin-top:14px}
+#setMenu .set-grp{margin:22px 4px 8px}
+.set-card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow-soft);overflow:hidden}
+.set-mi{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:0 14px;border:0;background:none;color:var(--text);
+  font:inherit;font-weight:700;font-size:16px;text-align:left;cursor:pointer}
+.set-mi + .set-mi{border-top:1px solid var(--line)}
+.set-mi:active{background:rgba(127,127,127,.1)}
+.set-mi .chev{margin-left:auto;color:var(--muted);font-size:20px}
+.set-mi .set-cnt{margin-left:auto;font-size:12px;font-weight:800;color:var(--danger);background:var(--danger-soft);border-radius:999px;padding:3px 9px}
+.set-mi .set-cnt + .chev{margin-left:0}
 /* Impostazioni › Frasi pronte e Colori */
 .sp-item.x-phr{align-items:flex-start;padding-top:14px;padding-bottom:14px}
 .x-txt{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.35}
