@@ -15,8 +15,74 @@ const FR_FONTS = [
 const FR_FORMATS = [['3:4', 1500, 2000], ['4:5', 1600, 2000], ['1:1', 1500, 1500], ['9:16', 1125, 2000]];
 const FR_TYPE_NAMES = {photo:'Foto', text:'Testo', logo:'Logo JR', shade:'Sfumatura', rect:'Forma'};
 
-const fr = {doc:null, pickTpl:'', sel:'', tplId:'', tplName:'', images:{}, cuts:{}, cutBusy:{}, undo:{}, brush:null, brushSize:44, erasing:false, cache:{}, fonts:{}, logo:null, templates:null,
+const fr = {doc:null, pickTpl:'', photoIds:{}, sel:'', tplId:'', tplName:'', images:{}, cuts:{}, cutBusy:{}, undo:{}, brush:null, brushSize:44, erasing:false, cache:{}, fonts:{}, logo:null, templates:null,
   exportKey:'', exportId:'', drawQueued:false, guides:[0, 0]};
+
+// Annulla / Ripeti: una fotografia della pagina dopo ogni modifica (testi, posizioni, foto, gomma…).
+const frHist = {stack:[], i:-1, t:0};
+const frImgIds = new WeakMap();
+let frImgSeq = 0;
+const frImgKey = im => { if (!im) return ''; if (!frImgIds.has(im)) frImgIds.set(im, ++frImgSeq); return frImgIds.get(im); };
+
+function frSnap() {
+  const doc = JSON.stringify(fr.doc, (k, v) => (k[0] === '_' ? undefined : v));
+  const imgs = Object.keys(fr.images).sort().map(k => `${k}:${frImgKey(fr.images[k])}`).join(',');
+  const cuts = Object.keys(fr.cuts).sort().map(k => `${k}:${frImgKey(fr.cuts[k])}`).join(',');
+  return {doc, images:{...fr.images}, cuts:{...fr.cuts}, key:`${doc}|${imgs}|${cuts}`};
+}
+
+function frHistReset() {
+  clearTimeout(frHist.t);
+  frHist.stack = []; frHist.i = -1;
+  if (fr.doc) frHistCommit();
+  frHistButtons();
+}
+
+function frHistCommit() {
+  if (!fr.doc) return;
+  const s = frSnap();
+  const cur = frHist.stack[frHist.i];
+  if (cur && cur.key === s.key) return;
+  frHist.stack = frHist.stack.slice(0, frHist.i + 1);
+  frHist.stack.push(s);
+  if (frHist.stack.length > 40) frHist.stack.shift();
+  frHist.i = frHist.stack.length - 1;
+  frHistButtons();
+}
+
+// Dopo ogni disegno: la fotografia si fa a dito fermo (niente cento passi per un trascinamento).
+function frHistLater() {
+  clearTimeout(frHist.t);
+  frHist.t = setTimeout(() => { if (frHistBusy() || fr.dragging) frHistLater(); else frHistCommit(); }, 350);
+}
+
+// Mentre il servizio lavora (gomma, sfondo) la storia aspetta: il risultato arriva come un passo solo.
+const frHistBusy = () => fr.erasing || Object.keys(fr.cutBusy).length > 0;
+
+function frHistGo(dir) {
+  if (frHistBusy()) return;
+  clearTimeout(frHist.t);
+  frHistCommit();                                   // l'ultima modifica non deve perdersi
+  const j = frHist.i + dir;
+  if (j < 0 || j >= frHist.stack.length) return;
+  haptic('select');
+  frHist.i = j;
+  const s = frHist.stack[j];
+  fr.doc = JSON.parse(s.doc);
+  fr.images = {...s.images}; fr.cuts = {...s.cuts}; fr.cache = {};
+  if (!frLayer(fr.sel)) fr.sel = '';
+  fr.tool = ''; fr.brush = null;
+  if ($('frSheet') && !$('frSheet').hidden) frSheetClose();
+  frLayers(); frPanel(); frDraw(); frHistButtons();
+}
+
+function frHistButtons() {
+  const u = $('frUndo'), r = $('frRedo');
+  if (!u) return;
+  u.disabled = frHist.i <= 0 || frHistBusy();
+  r.disabled = frHist.i >= frHist.stack.length - 1 || frHistBusy();
+  u.parentNode.hidden = !fr.doc || frHist.stack.length < 2;
+}
 
 let frSeq = 0;
 const frId = () => `l${Date.now().toString(36)}${(frSeq++).toString(36)}`;
@@ -418,6 +484,7 @@ function frDraw() {
     octx.setTransform(kk, 0, 0, kk, c.offsetLeft * dpr, c.offsetTop * dpr);
     frDrawSelection(octx);
     frFloat();
+    frHistLater();
   });
 }
 
@@ -600,12 +667,17 @@ const FR_SVG = {
   del:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
   eyeoff:'<path d="M4 4l16 16M9.9 5.8A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3 3.6M6.5 7.6A17 17 0 0 0 2.5 12S6 18.5 12 18.5a9 9 0 0 0 4-.9M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
-  grip:'<path d="M5 8h14M5 12h14M5 16h14"/>'
+  grip:'<path d="M5 8h14M5 12h14M5 16h14"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  undo:'<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  redo:'<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
+  wand:'<path d="M4 20L15 9M13 7l4 4"/><path d="M18 3v3M16.5 4.5h3M20 9v2M19 10h2M10 3v2M9 4h2"/>'
 };
+const FR_ADD = [['photo', 'Foto', 'Dalla galleria'], ['text', 'Testo', 'Scrivi qualcosa'], ['logo', 'Logo JR', 'Nel suo angolo'],
+  ['rect', 'Forma', 'Riquadro colorato'], ['shade', 'Sfumatura', 'Scurisce un lato']];
 const FR_TOOLS = {
-  page:[['tpl', 'Modelli', 'tpl'], '|', ['add-text', 'Testo', 'text'], ['add-photo', 'Foto', 'photo'], ['add-logo', 'Logo', 'logo'], ['add-rect', 'Forma', 'rect'],
-    ['add-shade', 'Sfumatura', 'shade'], '|', ['bg', 'Sfondo', 'bg'], ['fmt', 'Formato', 'fmt'], ['layers', 'Livelli', 'layers'],
-    ['caption', 'Didascalia', 'caption']],
+  page:[['add', 'Aggiungi', 'plus'], ['tpl', 'Modelli', 'tpl'], ['layers', 'Livelli', 'layers'], ['bg', 'Sfondo', 'bg'],
+    ['fmt', 'Formato', 'fmt'], ['caption', 'Didascalia', 'caption']],
   text:[['edit', 'Modifica', 'edit'], ['font', 'Font', null], ['color', 'Colore', null], ['format', 'Formato', 'format'],
     ['fx', 'Effetti', 'fx'], ['opacity', 'Trasparenza', 'opacity'], ['pos', 'Posizione', 'pos']],
   photo:[['replace', 'Sostituisci', 'replace'], ['cutout', 'Rimuovi sfondo', 'cutout'], ['erase', 'Gomma', 'erase'], ['filter', 'Filtri', 'filter'], ['adjust', 'Regola', 'adjust'], ['fx', 'Effetti', 'fx'],
@@ -639,6 +711,7 @@ function frLayerName(l) {
 // Striscia degli strumenti (e barretta sopra l'elemento).
 function frLayers() {
   const bar = $('frTools');
+  bar.classList.toggle('fr-page', !frLayer(fr.sel));
   const emptyTip = 'Tocca la pagina per scegliere una foto.';
   if (fr.doc && !fr.doc.layers.length) showToastSafe(emptyTip, 0);
   else if ($('frStatus').textContent === emptyTip) showToastSafe('');
@@ -655,7 +728,7 @@ function frLayers() {
     if (t === '|') { const s = document.createElement('span'); s.className = 'fr-tsep'; bar.appendChild(s); return; }
     const [key, label, icon] = t;
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'fr-tool' + (fr.tool === key ? ' on' : '');
+    b.type = 'button'; b.className = 'fr-tool' + (fr.tool === key ? ' on' : '') + (key === 'add' ? ' fr-plus' : '');
     let ico = icon ? frSvg(icon) : '';
     if (key === 'font') ico = `<span class="fr-aa" style="font-family:'FR ${l.font}',sans-serif">Aa</span>`;
     if (key === 'color') {
@@ -664,7 +737,7 @@ function frLayers() {
     }
     let text = label;
     if (key === 'cutout') {
-      if (fr.cutBusy[l.id]) { b.className += ' busy'; text = 'Attendi…'; }
+      if (fr.cutBusy[l.id]) { b.className += ' fr-wait'; text = 'Attendi…'; }
       else if (l.cutout && fr.cuts[l.id]) { b.className += ' on'; text = 'Sfondo tolto'; }
     }
     b.innerHTML = `<span class="fr-ti">${ico}</span><small></small>`;
@@ -673,6 +746,7 @@ function frLayers() {
     bar.appendChild(b);
   });
   frFloatButtons();
+  frBusyShow();
 }
 
 function frFloatButtons() {
@@ -700,6 +774,7 @@ function frTool(key, open) {
   if (key.startsWith('add-')) { frAdd(key.slice(4)); return; }
   if (key === 'layers') { frSheet(); return; }
   if (key === 'tpl') { frTplSheet(); return; }
+  if (key === 'add') { frAddSheet(); return; }
   if (key === 'replace') { frPick(l.id); return; }
   if (key === 'cutout') { frCutoutToggle(l); return; }
   if (key === 'erase' && !fr.images[l.id]) { frPick(l.id); return; }
@@ -990,25 +1065,26 @@ function frPanel() {
     {key:'blur', label:'Sfocatura', type:'range', min:0, max:40},
   ]));
   else if (t === 'erase') {
-    const tip = document.createElement('p');
-    tip.className = 'hint fr-note';
-    tip.textContent = fr.erasing ? 'Cancello e ricostruisco il dietro… ci vuole qualche secondo.'
-      : 'Togli la persona con un tocco, oppure passa il dito su quello che vuoi far sparire e tocca Cancella.';
-    put(tip);
-    const quick = frButton(fr.erasing ? 'Attendi…' : 'Togli la persona (un tocco)', () => frErase(l, true), 'btn fr-save fr-quick');
+    const n = fr.brush ? fr.brush.strokes.length : 0;
+    const quick = document.createElement('button');
+    quick.type = 'button'; quick.className = 'fr-magic';
+    quick.innerHTML = `${frSvg('cutout')}<span><b>Togli la persona</b><small>Un tocco: sparisce e il dietro si ricostruisce</small></span>`;
     quick.disabled = fr.erasing;
+    quick.addEventListener('click', () => frErase(l, true));
     put(quick);
+    const or = document.createElement('p');
+    or.className = 'fr-or'; or.textContent = 'oppure passa il dito su cosa cancellare';
+    put(or);
     put(frCard(fr, [{key:'brushSize', label:'Pennello', type:'range', min:12, max:110}]));
     const row = document.createElement('div');
     row.className = 'fr-arrange';
-    const n = fr.brush ? fr.brush.strokes.length : 0;
-    [['Annulla tratto', () => { fr.brush.strokes.pop(); frDraw(); frPanel(); }, !n || fr.erasing],
-      ['Foto originale', () => frEraseUndo(l), !(fr.undo[l.id] || []).length || fr.erasing]]
-      .forEach(([text, fn, off]) => { const b = frButton(text, () => { haptic('select'); fn(); }, 'fr-act'); b.disabled = off; row.appendChild(b); });
-    put(row);
-    const go = frButton(fr.erasing ? 'Cancello…' : 'Cancella', () => frErase(l), 'btn fr-save');
+    const undo = frButton('Annulla tratto', () => { haptic('select'); fr.brush.strokes.pop(); frDraw(); frPanel(); }, 'fr-act');
+    undo.disabled = !n || fr.erasing;
+    const go = frButton('Cancella', () => frErase(l), 'btn fr-go');
     go.disabled = !n || fr.erasing;
-    put(go);
+    row.append(undo, go);
+    put(row);
+    if ((fr.undo[l.id] || []).length && !fr.erasing) put(frButton('Torna alla foto originale', () => { haptic('select'); frEraseUndo(l); }, 'link-btn fr-save2'));
   }
   else if (t === 'shape') put(frCard(l, [{key:'radius', label:'Angoli', type:'range', min:0, max:400}]));
   else if (t === 'shade') put(frCard(l, [
@@ -1047,6 +1123,27 @@ function frAdd(type) {
   fr.sel = l.id; fr.tool = type === 'text' ? 'edit' : '';
   frLayers(); frPanel(); frDraw();
   if (type === 'text') setTimeout(() => { const ta = $('frPanel').querySelector('textarea'); if (ta) { ta.focus(); ta.select(); } }, 60);
+}
+
+// Aggiungi: un foglio con riquadri grandi, uno per cosa (Testo, Foto, Logo, Forma, Sfumatura).
+function frAddSheet() {
+  const sheet = $('frSheet'), body = $('frSheetBody');
+  body.innerHTML = '';
+  $('frSheetTitle').textContent = 'Aggiungi';
+  const grid = document.createElement('div');
+  grid.className = 'fr-addgrid';
+  FR_ADD.forEach(([type, label, sub]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = `fr-addtile fr-add-${type}`;
+    b.innerHTML = `<span class="fr-addico">${frSvg(type)}</span><span class="fr-addtxt"><b></b><small></small></span>`;
+    b.querySelector('b').textContent = label;
+    b.querySelector('small').textContent = sub;
+    b.addEventListener('click', () => { frSheetClose(); frAdd(type); });   // dentro al tocco: la galleria si apre
+    grid.appendChild(b);
+  });
+  body.appendChild(grid);
+  sheet.hidden = false;
+  requestAnimationFrame(() => sheet.classList.add('open'));
 }
 
 function frMove(l, dir) {
@@ -1109,6 +1206,7 @@ async function frPhotoPicked(file) {
     fr.sel = l.id;
     haptic('success');
     if (l.cutout) frCutout(l);              // modello con la foto senza sfondo: lo tolgo anche da questa
+    else frPrewarm(l);                      // lo scontorno parte già: Rimuovi sfondo e la Gomma poi sono subito pronti
   } catch (_) { showError('Foto non leggibile.'); }
   frLayers(); frPanel(); frDraw(); renderSteps();
 }
@@ -1142,10 +1240,10 @@ async function frErase(l, subject=false) {
     st.pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
     ctx.stroke();
   }
-  fr.erasing = true;
+  fr.erasing = true; fr.erasingSubject = subject;
   haptic('select');
   frPanel(); frLayers();
-  showToastSafe(subject ? 'Cerco la persona e la tolgo… ci vuole un po\'.' : 'Cancello… ci vuole qualche secondo.', 0);
+  showToastSafe('');
   try {
     const send = async (blob, type) => {
       const r = await netFetch(`${directBase}/upload`, {method:'POST', headers:{'Content-Type':type, 'X-ImageGEN-Session':session}, body:blob}, 60000);
@@ -1153,7 +1251,7 @@ async function frErase(l, subject=false) {
       if (!r.ok || !a.ok) throw new Error(a.error || 'Caricamento non riuscito.');
       return a.photo_id;
     };
-    const photoId = await send(await new Promise(r => src.toBlob(r, 'image/jpeg', 0.95)), 'image/jpeg');
+    const photoId = await frUploadId(l);
     const maskId = painted ? await send(await new Promise(r => m.toBlob(r, 'image/png')), 'image/png') : '';
     if (subject) await frWaitCutout(photoId, () => fr.images[l.id] !== src);   // scontorno pronto prima (richieste brevi)
     // lavoro in background sul servizio: la stessa richiesta breve ripetuta finché arriva l'immagine
@@ -1215,6 +1313,41 @@ function frCutoutToggle(l) {
   frLayers(); frDraw();
 }
 
+// La foto del livello caricata sul servizio una volta sola (Rimuovi sfondo, Gomma e anticipo usano la stessa).
+function frUploadId(l) {
+  const src = fr.images[l.id];
+  const have = fr.photoIds[l.id];
+  if (have && have.src === src) return have.id;
+  const id = (async () => {
+    const blob = await new Promise(resolve => src.toBlob(resolve, 'image/jpeg', 0.93));
+    const up = await netFetch(`${directBase}/upload`, {method:'POST', headers:{'Content-Type':'image/jpeg', 'X-ImageGEN-Session':session}, body:blob}, 60000);
+    const a = await up.json().catch(() => ({}));
+    if (!up.ok || !a.ok) throw new Error(a.error || 'Caricamento non riuscito.');
+    return a.photo_id;
+  })();
+  fr.photoIds[l.id] = {src, id};
+  id.catch(() => { if (fr.photoIds[l.id] && fr.photoIds[l.id].id === id) delete fr.photoIds[l.id]; });
+  return id;
+}
+
+// Appena scegli una foto: la carico e faccio partire lo scontorno in silenzio.
+function frPrewarm(l) {
+  if (!directBase || !session || !fr.images[l.id]) return;
+  frUploadId(l).then(id => netFetch(`${directBase}/cutout_state?session=${encodeURIComponent(session)}&id=${id}&start=1`, {}, 10000, 1))
+    .catch(() => {});
+}
+
+// Caricamento ben visibile sulla pagina mentre il servizio lavora.
+function frBusyShow() {
+  const b = $('frBusy');
+  if (!b) return;
+  const cut = fr.doc && fr.doc.layers.some(l => fr.cutBusy[l.id]);
+  const text = fr.erasing ? (fr.erasingSubject ? 'Tolgo la persona…' : 'Cancello…') : cut ? 'Tolgo lo sfondo…' : '';
+  b.hidden = !text;
+  $('frBusyText').textContent = text;
+  frHistButtons();
+}
+
 // Aspetta lo scontorno sul servizio con richieste brevi (una sola lunga attraverso il tunnel cade).
 // true = pronto, false = non serve più (stale()).
 async function frWaitCutout(photoId, stale) {
@@ -1240,14 +1373,10 @@ async function frCutout(l) {
   fr.cutBusy[l.id] = true;
   l.cutout = true;
   frLayers();
-  showToastSafe('Tolgo lo sfondo… ci vuole qualche secondo.', 0);
   try {
-    const blob = await new Promise(resolve => src.toBlob(resolve, 'image/jpeg', 0.93));
-    const up = await netFetch(`${directBase}/upload`, {method:'POST', headers:{'Content-Type':'image/jpeg', 'X-ImageGEN-Session':session}, body:blob}, 60000);
-    const a = await up.json().catch(() => ({}));
-    if (!up.ok || !a.ok) throw new Error(a.error || 'Caricamento non riuscito.');
-    const q = `session=${encodeURIComponent(session)}&id=${a.photo_id}`;
-    if (!await frWaitCutout(a.photo_id, () => fr.images[l.id] !== src)) return;   // nel frattempo la foto è cambiata
+    const photoId = await frUploadId(l);
+    const q = `session=${encodeURIComponent(session)}&id=${photoId}`;
+    if (!await frWaitCutout(photoId, () => fr.images[l.id] !== src)) return;   // nel frattempo la foto è cambiata
     const r = await netFetch(`${directBase}/cutout?${q}`, {}, 60000, 5, true);
     if (!r.ok) throw new Error('Scontorno non riuscito.');
     const bmp = await createImageBitmap(await r.blob());
@@ -1287,22 +1416,14 @@ function frDocForTemplate() {
   return d;
 }
 
-function frSaveTemplate(asNew) {
-  const doSave = name => {
-    name = String(name || '').trim();
-    if (!name) return;
-    const id = !asNew && fr.tplId ? fr.tplId : Math.random().toString(36).slice(2, 12).padEnd(8, '0');
-    frTemplatesCall({action:'save', template:{id, name, doc:frDocForTemplate()}})
-      .then(() => { fr.tplId = id; fr.tplName = name; haptic('success'); if (!$('frSheet').hidden) frTplSheet(); showToastSafe('Modello salvato.'); })
-      .catch(err => showError(err.message));
-  };
-  if (!asNew && fr.tplId) { doSave(fr.tplName); return; }
-  frAskName('Nome del modello', '', doSave);
-}
-
-function frAskName(title, value, done) {
-  const name = window.prompt(title, value || '');
-  if (name !== null) done(name);
+// Stesso nome del modello aperto = lo aggiorno; nome nuovo = un modello in più.
+function frSaveTemplate(name) {
+  name = String(name || '').trim();
+  if (!name) return;
+  const id = fr.tplId && name === fr.tplName ? fr.tplId : Math.random().toString(36).slice(2, 12).padEnd(8, '0');
+  frTemplatesCall({action:'save', template:{id, name, doc:frDocForTemplate()}})
+    .then(() => { fr.tplId = id; fr.tplName = name; haptic('success'); if (!$('frSheet').hidden) frTplSheet(); showToastSafe('Modello salvato.'); })
+    .catch(err => showError(err.message));
 }
 
 function showToastSafe(text, ms=2200) {
@@ -1367,10 +1488,23 @@ function frTplSheet() {
   const sheet = $('frSheet'), body = $('frSheetBody');
   body.innerHTML = '';
   $('frSheetTitle').textContent = 'Modelli';
-  const save = frButton(fr.tplId ? `Salva "${fr.tplName}"` : 'Salva questa pagina come modello', () => frSaveTemplate(), 'btn fr-save');
-  save.disabled = !fr.doc.layers.length;
-  body.appendChild(save);
-  if (fr.tplId) body.appendChild(frButton('Salva come nuovo modello', () => frSaveTemplate(true), 'link-btn fr-save2'));
+  if (fr.doc.layers.length) {
+    const form = document.createElement('form');
+    form.className = 'fr-tplsave';
+    form.innerHTML = '<span>Salva questa pagina come modello</span><div><input type="text" maxlength="40" enterkeyhint="done" placeholder="Nome, es. Formazione"><button type="submit" class="btn">Salva</button></div><small></small>';
+    const inp = form.querySelector('input'), go = form.querySelector('button'), note = form.querySelector('small');
+    inp.value = fr.tplName || '';
+    const upd = () => {
+      const v = inp.value.trim();
+      go.disabled = !v;
+      go.textContent = fr.tplId && v === fr.tplName ? 'Aggiorna' : 'Salva';
+      note.textContent = fr.tplId ? (v === fr.tplName ? 'Aggiorni il modello aperto. Cambia nome per farne uno nuovo.' : 'Diventa un modello nuovo.') : '';
+    };
+    inp.addEventListener('input', upd);
+    form.addEventListener('submit', e => { e.preventDefault(); inp.blur(); frSaveTemplate(inp.value); });
+    upd();
+    body.appendChild(form);
+  }
   const tip = document.createElement('p');
   tip.className = 'hint fr-ltip fr-tpltip';
   tip.textContent = 'Tocca un modello per aprirlo: tornano testi, stili e posizioni; la foto che hai messo resta.';
@@ -1392,7 +1526,7 @@ function frTplRender() {
   (fr.templates || []).forEach(t => rows.push([t.id, t.name, 'Modello salvato', t]));
   rows.forEach(([id, title, sub, t]) => {
     const b = document.createElement('div');
-    b.className = 'fr-tpl' + (fr.choice === id ? ' selected' : '');
+    b.className = 'fr-tpl';                          // nessun modello già segnato
     b.setAttribute('role', 'button');
     b.tabIndex = 0;
     const thumb = document.createElement('canvas');
@@ -1441,6 +1575,7 @@ function frThumbLater(canvas, doc) { clearTimeout(canvas._t); canvas._t = setTim
 function frOpenEditor() {
   if (!fr.doc) {                                     // i modelli si scelgono da dentro (Modelli)
     frOpenDoc(frBlank()); fr.choice = 'new';
+    frHistReset();
     frPick('new');                                    // per prima cosa la foto (annulli = pagina vuota)
   }
   if (fr.templates === null && directBase && session) frTemplatesCall({action:'list'}).catch(() => { fr.templates = []; });
@@ -1489,7 +1624,8 @@ function frPayload() {
 }
 
 function frReset() {
-  Object.assign(fr, {doc:null, sel:'', tool:'', dragging:'', tplId:'', tplName:'', images:{}, cuts:{}, cutBusy:{}, undo:{}, brush:null, erasing:false, cache:{}, exportKey:'', exportId:'', choice:''});
+  Object.assign(fr, {doc:null, sel:'', tool:'', dragging:'', tplId:'', tplName:'', images:{}, cuts:{}, cutBusy:{}, undo:{}, photoIds:{}, brush:null, erasing:false, cache:{}, exportKey:'', exportId:'', choice:''});
+  frHistReset();
   if ($('frSheet') && !$('frSheet').hidden) frSheetClose();
 }
 
@@ -1499,6 +1635,22 @@ function initFreeEditor() {
   document.body.appendChild($('frSheet'));          // sopra a tutto, anche alla barra in basso
   $('frSheet').addEventListener('click', e => { if (e.target === $('frSheet')) frSheetClose(); });
   $('frSheetClose').addEventListener('click', frSheetClose);
+  // Annulla / Ripeti in alto a sinistra sulla pagina, e il caricamento in basso
+  const box = $('frStageBox');
+  const hist = document.createElement('div');
+  hist.className = 'fr-hist'; hist.hidden = true;
+  [['frUndo', 'undo', 'Annulla', -1], ['frRedo', 'redo', 'Ripeti', 1]].forEach(([id, icon, label, dir]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.id = id; b.title = label; b.setAttribute('aria-label', label);
+    b.innerHTML = frSvg(icon);
+    b.addEventListener('pointerdown', e => e.stopPropagation());
+    b.addEventListener('click', () => frHistGo(dir));
+    hist.appendChild(b);
+  });
+  const busy = document.createElement('div');
+  busy.id = 'frBusy'; busy.className = 'fr-busy'; busy.hidden = true;
+  busy.innerHTML = '<span class="fr-spin"></span><span id="frBusyText"></span>';
+  box.append(hist, busy);
 }
 
 initFreeEditor();
