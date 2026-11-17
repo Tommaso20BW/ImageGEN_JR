@@ -162,11 +162,13 @@ class TemplateCaptionTest(unittest.TestCase):
         finally:
             caption.TV_CUSTOM = {}
 
-    def test_renewal_has_text_only_when_written(self):
-        data = {'kind': 'rin', 'name': 'YILDIZ', 'year': '2030'}
-        self.assertEqual(caption.build(data), '')
+    def test_renewal_like_the_channel(self):
+        data = {'kind': 'rin', 'name': 'GONZALEZ', 'year': '2030'}
+        with mock.patch.object(caption, '_roster_name', return_value='Nico Gonzalez'):
+            self.assertEqual(plain(caption.build(data)), '🇦🇷✅ <b>UFFICIALE</b> | <b>Nico Gonzalez</b> rinnova con la '
+                                                         '<b>Juventus</b> fino al 2030.\n\n👉 @Juventus_Reborn')
         caption.CUSTOM = {'rin': '✍️ **{giocatore}** rinnova fino al {anno}.'}
-        self.assertEqual(plain(caption.build(data)), '✍️ <b>Yildiz</b> rinnova fino al 2030.\n\n👉 @Juventus_Reborn')
+        self.assertEqual(plain(caption.build(data)), '✍️ <b>Nicolás González</b> rinnova fino al 2030.\n\n👉 @Juventus_Reborn')
 
     def test_templates_list(self):
         caption.CUSTOM = {'af': 'HERE WE GO {giocatore}'}

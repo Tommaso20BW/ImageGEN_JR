@@ -4,7 +4,7 @@
    ombra, contorno, colori, font…). Quello che vedi è quello che arriva: all'anteprima la pagina si
    disegna a piena risoluzione e va al servizio come immagine finita (kind 'free').
    Modelli: la pagina senza le foto si salva con un nome nel repo degli asset (/templates); per
-   riusarla basta rimettere le foto. "Lutto" è un modello già pronto. */
+   riusarla basta rimettere le foto. */
 
 const FR_FONTS = [
   ['Poppins', 'Poppins-Medium.ttf'], ['Anton', 'Anton-Regular.ttf'], ['Bebas Neue', 'BebasNeue2014-Regular.ttf'],
@@ -46,21 +46,6 @@ function frLogoSpot(W) {
 function frLogoHome(l) { Object.assign(l, frLogoSpot(fr.doc.w)); }
 
 function frBlank(w=1500, h=2000) { return {v:1, w, h, bg:'#000000', caption:'', layers:[]}; }
-
-// Modello pronto: foto in bianco e nero a tutta pagina, sfumatura nera dal basso, nome e anni con un
-// bagliore bianco minimo, logo JR bianco in alto a destra.
-function frLuttoDoc() {
-  const d = frBlank();
-  fr.doc = d;
-  const photo = {...frNew('photo'), bw:true, contrast:15, sharpen:true};
-  const shade = {...frNew('shade'), from:62, strength:78};
-  const glow = {on:true, color:'#ffffff', blur:18, strength:18};   // bagliore minimo
-  const name = {...frNew('text'), text:'Nome Cognome', y:1785, size:140, fit:1300, glow:{...glow}};
-  const years = {...frNew('text'), text:'1960-2026', y:1865, size:62, color:'#e8e8e8', glow:{...glow}};
-  const logo = frNew('logo');                       // al suo posto di sempre
-  d.layers = [photo, shade, name, years, logo];
-  return d;
-}
 
 /* ---------- risorse: font, logo, foto ---------- */
 function frFile(name) { return `${directBase}/editorfile?session=${encodeURIComponent(session)}&name=${encodeURIComponent(name)}`; }
@@ -1343,7 +1328,6 @@ function frOpenDoc(doc, tpl) {
 
 function frTplDoc(choice) {
   if (choice === 'new') return frBlank();
-  if (choice === 'lutto') return frLuttoDocStatic();
   const t = (fr.templates || []).find(x => x.id === choice);
   return t ? t.doc : null;
 }
@@ -1352,7 +1336,6 @@ function frTplDoc(choice) {
 function frApplyTpl(choice, img) {
   haptic('select');
   if (choice === 'new') frOpenDoc(frBlank());
-  else if (choice === 'lutto') frOpenDoc(frLuttoDoc(), null);
   else {
     const t = (fr.templates || []).find(x => x.id === choice);
     if (!t) return;
@@ -1405,7 +1388,7 @@ function frTplRender() {
   const box = $('frTplList');
   if (!box) return;
   box.innerHTML = '';
-  const rows = [['new', 'Nuova pagina vuota', 'Parti da zero'], ['lutto', 'Lutto', 'Foto in bianco e nero, nome e anni']];
+  const rows = [['new', 'Nuova pagina vuota', 'Parti da zero']];
   (fr.templates || []).forEach(t => rows.push([t.id, t.name, 'Modello salvato', t]));
   rows.forEach(([id, title, sub, t]) => {
     const b = document.createElement('div');
@@ -1433,7 +1416,7 @@ function frTplRender() {
     }
     b.addEventListener('click', () => frChoose(id));
     box.appendChild(b);
-    frThumb(thumb, id === 'new' ? frBlank() : id === 'lutto' ? frLuttoDocStatic() : t.doc);
+    frThumb(thumb, id === 'new' ? frBlank() : t.doc);
   });
   if (fr.templates === null) {
     const s = document.createElement('p');
@@ -1441,8 +1424,6 @@ function frTplRender() {
     box.appendChild(s);
   }
 }
-
-function frLuttoDocStatic() { const keep = fr.doc; const d = frLuttoDoc(); fr.doc = keep; return d; }
 
 function frThumb(canvas, doc) {
   const keep = {doc:fr.doc, images:fr.images, cache:fr.cache, sel:fr.sel};
@@ -1503,7 +1484,7 @@ async function frExport() {
 
 function frPayload() {
   if (!fr.exportId) throw new Error('Apri l’anteprima.');
-  return {v:1, action:'render', session, data:{kind:'free', photo_id:fr.exportId, title:fr.tplName || (fr.choice === 'lutto' ? 'Lutto' : ''),
+  return {v:1, action:'render', session, data:{kind:'free', photo_id:fr.exportId, title:fr.tplName || '',
     caption:String(fr.doc.caption || '').trim()}};
 }
 

@@ -44,6 +44,7 @@ E_STAR = emoji('5438496463044752972', '⭐️')
 E_TOP = emoji('5422354988103901774', '🔝')
 E_EYES = emoji('5424885441100782420', '👀')
 E_SOURCE = emoji('5785366354106261925', '📲')     # fonte del mercato (📲 Fabrizio Romano)
+E_SIGNED = emoji('5470060791883374114', '✍️')
 
 
 # --- Modelli dei messaggi (Impostazioni › Messaggi) ---------------------------------------------
@@ -58,8 +59,9 @@ TEMPLATE_KINDS = {   # tipo -> (nome nella Mini App, testo di base, segnaposto)
     'motm': ('MOTM', '⭐️🔝 𝐌𝐎𝐓𝐌 {hashtag}: **{giocatore}**', ('hashtag', 'giocatore')),
     'potm': ('POTM', '📊👀 Il verdetto del sondaggio su __Telegram__ è netto: **{giocatore}** è stato eletto '
                      'miglior giocatore della **Juventus** {mesi}.', ('giocatore', 'mesi')),
-    # Testo di base vuoto = la grafica parte senza testo finché non ne scrivi uno.
-    'rin': ('Rinnovo', '', ('giocatore', 'anno')),
+    # Come sul canale: 🇦🇷✅ UFFICIALE | Nico Gonzalez rinnova con la Juventus fino al 2030.
+    'rin': ('Rinnovo', '{bandiera}✅ **UFFICIALE** | **{giocatore}** rinnova con la **Juventus** fino al {anno}.',
+            ('bandiera', 'giocatore', 'anno')),
 }
 TEMPLATE_MAX = 900                 # caratteri: la didascalia di Telegram arriva a 1024, firma compresa
 CUSTOM = {}                        # tipo -> testo scritto nella Mini App (lo carica il servizio)
@@ -67,7 +69,7 @@ PREMIUM = {   # emoji scritta nel modello -> emoji personalizzata del canale
     '☑️': E_CHECK, '📝': E_NOTE, '🆕': E_NEW, '✅': E_OFFICIAL, '🌍': E_WORLD, '📲': E_SOURCE,
     '⭐️': E_STAR, '🔝': E_TOP, '📊': E_STATS, '👀': E_EYES, '📰': E_NEWS, '📆': E_DAY, '🔥': E_FIRE,
     '⚔️': E_VS, '⏰': E_TIME, '📺': E_TV, '🏟': E_HOME, '✈️': E_AWAY, '🆙': E_UP, '🤝': E_FRIENDLY,
-    '🎂': E_CAKE, '👉': SIGN,
+    '🎂': E_CAKE, '👉': SIGN, '✍️': E_SIGNED,
 }
 
 
@@ -365,6 +367,36 @@ def _person_name(text):
     return text.title() if text.isupper() else text
 
 
+def _roster_name(text):
+    """Nome sulla maglia (YILDIZ, GONZALEZ) -> nome della rosa (Kenan Yildiz, Nico Gonzalez), se è uno solo."""
+    shown = _person_name(text)
+    try:
+        from livescore.graphics import goal as g
+        q = g.normalize_name(text)
+        hits = []
+        for p in g.load_players():
+            names = [g.normalize_name(n) for n in (p.name, *p.aliases)]
+            if q in names:
+                return p.name
+            if q and any(n.split()[-1:] == [q] or n.endswith(' ' + q) for n in names):
+                hits.append(p.name)
+        return hits[0] if len(set(hits)) == 1 else shown
+    except Exception:  # noqa: BLE001 - senza rosa resta il nome della maglia
+        return shown
+
+
+def _player_icon(name):
+    """Faccia del giocatore nel JR Pack, altrimenti la bandiera della nazionale, altrimenti niente."""
+    face = _face(name)
+    if face:
+        return face
+    try:
+        from graphics import compleanno
+        return flag(compleanno.nationality(name))
+    except Exception:  # noqa: BLE001
+        return ''
+
+
 def _bday_caption(data):
     """Come gli auguri del canale: 🎂🇦🇷 Tanti auguri a <b>Paulo Dybala!</b>"""
     name = _person_name(data.get('player') or data.get('name'))
@@ -427,7 +459,8 @@ def _other_caption(data):
         # ✅ HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.  +  📲 Fabrizio Romano (senza bandiera)
         return _from_template('af', giocatore=html.escape(_who(data)))
     if kind == 'rin':
-        return _from_template('rin', giocatore=esc(_person_name(data.get('name'))), anno=esc(data.get('year')))
+        name = _roster_name(data.get('name'))
+        return _from_template('rin', bandiera=_player_icon(name), giocatore=esc(name), anno=esc(data.get('year')))
     if kind == 'free':
         return html.escape(str(data.get('caption') or '').strip())      # testo scritto a mano, o niente
     if kind == 'table':

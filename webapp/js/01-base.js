@@ -117,7 +117,7 @@ const REQUESTS = [
   {id:'rin',    kind:'rin',   icon:'rin', title:'Rinnovi',      desc:'Maglia stesa con nome e anno del contratto'},
   {id:'af',     kind:'af',    icon:'af', title:'Here We Go', desc:'Acquisto ufficiale: poster oro AFFARE FATTO con la foto'},
   {id:'bday',   kind:'bday',  icon:'bday', title:'Compleanno',   desc:'Auguri a un giocatore della rosa o a un ex'},
-  {id:'free',   kind:'free',  icon:'free', title:'Editor libero', desc:'Foto, testi e logo dove vuoi; modelli salvati come Lutto'},
+  {id:'free',   kind:'free',  icon:'free', title:'Editor libero', desc:'Foto, testi e logo dove vuoi; modelli da salvare'},
   {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia Instagram', desc:'Notizia in formato storia'},
   {id:'igq',    kind:'igq',   icon:'igq', title:'Citazione Instagram', desc:'Post Instagram: foto, testo e account'},
   {id:'xq',     kind:'xq',    icon:'xq', title:'Citazione X',  desc:'Post X: testo, account e foto (o sfondo)'},

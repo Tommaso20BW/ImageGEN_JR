@@ -73,19 +73,8 @@ const hhmm = ms => {
   if (ms >= day(1)) return `ieri ${time}`;
   return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${time}`;
 };
-// Sempre due righe (tutte le righe dell'elenco alte uguali): giocatore e minuto; risultato e
-// avversario. Senza giocatore (Kick Off, fasi...) "risultato · avversario" sale sulla prima.
-// Storia e Citazioni: account (se c'è) e poi l'inizio del testo (`note`).
-// Avversario col nome italiano (come nel resto della Mini App); negli invii salvati prima:
-// "IG" -> "Instagram" e niente "@" davanti al nome di una persona ("@Alessandro Del Piero").
+// Cos'è la grafica (negli invii salvati prima "IG" -> "Instagram").
 const sentName = item => String(item.name || '').replace(/ IG$/, ' Instagram');
-const sentLines = item => {
-  const player = /^@\S+\s/.test(item.player || '') ? item.player.slice(1) : item.player;
-  const who = [player, item.minute].filter(Boolean).join(' · ');
-  const vs = item.opponent ? displayTeamName(item.opponent) : '';
-  const match = item.note || [item.score, vs].filter(Boolean).join(' · ');
-  return who ? [who, match] : [match, ''];
-};
 const sentUrl = (what, id) => `${directBase}/history/${what}?session=${encodeURIComponent(session)}&id=${encodeURIComponent(id)}`;
 
 async function loadRecent() {
@@ -110,7 +99,7 @@ function renderSentList() {
   });
 }
 
-// Righe dell'elenco (miniatura, nome e ora, due righe di dettagli), con l'azione al tocco.
+// Griglia di foto grandi: sopra la sfumatura solo cos'è (Rinnovo, Storia Instagram...) e l'ora.
 function fillSentRows(listId, emptyId, groupId, onPick) {
   const list = $(listId);
   list.innerHTML = '';
@@ -119,18 +108,11 @@ function fillSentRows(listId, emptyId, groupId, onPick) {
   recentItems.forEach(item => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'hm-item hm-recent';
-    b.innerHTML = '<img class="hm-thumb" alt="" loading="lazy"><span class="hm-txt">' +
-      '<span class="hm-top"><span class="hm-name"></span><span class="hm-time"></span></span>' +
-      '<span class="hm-desc"></span><span class="hm-desc"></span></span>' +
-      '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-    b.querySelector('.hm-thumb').src = sentUrl('thumb', item.id);
-    b.querySelector('.hm-name').textContent = sentName(item);
-    const [who, match] = sentLines(item);
-    const desc = b.querySelectorAll('.hm-desc');
-    desc[0].textContent = who || ' ';      // riga vuota: spazio, così l'altezza resta uguale
-    desc[1].textContent = match || ' ';
-    b.querySelector('.hm-time').textContent = hhmm(item.at);
+    b.className = 'sent-tile';
+    b.innerHTML = '<img alt="" loading="lazy"><span class="sent-cap"><b></b><small></small></span>';
+    b.querySelector('img').src = sentUrl('thumb', item.id);
+    b.querySelector('b').textContent = sentName(item);
+    b.querySelector('small').textContent = hhmm(item.at);
     b.addEventListener('click', () => onPick(item));
     list.appendChild(b);
   });
@@ -140,13 +122,11 @@ function renderSentItem() {
   const item = recentPick;
   if (!item) return;
   $('sentTitle').textContent = sentName(item);
-  const [who, match] = sentLines(item);
-  $('sentLead').textContent = [who, match, `inviata alle ${hhmm(item.at)}`].filter(Boolean).join(' · ');
+  const when = hhmm(item.at);
+  $('sentLead').textContent = `Inviata ${/^\d/.test(when) ? 'alle ' : ''}${when}`;
   $('sentImage').src = sentUrl('image', item.id);
   $('sentEdit').hidden = !sentSnapshot(item.id);
-  $('sentNote').textContent = sentSnapshot(item.id)
-    ? '“Rimanda” la manda di nuovo uguale. Per cambiare minuto, risultato o giocatore usa “Modifica i dati”.'
-    : '“Rimanda” la manda di nuovo uguale. Questa grafica non si può modificare da qui: rifalla dalla Home.';
+  $('sentNote').textContent = '';
 }
 
 function sentSnapshot(id) {

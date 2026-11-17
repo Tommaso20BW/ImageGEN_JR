@@ -1249,7 +1249,7 @@ class Service:
         repo degli asset (con il file_id Telegram: resta anche per le sessioni dopo)."""
         entry = {'id': int(message_id), 'name': log.graphic_name(data), **_send_detail(data),
                  'kind': data.get('kind', ''), 'at': int(time.time() * 1000), 'png': png, 'caption': text or '',
-                 'thumb': _jpeg(png, (240, 320), 80),
+                 'thumb': _jpeg(png, (480, 640), 78),   # riquadri grandi di Ultimi invii
                  **(getattr(self.telegram, 'last_photo', None) or {})}
         with self.history_lock:
             self.history.insert(0, entry)

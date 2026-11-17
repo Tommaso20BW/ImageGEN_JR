@@ -11,7 +11,8 @@ function syncNav() {
   $('navTitle').textContent = home ? '' : (previewMode ? 'Anteprima' : (h1 ? h1.textContent.trim() : stepTitle(screenName)));
   const req = currentRequest();
   const opp = selectedTeam ? displayTeamName(selectedTeam.name) : '';
-  $('navSub').textContent = home || !req ? '' : (LIVE ? '' : req.title + (opp ? ` · ${opp}` : ''));
+  const sub = home || !req || LIVE ? '' : req.title + (opp ? ` · ${opp}` : '');
+  $('navSub').textContent = sub === $('navTitle').textContent ? '' : sub;   // niente "Ultimi invii / Ultimi invii"
   const back = $('backButton');
   $('closeWorkflowButton').hidden = !home;
   $('navBack').hidden = home || LIVE && !previewMode && flowIndex === 0;
@@ -799,8 +800,8 @@ async function nmSave(reset) {
    Il servizio li tiene in imagegen/captions.json (repo degli asset). **grassetto**, __corsivo__,
    {segnaposto}; le emoji del canale diventano animate da sole e la firma si aggiunge sempre. */
 let msgList = null;
-const MSG_SAMPLE = {hashtag:'#JuveNapoli', avversario:'Napoli', giocatore:'Kenan Yildiz', mesi:'nel mese di ottobre 2026', anno:'2030'};
-const MSG_FIELD = {hashtag:'Hashtag partita', avversario:'Avversario', giocatore:'Giocatore', mesi:'Mesi del sondaggio', anno:'Anno di scadenza'};
+const MSG_SAMPLE = {hashtag:'#JuveNapoli', avversario:'Napoli', giocatore:'Kenan Yildiz', mesi:'nel mese di ottobre 2026', anno:'2030', bandiera:'🇹🇷'};
+const MSG_FIELD = {hashtag:'Hashtag', avversario:'Avversario', giocatore:'Giocatore', mesi:'Mesi', anno:'Anno', bandiera:'Bandiera'};
 
 async function openMessages() {
   haptic('select');
@@ -832,22 +833,19 @@ function msgRender(page) {
   const box = $('setPage'), D = setDraft;
   if (page === 'msg') {
     const rows = (msgList || []).map(m => `<button type="button" class="sp-item" data-sp="msg-open" data-k="${setEsc(m.kind)}">
-      <span>${setEsc(m.name)}</span><span class="sp-v">${m.custom ? 'Tuo' : m.default ? 'Di base' : 'Nessun testo'}</span><span class="sp-chev">›</span></button>`).join('');
+      <span>${setEsc(m.name)}</span><span class="sp-v">${m.custom ? 'Modificato' : m.default ? '' : 'Senza testo'}</span><span class="sp-chev">›</span></button>`).join('');
     box.innerHTML = spNav('Messaggi') + `<div class="sp-body">
-      <p class="sp-note">Il testo che ImageGEN mette sotto la grafica quando la invia sul canale.</p>
       ${msgList ? `<div class="sp-list">${rows}</div>` : '<p class="sp-note">Carico…</p>'}</div>`;
     return;
   }
   const M = D.m;
   box.innerHTML = spNav(M.name, {save:true, cancel:true, saveOff:D.text.trim() === M.text}) + `<div class="sp-body">
-    <div class="sp-lbl">Testo</div>
-    <div class="sp-list"><textarea id="msgText" class="sp-field msg-ta" maxlength="900" rows="3" spellcheck="false" placeholder="${M.default ? '' : 'Nessun testo: scrivi qui per aggiungerlo'}">${setEsc(D.text)}</textarea></div>
-    ${M.fields.length ? `<div class="sp-lbl">Tocca per inserire</div>
-    <div class="msg-chips">${M.fields.map(f => `<button type="button" data-sp="msg-ins" data-f="${f}"><b>{${f}}</b><small>${setEsc(MSG_FIELD[f] || '')}</small></button>`).join('')}</div>` : ''}
-    <p class="sp-note">**grassetto** · __corsivo__ · le emoji del canale (✅ ☑️ 📝 🆕 🌍 📲 ⭐️ 🔝 📊 👀) diventano animate da sole. La firma si aggiunge sempre.</p>
-    <div class="sp-lbl">Anteprima</div>
     <div id="msgPrev" class="msg-prev">${msgPreview(D.text)}</div>
-    ${D.text !== M.default ? `<div class="sp-list msg-base"><button type="button" class="sp-item sp-act" data-sp="msg-base">${M.default ? 'Torna al testo di base' : 'Togli il testo'}</button></div>` : ''}
+    <div class="sp-lbl">Testo</div>
+    <div class="sp-list"><textarea id="msgText" class="sp-field msg-ta" maxlength="900" rows="3" spellcheck="false" placeholder="${M.default ? '' : 'Scrivi qui il testo'}">${setEsc(D.text)}</textarea></div>
+    ${M.fields.length ? `<div class="msg-chips">${M.fields.map(f => `<button type="button" data-sp="msg-ins" data-f="${f}">+ ${setEsc(MSG_FIELD[f] || f)}</button>`).join('')}</div>` : ''}
+    <p class="msg-tip">**grassetto** &nbsp; __corsivo__</p>
+    ${D.text !== M.default ? `<button type="button" class="msg-base" data-sp="msg-base">${M.default ? 'Torna al testo di base' : 'Togli il testo'}</button>` : ''}
     <div id="setErr" class="sp-err"></div></div>`;
   const ta = $('msgText');
   fitTextarea(ta);

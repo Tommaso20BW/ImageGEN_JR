@@ -302,12 +302,12 @@ body.live .brand-btn{pointer-events:none}
 
 /* Impostazioni › Messaggi: testo del modello, segnaposto e anteprima. */
 .sp-field.msg-ta{display:block;height:auto;min-height:96px;padding:14px 16px;font-size:16px;font-weight:500;line-height:1.4;resize:none}
-.msg-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 2px}
-.msg-chips button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;border-radius:12px;background:var(--surface);
-  color:var(--tint);font:inherit;font-size:15px;padding:8px 12px;cursor:pointer}
-.msg-chips small{color:var(--muted);font-size:12px;font-weight:600}
-.msg-prev{background:var(--surface);border-radius:14px;padding:14px 16px;white-space:pre-wrap;font-size:15px;line-height:1.45;overflow-wrap:anywhere}
-.msg-base{margin-top:14px}
+.msg-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 2px 0}
+.msg-chips button{border:0;border-radius:999px;background:var(--surface);box-shadow:var(--shadow-soft);color:var(--text);
+  font:inherit;font-weight:700;font-size:14px;padding:8px 14px;cursor:pointer}
+.msg-prev{background:var(--surface);border-radius:16px 16px 16px 4px;box-shadow:var(--shadow-soft);margin-top:14px;padding:14px 16px;white-space:pre-wrap;font-size:15px;line-height:1.45;overflow-wrap:anywhere}
+.msg-base{display:block;margin:18px auto 0;border:0;background:none;color:var(--danger);font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+.msg-tip{margin:10px 4px 0;color:var(--muted);font-size:13px}
 .msg-none{color:var(--muted);font-style:italic}
 #setMenu{margin-top:14px}
 #setMenu .set-grp{margin:22px 4px 8px}
