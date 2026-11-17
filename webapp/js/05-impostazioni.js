@@ -87,7 +87,7 @@ async function loadEspnTeams() {
     .then(r => r.json()).then(body => { if (body && body.ok) espnTeams = body.teams || []; })
     .catch(() => {}).finally(() => {
       espnTeamsJob = null;
-      if ($('setOv').classList.contains('open')) { renderSetList(); markSetSeen(); } else updateSetBadge();
+      if ($('setOv').classList.contains('open')) { renderSetList(); renderSetMenu(); markSetSeen(); } else updateSetBadge();
     });
   return espnTeamsJob;
 }
@@ -121,11 +121,42 @@ function openSettings() {
   $('setQ').value = '';
   loadTeamNames();
   $('setOv').classList.add('open');
+  showSetView('menu');
   renderSetList();
   markSetSeen();
   loadEspnTeams();
 }
 const closeSettings = () => { closeSetSheet(); $('setOv').classList.remove('open'); };
+
+// Prima pagina: elenco semplice delle sezioni; Squadre apre ricerca ed elenco delle squadre.
+const SET_ICONS = {
+  msg:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
+  teams:'<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/>'
+};
+let setView = 'menu';
+function renderSetMenu() {
+  const box = $('setMenu');
+  box.innerHTML = '';
+  const n = unmatchedEspn().length;
+  [['msg', 'Messaggi', 'Testo sotto le grafiche', openMessages],
+   ['teams', 'Squadre', n ? `${n} da sistemare` : 'Logo, nome, hashtag, nomi ESPN', () => { haptic('select'); showSetView('teams'); }]]
+    .forEach(([ico, title, sub, open]) => {
+      const r = setRow(null, title, sub);
+      r.classList.add('ico');
+      r.querySelector('.set-ph').innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SET_ICONS[ico]}</svg>`;
+      r.addEventListener('click', open);
+      box.appendChild(r);
+    });
+}
+function showSetView(view) {
+  setView = view;
+  const teamsView = view === 'teams';
+  $('setMenu').hidden = teamsView;
+  $('setTeams').hidden = !teamsView;
+  $('setTitle').textContent = teamsView ? 'Squadre' : 'Impostazioni';
+  $('setBack').querySelector('span').textContent = teamsView ? 'Indietro' : 'Home';
+  if (teamsView) renderSetList(); else renderSetMenu();
+}
 
 // Riga dell'elenco: logo (o cerchio vuoto per i nomi ESPN senza squadra), nome e una riga grigia.
 function setRow(team, title, sub) {
@@ -190,11 +221,6 @@ function renderSetList() {
     return;
   }
   const namesMine = noLogo().filter(r => r.custom);
-  const msg = setRow(null, 'Messaggi', 'Convocati, XI, Here We Go, MOTM…');
-  msg.classList.add('msg');
-  msg.querySelector('.set-ph').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>';
-  msg.addEventListener('click', openMessages);
-  box.appendChild(msg);
   if (missing.length) { grp('Da sistemare'); addMissing(); }
   else if (espnTeamsJob) empty('Controllo il calendario ESPN…');
   if (modified.length || namesMine.length) { grp('Modificate'); addTeams(modified); addNames(namesMine); }
@@ -614,7 +640,7 @@ async function spOnSave() {
 
 function initSettings() {
   $('setBtn').addEventListener('click', openSettings);
-  $('setBack').addEventListener('click', closeSettings);
+  $('setBack').addEventListener('click', () => { if (setView === 'teams') showSetView('menu'); else closeSettings(); });
   $('setQ').addEventListener('input', renderSetList);
   $('setFile').addEventListener('change', () => { const f = $('setFile').files[0]; $('setFile').value = ''; spUpload(f); });
   $('setPage').addEventListener('click', async ev => {
