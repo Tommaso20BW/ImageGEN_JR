@@ -180,7 +180,7 @@ function renderHome() {
         '<svg class="hm-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
       b.querySelector('.hm-name').textContent = r.title;
       b.querySelector('.hm-desc').textContent = r.desc;
-      b.addEventListener('click',() => openRequest(r));
+      b.addEventListener('click',() => (r.kind === 'free' ? frStart(r) : openRequest(r)));
       list.appendChild(b);
     });
     box.appendChild(sec);

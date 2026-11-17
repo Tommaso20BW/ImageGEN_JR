@@ -1185,6 +1185,14 @@ function frPick(target, tpl='') {
   $('frFile').click();
 }
 
+// Dalla Home: prima la galleria, e solo con una foto scelta si entra nell'editor (se annulli resti in Home).
+let frStartReq = null, frStartImg = null;
+function frStart(r) {
+  frStartReq = r;
+  fr.photoFor = 'start'; fr.pickTpl = '';
+  $('frFile').click();
+}
+
 async function frPhotoPicked(file) {
   const target = fr.photoFor, tpl = fr.pickTpl;
   fr.photoFor = ''; fr.pickTpl = '';
@@ -1192,6 +1200,13 @@ async function frPhotoPicked(file) {
   let img;
   try { img = await frReadPhoto(file); } catch (_) { showError('Foto non leggibile.'); $('frFile').value = ''; return; }
   $('frFile').value = '';
+  if (target === 'start') {
+    if (!frStartReq) return;
+    frStartImg = img;
+    const r = frStartReq; frStartReq = null;
+    openRequest(r);                                  // l'editor si apre già con la foto (frOpenEditor)
+    return;
+  }
   if (tpl) { frApplyTpl(tpl, img); return; }
   // la foto va nel livello scelto, altrimenti in un livello nuovo (la prima fa da sfondo, le altre sopra)
   let l = target !== 'new' ? frLayer(target) : null;
@@ -1462,7 +1477,8 @@ function frApplyTpl(choice, img) {
     frOpenDoc(t.doc, t);
   }
   fr.choice = choice;
-  const first = fr.doc.layers.find(l => l.type === 'photo');
+  let first = fr.doc.layers.find(l => l.type === 'photo');
+  if (!first && img) { first = frNew('photo'); fr.doc.layers.unshift(first); }   // anche la pagina vuota tiene la foto
   if (first && img) fr.images[first.id] = img;
   fr.doc.layers = fr.doc.layers.filter(l => l.type !== 'photo' || fr.images[l.id]);
   fr.sel = '';
@@ -1574,8 +1590,17 @@ function frThumbLater(canvas, doc) { clearTimeout(canvas._t); canvas._t = setTim
 function frOpenEditor() {
   if (!fr.doc) {                                     // i modelli si scelgono da dentro (Modelli)
     frOpenDoc(frBlank()); fr.choice = 'new';
-    frHistReset();
-    frPick('new');                                    // per prima cosa la foto (annulli = pagina vuota)
+    if (frStartImg) {                                 // la foto scelta dalla Home fa da sfondo
+      const l = frNew('photo');
+      fr.doc.layers.push(l);
+      fr.images[l.id] = frStartImg;
+      frStartImg = null;
+      frPrewarm(l);
+      frHistReset();
+    } else {
+      frHistReset();
+      frPick('new');                                  // per prima cosa la foto (annulli = pagina vuota)
+    }
   }
   if (fr.templates === null && directBase && session) frTemplatesCall({action:'list'}).catch(() => { fr.templates = []; });
   frLayers(); frPanel(); frDraw();
