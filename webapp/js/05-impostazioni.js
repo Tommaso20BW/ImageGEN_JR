@@ -129,21 +129,16 @@ function openSettings() {
 const closeSettings = () => { closeSetSheet(); $('setOv').classList.remove('open'); };
 
 // Prima pagina: elenco semplice delle sezioni; Squadre apre ricerca ed elenco delle squadre.
-const SET_ICONS = {
-  msg:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
-  teams:'<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/>'
-};
 let setView = 'menu';
 function renderSetMenu() {
   const box = $('setMenu');
   box.innerHTML = '';
   const n = unmatchedEspn().length;
-  [['msg', 'Messaggi', 'Testo sotto le grafiche', openMessages],
-   ['teams', 'Squadre', n ? `${n} da sistemare` : 'Logo, nome, hashtag, nomi ESPN', () => { haptic('select'); showSetView('teams'); }]]
-    .forEach(([ico, title, sub, open]) => {
+  [['Messaggi', 'Testo sotto le grafiche', openMessages],
+   ['Squadre', n ? `${n} da sistemare` : 'Logo, nome, hashtag, nomi ESPN', () => { haptic('select'); showSetView('teams'); }]]
+    .forEach(([title, sub, open]) => {
       const r = setRow(null, title, sub);
-      r.classList.add('ico');
-      r.querySelector('.set-ph').innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SET_ICONS[ico]}</svg>`;
+      r.classList.add('nm');                    // senza icona
       r.addEventListener('click', open);
       box.appendChild(r);
     });
