@@ -1043,6 +1043,8 @@ class Service:
                 return {'preview': team_settings.preview_uri(mono, 480), 'aspect': w / h, 'frame': frame, 'photo_id': photo_id}
             w, h = Image.open(io.BytesIO(mono)).size
             return {'preview': team_settings.preview_uri(mono, 480), 'aspect': w / h, 'frame': frame}
+        if action in ('captions_list', 'caption_save'):   # Impostazioni › Messaggi: modelli dei testi
+            return self.captions(envelope)
         if action == 'names_list':       # Impostazioni › Nomi: nome ESPN -> nome italiano e hashtag
             return {'teams': team_settings.names_list(asset_dir())}
         if action == 'name_save':
@@ -1511,6 +1513,27 @@ class Service:
             raise ValueError('Font non trovato.')
         return path.read_bytes(), 'font/otf' if name.endswith('.otf') else 'font/ttf'
 
+    def captions(self, envelope):
+        """Modelli dei messaggi: elenco, salva (testo di base o vuoto = torna quello di base)."""
+        if envelope.get('action') == 'caption_save':
+            kind = str(envelope.get('kind') or '')
+            if kind not in caption.TEMPLATE_KINDS:
+                raise ValueError('Messaggio non valido.')
+            text = caption.clean_template(envelope.get('text'))
+            with self.history_lock:
+                saved = dict(caption.CUSTOM)
+                if not text or text == caption.TEMPLATE_KINDS[kind][1]:
+                    saved.pop(kind, None)
+                else:
+                    saved[kind] = text
+                changed = saved != caption.CUSTOM
+                caption.CUSTOM = saved
+            if changed:
+                sent_store.save_captions(saved)
+                log.info('SALVATAGGIO', f"Messaggi: modello {caption.TEMPLATE_KINDS[kind][0]} "
+                                        f"{'cambiato' if kind in saved else 'tornato quello di base'}")
+        return {'captions': caption.templates_list()}
+
     def colors(self, envelope):
         """Post: colori aggiunti con il + (titolo e logo JR). Elenco, aggiungi, togli; nel repo degli asset."""
         from graphics import photo_jr
@@ -1721,6 +1744,7 @@ class Service:
             self.ig_phrases = sent_store.load_phrases()
             self.saved_colors = sent_store.load_colors()
             self.editor_templates = sent_store.load_templates()
+            caption.CUSTOM = sent_store.load_captions()
         if self.history or self.ig_phrases:
             log.info('AVVIO', f'Ultimi invii: {len(self.history)} · frasi pronte: {len(self.ig_phrases)}')
 

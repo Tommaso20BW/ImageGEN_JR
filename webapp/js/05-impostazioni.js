@@ -190,6 +190,11 @@ function renderSetList() {
     return;
   }
   const namesMine = noLogo().filter(r => r.custom);
+  const msg = setRow(null, 'Messaggi', 'Convocati, XI, Here We Go, MOTM…');
+  msg.classList.add('msg');
+  msg.querySelector('.set-ph').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>';
+  msg.addEventListener('click', openMessages);
+  box.appendChild(msg);
   if (missing.length) { grp('Da sistemare'); addMissing(); }
   else if (espnTeamsJob) empty('Controllo il calendario ESPN…');
   if (modified.length || namesMine.length) { grp('Modificate'); addTeams(modified); addNames(namesMine); }
@@ -382,6 +387,7 @@ function renderSetPage() {
   if (!page) { box.hidden = true; return; }
   box.hidden = false;
   if (page.startsWith('emoji')) { emoRender(); return; }
+  if (page.startsWith('msg')) { msgRender(page); return; }
   const T = setTeam, D = setDraft;
   let html = '';
   if (page === 'team' || page === 'new') {
@@ -585,6 +591,7 @@ async function spOnSave() {
   const page = setStack[setStack.length - 1], T = setTeam, D = setDraft;
   if (page === 'nm') { nmSave(false); return; }
   if (page === 'emoji') { emoOnSave(); return; }
+  if (page === 'msg-edit') { msgSave(); return; }
   if (page === 'logo') {
     if (T.isNew) {      // bozza: il logo si salva con "Crea squadra"
       if (D.preview) T.pending = {logo:D.logo, preview:D.preview, aspect:D.aspect, frame:{...D.frame}};
@@ -642,6 +649,9 @@ function initSettings() {
       const body = await spSave({base:null, key:'', name:T.custom || T.espn, aliases:T.aliases, tag:T.tag || '', logo:p.logo, logo_frame:p.frame});
       if (body) spAfterSave(body);
     }
+    else if (act === 'msg-open') msgOpen(btn.dataset.k);
+    else if (act === 'msg-ins') msgInsert(btn.dataset.f);
+    else if (act === 'msg-base') { D.text = D.m.default; renderSetPage(); }
     else if (act === 'nm-logo') { openFixSheet(T.nm.espn); }
     else if (act === 'nm-reset') {
       if (!T.confirmReset) { T.confirmReset = true; renderSetPage(); return; }
@@ -734,6 +744,97 @@ async function nmSave(reset) {
     await loadTeamNames(true);
     closeSetSheet(); renderSetList();
     if (body.remote) setToast(reset ? 'Ripristinato' : 'Salvato'); else setToast(`Salvato solo per questa sessione (${body.warning})`, true);
+  } catch (err) {
+    setBusy = false; renderSetPage();
+    $('setErr').textContent = err.message || 'Salvataggio non riuscito.';
+  }
+}
+
+
+/* ---------- Impostazioni › Messaggi: modelli dei testi sotto le grafiche ----------
+   Il servizio li tiene in imagegen/captions.json (repo degli asset). **grassetto**, __corsivo__,
+   {segnaposto}; le emoji del canale diventano animate da sole e la firma si aggiunge sempre. */
+let msgList = null;
+const MSG_SAMPLE = {hashtag:'#JuveNapoli', avversario:'Napoli', giocatore:'Kenan Yildiz', mesi:'nel mese di ottobre 2026'};
+const MSG_FIELD = {hashtag:'Hashtag partita', avversario:'Avversario', giocatore:'Giocatore', mesi:'Mesi del sondaggio'};
+
+async function openMessages() {
+  haptic('select');
+  setTeam = null; setDraft = null; setStack = ['msg'];
+  renderSetPage();
+  try { msgList = (await setPost({action:'captions_list'})).captions || []; }
+  catch (err) { setToast(err.message || 'Messaggi non caricati.', true); }
+  if (setStack[setStack.length - 1] === 'msg') renderSetPage();
+}
+
+function msgOpen(kind) {
+  const m = (msgList || []).find(x => x.kind === kind);
+  if (!m) return;
+  haptic('select');
+  setDraft = {m, text:m.text};
+  setStack.push('msg-edit');
+  renderSetPage();
+}
+
+// Anteprima come su Telegram (emoji normali al posto di quelle animate, valori d'esempio).
+function msgPreview(text) {
+  const h = setEsc(text).replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>').replace(/__([\s\S]+?)__/g, '<i>$1</i>')
+    .replace(/\{(\w+)\}/g, (all, k) => MSG_SAMPLE[k.toLowerCase()] ? setEsc(MSG_SAMPLE[k.toLowerCase()]) : all);
+  return `${h}\n\n👉 @Juventus_Reborn`;
+}
+
+function msgRender(page) {
+  const box = $('setPage'), D = setDraft;
+  if (page === 'msg') {
+    const rows = (msgList || []).map(m => `<button type="button" class="sp-item" data-sp="msg-open" data-k="${setEsc(m.kind)}">
+      <span>${setEsc(m.name)}</span><span class="sp-v">${m.custom ? 'Tuo' : 'Di base'}</span><span class="sp-chev">›</span></button>`).join('');
+    box.innerHTML = spNav('Messaggi') + `<div class="sp-body">
+      <p class="sp-note">Il testo che ImageGEN mette sotto la grafica quando la invia sul canale.</p>
+      ${msgList ? `<div class="sp-list">${rows}</div>` : '<p class="sp-note">Carico…</p>'}</div>`;
+    return;
+  }
+  const M = D.m;
+  box.innerHTML = spNav(M.name, {save:true, cancel:true, saveOff:D.text.trim() === M.text}) + `<div class="sp-body">
+    <div class="sp-lbl">Testo</div>
+    <div class="sp-list"><textarea id="msgText" class="sp-field msg-ta" maxlength="900" rows="3" spellcheck="false">${setEsc(D.text)}</textarea></div>
+    ${M.fields.length ? `<div class="sp-lbl">Tocca per inserire</div>
+    <div class="msg-chips">${M.fields.map(f => `<button type="button" data-sp="msg-ins" data-f="${f}"><b>{${f}}</b><small>${setEsc(MSG_FIELD[f] || '')}</small></button>`).join('')}</div>` : ''}
+    <p class="sp-note">**grassetto** · __corsivo__ · le emoji del canale (✅ ☑️ 📝 🆕 🌍 📲 ⭐️ 🔝 📊 👀) diventano animate da sole. La firma si aggiunge sempre.</p>
+    <div class="sp-lbl">Anteprima</div>
+    <div id="msgPrev" class="msg-prev">${msgPreview(D.text)}</div>
+    ${D.text !== M.default ? '<div class="sp-list msg-base"><button type="button" class="sp-item sp-act" data-sp="msg-base">Torna al testo di base</button></div>' : ''}
+    <div id="setErr" class="sp-err"></div></div>`;
+  const ta = $('msgText');
+  fitTextarea(ta);
+  ta.addEventListener('input', () => {
+    D.text = ta.value;
+    fitTextarea(ta);
+    $('msgPrev').innerHTML = msgPreview(D.text);
+    const save = box.querySelector('[data-sp="save"]');
+    if (save && !setBusy) save.disabled = D.text.trim() === M.text;
+  });
+}
+
+function msgInsert(field) {
+  const ta = $('msgText'), D = setDraft;
+  if (!ta) return;
+  const a = ta.selectionStart ?? ta.value.length, b = ta.selectionEnd ?? a, add = `{${field}}`;
+  ta.value = ta.value.slice(0, a) + add + ta.value.slice(b);
+  ta.focus();
+  ta.setSelectionRange(a + add.length, a + add.length);
+  ta.dispatchEvent(new Event('input'));
+}
+
+async function msgSave() {
+  const D = setDraft;
+  if (!D.text.trim()) { $('setErr').textContent = 'Scrivi il testo (o torna a quello di base).'; return; }
+  setBusy = true; renderSetPage();
+  try {
+    const body = await setPost({action:'caption_save', kind:D.m.kind, text:D.text});
+    msgList = body.captions || msgList;
+    setBusy = false;
+    spPop();
+    setToast('Salvato');
   } catch (err) {
     setBusy = false; renderSetPage();
     $('setErr').textContent = err.message || 'Salvataggio non riuscito.';

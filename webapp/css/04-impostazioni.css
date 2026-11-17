@@ -299,3 +299,13 @@ body.live .brand-btn{pointer-events:none}
 .stat-row input:focus::placeholder{opacity:.12}
 .stat-tools{display:flex;justify-content:space-between;align-items:center;margin-top:14px;color:var(--muted);font-size:12.5px}
 .link-btn{border:0;background:transparent;color:var(--muted);font-size:12.5px;font-weight:700;text-decoration:underline;padding:6px 0}
+
+/* Impostazioni › Messaggi: riga in cima all'elenco, testo del modello, segnaposto e anteprima. */
+.set-row.msg .set-ph{display:grid;place-items:center;border:0;background:var(--tint);color:#fff}
+.sp-field.msg-ta{display:block;height:auto;min-height:96px;padding:14px 16px;font-size:16px;font-weight:500;line-height:1.4;resize:none}
+.msg-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 2px}
+.msg-chips button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;border-radius:12px;background:var(--surface);
+  color:var(--tint);font:inherit;font-size:15px;padding:8px 12px;cursor:pointer}
+.msg-chips small{color:var(--muted);font-size:12px;font-weight:600}
+.msg-prev{background:var(--surface);border-radius:14px;padding:14px 16px;white-space:pre-wrap;font-size:15px;line-height:1.45;overflow-wrap:anywhere}
+.msg-base{margin-top:14px}

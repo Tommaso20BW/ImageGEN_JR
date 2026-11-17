@@ -6,6 +6,7 @@
 - imagegen/ig_phrases.json Storia IG: frasi pronte.
 - imagegen/colors.json     Post: colori aggiunti con il + ({'title': ['#rrggbb'], 'jr': [colore JR]}).
 - imagegen/editor_templates.json  Editor libero: modelli salvati ([{'id', 'name', 'doc'}], senza foto).
+- imagegen/captions.json  Impostazioni › Messaggi: modelli dei testi cambiati ({tipo: testo}).
 
 Il workflow copia la cartella imagegen/ nella cartella asset all'avvio (lettura subito, senza
 rete); ogni modifica si scrive in locale e poi con un commit (team_settings._commit), in un
@@ -25,6 +26,7 @@ COLORS_KEEP = 24
 TEMPLATES = 'editor_templates.json'
 TEMPLATES_KEEP = 40
 TEMPLATE_MAX = 12000             # byte del modello (JSON): livelli, testi e stili, mai le foto
+CAPTIONS = 'captions.json'
 NAMES = 'ig_names.json'          # Citazione IG: nome scritto a mano per ogni account ({username: nome})
 HISTORY_KEEP = 20
 PHRASES_KEEP = 40
@@ -126,6 +128,21 @@ def load_templates():
 
 def save_templates(templates):
     _save(TEMPLATES, templates[:TEMPLATES_KEEP], 'ImageGen: modelli dell\'editor libero')
+
+
+def load_captions():
+    """Modelli dei messaggi cambiati nella Mini App (solo i tipi che esistono ancora)."""
+    import caption
+    out = {}
+    for kind, text in _read(CAPTIONS, {}).items():
+        text = caption.clean_template(text)
+        if kind in caption.TEMPLATE_KINDS and text:
+            out[kind] = text
+    return out
+
+
+def save_captions(captions):
+    _save(CAPTIONS, captions, 'ImageGen: modelli dei messaggi')
 
 
 def save_colors(colors):

@@ -5,6 +5,7 @@ di LiveScore (nomi italiani e hashtag di Impostazioni › Nomi). Le altre (Match
 Classifica, Convocati...) seguono i post fatti a mano, con le emoji personalizzate del canale.
 Queste ultime finiscono con la firma 👉 @Juventus_Reborn; quelle della diretta no, come sul canale.
 Compleanni: auguri con torta e bandiera della nazionale. Post, Storie e Citazioni partono senza testo.
+Convocati, XI, Here We Go, MOTM e POTM seguono i modelli di Impostazioni › Messaggi (TEMPLATE_KINDS).
 """
 import html
 
@@ -42,6 +43,67 @@ E_STAR = emoji('5438496463044752972', '⭐️')
 E_TOP = emoji('5422354988103901774', '🔝')
 E_EYES = emoji('5424885441100782420', '👀')
 E_SOURCE = emoji('5785366354106261925', '📲')     # fonte del mercato (📲 Fabrizio Romano)
+
+
+# --- Modelli dei messaggi (Impostazioni › Messaggi) ---------------------------------------------
+# Testo semplice scritto nella Mini App: **grassetto**, __corsivo__, {segnaposto}. Le emoji del canale
+# (☑️ 📝 🆕 ✅ ...) diventano da sole quelle personalizzate. La firma 👉 @Juventus_Reborn si aggiunge sempre.
+TEMPLATE_KINDS = {   # tipo -> (nome nella Mini App, testo di base, segnaposto)
+    'squad': ('Convocati', f'☑️📝 I convocati di **{ALLENATORE}** per {{hashtag}}.', ('hashtag', 'avversario')),
+    'pxi': ('Probabile XI', '🆕📋 𝐏𝐑𝐎𝐁𝐀𝐁𝐈𝐋𝐄 𝐗𝐈 {hashtag}', ('hashtag', 'avversario')),
+    'xi': ('XI ufficiale', '✅📋 𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄 {hashtag}', ('hashtag', 'avversario')),
+    'conv': ('Convocati nazionali', '🌍📋 I bianconeri convocati dalle rispettive nazionali.', ()),
+    'af': ('Here We Go', '✅ HERE WE GO: **{giocatore}** alla **Juventus**.\n\n__📲 Fabrizio Romano__', ('giocatore',)),
+    'motm': ('MOTM', '⭐️🔝 𝐌𝐎𝐓𝐌 {hashtag}: **{giocatore}**', ('hashtag', 'giocatore')),
+    'potm': ('POTM', '📊👀 Il verdetto del sondaggio su __Telegram__ è netto: **{giocatore}** è stato eletto '
+                     'miglior giocatore della **Juventus** {mesi}.', ('giocatore', 'mesi')),
+}
+TEMPLATE_MAX = 900                 # caratteri: la didascalia di Telegram arriva a 1024, firma compresa
+CUSTOM = {}                        # tipo -> testo scritto nella Mini App (lo carica il servizio)
+PREMIUM = {   # emoji scritta nel modello -> emoji personalizzata del canale
+    '☑️': E_CHECK, '📝': E_NOTE, '🆕': E_NEW, '✅': E_OFFICIAL, '🌍': E_WORLD, '📲': E_SOURCE,
+    '⭐️': E_STAR, '🔝': E_TOP, '📊': E_STATS, '👀': E_EYES, '📰': E_NEWS, '📆': E_DAY, '🔥': E_FIRE,
+    '⚔️': E_VS, '⏰': E_TIME, '📺': E_TV, '🏟': E_HOME, '✈️': E_AWAY, '🆙': E_UP, '🤝': E_FRIENDLY,
+    '🎂': E_CAKE, '👉': SIGN,
+}
+
+
+def clean_template(text):
+    """Testo del modello come si salva: a capo uniformi, niente spazi in fondo alle righe."""
+    lines = [line.rstrip() for line in str(text or '').replace('\r', '').split('\n')]
+    return '\n'.join(lines).strip()[:TEMPLATE_MAX]
+
+
+def template_text(kind):
+    """Modello in uso: quello scritto nella Mini App, o quello di base."""
+    return CUSTOM.get(kind) or TEMPLATE_KINDS[kind][1]
+
+
+def _premium(text):
+    import re
+    keys = {plain.replace('️', ''): tag for plain, tag in PREMIUM.items()}   # con o senza variante
+    pattern = '|'.join(re.escape(k) for k in sorted(keys, key=len, reverse=True))
+    return re.sub(f'(?:{pattern})️?', lambda m: keys[m.group(0).replace('️', '')], text)
+
+
+def render_template(text, values):
+    """Modello -> HTML di Telegram: escape, emoji del canale, **grassetto**, __corsivo__, {segnaposto}.
+    `values` sono già HTML (con l'escape); un segnaposto sconosciuto resta com'è."""
+    import re
+    out = _premium(esc(text))
+    out = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', out, flags=re.S)
+    out = re.sub(r'__(.+?)__', r'<i>\1</i>', out, flags=re.S)
+    return re.sub(r'\{(\w+)\}', lambda m: values.get(m.group(1).lower(), m.group(0)), out)
+
+
+def _from_template(kind, **values):
+    return render_template(template_text(kind), values)
+
+
+def templates_list():
+    """Per la Mini App: ogni modello con il testo in uso, quello di base e i segnaposto."""
+    return [{'kind': k, 'name': name, 'text': template_text(k), 'default': base, 'fields': list(fields),
+             'custom': k in CUSTOM} for k, (name, base, fields) in TEMPLATE_KINDS.items()]
 
 # Bandiere animate del canale (codice ISO -> emoji personalizzata); le altre nazioni hanno la bandiera normale.
 FLAGS = {
@@ -227,11 +289,9 @@ def _match_caption(data):
     if kind == 'xi':
         if data.get('team') == 'italy':
             return f"✅📋 𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄 𝐈𝐓𝐀𝐋𝐈𝐀\n\n{tail}"
-        return f"{E_OFFICIAL}<b>📋</b> 𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄 {m['tag']}"
-    if kind == 'pxi':
-        return f"{E_NEW}<b>📋</b> 𝐏𝐑𝐎𝐁𝐀𝐁𝐈𝐋𝐄 𝐗𝐈 {m['tag']}"
-    if kind == 'squad':
-        return f"{E_CHECK}{E_NOTE} I convocati di <b>{esc(ALLENATORE)}</b> per {m['tag']}."
+        return _from_template('xi', hashtag=m['tag'], avversario=m['away'] if m['juve_home'] else m['home'])
+    if kind in ('pxi', 'squad'):
+        return _from_template(kind, hashtag=m['tag'], avversario=m['away'] if m['juve_home'] else m['home'])
     if kind == 'md':
         competition = str(data.get('competition') or '')
         comp_emoji = MD_COMPETITION.get(competition, m['comp'])
@@ -335,20 +395,18 @@ def _other_caption(data):
         return _bday_caption(data)
     if kind == 'motm':
         # come sul canale: ⭐️🔝 𝐌𝐎𝐓𝐌 #JuveNapoli: <b>Kerim Alajbegovic</b>
-        return f"{E_STAR}{E_TOP} 𝐌𝐎𝐓𝐌 {_motm_tag(data)}: <b>{html.escape(_who(data))}</b>"
+        return _from_template('motm', hashtag=_motm_tag(data), giocatore=html.escape(_who(data)))
     if kind == 'potm':
         # come sul canale: 📊👀 Il verdetto del sondaggio su <i>Telegram</i> è netto: <b>Nico Gonzalez</b> è stato
         # eletto miglior giocatore della <b>Juventus</b> nei mesi di agosto e settembre 2026.
         months = [m.strip().lower() for m in str(data.get('month') or '').split('/') if m.strip()]
         when = ' e '.join(filter(None, [', '.join(months[:-1]), months[-1] if months else '']))
         span = f"nei mesi di {when}" if len(months) > 1 else f"nel mese di {when}"
-        return (f"{E_STATS}{E_EYES} Il verdetto del sondaggio su <i>Telegram</i> è netto: <b>{html.escape(_who(data))}</b> "
-                f"è stato eletto miglior giocatore della <b>Juventus</b> {html.escape(span)} {_poll_year(months)}.")
+        return _from_template('potm', giocatore=html.escape(_who(data)),
+                              mesi=f"{html.escape(span)} {_poll_year(months)}")
     if kind == 'af':
         # ✅ HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.  +  📲 Fabrizio Romano (senza bandiera)
-        who = _who(data)
-        return (f"{E_OFFICIAL} HERE WE GO: <b>{html.escape(who)}</b> alla <b>Juventus</b>.\n\n"
-                f"<i>{E_SOURCE} Fabrizio Romano</i>")
+        return _from_template('af', giocatore=html.escape(_who(data)))
     if kind == 'free':
         return html.escape(str(data.get('caption') or '').strip())      # testo scritto a mano, o niente
     if kind == 'table':
@@ -360,7 +418,7 @@ def _other_caption(data):
         round_ = _giornata(comp)
         return text + (f"\n{E_DAY}<i> {round_}ª Giornata</i>" if round_ else '')
     if kind == 'conv':
-        return f"{E_WORLD}<b>📋</b> I bianconeri convocati dalle rispettive nazionali."
+        return _from_template('conv')
     if kind == 'cal':
         month = int(data.get('month') or 0)
         name = MONTHS[month - 1] if 1 <= month <= 12 else ''

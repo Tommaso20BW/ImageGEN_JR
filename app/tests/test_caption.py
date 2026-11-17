@@ -130,6 +130,35 @@ class AwardsCaptionTest(unittest.TestCase):
         self.assertTrue(text.endswith('@Juventus_Reborn'))
 
 
+class TemplateCaptionTest(unittest.TestCase):
+    """Impostazioni › Messaggi: modelli scritti nella Mini App."""
+
+    def tearDown(self):
+        caption.CUSTOM = {}
+
+    def test_default_templates_keep_channel_emoji(self):
+        text = caption.build({'kind': 'squad', 'competition': 'ita.1', 'side': 'home', 'opponent': FIO})
+        self.assertTrue(text.startswith('<tg-emoji emoji-id="5454096630372379732">☑️</tg-emoji>'
+                                        '<tg-emoji emoji-id="5334882760735598374">📝</tg-emoji> I convocati di '
+                                        '<b>Spalletti</b> per #JuveFiorentina.'), text)
+
+    def test_custom_template(self):
+        caption.CUSTOM = {'pxi': 'Ecco la **probabile** contro {avversario} <3 __{hashtag}__ ✅ {boh}'}
+        text = plain(caption.build({'kind': 'pxi', 'competition': 'ita.1', 'side': 'away', 'opponent': FIO}))
+        self.assertEqual(text, 'Ecco la <b>probabile</b> contro Fiorentina &lt;3 <i>#FiorentinaJuve</i> ✅ {boh}'
+                               '\n\n👉 @Juventus_Reborn')
+        self.assertIn('emoji-id="5427009714745517609"', caption.build({'kind': 'pxi', 'competition': 'ita.1',
+                                                                        'side': 'home', 'opponent': FIO}))
+
+    def test_templates_list(self):
+        caption.CUSTOM = {'af': 'HERE WE GO {giocatore}'}
+        rows = {r['kind']: r for r in caption.templates_list()}
+        self.assertEqual(rows['af']['text'], 'HERE WE GO {giocatore}')
+        self.assertTrue(rows['af']['custom'])
+        self.assertFalse(rows['xi']['custom'])
+        self.assertEqual(caption.clean_template(' a  \r\nb \n'), 'a\nb')
+
+
 class FakeResponse:
     def __init__(self, status, body):
         self.status_code, self.body = status, body
