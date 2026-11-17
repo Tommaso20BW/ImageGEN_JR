@@ -12,7 +12,8 @@ import unicodedata
 
 URL = 'https://www.calligrapher.ai/'
 STYLES = ('44', '54', '23', '1', '19', '6', '30', '11', '21')   # tutti gli stili del sito
-SPEED, BIAS, WIDTH = '9.5', '1.1', '1.5'                      # tratto al massimo: firma piena
+SPEED, WIDTH = '9.5', '1.5'                                   # tratto al massimo: firma piena
+BIAS = (1.5, 2.5)                     # leggibilità del sito: a caso in questo intervallo, una per firma
 TIMEOUT_S = 40
 
 
@@ -57,7 +58,8 @@ def _write(lines, style):
                     page = browser.new_page(viewport={'width': 1200, 'height': 800})
                     page.goto(URL, wait_until='load', timeout=TIMEOUT_S * 1000)
                     page.wait_for_selector('#loading-indicator', state='detached', timeout=TIMEOUT_S * 1000)
-                    out['paths'] = [page.evaluate(_JS_WRITE, [t, style, SPEED, BIAS, WIDTH]) for t in lines]
+                    bias = f'{random.uniform(*BIAS):.2f}'      # nome e cognome con la stessa leggibilità
+                    out['paths'] = [page.evaluate(_JS_WRITE, [t, style, SPEED, bias, WIDTH]) for t in lines]
                 finally:
                     browser.close()
         except Exception as exc:       # noqa: BLE001 - la firma non deve mai bloccare la grafica

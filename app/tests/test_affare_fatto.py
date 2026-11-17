@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 from PIL import Image
 
+import _percorsi  # noqa: F401 - prima degli import del servizio
 from graphics import affare_fatto as A
 from graphics import firma
 
