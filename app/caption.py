@@ -139,6 +139,7 @@ COMPETITION_NAMES = {
 TABLES = {   # classifica: emoji e nome della competizione, come nei post del canale
     'SA': (E_ITA, 'Serie A'), 'UCL': ('🇪🇺', 'UCL'), 'UEL': (E_UEFA, 'UEL'), 'UECL': ('🇪🇺', 'UECL'),
 }
+BRACKET_NAMES = {'UCL': 'Champions League', 'UEL': 'Europa League', 'UECL': 'Conference League'}
 # Matchday: emoji della competizione e canale TV di solito (la Mini App non chiede la TV).
 MD_COMPETITION = {'ita.1': E_ITA, 'ita.coppa_italia': E_CI, 'uefa.europa': E_UEFA, 'club.friendly': E_FRIENDLY}
 MD_TV = {'ita.1': 'DAZN', 'ita.coppa_italia': 'Mediaset', 'ita.super_cup': 'Mediaset',
@@ -465,9 +466,11 @@ def _other_caption(data):
         return html.escape(str(data.get('caption') or '').strip())      # testo scritto a mano, o niente
     if kind == 'table':
         comp = str(data.get('competition') or '').upper()
-        if data.get('view') == 'bracket' or comp == 'CI':
+        if comp == 'CI' or (data.get('view') == 'bracket' and comp not in BRACKET_NAMES):
             return f"{E_UP}{E_CI} Tabellone<b> Coppa Italia </b>aggiornato."
         flag, name = TABLES.get(comp, ('', ''))
+        if data.get('view') == 'bracket':        # coppe europee: come quello della Coppa Italia
+            return f"{E_UP}{flag} Tabellone<b> {BRACKET_NAMES[comp]} </b>aggiornato."
         text = f"{flag}{E_STATS}<b> {name} | Classifica</b>"
         round_ = _giornata(comp)
         return text + (f"\n{E_DAY}<i> {round_}ª Giornata</i>" if round_ else '')

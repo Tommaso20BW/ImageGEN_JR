@@ -162,6 +162,11 @@ class TemplateCaptionTest(unittest.TestCase):
         finally:
             caption.TV_CUSTOM = {}
 
+    def test_uefa_bracket_names_its_competition(self):
+        text = plain(caption.build({'kind': 'table', 'competition': 'UEL', 'view': 'bracket'}))
+        self.assertTrue(text.startswith('🆙🇪🇺 Tabellone<b> Europa League </b>aggiornato.'), text)
+        self.assertIn('Coppa Italia', caption.build({'kind': 'table', 'competition': 'CI', 'view': 'bracket'}))
+
     def test_uppercase_surname_in_title_case(self):
         data = {'kind': 'af', 'name': 'Kenan', 'surname': 'YILDIZ'}
         self.assertIn('<b>Kenan Yildiz</b>', caption.build(data))
