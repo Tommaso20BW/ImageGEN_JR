@@ -115,7 +115,7 @@ const REQUESTS = [
   {id:'conv',   kind:'conv',  icon:'conv', title:'Convocati',    desc:'Bianconeri convocati in nazionale, con le bandiere'},
   {id:'jr',     kind:'jr',    icon:'jr', title:'Post',         desc:'Foto con il logo JR: classica, sfocata, collage o con titolo'},
   {id:'rin',    kind:'rin',   icon:'rin', title:'Rinnovi',      desc:'Maglia stesa con nome e anno del contratto'},
-  {id:'af',     kind:'af',    icon:'af', title:'Here We Go', desc:'Acquisto ufficiale: poster oro AFFARE FATTO con la foto'},
+  {id:'af',     kind:'af',    icon:'af', title:'Here we go!', desc:'Acquisto ufficiale: poster oro AFFARE FATTO con la foto'},
   {id:'bday',   kind:'bday',  icon:'bday', title:'Compleanno',   desc:'Auguri a un giocatore della rosa o a un ex'},
   {id:'free',   kind:'free',  icon:'free', title:'Editor libero', desc:'Foto, testi e logo dove vuoi; modelli da salvare'},
   {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia Instagram', desc:'Notizia in formato storia'},

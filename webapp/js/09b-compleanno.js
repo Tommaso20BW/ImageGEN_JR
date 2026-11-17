@@ -445,7 +445,7 @@ function bdPhotosRender() {
    momentaneo scritto a mano solo per questa grafica: non finisce in nessuna lista. */
 const aw = {player:'', manual:false, names:[], name:''};
 const awFields = () => kind === 'potm' ? ['potmName','potmSurname'] : kind === 'af' ? AF_FIELDS : ['motmName','motmSurname'];
-const awTitle = () => ({potm:'Player of the Month', af:'Here We Go'})[kind] || 'Man of the Match';
+const awTitle = () => ({potm:'Player of the Month', af:'Here we go!'})[kind] || 'Man of the Match';
 // Nome e cognome dal nome completo della rosa: il cognome è quello che l'app usa ovunque.
 // Se il cognome dell'app è un soprannome (es. NICO GONZALEZ) si usa il cognome vero del nome completo.
 function awSplit(p) {
