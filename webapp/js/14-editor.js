@@ -669,12 +669,12 @@ const FR_SVG = {
   eyeoff:'<path d="M4 4l16 16M9.9 5.8A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3 3.6M6.5 7.6A17 17 0 0 0 2.5 12S6 18.5 12 18.5a9 9 0 0 0 4-.9M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   grip:'<path d="M5 8h14M5 12h14M5 16h14"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
+  close:'<path d="M6 6l12 12M18 6L6 18"/>',
   undo:'<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   redo:'<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
   wand:'<path d="M4 20L15 9M13 7l4 4"/><path d="M18 3v3M16.5 4.5h3M20 9v2M19 10h2M10 3v2M9 4h2"/>'
 };
-const FR_ADD = [['photo', 'Foto', 'Dalla galleria'], ['text', 'Testo', 'Scrivi qualcosa'], ['logo', 'Logo JR', 'Nel suo angolo'],
-  ['rect', 'Forma', 'Riquadro colorato'], ['shade', 'Sfumatura', 'Scurisce un lato']];
+const FR_ADD = [['photo', 'Foto'], ['text', 'Testo'], ['logo', 'Logo JR'], ['rect', 'Forma'], ['shade', 'Sfumatura']];
 const FR_TOOLS = {
   page:[['add', 'Aggiungi', 'plus'], ['tpl', 'Modelli', 'tpl'], ['layers', 'Livelli', 'layers'], ['bg', 'Sfondo', 'bg'],
     ['fmt', 'Formato', 'fmt'], ['caption', 'Didascalia', 'caption']],
@@ -711,11 +711,14 @@ function frLayerName(l) {
 // Striscia degli strumenti (e barretta sopra l'elemento).
 function frLayers() {
   const bar = $('frTools');
+  if (frLayer(fr.sel)) fr.adding = false;
   bar.classList.toggle('fr-page', !frLayer(fr.sel));
+  bar.classList.toggle('fr-adding', !!fr.adding);
   const emptyTip = 'Tocca la pagina per scegliere una foto.';
   if (fr.doc && !fr.doc.layers.length) showToastSafe(emptyTip, 0);
   else if ($('frStatus').textContent === emptyTip) showToastSafe('');
   bar.innerHTML = '';
+  if (fr.adding && fr.doc) { frAddBar(bar); frFloatButtons(); frBusyShow(); return; }
   const l = frLayer(fr.sel);
   if (l) {
     const done = document.createElement('button');
@@ -774,7 +777,7 @@ function frTool(key, open) {
   if (key.startsWith('add-')) { frAdd(key.slice(4)); return; }
   if (key === 'layers') { frSheet(); return; }
   if (key === 'tpl') { frTplSheet(); return; }
-  if (key === 'add') { frAddSheet(); return; }
+  if (key === 'add') { fr.adding = true; fr.tool = ''; frLayers(); frPanel(); return; }
   if (key === 'replace') { frPick(l.id); return; }
   if (key === 'cutout') { frCutoutToggle(l); return; }
   if (key === 'erase' && !fr.images[l.id]) { frPick(l.id); return; }
@@ -1125,25 +1128,21 @@ function frAdd(type) {
   if (type === 'text') setTimeout(() => { const ta = $('frPanel').querySelector('textarea'); if (ta) { ta.focus(); ta.select(); } }, 60);
 }
 
-// Aggiungi: un foglio con riquadri grandi, uno per cosa (Testo, Foto, Logo, Forma, Sfumatura).
-function frAddSheet() {
-  const sheet = $('frSheet'), body = $('frSheetBody');
-  body.innerHTML = '';
-  $('frSheetTitle').textContent = 'Aggiungi';
-  const grid = document.createElement('div');
-  grid.className = 'fr-addgrid';
-  FR_ADD.forEach(([type, label, sub]) => {
+// Aggiungi: la barra in basso diventa una fila di cerchi colorati (X per tornare), la pagina resta tutta visibile.
+function frAddBar(bar) {
+  const x = document.createElement('button');
+  x.type = 'button'; x.className = 'fr-addx'; x.setAttribute('aria-label', 'Chiudi');
+  x.innerHTML = frSvg('close');
+  x.addEventListener('click', () => { haptic('select'); fr.adding = false; frLayers(); });
+  bar.appendChild(x);
+  FR_ADD.forEach(([type, label]) => {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = `fr-addtile fr-add-${type}`;
-    b.innerHTML = `<span class="fr-addico">${frSvg(type)}</span><span class="fr-addtxt"><b></b><small></small></span>`;
-    b.querySelector('b').textContent = label;
-    b.querySelector('small').textContent = sub;
-    b.addEventListener('click', () => { frSheetClose(); frAdd(type); });   // dentro al tocco: la galleria si apre
-    grid.appendChild(b);
+    b.type = 'button'; b.className = `fr-additem fr-add-${type}`;
+    b.innerHTML = `<span class="fr-addico">${frSvg(type)}</span><small></small>`;
+    b.querySelector('small').textContent = label;
+    b.addEventListener('click', () => { fr.adding = false; frLayers(); frAdd(type); });   // dentro al tocco: la galleria si apre
+    bar.appendChild(b);
   });
-  body.appendChild(grid);
-  sheet.hidden = false;
-  requestAnimationFrame(() => sheet.classList.add('open'));
 }
 
 function frMove(l, dir) {
@@ -1624,7 +1623,7 @@ function frPayload() {
 }
 
 function frReset() {
-  Object.assign(fr, {doc:null, sel:'', tool:'', dragging:'', tplId:'', tplName:'', images:{}, cuts:{}, cutBusy:{}, undo:{}, photoIds:{}, brush:null, erasing:false, cache:{}, exportKey:'', exportId:'', choice:''});
+  Object.assign(fr, {doc:null, sel:'', tool:'', dragging:'', tplId:'', tplName:'', images:{}, cuts:{}, cutBusy:{}, undo:{}, photoIds:{}, adding:false, brush:null, erasing:false, cache:{}, exportKey:'', exportId:'', choice:''});
   frHistReset();
   if ($('frSheet') && !$('frSheet').hidden) frSheetClose();
 }

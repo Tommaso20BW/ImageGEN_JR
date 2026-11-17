@@ -144,23 +144,24 @@
   box-shadow:0 2px 8px rgba(125,42,232,.35)}
 .fr-tool.fr-plus .fr-ti svg{width:20px;height:20px;stroke-width:2.6}
 .fr-tool.fr-plus small{color:var(--text);font-weight:650}
-.fr-addgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-bottom:4px}
-.fr-addtile{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:14px;border:0;border-radius:16px;
-  background:var(--surface);color:var(--text);font-family:inherit;text-align:left;cursor:pointer;box-shadow:0 0 0 1px var(--line) inset;
-  -webkit-tap-highlight-color:transparent;transition:transform .12s}
-.fr-addtile:active{transform:scale(.97)}
-.fr-addtxt{display:flex;flex-direction:column;gap:2px;margin-top:8px}
-.fr-addtile b{font-size:16px;font-weight:650}
-.fr-addtile small{font-size:12.5px;color:var(--muted)}
-.fr-addico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:#fff}
-.fr-addico svg{width:23px;height:23px}
+.fr-tools.fr-adding{align-items:center;gap:4px}
+.fr-addx{flex:none;width:44px;height:44px;margin-right:2px;border-radius:50%;border:0;background:var(--surface2);color:var(--text);
+  display:grid;place-items:center;padding:0;cursor:pointer}
+.fr-addx svg{width:20px;height:20px}
+.fr-additem{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:3px 0;border:0;background:none;
+  color:var(--text);font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;animation:frPop .2s ease both}
+.fr-additem:nth-child(3){animation-delay:.03s}.fr-additem:nth-child(4){animation-delay:.06s}
+.fr-additem:nth-child(5){animation-delay:.09s}.fr-additem:nth-child(6){animation-delay:.12s}
+.fr-additem:active .fr-addico{transform:scale(.92)}
+.fr-additem small{font-size:11.5px;font-weight:600;white-space:nowrap}
+.fr-addico{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:#fff;transition:transform .12s}
+.fr-addico svg{width:22px;height:22px}
+@keyframes frPop{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
 .fr-add-text .fr-addico{background:#7D2AE8}
 .fr-add-photo .fr-addico{background:#00A3AD}
 .fr-add-logo .fr-addico{background:#111}
 .fr-add-rect .fr-addico{background:#FF7A00}
 .fr-add-shade .fr-addico{background:linear-gradient(180deg,#8e8e93,#1c1c1e)}
-.fr-add-photo{grid-column:1/-1;flex-direction:row;align-items:center;gap:14px}
-.fr-add-photo .fr-addtxt{margin-top:0}
 
 /* Annulla / Ripeti sulla pagina */
 .fr-hist{position:absolute;left:8px;top:8px;display:flex;gap:2px;padding:3px;border-radius:12px;background:var(--surface);
