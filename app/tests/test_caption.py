@@ -164,7 +164,7 @@ class TemplateCaptionTest(unittest.TestCase):
 
     def test_uefa_bracket_names_its_competition(self):
         text = plain(caption.build({'kind': 'table', 'competition': 'UEL', 'view': 'bracket'}))
-        self.assertTrue(text.startswith('🆙🇪🇺 Tabellone<b> Europa League </b>aggiornato.'), text)
+        self.assertTrue(text.startswith('🇪🇺🆙 Tabellone<b> Europa League </b>aggiornato.'), text)
         self.assertIn('Coppa Italia', caption.build({'kind': 'table', 'competition': 'CI', 'view': 'bracket'}))
 
     def test_uppercase_surname_in_title_case(self):

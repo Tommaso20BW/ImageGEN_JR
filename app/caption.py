@@ -473,7 +473,7 @@ def _other_caption(data):
             return f"{E_UP}{E_CI} Tabellone<b> Coppa Italia </b>aggiornato."
         flag, name = TABLES.get(comp, ('', ''))
         if data.get('view') == 'bracket':        # coppe europee: come quello della Coppa Italia
-            return f"{E_UP}{flag} Tabellone<b> {BRACKET_NAMES[comp]} </b>aggiornato."
+            return f"{flag}{E_UP} Tabellone<b> {BRACKET_NAMES[comp]} </b>aggiornato."
         text = f"{flag}{E_STATS}<b> {name} | Classifica</b>"
         round_ = _giornata(comp)
         return text + (f"\n{E_DAY}<i> {round_}ª Giornata</i>" if round_ else '')
