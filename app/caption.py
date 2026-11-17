@@ -25,6 +25,8 @@ E_DAY = emoji('5431897022456145283', '📆')
 E_ITA = emoji('5861702401290936738', '🇮🇹')        # Serie A
 E_CI = emoji('5861593197452468452', '🇮🇹')         # Coppa Italia
 E_UEFA = emoji('5800778775528479618', '🇪🇺')       # Europa League
+E_UCL = emoji('5800776293037384533', '🇪🇺')        # Champions League
+E_UECL = emoji('5800893141917638105', '🇪🇺')       # Conference League
 E_FRIENDLY = emoji('5357080225463149588', '🤝')
 E_HOME = emoji('5789811507818668397', '🏟')
 E_TV = emoji('5373330964372004748', '📺')
@@ -137,11 +139,12 @@ COMPETITION_NAMES = {
     'fifa.cwc': 'Mondiale per Club', 'club.friendly': 'Amichevole',
 }
 TABLES = {   # classifica: emoji e nome della competizione, come nei post del canale
-    'SA': (E_ITA, 'Serie A'), 'UCL': ('🇪🇺', 'UCL'), 'UEL': (E_UEFA, 'UEL'), 'UECL': ('🇪🇺', 'UECL'),
+    'SA': (E_ITA, 'Serie A'), 'UCL': (E_UCL, 'UCL'), 'UEL': (E_UEFA, 'UEL'), 'UECL': (E_UECL, 'UECL'),
 }
 BRACKET_NAMES = {'UCL': 'Champions League', 'UEL': 'Europa League', 'UECL': 'Conference League'}
 # Matchday: emoji della competizione e canale TV di solito (la Mini App non chiede la TV).
-MD_COMPETITION = {'ita.1': E_ITA, 'ita.coppa_italia': E_CI, 'uefa.europa': E_UEFA, 'club.friendly': E_FRIENDLY}
+MD_COMPETITION = {'ita.1': E_ITA, 'ita.coppa_italia': E_CI, 'uefa.champions': E_UCL, 'uefa.europa': E_UEFA,
+                  'uefa.europa.conf': E_UECL, 'club.friendly': E_FRIENDLY}
 MD_TV = {'ita.1': 'DAZN', 'ita.coppa_italia': 'Mediaset', 'ita.super_cup': 'Mediaset',
          'uefa.champions': 'Sky Sport', 'uefa.europa': 'Sky Sport', 'uefa.europa.conf': 'Sky Sport',
          'uefa.super_cup': 'Sky Sport', 'club.friendly': 'Juventus.com'}
