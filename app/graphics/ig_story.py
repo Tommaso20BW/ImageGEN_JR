@@ -80,6 +80,9 @@ TEXT_COLORS = {
     'orange': '#FD8D32', 'red': '#ED4956', 'pink': '#D10869', 'purple': '#A307BA',
 }
 
+# Logo JR: sul giallo chiaro della tavolozza si vedrebbe poco, quindi un giallo ambra più scuro
+LOGO_COLORS = {'yellow': '#D9A22E'}
+
 
 def source_colors(color):
     """(blocco, scritta) della fonte: il blocco prende il colore scelto (nero = quello dell'etichetta);
@@ -414,9 +417,9 @@ def _logo_alpha():
         return a.crop(a.getbbox())
 
 
-def _logo_stamp(img, y_top, seed, size=140, k=.78):
+def _logo_stamp(img, y_top, seed, size=140, k=.78, ink=BLACK):
     """Logo JR dritto stampato sulla carta come un timbro: niente bordo, inchiostro un po'
-    sbiadito e consumato (più chiaro in alcuni punti, cambia con il seed)."""
+    sbiadito e consumato (più chiaro in alcuni punti, cambia con il seed). ink: colore scelto."""
     lg = _logo_alpha()
     lw = int(lg.width * size / lg.height)
     a = lg.resize((lw, size), Image.LANCZOS).filter(ImageFilter.GaussianBlur(.6))
@@ -424,7 +427,7 @@ def _logo_stamp(img, y_top, seed, size=140, k=.78):
     x, y = int(W / 2 - lw / 2), int(y_top)
     m[y:y + size, x:x + lw] = _arr(a)
     m *= cp._ink_breakup((W, H), seed, .55) * k
-    return img * (1 - m[..., None]) + BLACK[None, None] * m[..., None]
+    return img * (1 - m[..., None]) + np.asarray(ink, np.float32)[None, None] * m[..., None]
 
 
 def _finish(img, light, grain, seed, vignette=.18):
@@ -460,7 +463,9 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     img = cp._paper((W, H), PAPER, seed=int(rng.integers(1 << 20))).copy()
     light = cp._crumple((W, H), int(rng.integers(1 << 20)), 0.7, folds=3)
 
-    # etichetta: un pezzo di carta nero per parola, uno sotto l'altro, sfalsati verso destra
+    # etichetta, fonte e logo JR prendono il colore scelto (nero = quello di sempre)
+    block, letters = source_colors(color)
+    # etichetta: un pezzo di carta per parola, uno sotto l'altro, sfalsati verso destra
     sign = rng.choice((-1, 1))
     h = _label_height(parts)
     rights = [i * LABEL_STEP for i in range(len(parts))]   # bordo destro: quello sotto sporge di LABEL_STEP
@@ -471,7 +476,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
         ph = p.height + 32
         pw = p.width + 2 * LABEL_PAD
         ang = float(sign * (-1) ** i * rng.uniform(1.5, 2.5))
-        img = _piece(img, p, (shift + rights[i] - pw / 2, yy + ph / 2), ang, BLACK, CREAM,
+        img = _piece(img, p, (shift + rights[i] - pw / 2, yy + ph / 2), ang, block, letters,
                      int(rng.integers(1 << 20)), pad=(LABEL_PAD, 16), tear=2,
                      sh=(6, 10, 8, .4), breakup=.08, fringe=True)
         yy += ph + LABEL_VSEP
@@ -499,12 +504,12 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     if src is not None:
         y += SRC_GAP - (_line_gap(size) if lines else 0)
         bh = src.height + 2 * SRC_PAD[1]
-        block, letters = source_colors(color)
         img = _piece(img, src, (W / 2 + rng.uniform(-8, 8), y + bh / 2), _tilt(rng, 1.5, 2.5),
                      block, letters, int(rng.integers(1 << 20)), pad=SRC_PAD)
         y += bh
 
-    img = _logo_stamp(img, LOGO_Y, int(rng.integers(1 << 20)))
+    logo = LOGO_COLORS.get(text_color(color))
+    img = _logo_stamp(img, LOGO_Y, int(rng.integers(1 << 20)), ink=_rgb(logo) if logo else block)
     img = _finish(img, light, .035, int(rng.integers(1 << 20)))
     out = Image.fromarray(np.uint8(np.clip(img, 0, 1) * 255 + 0.5))
     buf = io.BytesIO()
