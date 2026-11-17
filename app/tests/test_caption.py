@@ -71,7 +71,7 @@ class CaptionTest(unittest.TestCase):
         finally:
             classifica._last.pop('UEL', None)
         self.assertEqual(plain(caption.build({'kind': 'table', 'competition': 'CI', 'view': 'bracket'})),
-                         '🆙🇮🇹 Tabellone<b> Coppa Italia </b>aggiornato.\n\n👉 @Juventus_Reborn')
+                         '🇮🇹🆙 Tabellone<b> Coppa Italia </b>aggiornato.\n\n👉 @Juventus_Reborn')
 
     def test_other_graphics(self):
         self.assertEqual(plain(caption.build({'kind': 'table', 'competition': 'SA'})),

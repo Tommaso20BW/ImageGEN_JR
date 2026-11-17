@@ -470,7 +470,7 @@ def _other_caption(data):
     if kind == 'table':
         comp = str(data.get('competition') or '').upper()
         if comp == 'CI' or (data.get('view') == 'bracket' and comp not in BRACKET_NAMES):
-            return f"{E_UP}{E_CI} Tabellone<b> Coppa Italia </b>aggiornato."
+            return f"{E_CI}{E_UP} Tabellone<b> Coppa Italia </b>aggiornato."
         flag, name = TABLES.get(comp, ('', ''))
         if data.get('view') == 'bracket':        # coppe europee: come quello della Coppa Italia
             return f"{flag}{E_UP} Tabellone<b> {BRACKET_NAMES[comp]} </b>aggiornato."
