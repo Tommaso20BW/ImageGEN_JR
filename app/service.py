@@ -1045,6 +1045,10 @@ class Service:
             return {'preview': team_settings.preview_uri(mono, 480), 'aspect': w / h, 'frame': frame}
         if action in ('captions_list', 'caption_save'):   # Impostazioni › Messaggi: modelli dei testi
             return self.captions(envelope)
+        if action in ('tv_list', 'tv_save'):             # Impostazioni › Matchday: canale TV
+            return self.tv_channels(envelope)
+        if action in ('ig_names_list', 'ig_name_save'):  # Impostazioni › Nomi Instagram (Citazione IG)
+            return self.ig_names(envelope)
         if action == 'names_list':       # Impostazioni › Nomi: nome ESPN -> nome italiano e hashtag
             return {'teams': team_settings.names_list(asset_dir())}
         if action == 'name_save':
@@ -1534,6 +1538,45 @@ class Service:
                                         f"{'cambiato' if kind in saved else 'tornato quello di base'}")
         return {'captions': caption.templates_list()}
 
+    def tv_channels(self, envelope):
+        """Canale TV del Matchday per competizione: elenco, salva (vuoto o quello di base = di base)."""
+        if envelope.get('action') == 'tv_save':
+            comp = str(envelope.get('competition') or '')
+            if comp not in caption.MD_TV:
+                raise ValueError('Competizione non valida.')
+            tv = caption.clean_tv(envelope.get('tv'))
+            with self.history_lock:
+                saved = dict(caption.TV_CUSTOM)
+                if not tv or tv == caption.MD_TV[comp]:
+                    saved.pop(comp, None)
+                else:
+                    saved[comp] = tv
+                changed = saved != caption.TV_CUSTOM
+                caption.TV_CUSTOM = saved
+            if changed:
+                sent_store.save_tv(saved)
+                log.info('SALVATAGGIO', f"Matchday: canale TV per {caption.COMPETITION_NAMES.get(comp, comp)} "
+                                        f"= {caption.tv_for(comp)}")
+        return {'channels': caption.tv_list()}
+
+    def ig_names(self, envelope):
+        """Citazione IG: nomi ricordati per ogni account. Elenco, cambia, togli (nome vuoto)."""
+        if envelope.get('action') == 'ig_name_save':
+            handle = str(envelope.get('handle') or '').strip().lstrip('@').lower()
+            name = ' '.join(str(envelope.get('name') or '').split())[:60]
+            with self.history_lock:
+                names = sent_store.load_names()
+                if handle not in names:
+                    raise ValueError('Account non trovato.')
+                if name:
+                    names[handle] = name
+                else:
+                    names.pop(handle)
+                sent_store.save_names(names)
+            log.info('SALVATAGGIO', f"Nome per @{handle}: {name or 'tolto'}")
+        names = sent_store.load_names()
+        return {'names': [{'handle': h, 'name': n} for h, n in sorted(names.items())]}
+
     def colors(self, envelope):
         """Post: colori aggiunti con il + (titolo e logo JR). Elenco, aggiungi, togli; nel repo degli asset."""
         from graphics import photo_jr
@@ -1745,6 +1788,7 @@ class Service:
             self.saved_colors = sent_store.load_colors()
             self.editor_templates = sent_store.load_templates()
             caption.CUSTOM = sent_store.load_captions()
+            caption.TV_CUSTOM = sent_store.load_tv()
         if self.history or self.ig_phrases:
             log.info('AVVIO', f'Ultimi invii: {len(self.history)} · frasi pronte: {len(self.ig_phrases)}')
 

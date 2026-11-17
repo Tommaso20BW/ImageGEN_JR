@@ -150,6 +150,18 @@ class TemplateCaptionTest(unittest.TestCase):
         self.assertIn('emoji-id="5427009714745517609"', caption.build({'kind': 'pxi', 'competition': 'ita.1',
                                                                         'side': 'home', 'opponent': FIO}))
 
+    def test_matchday_tv_from_settings(self):
+        data = {'kind': 'md', 'competition': 'ita.1', 'side': 'home', 'opponent': FIO, 'info': {}}
+        self.assertIn('DAZN', caption.build(data))
+        caption.TV_CUSTOM = {'ita.1': 'Sky Sport'}
+        try:
+            self.assertIn('Sky Sport', caption.build(data))
+            self.assertNotIn('DAZN', caption.build(data))
+            row = next(r for r in caption.tv_list() if r['competition'] == 'ita.1')
+            self.assertEqual((row['tv'], row['default'], row['custom']), ('Sky Sport', 'DAZN', True))
+        finally:
+            caption.TV_CUSTOM = {}
+
     def test_renewal_has_text_only_when_written(self):
         data = {'kind': 'rin', 'name': 'YILDIZ', 'year': '2030'}
         self.assertEqual(caption.build(data), '')

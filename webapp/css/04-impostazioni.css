@@ -310,3 +310,9 @@ body.live .brand-btn{pointer-events:none}
 .msg-base{margin-top:14px}
 .msg-none{color:var(--muted);font-style:italic}
 #setMenu{margin-top:14px}
+/* Impostazioni › Frasi pronte e Colori */
+.sp-item.x-phr{align-items:flex-start;padding-top:14px;padding-bottom:14px}
+.x-txt{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.35}
+.x-dot{flex:none;width:12px;height:12px;border-radius:50%;margin-top:4px}
+.x-sw{flex:none;width:28px;height:28px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.x-phr .sp-rm{flex:none}

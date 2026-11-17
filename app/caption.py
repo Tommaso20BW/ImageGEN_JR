@@ -142,6 +142,22 @@ MD_COMPETITION = {'ita.1': E_ITA, 'ita.coppa_italia': E_CI, 'uefa.europa': E_UEF
 MD_TV = {'ita.1': 'DAZN', 'ita.coppa_italia': 'Mediaset', 'ita.super_cup': 'Mediaset',
          'uefa.champions': 'Sky Sport', 'uefa.europa': 'Sky Sport', 'uefa.europa.conf': 'Sky Sport',
          'uefa.super_cup': 'Sky Sport', 'club.friendly': 'Juventus.com'}
+TV_CUSTOM = {}     # Impostazioni › Matchday: canale scritto nella Mini App (competizione -> canale)
+TV_MAX = 30
+
+
+def clean_tv(value):
+    return ' '.join(str(value or '').split())[:TV_MAX]
+
+
+def tv_for(competition):
+    return TV_CUSTOM.get(competition) or MD_TV.get(competition, '')
+
+
+def tv_list():
+    """Per la Mini App: ogni competizione con il canale in uso e quello di base."""
+    return [{'competition': c, 'name': COMPETITION_NAMES.get(c, c), 'tv': tv_for(c), 'default': base,
+             'custom': c in TV_CUSTOM} for c, base in MD_TV.items()]
 MONTHS = ('GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO', 'AGOSTO',
           'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE')
 _SMALL = {'di', 'del', 'della', 'dei', 'degli', 'delle', 'de', 'da', 'la', 'le', 'il', 'lo', 'e'}
@@ -304,7 +320,7 @@ def _match_caption(data):
         rows = [f"{comp_emoji} {esc(COMPETITION_NAMES.get(competition, ''))}",
                 f"{_team_emoji(data)} {opponent}",
                 f"{place} {esc(_stadium(info.get('stadium')))}",
-                f"{E_TV} {esc(MD_TV.get(competition, ''))}",
+                f"{E_TV} {esc(tv_for(competition))}",
                 f"{E_TIME} {esc(str(info.get('time') or '').split(' ')[0])}",
                 f"{E_PHONE} {m['tag']}"]
         return f"𝐌𝐀𝐓𝐂𝐇𝐃𝐀𝐘 {E_FIRE}{E_VS}\n\n" + '\n'.join(f'<i>{r}</i>' for r in rows if r.split(' ', 1)[-1].strip())

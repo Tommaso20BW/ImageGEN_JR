@@ -135,7 +135,11 @@ function renderSetMenu() {
   box.innerHTML = '';
   const n = unmatchedEspn().length;
   [['Messaggi', 'Testo sotto le grafiche', openMessages],
-   ['Squadre', n ? `${n} da sistemare` : 'Logo, nome, hashtag, nomi ESPN', () => { haptic('select'); showSetView('teams'); }]]
+   ['Matchday', 'Canale TV di ogni competizione', () => openXtra('tv')],
+   ['Squadre', n ? `${n} da sistemare` : 'Logo, nome, hashtag, nomi ESPN', () => { haptic('select'); showSetView('teams'); }],
+   ['Frasi pronte', 'Storia IG', () => openXtra('phr')],
+   ['Colori', 'Titolo e logo JR del Post', () => openXtra('col')],
+   ['Nomi Instagram', 'Citazione IG', () => openXtra('ign')]]
     .forEach(([title, sub, open]) => {
       const r = setRow(null, title, sub);
       r.classList.add('nm');                    // senza icona
@@ -409,6 +413,7 @@ function renderSetPage() {
   box.hidden = false;
   if (page.startsWith('emoji')) { emoRender(); return; }
   if (page.startsWith('msg')) { msgRender(page); return; }
+  if (XTRA_PAGES.has(page)) { xtraRender(page); return; }
   const T = setTeam, D = setDraft;
   let html = '';
   if (page === 'team' || page === 'new') {
@@ -613,6 +618,7 @@ async function spOnSave() {
   if (page === 'nm') { nmSave(false); return; }
   if (page === 'emoji') { emoOnSave(); return; }
   if (page === 'msg-edit') { msgSave(); return; }
+  if (page === 'tv-edit' || page === 'ign-edit') { xtraSave(); return; }
   if (page === 'logo') {
     if (T.isNew) {      // bozza: il logo si salva con "Crea squadra"
       if (D.preview) T.pending = {logo:D.logo, preview:D.preview, aspect:D.aspect, frame:{...D.frame}};
@@ -671,6 +677,9 @@ function initSettings() {
       if (body) spAfterSave(body);
     }
     else if (act === 'msg-open') msgOpen(btn.dataset.k);
+    else if (act === 'x-open') xtraOpen(Number(btn.dataset.i));
+    else if (act === 'x-rm') xtraRemove(btn);
+    else if (act === 'x-del') { if (!D.confirm) { D.confirm = true; renderSetPage(); } else xtraSave(true); }
     else if (act === 'msg-ins') msgInsert(btn.dataset.f);
     else if (act === 'msg-base') { D.text = D.m.default; renderSetPage(); }
     else if (act === 'nm-logo') { openFixSheet(T.nm.espn); }
@@ -857,6 +866,124 @@ async function msgSave() {
     setBusy = false;
     spPop();
     setToast('Salvato');
+  } catch (err) {
+    setBusy = false; renderSetPage();
+    $('setErr').textContent = err.message || 'Salvataggio non riuscito.';
+  }
+}
+
+
+
+/* ---------- Impostazioni › Matchday, Frasi pronte, Colori, Nomi Instagram ----------
+   Matchday: canale TV di ogni competizione (riga 📺 del testo). Le altre tre sono cose già salvate
+   dalle loro schermate (Storia IG, Post, Citazione IG): qui si vedono tutte e si tolgono o correggono. */
+let tvList = null, ignList = null;
+const XTRA_PAGES = new Set(['tv', 'tv-edit', 'phr', 'col', 'ign', 'ign-edit']);
+const xtraEmpty = text => `<p class="sp-note">${text}</p>`;
+
+async function openXtra(page) {
+  haptic('select');
+  setTeam = null; setDraft = null; setStack = [page];
+  renderSetPage();
+  try {
+    if (page === 'tv') tvList = (await setPost({action:'tv_list'})).channels || [];
+    if (page === 'ign') ignList = (await setPost({action:'ig_names_list'})).names || [];
+    if (page === 'phr') await phrasesCall('list');
+    if (page === 'col') await colorsCall('list');
+  } catch (err) { setToast(err.message || 'Non caricato.', true); }
+  if (setStack[setStack.length - 1] === page) renderSetPage();
+}
+
+function xtraRender(page) {
+  const box = $('setPage'), D = setDraft;
+  const item = (i, title, value) => `<button type="button" class="sp-item" data-sp="x-open" data-i="${i}">
+    <span>${setEsc(title)}</span><span class="sp-v">${setEsc(value)}</span><span class="sp-chev">›</span></button>`;
+  const rm = (i, label) => `<button type="button" class="sp-rm" data-sp="x-rm" data-i="${i}" aria-label="Togli ${setEsc(label)}">−</button>`;
+  let html = '';
+  if (page === 'tv') {
+    html = spNav('Matchday') + `<div class="sp-body">
+      <p class="sp-note">Canale TV scritto nel testo del Matchday (riga 📺), per competizione.</p>
+      ${tvList ? `<div class="sp-list">${tvList.map((c, i) => item(i, c.name, c.tv)).join('')}</div>` : xtraEmpty('Carico…')}</div>`;
+  } else if (page === 'tv-edit') {
+    const C = D.row;
+    html = spNav(C.name, {save:true, cancel:true, saveOff:(D.value.trim() || C.default) === C.tv}) + `<div class="sp-body">
+      <div class="sp-lbl">Canale TV</div>
+      <div class="sp-list"><input id="xField" class="sp-field" type="text" maxlength="30" autocomplete="off" spellcheck="false" value="${setEsc(D.value)}" placeholder="${setEsc(C.default)}"></div>
+      <p class="sp-note">Di base: <b>${setEsc(C.default)}</b>. Campo vuoto = di base.</p>
+      <div id="setErr" class="sp-err"></div></div>`;
+  } else if (page === 'phr') {
+    html = spNav('Frasi pronte') + `<div class="sp-body">
+      <p class="sp-note">Le frasi salvate nella Storia IG. Le aggiungi da lì con “Salva il testo attuale”.</p>
+      ${igPhrases.length ? `<div class="sp-list">${igPhrases.map((p, i) => `<div class="sp-item x-phr">
+        <span class="x-dot" style="background:${igHex(p.color)}"></span><span class="x-txt">${setEsc(p.text)}</span>${rm(i, 'frase')}</div>`).join('')}</div>`
+        : xtraEmpty('Nessuna frase salvata.')}</div>`;
+  } else if (page === 'col') {
+    const rows = (list, target) => list.map((c, i) => {
+      const css = target === 'title' ? c : jrcCss(c);
+      const name = target === 'title' ? c : c.type === 'solid' ? c.hex : 'Sfumatura';
+      return `<div class="sp-item"><span class="x-sw" style="background:${css}"></span><span>${setEsc(String(name).toUpperCase())}</span>
+        <button type="button" class="sp-rm" data-sp="x-rm" data-t="${target}" data-i="${i}" aria-label="Togli colore">−</button></div>`;
+    }).join('');
+    html = spNav('Colori') + `<div class="sp-body">
+      <p class="sp-note">I colori aggiunti con il + nel Post. Quelli pronti restano sempre.</p>
+      <div class="sp-lbl">Titolo del Post</div>
+      ${savedColors.title.length ? `<div class="sp-list">${rows(savedColors.title, 'title')}</div>` : xtraEmpty('Nessun colore aggiunto.')}
+      <div class="sp-lbl">Logo JR</div>
+      ${savedColors.jr.length ? `<div class="sp-list">${rows(savedColors.jr, 'jr')}</div>` : xtraEmpty('Nessun colore aggiunto.')}</div>`;
+  } else if (page === 'ign') {
+    html = spNav('Nomi Instagram') + `<div class="sp-body">
+      <p class="sp-note">Nella Citazione IG il nome scritto per un account si ricorda: la volta dopo arriva già.</p>
+      ${!ignList ? xtraEmpty('Carico…') : ignList.length ? `<div class="sp-list">${ignList.map((n, i) => item(i, '@' + n.handle, n.name)).join('')}</div>`
+        : xtraEmpty('Nessun nome salvato.')}</div>`;
+  } else if (page === 'ign-edit') {
+    const N = D.row;
+    html = spNav('@' + N.handle, {save:true, cancel:true, saveOff:!D.value.trim() || D.value.trim() === N.name}) + `<div class="sp-body">
+      <div class="sp-lbl">Nome mostrato</div>
+      <div class="sp-list"><input id="xField" class="sp-field" type="text" maxlength="60" autocomplete="off" autocapitalize="words" spellcheck="false" value="${setEsc(D.value)}"></div>
+      <button type="button" class="sp-danger" data-sp="x-del">${D.confirm ? 'Tocca di nuovo per confermare' : 'Togli questo nome'}</button>
+      <div id="setErr" class="sp-err"></div></div>`;
+  }
+  box.innerHTML = html;
+  const field = $('xField');
+  if (field) field.addEventListener('input', () => {
+    D.value = field.value;
+    const save = box.querySelector('[data-sp="save"]'), C = D.row, v = D.value.trim();
+    if (save && !setBusy) save.disabled = page === 'tv-edit' ? (v || C.default) === C.tv : (!v || v === C.name);
+  });
+}
+
+function xtraOpen(i) {
+  const page = setStack[setStack.length - 1];
+  const row = page === 'tv' ? tvList[i] : ignList[i];
+  if (!row) return;
+  haptic('select');
+  setDraft = {row, value:page === 'tv' ? (row.custom ? row.tv : '') : row.name};
+  setStack.push(page + '-edit');
+  renderSetPage();
+}
+
+function xtraRemove(btn) {
+  const page = setStack[setStack.length - 1], i = Number(btn.dataset.i);
+  if (page === 'phr') {
+    const p = igPhrases[i];
+    if (p) askConfirm('Togliere questa frase pronta?', () =>
+      phrasesCall('delete', p.text).then(() => { renderSetPage(); setToast('Frase tolta'); }).catch(err => setToast(err.message, true)));
+  } else if (page === 'col') {
+    const t = btn.dataset.t, c = (savedColors[t] || [])[i];
+    if (c) askConfirm('Togliere questo colore?', () =>
+      colorsCall('delete', t, c).then(() => { renderSetPage(); setToast('Colore tolto'); }).catch(err => setToast(err.message, true)));
+  }
+}
+
+async function xtraSave(remove = false) {
+  const page = setStack[setStack.length - 1], D = setDraft;
+  setBusy = true; renderSetPage();
+  try {
+    if (page === 'tv-edit') tvList = (await setPost({action:'tv_save', competition:D.row.competition, tv:D.value})).channels || tvList;
+    else ignList = (await setPost({action:'ig_name_save', handle:D.row.handle, name:remove ? '' : D.value})).names || ignList;
+    setBusy = false;
+    spPop();
+    setToast(remove ? 'Tolto' : 'Salvato');
   } catch (err) {
     setBusy = false; renderSetPage();
     $('setErr').textContent = err.message || 'Salvataggio non riuscito.';

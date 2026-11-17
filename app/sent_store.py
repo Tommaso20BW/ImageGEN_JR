@@ -7,6 +7,7 @@
 - imagegen/colors.json     Post: colori aggiunti con il + ({'title': ['#rrggbb'], 'jr': [colore JR]}).
 - imagegen/editor_templates.json  Editor libero: modelli salvati ([{'id', 'name', 'doc'}], senza foto).
 - imagegen/captions.json  Impostazioni › Messaggi: modelli dei testi cambiati ({tipo: testo}).
+- imagegen/md_tv.json     Impostazioni › Matchday: canale TV cambiato ({competizione: canale}).
 
 Il workflow copia la cartella imagegen/ nella cartella asset all'avvio (lettura subito, senza
 rete); ogni modifica si scrive in locale e poi con un commit (team_settings._commit), in un
@@ -27,6 +28,7 @@ TEMPLATES = 'editor_templates.json'
 TEMPLATES_KEEP = 40
 TEMPLATE_MAX = 12000             # byte del modello (JSON): livelli, testi e stili, mai le foto
 CAPTIONS = 'captions.json'
+TV = 'md_tv.json'
 NAMES = 'ig_names.json'          # Citazione IG: nome scritto a mano per ogni account ({username: nome})
 HISTORY_KEEP = 20
 PHRASES_KEEP = 40
@@ -143,6 +145,21 @@ def load_captions():
 
 def save_captions(captions):
     _save(CAPTIONS, captions, 'ImageGen: modelli dei messaggi')
+
+
+def load_tv():
+    """Canali TV del Matchday cambiati nella Mini App (solo le competizioni che esistono)."""
+    import caption
+    out = {}
+    for comp, tv in _read(TV, {}).items():
+        tv = caption.clean_tv(tv)
+        if comp in caption.MD_TV and tv:
+            out[comp] = tv
+    return out
+
+
+def save_tv(tv):
+    _save(TV, tv, 'ImageGen: canali TV del Matchday')
 
 
 def save_colors(colors):
