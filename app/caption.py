@@ -362,9 +362,9 @@ def _face(name):
 
 
 def _person_name(text):
-    """Nome per il testo: quello della rosa così com'è, quello scritto sulla grafica (maiuscolo) in Title Case."""
-    text = ' '.join(str(text or '').split())
-    return text.title() if text.isupper() else text
+    """Nome per il testo: le parole scritte in maiuscolo sulla grafica in Title Case, una per una
+    (Kenan YILDIZ -> Kenan Yildiz); quelle già scritte bene (McKennie) restano come sono."""
+    return ' '.join(w.title() if w.isupper() else w for w in str(text or '').split())
 
 
 def _roster_name(text):

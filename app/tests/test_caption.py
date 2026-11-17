@@ -162,6 +162,12 @@ class TemplateCaptionTest(unittest.TestCase):
         finally:
             caption.TV_CUSTOM = {}
 
+    def test_uppercase_surname_in_title_case(self):
+        data = {'kind': 'af', 'name': 'Kenan', 'surname': 'YILDIZ'}
+        self.assertIn('<b>Kenan Yildiz</b>', caption.build(data))
+        self.assertEqual(caption._person_name('Weston McKennie'), 'Weston McKennie')
+        self.assertEqual(caption._person_name('KERIM ALAJBEGOVIĆ'), 'Kerim Alajbegović')
+
     def test_renewal_like_the_channel(self):
         data = {'kind': 'rin', 'name': 'GONZALEZ', 'year': '2030'}
         with mock.patch.object(caption, '_roster_name', return_value='Nico Gonzalez'):
