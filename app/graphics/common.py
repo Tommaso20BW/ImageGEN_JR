@@ -475,7 +475,8 @@ def story_jr_alpha():
 # Timbro chiaro (bianco su blu, rosso, blu notte): sbiadito e consumato si perdeva nello sfondo,
 # quindi inchiostro pieno e consumato poco. Il timbro scuro su carta resta sbiadito.
 STAMP_DARK = (.78, .55)     # forza dell'inchiostro, quanto è consumato
-STAMP_LIGHT = (1.0, .3)
+STAMP_LIGHT = (.97, .55)    # stesse chiazze del timbro scuro, inchiostro più pieno
+STAMP_LIGHT_LIFT = .6       # schiarisce le zone consumate: su fondo colorato devono restare visibili
 
 
 def _light(color):
@@ -483,13 +484,13 @@ def _light(color):
     if isinstance(color, str):
         h = color.lstrip('#')
         color = tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) if len(h) == 6 else (0, 0, 0)
-    return sum(color[:3]) > 3 * 160
+    return sum(color[:3]) > 3 * 100
 
 
 @lru_cache(maxsize=2)
 def story_jr_stamp_alpha(light=False):
     """Logo JR a timbro come nelle Storie IG normali (ig_story._logo_stamp): bordo morbido,
-    inchiostro sbiadito (78%) e consumato a chiazze; chiaro: pieno e consumato poco.
+    inchiostro sbiadito (78%) e consumato a chiazze; chiaro: stesse chiazze, ma più pieno.
     Misura del logo su una storia 1080x1920."""
     import numpy as np
     from PIL import Image, ImageFilter
@@ -500,7 +501,8 @@ def story_jr_stamp_alpha(light=False):
     m = np.asarray(a.resize((w, h), Image.LANCZOS).filter(ImageFilter.GaussianBlur(.6)), np.float32) / 255
     x, y = (1080 - w) // 2, STORY_JR_TOP
     strength, wear = STAMP_LIGHT if light else STAMP_DARK
-    m *= cp._ink_breakup((1080, STORY_H), 11, wear)[y:y + h, x:x + w] * strength
+    ink = cp._ink_breakup((1080, STORY_H), 11, wear)[y:y + h, x:x + w]
+    m *= (ink ** STAMP_LIGHT_LIFT if light else ink) * strength
     return Image.fromarray(np.uint8(np.clip(m, 0, 1) * 255 + .5))
 
 
