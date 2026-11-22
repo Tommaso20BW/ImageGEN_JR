@@ -356,6 +356,30 @@ def _build_state(envelope, catalog, now, expected_session):
             'source': 'webapp-direct',
         }
 
+    # COMMENTO IG: foto del post con un commento scelto, nel 3:4 e nella storia.
+    if kind == 'igc':
+        from graphics import ig_comment, ig_quote
+        text = ig_quote.clean_text(incoming.get('text'))[:ig_comment.MAX_TEXT]
+        name = ig_quote.clean_name(incoming.get('name'))
+        if not text:
+            raise ValueError('Scrivi il testo del commento.')
+        if not name:
+            raise ValueError('Scrivi il nome di chi ha commentato.')
+        data = {'kind': kind, 'photo_id': _photo_id(incoming.get('photo_id')), 'text': text, 'name': name,
+                'frame': _frame(incoming.get('frame')), 'verified': incoming.get('verified') is True,
+                'time': ig_comment.clean_short(incoming.get('time'), 12),
+                'likes': ig_comment.clean_short(incoming.get('likes'), 10),
+                'position': ig_comment.clean_position(incoming.get('position'))}
+        if incoming.get('avatar_id'):
+            data['avatar_id'] = _photo_id(incoming.get('avatar_id'))
+        return {
+            'id': uuid.uuid4().hex[:10],
+            'data': data,
+            'status': 'ready',
+            'updated': now,
+            'source': 'webapp-direct',
+        }
+
     # STORIE IG - Breaking News: niente partita, solo testo e/o foto (almeno uno dei due).
     if kind == 'igbn':
         raw, found = ig_story.split_source(incoming.get('text'))
@@ -710,7 +734,7 @@ def _build_state(envelope, catalog, now, expected_session):
 
 
 # Grafiche in due formati: 3:4 e storia IG (9:16). "story": true chiede la storia.
-STORY_KINDS = ('bday', 'bdold', 'xi', 'pxi', 'squad', 'table', 'motm')
+STORY_KINDS = ('bday', 'bdold', 'xi', 'pxi', 'squad', 'table', 'motm', 'igc')
 
 
 def parse_webapp_request(envelope, catalog, now, expected_session):

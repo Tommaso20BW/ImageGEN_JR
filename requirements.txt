@@ -9,3 +9,5 @@ opencv-python-headless>=4.9
 # Scontorno della persona per HALF TIME / END OF 90' / FULL TIME (modello isnet-general-use).
 rembg==2.0.86
 onnxruntime==1.31.0
+# Lettura dei commenti dagli screenshot di Instagram (modelli inclusi, niente servizi esterni).
+rapidocr==3.10.0

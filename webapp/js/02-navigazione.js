@@ -291,7 +291,7 @@ function buildFlow() {
   // Storia: niente editor della foto (la storia va intera nel riquadro 9:16).
   // Citazione Instagram: prima si sceglie Post o Storia. X e Threads: solo post.
   else if (isQuoteKind(kind)) flow = [...(kind === 'igq' ? ['iqmode'] : []), ...(iq.story ? ['iqurl','iqshot','iqtext']
-    : [...(iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']),'iqtext','photo'])];
+    : [...(iq.photos.length > 1 ? ['iqurl','iqpick'] : ['iqurl']), ...(iqIsComment() ? ['iqcshot','iqcedit'] : ['iqtext']),'photo'])];
   flowIndex = Math.max(0,Math.min(flowIndex,flow.length - 1));
 }
 
@@ -364,6 +364,8 @@ function stepValue(step) {
     case 'iqpick': return iq.sel >= 0 ? `Foto ${iq.sel + 1}` : '';
     case 'iqshot': return iq.photos.length ? 'Allegato' : '';
     case 'iqtext': return $('iqName').value.trim();
+    case 'iqcshot': return iqc.sel >= 0 ? iqc.list[iqc.sel].user : iqc.sel === -2 ? 'A mano' : '';
+    case 'iqcedit': return $('iqcName').value.trim();
     case 'rincontent': {
       const n = $('rinName').value.trim().toUpperCase(), y = $('rinYear').value.trim();
       return n && y ? `${n} · ${y}` : n;
@@ -693,6 +695,10 @@ function renderFlow() {
   if (screenName === 'igphr') loadPhrases();
   if (screenName === 'iqpick') renderIqPick();
   if (screenName === 'iqshot') iqShotRefresh();
+  if (screenName === 'iqcshot') iqcRender();
+  if (screenName === 'iqcedit') iqcRefreshVerified();
+  $('iqcPos').hidden = !(screenName === 'photo' && iqIsComment());
+  if (screenName === 'photo' && iqIsComment()) iqcRenderPos();
   if (screenName === 'sentitem') renderSentItem();
   if (screenName === 'calrows') fillCalendarFromFixtures();
   if (screenName === 'calrows') renderCalRows();

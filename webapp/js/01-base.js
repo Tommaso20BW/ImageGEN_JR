@@ -119,7 +119,7 @@ const REQUESTS = [
   {id:'bday',   kind:'bday',  icon:'bday', title:'Compleanno',   desc:'Auguri a un giocatore della rosa o a un ex'},
   {id:'free',   kind:'free',  icon:'free', title:'Editor libero', desc:'Foto, testi e logo dove vuoi; modelli da salvare'},
   {id:'igbn',   kind:'igbn',  icon:'igbn', title:'Storia Instagram', desc:'Notizia in formato storia'},
-  {id:'igq',    kind:'igq',   icon:'igq', title:'Citazione Instagram', desc:'Post Instagram: foto, testo e account'},
+  {id:'igq',    kind:'igq',   icon:'igq', title:'Citazione Instagram', desc:'Post, storia o commento scelto'},
   {id:'xq',     kind:'xq',    icon:'xq', title:'Citazione X',  desc:'Post X: testo, account e foto (o sfondo)'},
   {id:'thq',    kind:'thq',   icon:'thq', title:'Citazione Threads', desc:'Post Threads: testo, account e foto (o sfondo)'},
   {id:'sent',   kind:'sent',  icon:'sent', title:'Ultimi invii', desc:'Rimanda o modifica le grafiche già inviate'},
@@ -194,7 +194,7 @@ const TABLE_VIEWS = [['table','Classifica'],['bracket','Tabellone']];
 const tableViews = () => TABLE_VIEWS;
 const tableViewOf = () => tableComp === 'SA' ? 'table' : tableComp === 'CI' ? 'bracket' : tableView;
 const tableWithResults = () => tableViewOf() === 'table' || tableComp === 'CI';
-const IQ_MODES = [['post','Post'],['story','Storia']];
+const IQ_MODES = [['post','Post'],['story','Storia'],['comment','Commento']];
 const JR_STYLES = [['classic','Classica'],['blur','Sfocata'],['collage','Collage'],['title','Titolo']];
 // Formati della Classica: larghezza fissa 1080, cambia l'altezza (come graphics/photo_jr.py RATIOS).
 // Il logo JR resta in alto a destra, alla stessa distanza dai bordi e della stessa misura del 3:4.
@@ -226,6 +226,7 @@ const STEP_NAMES = {
   home:'Home',
   competition:'Competizione', side:'Campo', opponent:'Avversario', kit:'Maglia',
   player:'Giocatore', minute:'Risultato e minuto', pose:'Posa', score:'Risultato',
+  iqcshot:'Commento', iqcedit:'Testo del commento',
   natkind:'Grafica', natxi:'Formazione', natopp:'Avversaria', natplayer:'Giocatore', goaltype:'Tipo di gol',
   phase:'Fase', moment:'Momento', stats:'Statistiche', squad:'Convocati', mdpick:'Partita', lineup:'Formazione', photo:'Foto', mdplayer:'Giocatore', match:'Partita', jrcolor:'Colore JR', jrtitle:'Titolo', module:'Modulo', xi11:'Giocatori', calmonth:'Mese', calrows:'Partite', tablecomp:'Competizione', tableview:'Grafica', convlist:'Giocatori', phasephoto:'Foto', jrstyle:'Stile', jrratio:'Formato', jrphotos:'Foto', jrbg:'Sfondo', jrblur:'Posizione', jrlayout:'Layout', igcontent:'Contenuto', rincontent:'Rinnovo', bdplayer:'Giocatore', bdphoto:'Foto', bdinfo:'Dati', bdpos:'Posizione', bdmode:'Tipo', bdoname:'Nome', motminfo:'Dati', potminfo:'Dati', afinfo:'Dati', fredit:'Editor', awkind:'Grafica', awplayer:'Giocatore', bdophoto:'Foto', sentlist:'Ultimi invii', sentitem:'Grafica', igsent:'Foto', igtg:'Notizia', igphr:'Frasi', iqmode:'Tipo', iqurl:'Link', iqpick:'Foto', iqshot:'Screenshot', iqtext:'Testo'
 };

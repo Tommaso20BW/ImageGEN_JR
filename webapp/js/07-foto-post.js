@@ -69,7 +69,9 @@ function fitPhotoFrame() {
   const frame = $('photoFrame'), stage = $('stage');
   if (!frame.offsetParent) return;
   const dial = $('rotDial');
-  const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 34 - (dial && !dial.hidden ? dial.offsetHeight + 8 : 0);
+  const pos = $('iqcPos');              // Commento IG: Sopra / Centro / Sotto sotto la foto
+  const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 34 - (dial && !dial.hidden ? dial.offsetHeight + 8 : 0)
+    - (pos && !pos.hidden ? pos.offsetHeight + 10 : 0);
   const [pw, ph] = photoDims();
   frame.style.aspectRatio = `${pw} / ${ph}`;
   const width = Math.max(200, Math.min(frame.parentElement.clientWidth, free * pw / ph));
@@ -199,6 +201,7 @@ function readyGhostUrl() {
   if (!directBase || !session) return '';
   let name = '', variant = '';
   if (kind === 'jr' && jrb.style === 'title') { name = 'jrtitle'; variant = jrColor || 'black'; }
+  else if (iqIsComment()) return '';      // la sagoma del commento la fa subito il servizio
   else if (isQuoteKind(kind)) { name = 'quote'; variant = kind === 'xq' ? 'x' : kind === 'thq' ? 'threads' : iq.story ? 'igstory' : 'ig'; }
   else if (kind === 'bday') { name = 'compleanno'; variant = bdOld() ? 'old' : 'now'; }
   else if (kind === 'motm') { name = 'motm'; variant = 'std'; }

@@ -28,6 +28,7 @@ KINDS = [
     ('HERE WE GO', 'af'),
     ('EDITOR LIBERO', 'free'),
     ('CITAZIONE INSTAGRAM', 'igq'),
+    ('COMMENTO INSTAGRAM', 'igc'),
     ('CITAZIONE X', 'xq'),
     ('CITAZIONE THREADS', 'thq'),
 ]

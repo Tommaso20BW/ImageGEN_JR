@@ -30,7 +30,7 @@ class PayloadTests(unittest.TestCase):
         self.assertIs(parse(bday(story=True))['story'], True)
 
     def test_story_kinds(self):
-        self.assertEqual(set(webapp_payload.STORY_KINDS), {'bday', 'bdold', 'xi', 'pxi', 'squad', 'table', 'motm'})
+        self.assertEqual(set(webapp_payload.STORY_KINDS), {'bday', 'bdold', 'xi', 'pxi', 'squad', 'table', 'motm', 'igc'})
 
 
 class SubmitTests(unittest.TestCase):

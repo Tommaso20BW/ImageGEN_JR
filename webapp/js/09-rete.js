@@ -27,6 +27,9 @@ function buildPayload(ghost=false) {
   if (isQuoteKind(kind)) {
     const photo = iq.photos[iq.sel];
     if (!photo) throw new Error(iq.story ? 'Allega lo screenshot della storia.' : 'Scegli la foto del post.');
+    if (iqIsComment()) return {v:1, action:'render', session, data:{kind:'igc', photo_id:photoState.id || photo.photo_id,
+      text:$('iqcText').value.trim(), name:$('iqcName').value.trim(), time:$('iqcTime').value.trim(), likes:$('iqcLikes').value.trim(),
+      verified:!!iqc.verified, position:iqc.pos, ...(iqc.avatar ? {avatar_id:iqc.avatar} : {}), frame:photoFrameData()}};
     // Foto del post (o della storia, dallo screenshot), o quella caricata a mano nell'editor ("Scegli foto").
     return {v:1, action:'render', session, data:{kind, photo_id:photoState.id || photo.photo_id, ...(iq.story ? {story:true, ...(iq.bars ? {bars:iq.bars} : {})} : {}),
       text:iq.story ? '' : $('iqText').value.trim(), name:$('iqName').value.trim(), ...(iq.avatar ? {avatar_id:iq.avatar} : {}),
@@ -427,7 +430,7 @@ function initLayoutEditor() {
   $('lay').addEventListener('touchmove',e => { if (e.target.closest('#layFrame')) e.preventDefault(); },{passive:false});
 }
 
-const DUAL_KINDS = new Set(['bday','bdold','xi','pxi','squad','table','motm']);
+const DUAL_KINDS = new Set(['bday','bdold','xi','pxi','squad','table','motm','igc']);
 // Risultati della giornata: solo post, la storia c'è per la classifica.
 const isDualPayload = p => !LIVE && !!p && !!p.data && DUAL_KINDS.has(p.data.kind) && p.data.team !== 'italy' && p.data.view !== 'results';
 

@@ -257,7 +257,7 @@ class Renderer:
         if isinstance(data, dict) and data.get('story') is True and isinstance(out, (bytes, bytearray)):
             from graphics.common import story_paper
             from webapp_payload import STORY_KINDS
-            if data.get('kind') in STORY_KINDS:
+            if data.get('kind') in STORY_KINDS and data.get('kind') != 'igc':     # il commento resta pulito
                 return story_paper(bytes(out))
         return out
 
@@ -311,6 +311,16 @@ class Renderer:
                                    platform={'xq': 'x', 'thq': 'threads'}.get(kind, 'ig'), handle=data.get('handle', ''),
                                    verified=data.get('verified', False), story=data.get('story', False), bars=data.get('bars'),
                                    avatar=self.photos.get(data.get('avatar_id')) if data.get('avatar_id') else None)
+
+        if kind == 'igc':
+            from graphics import ig_comment
+
+            return ig_comment.render(photo=None if ghost else self._photo(data), text=data.get('text', ''),
+                                     name=data.get('name', ''), frame=data.get('frame'), ghost=ghost,
+                                     verified=data.get('verified', False), time=data.get('time', ''),
+                                     likes=data.get('likes', ''), position=data.get('position'),
+                                     story=data.get('story', False),
+                                     avatar=self.photos.get(data.get('avatar_id')) if data.get('avatar_id') else None)
 
         if kind == 'igbn':
             from graphics import ig_story

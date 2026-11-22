@@ -376,6 +376,9 @@ class _DirectHandler(BaseHTTPRequestHandler):
             if self.headers.get('X-ImageGEN-Crop', '') == 'story':
                 self._json(200, {'ok': True, **self.service.store_story_shot(raw)})
                 return
+            if self.headers.get('X-ImageGEN-Crop', '') == 'comments':
+                self._json(200, {'ok': True, **self.service.read_comments(raw)})
+                return
             self._json(200, {'ok': True, **self.service.store_photo(raw)})
         except ValueError as exc:
             self._json(400, {'ok': False, 'error': str(exc)})
@@ -706,6 +709,12 @@ class Service:
             except ValueError:
                 pass
         return out
+
+    def read_comments(self, raw):
+        """Screenshot dei commenti (Commento IG): nome, testo, tempo, mi piace e foto profilo di ognuno."""
+        import ig_comments
+        check_photo(raw)
+        return {'comments': ig_comments.public(ig_comments.read(raw))}
 
     def _expires_ms(self):
         return int((time.time() + (self.deadline - time.monotonic())) * 1000)
@@ -2023,7 +2032,7 @@ def _send_detail(data):
     opponent = data.get('opponent')
     empty = {'player': '', 'minute': '', 'score': '', 'opponent': '', 'note': ''}
     # Storia e Citazioni: nome dell'account (con @account se c'è) e inizio del testo.
-    if kind in ('igq', 'xq', 'thq', 'igbn'):
+    if kind in ('igq', 'igc', 'xq', 'thq', 'igbn'):
         text = ' '.join(str(data.get('text') or '').split())
         note = (text[:117] + '…') if len(text) > 120 else text
         if not note and data.get('photo_id'):

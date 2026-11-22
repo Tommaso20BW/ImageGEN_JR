@@ -530,8 +530,8 @@
 
           <section class="screen" data-screen="iqmode">
             <div class="eyebrow">Citazione Instagram</div>
-            <h1>Post o storia</h1>
-            <p class="lead">Post: dal link arrivano foto, testo, nome e foto profilo. Storia: alleghi lo screenshot e la grafica la mostra come una storia vera (il link è facoltativo).</p>
+            <h1>Post, storia o commento</h1>
+            <p class="lead">Post: dal link arrivano foto, testo, nome e foto profilo. Storia: alleghi lo screenshot e la grafica la mostra come una storia vera. Commento: foto del post con il commento che scegli da uno screenshot.</p>
             <div id="iqModeOpts" class="opts" role="radiogroup"></div>
           </section>
 
@@ -580,6 +580,35 @@
               <label class="ios-row"><span id="iqAvatar" class="iq-av"></span><input id="iqName" class="ios-in" maxlength="40" autocapitalize="words" autocomplete="off" spellcheck="false" placeholder="Nome (es. Francisco Conceição)"></label>
               <label id="iqHandleRow" class="ios-row" hidden><span class="iq-at">@</span><input id="iqHandle" class="ios-in" maxlength="40" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="account"></label>
               <button id="iqVerRow" class="ios-row ios-act iq-ver" type="button" hidden><span>Spunta blu</span><span id="iqVerCk"></span></button>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="iqcshot">
+            <div class="eyebrow">Commento Instagram</div>
+            <h1>Scegli il commento</h1>
+            <p class="lead">Allega uno o più screenshot dei commenti e tocca quello da usare.</p>
+            <div class="ios-list">
+              <button id="iqcPick" class="ios-row ios-act" type="button">Allega screenshot</button>
+            </div>
+            <input id="iqcFile" type="file" accept="image/*" multiple hidden>
+            <p id="iqcHint" class="note"></p>
+            <div id="iqcList" class="iqc-list" hidden></div>
+            <div class="ios-list iqc-manual">
+              <button id="iqcManual" class="ios-row ios-act" type="button">Scrivilo a mano</button>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="iqcedit">
+            <div class="eyebrow">Commento Instagram</div>
+            <h1>Testo del commento</h1>
+            <p class="lead">Correggi il testo se serve: le emoji non compaiono nella grafica.</p>
+            <textarea id="iqcText" class="field-input" style="min-height:120px" maxlength="300" spellcheck="true" placeholder="Testo del commento"></textarea>
+            <div class="field-label gap">Account</div>
+            <div class="ios-list">
+              <label class="ios-row"><span class="iq-at">@</span><input id="iqcName" class="ios-in" maxlength="40" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="account"></label>
+              <label class="ios-row"><span>Tempo</span><input id="iqcTime" class="ios-in" maxlength="12" autocomplete="off" placeholder="6 h"></label>
+              <label class="ios-row"><span>Mi piace</span><input id="iqcLikes" class="ios-in" maxlength="10" inputmode="decimal" autocomplete="off" placeholder="4.712"></label>
+              <button id="iqcVerRow" class="ios-row ios-act iq-ver" type="button"><span>Spunta blu</span><span id="iqcVerCk"></span></button>
             </div>
           </section>
 
@@ -759,6 +788,7 @@
               <div id="photoEmpty" class="empty" aria-label="Nessuna foto"></div>
               <div class="guides" aria-hidden="true"><i class="v" style="left:25%"></i><i class="v mid" style="left:50%"></i><i class="v" style="left:75%"></i><i class="h" style="top:25%"></i><i class="h mid" style="top:50%"></i><i class="h" style="top:75%"></i></div>
             </div>
+            <div id="iqcPos" class="iqc-pos" role="radiogroup" aria-label="Posizione del commento" hidden></div>
             <div id="rotDial" class="rot-dial" hidden>
               <button id="rotVal" class="rot-val" type="button" aria-label="Rotazione (tocca per tornare a 0°)">0°</button>
               <div class="rot-track" aria-hidden="true"><div id="rotTicks" class="rot-ticks"></div><i class="rot-needle"></i></div>

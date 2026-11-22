@@ -24,7 +24,8 @@ async function iqLoad() {
     const body = await response.json().catch(() => ({}));
     if (!response.ok || !body.ok) throw new Error(body.error || 'Post non leggibile.');
     if (kind === 'igq' && iq.mode === 'story' && !body.story) throw new Error('Questo è il link di un post: torna indietro e scegli Post.');
-    if (kind === 'igq') iq.mode = body.story ? 'story' : 'post';     // link di una storia in "Post": passa a Storia
+    if (iqIsComment() && body.story) throw new Error('Serve il link di un post, non di una storia.');
+    if (kind === 'igq' && !iqIsComment()) iq.mode = body.story ? 'story' : 'post';     // link di una storia in "Post": passa a Storia
     Object.assign(iq, {url, photos:body.photos || [], sel:(body.photos || []).length === 1 ? 0 : -1,
       avatar:body.avatar_id || '', verified:!!body.verified, story:!!body.story});
     if (iq.story) clearPhoto();           // storia: la foto la carichi tu nell'editor
@@ -119,6 +120,7 @@ $('iqUrl').addEventListener('input', () => {
   clearError();
   if ((iq.url || iq.noLink) && $('iqUrl').value.trim() !== iq.url) {
     Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', story:iq.mode === 'story', noLink:false, bars:null});
+    iqcReset();
     buildFlow();
     renderSteps();
   }
@@ -132,6 +134,7 @@ function iqReset(story, noLink) {
   $('iqName').value = '';
   $('iqHandle').value = '';
   $('iqAvatar').style.backgroundImage = '';
+  iqcReset();
   clearPhoto();
 }
 function iqSetMode(mode) {
@@ -264,3 +267,137 @@ async function iqTranslate() {
   }
 }
 $('iqTranslate').addEventListener('click', iqTranslate);
+
+
+/* ----- Commento IG: foto del post con UN commento scelto -----
+   Screenshot dei commenti -> il servizio li legge (app/ig_comments.py) -> si tocca quello da usare
+   (nessuno è già scelto) -> testo correggibile -> nell'editor il riquadro va sotto, al centro o sopra. */
+const IQC_POS = [['sopra','Sopra'],['centro','Centro'],['sotto','Sotto']];
+const iqc = {list:[], sel:-1, busy:false, picking:false, pos:'sotto', avatar:'', verified:false};
+function iqIsComment() { return kind === 'igq' && iq.mode === 'comment'; }
+function iqcReset() {
+  Object.assign(iqc, {list:[], sel:-1, busy:false, picking:false, pos:'sotto', avatar:'', verified:false});
+  ['iqcText','iqcName','iqcTime','iqcLikes'].forEach(id => { $(id).value = ''; });
+  $('iqcHint').textContent = '';
+}
+function iqcRender() {
+  $('iqcPick').textContent = iqc.busy ? 'Leggo i commenti…' : iqc.list.length ? 'Aggiungi altro screenshot' : 'Allega screenshot';
+  $('iqcPick').disabled = iqc.busy;
+  const box = $('iqcList');
+  box.hidden = !iqc.list.length;
+  box.innerHTML = '';
+  iqc.list.forEach((c, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'iqc-row' + (i === iqc.sel ? ' on' : '');
+    const av = document.createElement('span');
+    av.className = 'iq-av';
+    if (c.avatar) av.style.backgroundImage = `url("data:image/jpeg;base64,${c.avatar}")`;
+    const body = document.createElement('span');
+    body.className = 'iqc-body';
+    const who = document.createElement('b');
+    who.textContent = [c.user, c.time].filter(Boolean).join(' · ');
+    const text = document.createElement('span');
+    text.textContent = c.text;
+    body.append(who, text);
+    b.append(av, body);
+    if (c.likes) {
+      const likes = document.createElement('em');
+      likes.textContent = `♡ ${c.likes}`;
+      b.append(likes);
+    }
+    b.addEventListener('click', () => iqcChoose(i));
+    box.appendChild(b);
+  });
+}
+async function iqcUpload(files) {
+  if (!files.length || iqc.busy) return;
+  clearError();
+  if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return; }
+  iqc.busy = true; $('iqcHint').textContent = ''; iqcRender();
+  try {
+    for (const file of files) {
+      const {blob, type} = await preparePhoto(file);
+      const response = await netFetch(`${directBase}/upload`, {
+        method:'POST', headers:{'Content-Type':type, 'X-ImageGEN-Session':session, 'X-ImageGEN-Crop':'comments'}, body:blob
+      }, 90000);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) throw new Error(body.error || 'Screenshot non leggibile.');
+      const seen = new Set(iqc.list.map(iqcKey));
+      (body.comments || []).forEach(c => { if (!seen.has(iqcKey(c))) { seen.add(iqcKey(c)); iqc.list.push(c); } });
+    }
+    haptic('success');
+    $('iqcHint').textContent = iqc.list.length ? 'Le emoji non si leggono: nel passaggio dopo puoi correggere il testo.'
+      : 'Non ho trovato commenti: prova con un altro screenshot o scrivilo a mano.';
+  } catch (err) {
+    showError(err && err.name === 'AbortError' ? 'Lettura troppo lenta. Riprova.' : (err.message || 'Screenshot non leggibile.'));
+  } finally {
+    iqc.busy = false; iqcRender();
+  }
+}
+const iqcKey = c => `${c.user} ${c.text}`.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+async function iqcAvatarId(base64) {
+  if (!base64) return '';
+  try {
+    const bytes = Uint8Array.from(atob(base64), ch => ch.charCodeAt(0));
+    const response = await netFetch(`${directBase}/upload`, {
+      method:'POST', headers:{'Content-Type':'image/jpeg', 'X-ImageGEN-Session':session}, body:new Blob([bytes], {type:'image/jpeg'})
+    }, 30000);
+    const body = await response.json().catch(() => ({}));
+    return response.ok && body.ok ? body.photo_id : '';
+  } catch (_) { return ''; }
+}
+async function iqcChoose(i) {
+  if (iqc.picking) return;
+  haptic('select');
+  iqc.picking = true;
+  iqc.sel = i;
+  iqcRender();
+  const c = iqc.list[i];
+  $('iqcText').value = c.text;
+  $('iqcName').value = c.user;
+  $('iqcTime').value = c.time || '';
+  $('iqcLikes').value = c.likes || '';
+  iqc.verified = false;
+  iqc.avatar = await iqcAvatarId(c.avatar);
+  iqc.picking = false;
+  renderSteps();
+  if (flow[flowIndex] === 'iqcshot') nextField(true);
+}
+function iqcRefreshVerified() { $('iqcVerCk').textContent = iqc.verified ? '✓' : ''; }
+function iqcRenderPos() {
+  $('iqcPos').querySelectorAll('button').forEach(b => {
+    const on = b.dataset.v === iqc.pos;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+}
+IQC_POS.forEach(([v, label]) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.dataset.v = v;
+  b.setAttribute('role', 'radio');
+  b.textContent = label;
+  b.addEventListener('click', () => {
+    if (iqc.pos === v) return;
+    haptic('select');
+    iqc.pos = v;
+    iqcRenderPos();
+    updatePhotoOverlay();
+  });
+  $('iqcPos').appendChild(b);
+});
+$('iqcPick').addEventListener('click', () => { if (!iqc.busy) $('iqcFile').click(); });
+$('iqcFile').addEventListener('change', e => { iqcUpload([...(e.target.files || [])]); e.target.value = ''; });
+$('iqcManual').addEventListener('click', () => {
+  haptic('select');
+  Object.assign(iqc, {sel:-2, avatar:'', verified:false});
+  ['iqcText','iqcName','iqcTime','iqcLikes'].forEach(id => { $(id).value = ''; });
+  iqcRender();
+  nextField(true);
+});
+$('iqcVerRow').addEventListener('click', () => {
+  haptic('select');
+  iqc.verified = !iqc.verified;
+  iqcRefreshVerified();
+});

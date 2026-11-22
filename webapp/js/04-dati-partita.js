@@ -86,6 +86,9 @@ function validateCurrent() {
   if (step === 'jrratio' && !jrb.ratio) { showError('Scegli il formato.'); return false; }
   if (step === 'jrtitle' && !jrb.title.trim()) { showError('Scrivi il titolo.'); return false; }
   if (step === 'iqshot' && !iq.photos.length) { showError('Allega lo screenshot della storia.'); return false; }
+  if (step === 'iqcshot' && iqc.sel === -1) { showError('Tocca il commento da usare.'); return false; }
+  if (step === 'iqcedit' && !$('iqcText').value.trim()) { showError('Scrivi il testo del commento.'); return false; }
+  if (step === 'iqcedit' && !$('iqcName').value.trim()) { showError('Scrivi il nome di chi ha commentato.'); return false; }
   if (step === 'iqpick' && iq.sel < 0) { showError('Tocca la foto da usare.'); return false; }
   if (step === 'iqtext' && !iq.story && !$('iqText').value.trim()) { showError('Scrivi il testo della citazione.'); return false; }
   if (step === 'iqtext' && iq.story && !$('iqHandle').value.trim() && !$('iqName').value.trim()) { showError('Scrivi il @account della storia.'); return false; }
