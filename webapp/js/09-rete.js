@@ -57,7 +57,7 @@ function buildPayload(ghost=false) {
   if (kind === 'conv') return convPayload();
   if (kind === 'table') {
     if (!tableComp) throw new Error('Scegli la competizione.');
-    if (!tableViewOf()) throw new Error('Scegli classifica o tabellone.');
+    if (!tableViewOf()) throw new Error('Scegli classifica, tabellone o risultati.');
     return {v:1, action:'render', session, data:{kind:'table', competition:tableComp, view:tableViewOf()}};
   }
   if (kind === 'cal') {
@@ -427,7 +427,8 @@ function initLayoutEditor() {
 }
 
 const DUAL_KINDS = new Set(['bday','bdold','xi','pxi','squad','table','motm']);
-const isDualPayload = p => !LIVE && !!p && !!p.data && DUAL_KINDS.has(p.data.kind) && p.data.team !== 'italy';
+// Risultati della giornata: solo post, la storia c'è per la classifica.
+const isDualPayload = p => !LIVE && !!p && !!p.data && DUAL_KINDS.has(p.data.kind) && p.data.team !== 'italy' && p.data.view !== 'results';
 
 // Il servizio può aspettare un'altra richiesta (fino a 75 s) e poi fare il render.
 async function fetchPreview(raw) {
@@ -463,7 +464,9 @@ async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caric
     $('backButton').disabled = true;
     $('nextButton').textContent = 'Anteprima…';
     const bracket = kind === 'table' && tableViewOf() === 'bracket';    // tempi e testo a parte: ci mette di più
-    if (!(keepBusy && busy)) showBusy('Genero l’anteprima…',bracket ? 'Leggo il tabellone aggiornato da Diretta.it.' : BUSY_SUB[realKind()] || '',bracket ? 'bracket' : realKind());
+    const results = kind === 'table' && tableViewOf() === 'results';
+    if (!(keepBusy && busy)) showBusy('Genero l’anteprima…',bracket ? 'Leggo il tabellone aggiornato da Diretta.it.'
+      : results ? 'Leggo i risultati aggiornati da Diretta.it.' : BUSY_SUB[realKind()] || '',bracket ? 'bracket' : realKind());
 
     // Compleanno (anche ex calciatori), Starting XI, Probabili, Squad List, Classifica, Tabellone e Man of the Match:
     // anche la versione per le storie IG, preparata insieme al 3:4.

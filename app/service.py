@@ -897,6 +897,10 @@ class Service:
         if data.get('kind') != 'table':
             return ''
         comp = str(data.get('competition') or '').upper()
+        if data.get('view') == 'results':
+            from graphics import risultati
+            raw = json.dumps((risultati._last.get(comp) or {}).get('partite'), sort_keys=True, ensure_ascii=False, default=str)
+            return hashlib.sha256(raw.encode('utf-8')).hexdigest()[:16]
         if data.get('view') == 'bracket':
             from graphics import tabellone
             raw = json.dumps((tabellone._last.get(comp) or {}).get('rounds'), sort_keys=True, ensure_ascii=False, default=str)

@@ -333,11 +333,11 @@ def _match_caption(data):
     return ''
 
 
-def _giornata(comp):
-    """Giornata della classifica appena letta da Diretta.it per la grafica (None se non c'è)."""
+def _giornata(comp, module='classifica'):
+    """Giornata della classifica (o dei risultati) appena letta da Diretta.it per la grafica (None se non c'è)."""
     try:
-        from graphics import classifica
-        value = int((classifica._last.get(comp) or {}).get('giornata') or 0)
+        import importlib
+        value = int((importlib.import_module(f'graphics.{module}')._last.get(comp) or {}).get('giornata') or 0)
     except Exception:  # noqa: BLE001
         return None
     return value or None
@@ -472,6 +472,10 @@ def _other_caption(data):
         if comp == 'CI' or (data.get('view') == 'bracket' and comp not in BRACKET_NAMES):
             return f"{E_CI}{E_UP} Tabellone<b> Coppa Italia </b>aggiornato."
         flag, name = TABLES.get(comp, ('', ''))
+        if data.get('view') == 'results':
+            text = f"{flag}⚽️<b> {name} | Risultati</b>"
+            round_ = _giornata(comp, 'risultati')
+            return text + (f"\n{E_DAY}<i> {round_}ª Giornata</i>" if round_ else '')
         if data.get('view') == 'bracket':        # coppe europee: come quello della Coppa Italia
             return f"{flag}{E_UP} Tabellone<b> {BRACKET_NAMES[comp]} </b>aggiornato."
         text = f"{flag}{E_STATS}<b> {name} | Classifica</b>"

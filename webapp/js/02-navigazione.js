@@ -279,7 +279,7 @@ function buildFlow() {
     : ['jrstyle','jrratio','jrcolor','photo'];
   else if (kind === 'cal') flow = ['calmonth','calrows'];
   else if (kind === 'conv') flow = ['convlist'];
-  else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
+  else if (kind === 'table') flow = tableComp && tableComp !== 'CI' ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'rin') flow = ['rincontent'];
   else if (kind === 'award') flow = ['awkind'];                     // MOTM e POTM: prima si sceglie quale
   else if (kind === 'potm') flow = ['awkind','awplayer','potminfo','bdophoto'];
@@ -340,7 +340,7 @@ function stepValue(step) {
     case 'jrcolor': return jrColorLabel();
     case 'jrstyle': return labelOf(JR_STYLES,jrb.style);
     case 'tablecomp': return labelOf(TABLE_COMPS,tableComp);
-    case 'tableview': return labelOf(TABLE_VIEWS,tableView);
+    case 'tableview': return labelOf(tableViews(),tableView);
     case 'convlist': return convRows.length ? `${convRows.length} giocatori` : '';
     case 'jrratio': return jrb.ratio;
     case 'jrtitle': return jrb.title.trim().toUpperCase();
@@ -744,8 +744,12 @@ function updateScreenValues() {
   renderOptions('bdModeOpts',BD_MODES,bd.mode,bdSetMode);
   // MOTM e POTM: scegliendo la grafica si passa a quel tipo (nessuna scelta all'inizio).
   renderOptions('awKindOpts',AW_KINDS,AW_KINDS.some(([v]) => v === kind) ? kind : '',v => { if (v !== kind) changeKind(v,true,true); });
-  renderOptions('tableCompOpts',TABLE_COMPS,tableComp,v => { tableComp = v; buildFlow(); });
-  renderOptions('tableViewOpts',TABLE_VIEWS,tableView,v => { tableView = v; });
+  renderOptions('tableCompOpts',TABLE_COMPS,tableComp,v => {
+    tableComp = v;
+    if (!tableViews().some(([k]) => k === tableView)) tableView = '';    // es. Tabellone e poi Serie A
+    buildFlow();
+  });
+  renderOptions('tableViewOpts',tableViews(),tableView,v => { tableView = v; });
   renderOptions('calMonthOpts',CAL_MONTHS.map((m,i) => [String(i + 1),m]),String(calMonth || ''),v => { if (calMonth !== Number(v)) calRows = []; calMonth = Number(v); autoCalendar(); });
   const poseList = posesForPlayer();
   if (pose && !poseList.some(([v]) => v === pose)) pose = '';   // cambiati giocatore o maglia

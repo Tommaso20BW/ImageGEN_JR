@@ -310,12 +310,13 @@ def _build_state(envelope, catalog, now, expected_session):
     if kind == 'table':
         if competition not in TABLE_COMPETITIONS:
             raise ValueError('Scegli Serie A, Coppa Italia, Champions, Europa o Conference League.')
-        view = {'SA': 'table', 'CI': 'bracket'}.get(competition) or str(incoming.get('view') or 'table')
-        if view not in ('table', 'bracket'):
-            raise ValueError('Scegli classifica o tabellone.')
+        # Coppa Italia: solo tabellone. Serie A: classifica o risultati. Coppe europee: tutte e tre.
+        view = 'bracket' if competition == 'CI' else str(incoming.get('view') or 'table')
+        if view not in ('table', 'bracket', 'results') or (competition == 'SA' and view == 'bracket'):
+            raise ValueError('Scegli classifica, tabellone o risultati.')
         data = {'kind': 'table', 'competition': competition}
-        if view == 'bracket':
-            data['view'] = 'bracket'
+        if view != 'table':
+            data['view'] = view
         return {
             'id': uuid.uuid4().hex[:10],
             'data': data,
@@ -716,8 +717,8 @@ def parse_webapp_request(envelope, catalog, now, expected_session):
         expected_session,
     )
     data = state['data']
-    if (data.get('kind') in STORY_KINDS and data.get('team') != 'italy'
-            and envelope['data'].get('story') is True):
+    if (data.get('kind') in STORY_KINDS and data.get('team') != 'italy' and data.get('view') != 'results'
+            and envelope['data'].get('story') is True):          # risultati: solo post, niente storia
         data['story'] = True
     return state
 

@@ -1,0 +1,131 @@
+<!-- RISULTATI DELLA GIORNATA: si aggiunge alla pagina della classifica (template.html), che
+     dà intestazione, colori e sfondi di ogni competizione. Qui solo le righe delle partite. -->
+<style>
+  /* Fino a 10 partite: una colonna, casa a sinistra e trasferta a destra.
+     Di più (coppe, 18 partite): due colonne di schede a due righe. */
+  .table-area{display:flex;flex-direction:column;gap:0;}
+  .res-list{flex:1;display:flex;flex-direction:column;min-height:0;}
+  .res-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:column;column-gap:18px;row-gap:9px;min-height:0;}
+
+  /* ── riga larga ── */
+  .m{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 58px 150px 58px minmax(0,1fr);
+     align-items:center;border-bottom:1px solid var(--line);padding:0 10px;}
+  .m:last-child{border-bottom:0;}
+  .m .t-name{font-family:var(--f-display),sans-serif;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+     font-size:1.32rem;font-weight:700;color:var(--ink);letter-spacing:-.005em;}
+  .m .t-name.home{text-align:right;padding-right:6px;}
+  .m .t-name.away{text-align:left;padding-left:6px;}
+  .m .t-logo{display:flex;align-items:center;justify-content:center;}
+  .m .t-logo img{width:46px;height:46px;object-fit:contain;}
+  .m .lose{color:var(--ink-dim);font-weight:600;}
+
+  .score{justify-self:center;display:flex;align-items:center;justify-content:center;gap:12px;min-width:118px;height:58px;padding:0 14px;
+     font-family:var(--f-num),sans-serif;font-weight:900;font-size:2.2rem;font-variant-numeric:tabular-nums;letter-spacing:.01em;}
+  .score i{font-style:normal;opacity:.55;font-weight:700;font-size:.8em;}
+  .when{justify-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;
+     font-family:var(--f-body),sans-serif;font-weight:800;text-transform:uppercase;color:var(--ink-dim);}
+  .when b{font-size:1.02rem;letter-spacing:.08em;}
+  .when span{font-size:1.32rem;color:var(--ink);font-family:var(--f-num),sans-serif;font-variant-numeric:tabular-nums;margin-top:3px;}
+  .live-tag{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);font:800 .62rem/1 var(--f-body),sans-serif;
+     letter-spacing:.18em;text-transform:uppercase;color:#ff4d5e;}
+
+  /* ── scheda a due righe (coppe) ── */
+  .card{position:relative;min-height:0;display:grid;grid-template-rows:1fr 1fr;padding:0 14px 0 12px;background:var(--panel-row,var(--row-odd));
+     border:1px solid var(--line);}
+  .card .side{display:grid;grid-template-columns:38px minmax(0,1fr) 44px;align-items:center;min-height:0;}
+  .card .side + .side{border-top:1px solid var(--line);}
+  .card .t-logo{display:flex;align-items:center;justify-content:flex-start;}
+  .card .t-logo img{width:30px;height:30px;object-fit:contain;}
+  .card .t-name{font-family:var(--f-display),sans-serif;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+     font-size:1.02rem;font-weight:700;color:var(--ink);}
+  .card .goal{text-align:right;font-family:var(--f-num),sans-serif;font-weight:900;font-size:1.5rem;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .card .lose{color:var(--ink-dim);font-weight:600;}
+  .card .when-card{position:absolute;right:14px;top:50%;transform:translateY(-50%);text-align:right;line-height:1.1;
+     font:800 .74rem/1.15 var(--f-body),sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);}
+  .card .when-card span{display:block;font-size:1.05rem;color:var(--ink);letter-spacing:.02em;}
+
+  /* ── colori per competizione ── */
+  body.comp-SA .table-area{padding:14px 27px 12px;}
+  body.comp-SA .m{border-bottom:1px solid #dce8f8;}
+  body.comp-SA .m:nth-child(even){background:#edf4ff;}
+  body.comp-SA .m .t-name{color:#08245e;}
+  body.comp-SA .m .lose{color:#6f8bb3;}
+  body.comp-SA .score{color:#fff;background:linear-gradient(105deg,#052878 0%,#0757d7 60%,#168bd4 100%);border-radius:6px;
+     box-shadow:0 6px 16px rgba(7,63,170,.18);}
+  body.comp-SA .when{color:#5681b7;}
+  body.comp-SA .when span{color:#08245e;}
+  body.comp-SA .m.hl{background:linear-gradient(90deg,#063d9e,#0c70dd);}
+  body.comp-SA .m.hl .t-name{color:#fff;}
+  body.comp-SA .m.hl .score{background:#fff;color:#063d9e;box-shadow:none;}
+  body.comp-SA .m.hl .when,body.comp-SA .m.hl .when span{color:#fff;}
+
+  body.comp-UCL .score{color:#45e9ff;} body.comp-UEL .score{color:#ff7a2a;} body.comp-UECL .score{color:#21df72;}
+  body.comp-UCL .card .goal{color:#45e9ff;} body.comp-UEL .card .goal{color:#ff7a2a;} body.comp-UECL .card .goal{color:#21df72;}
+  body.comp-UCL .card .goal.lose,body.comp-UEL .card .goal.lose,body.comp-UECL .card .goal.lose{color:var(--ink-dim);}
+  body.comp-UCL .m.hl,body.comp-UCL .card.hl{background:linear-gradient(90deg,#17459b 0%,var(--panel-row) 78%);}
+  body.comp-UEL .m.hl,body.comp-UEL .card.hl{background:linear-gradient(90deg,#3a1708 0%,var(--panel-row) 78%);}
+  body.comp-UECL .m.hl,body.comp-UECL .card.hl{background:linear-gradient(90deg,#07351d 0%,var(--panel-row) 78%);}
+  body.comp-UCL .card,body.comp-UEL .card,body.comp-UECL .card{border-color:var(--line);}
+  body.comp-UCL .table-area,body.comp-UEL .table-area,body.comp-UECL .table-area{padding:16px 18px 14px;}
+  .card.hl .t-name.win,.m.hl .t-name.win{font-weight:900;}
+
+  .legend-item.date{font-size:.92rem;letter-spacing:.14em;}
+  body.comp-SA .legend-item.date{font-size:.8rem;}
+</style>
+<script>
+const HIGHLIGHT_R = new Set(['Juventus']);
+const TITOLI = {SA:'SERIE A', UCL:'CHAMPIONS LEAGUE', UEL:'EUROPA LEAGUE', UECL:'CONFERENCE LEAGUE'};
+const ICONE = {SA:'serie-a-scudetto.png', UCL:'ucl-mark.png', UEL:'uel-mark.png', UECL:'uecl-mark.png'};
+
+function esc(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function logo(src){ return `<div class="t-logo"><img src="${esc(src)}" alt=""></div>`; }
+function esito(p){
+  if (p.stato !== 'finita' && p.stato !== 'live') return ['', ''];
+  if (p.gol_casa === p.gol_trasferta) return ['', ''];
+  return p.gol_casa > p.gol_trasferta ? ['win', 'lose'] : ['lose', 'win'];
+}
+function quando(p){
+  const [g, o] = String(p.quando || '').split(' · ');
+  return p.stato === 'rinviata' ? ['Rinviata', ''] : [g || '', o || ''];
+}
+
+function riga(p){
+  const [h, a] = esito(p);
+  const hl = HIGHLIGHT_R.has(p.home) || HIGHLIGHT_R.has(p.away) ? ' hl' : '';
+  let mid;
+  if (p.stato === 'finita' || p.stato === 'live') mid = `<div class="score">${p.gol_casa}<i>–</i>${p.gol_trasferta}</div>`;
+  else { const [g, o] = quando(p); mid = `<div class="when"><b>${esc(g)}</b>${o ? `<span>${esc(o)}</span>` : ''}</div>`; }
+  return `<div class="m${hl}">
+    <div class="t-name home ${h}">${esc(p.home)}</div>${logo(p.home_logo)}${mid}${logo(p.away_logo)}
+    <div class="t-name away ${a}">${esc(p.away)}</div>${p.stato === 'live' ? '<div class="live-tag">In corso</div>' : ''}</div>`;
+}
+
+function scheda(p){
+  const [h, a] = esito(p);
+  const hl = HIGHLIGHT_R.has(p.home) || HIGHLIGHT_R.has(p.away) ? ' hl' : '';
+  const giocata = p.stato === 'finita' || p.stato === 'live';
+  const side = (nome, src, gol, cls) => `<div class="side">${logo(src)}<div class="t-name ${cls}">${esc(nome)}</div>
+    <div class="goal ${cls}">${giocata ? gol : ''}</div></div>`;
+  const [g, o] = quando(p);
+  return `<div class="card${hl}">${side(p.home, p.home_logo, p.gol_casa, h)}${side(p.away, p.away_logo, p.gol_trasferta, a)}
+    ${giocata ? '' : `<div class="when-card">${esc(g)}${o ? `<span>${esc(o)}</span>` : ''}</div>`}</div>`;
+}
+
+function renderRisultati(data){
+  const key = (data.competition || 'SA').toUpperCase();
+  document.body.className = 'comp-' + key;
+  document.getElementById('heroTitle').textContent = TITOLI[key] || TITOLI.SA;
+  document.getElementById('competitionIcon').src = ICONE[key] || ICONE.SA;
+  const turno = data.giornata ? `Giornata ${data.giornata}` : (data.turno || '');
+  document.getElementById('heroSub').textContent = ['Risultati', turno, data.stagione].filter(Boolean).join(' · ');
+  const partite = data.partite || [];
+  const area = document.getElementById('tableArea');
+  if (partite.length <= 10) area.innerHTML = `<div class="res-list">${partite.map(riga).join('')}</div>`;
+  else {
+    const per = Math.ceil(partite.length / 2);
+    area.innerHTML = `<div class="res-grid" style="grid-template-rows:repeat(${per},1fr)">${partite.map(scheda).join('')}</div>`;
+  }
+  document.getElementById('legend').innerHTML = data.date ? `<div class="legend-item date">${esc(data.date)}</div>` : '';
+}
+renderRisultati(window.__RISULTATI__);
+</script>

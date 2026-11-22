@@ -291,6 +291,10 @@ class Renderer:
             )
 
         if kind == 'table':
+            if data.get('view') == 'results':                     # risultati della giornata: solo 3:4
+                from graphics import risultati
+
+                return risultati.render(data['competition'])
             if data.get('view') == 'bracket':
                 from graphics import tabellone
 
