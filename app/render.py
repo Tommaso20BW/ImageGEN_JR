@@ -305,6 +305,8 @@ class Renderer:
             return ig_story.render(text=data.get('text', ''),
                                    photo=self._photo(data) if data.get('photo_id') else None,
                                    color=data.get('color', 'black'), label=data.get('label', 'breaking'), label_text=data.get('label_text', ''),
+                                   link=bool(data.get('link')),
+                                   link_text=data.get('link_text', ''),
                                    seed=data.get('seed'), source=data.get('source', ''))
 
         if kind == 'rin':

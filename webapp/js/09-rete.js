@@ -46,7 +46,8 @@ function buildPayload(ghost=false) {
     if (igLabel === 'custom' && !labelText) throw new Error('Scrivi il titolo.');
     const source = $('igSource').value.trim();
     return {v:1, action:'render', session, data:{kind:'igbn', text, color:igColor, label:igLabel || 'none',
-      ...(igLabel === 'custom' ? {label_text:labelText} : {}), ...(source ? {source} : {}), ...(igb.id ? {photo_id:igb.id} : {})}};
+      ...(igLabel === 'custom' ? {label_text:labelText} : {}),
+      ...($('igLinkText').value.trim() ? {link:true, link_text:$('igLinkText').value.trim()} : {}), ...(source ? {source} : {}), ...(igb.id ? {photo_id:igb.id} : {})}};
   }
   if (kind === 'conv') return convPayload();
   if (kind === 'table') {

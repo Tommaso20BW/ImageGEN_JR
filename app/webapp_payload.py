@@ -363,6 +363,13 @@ def _build_state(envelope, catalog, now, expected_session):
                 del data['label_text']
         if source:
             data['source'] = source
+        if incoming.get('link'):
+            # spazio vuoto per il pulsante link di Instagram
+            data['link'] = True
+            # testo che si metterà sul pulsante di Instagram: decide quanto è lunga la striscia
+            words = ig_story.clean_link_text(incoming.get('link_text'))
+            if words:
+                data['link_text'] = words
         if photo_id:
             data['photo_id'] = _photo_id(photo_id)
         return {

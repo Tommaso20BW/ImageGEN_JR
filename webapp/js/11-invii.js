@@ -370,6 +370,24 @@ IG_LABELS.forEach(([key, name]) => {
 });
 setIgLabel(igLabel);
 
+/* ----- Storia IG: spazio per il link -----
+   Icona in alto a destra del colore: apre il riquadro come la tavolozza. Con un testo c'è la striscia
+   (lunga quanto il pulsante con quel testo), vuoto niente. L'icona si colora quando c'è. */
+function renderIgLink() {
+  $('igLinkBtn').classList.toggle('on', !!$('igLinkText').value.trim());
+}
+const closeIgLink = () => { $('igLinkOv').classList.remove('open'); $('igLinkText').blur(); renderIgLink(); };
+$('igLinkBtn').addEventListener('click', () => {
+  haptic('select');
+  $('igLinkOv').classList.add('open');
+  setTimeout(() => $('igLinkText').focus(), 80);
+});
+$('igLinkText').addEventListener('input', renderIgLink);
+$('igLinkText').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); closeIgLink(); } });
+$('igLinkDone').addEventListener('click', () => { haptic('select'); closeIgLink(); });
+$('igLinkClear').addEventListener('click', () => { haptic('select'); $('igLinkText').value = ''; closeIgLink(); });
+$('igLinkOv').addEventListener('click', e => { if (e.target.id === 'igLinkOv') closeIgLink(); });
+
 /* ----- Storia IG: colore del testo ----- */
 // Pallino in alto a destra = colore attuale; un tocco apre la tavolozza sopra il testo.
 // Stessi colori di graphics/ig_story.py (TEXT_COLORS).

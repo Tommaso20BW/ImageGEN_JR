@@ -266,6 +266,8 @@ function resetAllData() {
   igColor = 'black';
   igLabel = '';
   if ($('igLabelText')) $('igLabelText').value = '';
+  if ($('igLinkText')) $('igLinkText').value = '';
+  if (typeof renderIgLink === 'function') renderIgLink();
   if (typeof setIgLabel === 'function') setIgLabel(igLabel);
   Object.assign(iq, {url:'', photos:[], sel:-1, avatar:'', loading:false, verified:false, story:false, noLink:false, bars:null, mode:''});
   ['iqUrl','iqText','iqName','iqHandle'].forEach(id => { $(id).value = ''; });

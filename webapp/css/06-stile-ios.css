@@ -438,6 +438,20 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 .ig-seg[data-l="custom"]{flex:1.45}
 .ig-label-text{margin:-6px 0 16px;text-transform:uppercase}
 .ig-label-text[hidden]{display:none}
+/* popup del link: come quello del Modulo */
+.ig-pop{align-items:center;justify-content:center;padding:16px}
+.ig-pop .mod-sh{max-width:380px;border-radius:14px;padding:14px 14px 16px;background:var(--surface);box-shadow:0 10px 40px rgba(0,0,0,.25)}
+html[data-theme="dark"] .ig-pop .mod-sh{background:#2C2C2E}
+.ig-pop .mod-top{display:grid;grid-template-columns:80px 1fr 80px;margin:0 0 12px}
+.ig-pop .mod-top b{grid-column:2;text-align:center;font-size:17px;font-weight:700}
+.ig-pop .mod-top button{color:var(--tint);font-size:16px;font-weight:500}
+.ig-pop .mod-top button:first-child{grid-column:1;justify-self:start}
+.ig-pop .mod-top button:last-child{grid-column:3;justify-self:end}
+.ig-pop .hint{margin:8px 2px 0}
+.ig-pop .field-input{background:var(--bg)}
+.ig-link-btn svg{width:22px;height:22px;margin:auto;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ig-link-btn{color:var(--muted);opacity:.55}
+.ig-link-btn.on{color:var(--text);opacity:1}
 .ig-seg.selected{background:var(--surface);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
 .ig-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .ig-tiles + .ig-tiles{margin-top:10px}

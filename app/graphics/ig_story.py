@@ -8,6 +8,8 @@ Carta stropicciata con grana (le texture del Compleanno) e, in colonna al centro
   ritagliata: si vede tutta. Se è verticale e c'è il testo, va a sinistra e il testo a destra;
 - testo (facoltativo): battuto a macchina (Special Elite), una riga per striscia di carta bianca,
   centrato. La grandezza dipende da quanto è lungo e si riduce finché tutto sta nella zona;
+- spazio per il link (facoltativo): striscia strappata vuota del colore scelto, dove mettere il
+  pulsante link dall'editor di Instagram; è lunga quanto il testo che si scriverà sul pulsante;
 - in basso il logo JR dritto, stampato come un timbro: senza bordo, un po' sbiadito.
 
 Tutto sta tra SAFE_T e SAFE_B (fuori dalle barre di Instagram). Gli angoli di strisce e foto
@@ -48,6 +50,9 @@ SIDE_PW = 440                        # larghezza massima della foto (senza bordo
 SIDE_TW = 400                        # larghezza delle righe di testo
 SIDE_GAP = 44                        # tra foto e testo
 SIDE_STEPS = ((80, 40), (160, 36), (10**9, 32))
+SIDE_GROW_MAX = 52                   # il testo accanto alla foto cresce fino a questa grandezza...
+SIDE_GROW_FILL = .6                  # ...e fino a questa quota dell'altezza della foto
+SIDE_EXTRA = 96                      # foto affiancata: bordo, inclinazione e nastro oltre l'altezza della foto
 FS_MIN = 28
 # Grandezza del testo in base ai caratteri: (fino a N caratteri, grandezza)
 FS_PHOTO_STEPS = ((120, 46), (240, 42), (10**9, 38))
@@ -278,11 +283,40 @@ def source_height(source):
     return t.height + 2 * SRC_PAD[1] + SRC_GAP if t else 0
 
 
-def layout(text, label, photo_size=None, source=''):
+# Spazio per il link: striscia vuota dove va il pulsante link di Instagram
+LINK_H = 118                         # altezza della striscia: il pulsante (~80) con un po' di bordo
+LINK_W = 640                         # senza testo
+LINK_GAP = 40                        # sopra la striscia
+MAX_LINK_TEXT = 40
+LINK_CHAR = 22                       # larghezza di una lettera del pulsante link di Instagram (circa)
+LINK_ICON = 90                       # icona della catena e margini del pulsante
+LINK_MARGIN = 70                     # striscia: spazio intorno al pulsante
+LINK_MIN_W = 340
+
+
+def link_width(link_text):
+    """Larghezza della striscia: quanto serve al pulsante link con quel testo, più un po' di margine."""
+    n = len(clean_link_text(link_text))
+    if not n:
+        return LINK_W
+    return int(min(W - 80, max(LINK_MIN_W, n * LINK_CHAR + LINK_ICON + LINK_MARGIN)))
+
+
+def clean_link_text(value):
+    """Testo che si scriverà sul pulsante link: serve solo a misurare la striscia."""
+    return ' '.join(tidy(value).split())[:MAX_LINK_TEXT]
+
+
+def tail_height(source, link=False):
+    """Altezza di fonte e spazio per il link, sotto il testo."""
+    return source_height(source) + (LINK_GAP + LINK_H if link else 0)
+
+
+def layout(text, label, photo_size=None, source='', link=False):
     """Misure della colonna: (parole etichetta, righe del testo, grandezza, altezza foto, y di partenza).
     photo_size = (larghezza, altezza) della foto o None. source: fonte (blocco nero sotto il testo)."""
     parts = _label_words(label_words(label), 150 if photo_size else 200)
-    room = BOTTOM - TOP - source_height(source)
+    room = BOTTOM - TOP - tail_height(source, link)
     lab_h = _label_height(parts)
     gaps = GAP * max(bool(parts) + bool(photo_size) + bool(text) - 1, 0) + (TILT_PAD if parts and photo_size else 0)
     size = font_max(text, bool(photo_size)) if text else 0
@@ -303,11 +337,11 @@ def layout(text, label, photo_size=None, source=''):
             break
         size -= 2
     if text and parts and not photo_size:
-        free = (LOGO_Y - GAP - TOP - lab_h - GAP - source_height(source)) * FS_GROW_FILL
+        free = (LOGO_Y - GAP - TOP - lab_h - GAP - tail_height(source, link)) * FS_GROW_FILL
         while size < FS_GROW_MAX and text_height(wrap(text, size + 2), size + 2) <= free:
             size += 2
             lines = wrap(text, size)
-    total = lab_h + text_height(lines, size) + gaps + ph_h + source_height(source)
+    total = lab_h + text_height(lines, size) + gaps + ph_h + tail_height(source, link)
     # con l'etichetta: lei fissa in alto (sotto il nome di Instagram), il resto centrato dopo
     return parts, lines, size, ph_h, TOP if parts else TOP + max((room - total) / 2, 0)
 
@@ -317,31 +351,45 @@ def is_side(text, photo_size):
     return bool(text) and bool(photo_size) and photo_size[1] / photo_size[0] >= SIDE_RATIO
 
 
-def side_layout(text, label, photo_size, source=''):
+def side_layout(text, label, photo_size, source='', link=False):
     """Foto a sinistra e testo a destra: (parole etichetta, righe, grandezza, larghezza e altezza foto,
     altezza del blocco, y di partenza). La foto non si ritaglia: se serve si rimpicciolisce tutta."""
     parts = _label_words(label_words(label), 150)
     lab_h = _label_height(parts)
-    room = BOTTOM - TOP - source_height(source) - lab_h - (GAP + TILT_PAD if parts else 0)
+    room = BOTTOM - TOP - tail_height(source, link) - lab_h - (GAP + TILT_PAD if parts else 0)
     ar = photo_size[1] / photo_size[0]
     n = len(text.replace('\n', ''))
     size = next(s for limit, s in SIDE_STEPS if n <= limit)
     while size > FS_MIN and text_height(wrap(text, size, SIDE_TW), size) > room:
         size -= 2
     lines = wrap(text, size, SIDE_TW)
-    pw = int(min(SIDE_PW, (room - 40) / ar))
+    pw = int(min(SIDE_PW, (room - SIDE_EXTRA) / ar))
     ph = int(pw * ar)
-    block = max(ph + 40, text_height(lines, size))
+    # testo corto accanto a una foto alta: cresce fino a riempire bene la colonna (senza superare la foto)
+    while size < SIDE_GROW_MAX and text_height(wrap(text, size + 2, SIDE_TW), size + 2) <= ph * SIDE_GROW_FILL:
+        size += 2
+        lines = wrap(text, size, SIDE_TW)
+    block = max(ph + SIDE_EXTRA, text_height(lines, size))
     if parts:
         return parts, lines, size, pw, ph, block, TOP
-    total = block + source_height(source)
+    total = block + tail_height(source, link)
     return parts, lines, size, pw, ph, block, TOP + max((BOTTOM - TOP - total) / 2, 0)
 
 
-def content_y(top, lines, size, ph_h, source=''):
+def side_plan(text, label, photo_size, source='', link=False):
+    """side_layout se la foto va a sinistra e tutto ci sta; altrimenti None (foto sopra il testo)."""
+    if not is_side(text, photo_size):
+        return None
+    plan = side_layout(text, label, photo_size, source, link)
+    parts, block, y = plan[0], plan[5], plan[6]
+    bottom = y + (_label_height(parts) + GAP + TILT_PAD if parts else 0) + block + tail_height(source, link)
+    return plan if bottom <= BOTTOM + 1 else None
+
+
+def content_y(top, lines, size, ph_h, source='', link=False):
     """y di foto + testo sotto l'etichetta: stesso spazio sopra (dall'etichetta) e sotto (fino al logo JR),
     almeno GAP dall'etichetta e senza uscire da BOTTOM."""
-    rest = text_height(lines, size) + ph_h + (GAP if lines and ph_h else 0) + source_height(source)
+    rest = text_height(lines, size) + ph_h + (GAP if lines and ph_h else 0) + tail_height(source, link)
     mid = (top - GAP) + (LOGO_Y - (top - GAP) - rest) / 2
     return max(min(mid, BOTTOM - rest), top)
 
@@ -467,6 +515,14 @@ def _photo(img, raw, cx, cy, ph_h, angle, rng, max_w=PHOTO_W):
     return _tape(img, (x0 + w - 50, y0 + h - 12), rng.uniform(22, 38), int(rng.integers(1 << 20)))
 
 
+def _link_space(img, y, block, letters, rng, width=LINK_W):
+    """Striscia strappata vuota del colore scelto: ci va il pulsante link di Instagram."""
+    empty = Image.new('L', (width - 2 * 20, LINK_H - 24), 0)
+    return _piece(img, empty, (W / 2 + rng.uniform(-6, 6), y + LINK_H / 2), _tilt(rng, .8, 1.6),
+                  block, letters, int(rng.integers(1 << 20)), pad=(20, 12), tear=1.6,
+                  sh=(5, 8, 6, .35), breakup=0, fringe=True)
+
+
 @lru_cache(maxsize=1)
 def _logo_alpha():
     """Forma del logo JR (alpha), ritagliata dall'overlay nero della FOTO + JR."""
@@ -503,7 +559,8 @@ def _tilt(rng, lo, hi):
 
 
 # ---------------------------------------------------------------- grafica
-def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None, source='', label_text=''):
+def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None, source='', label_text='',
+           link=False, link_text=''):
     text, found = split_source(text)
     text = clean_text(text)
     source = clean_source(source or found)
@@ -518,11 +575,12 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
         seed = int(np.random.default_rng().integers(1 << 30))
     rng = np.random.default_rng(seed)
     label = label_words(label, label_text)
-    side = is_side(text, psize)
+    plan = side_plan(text, label, psize, source, link)
+    side = plan is not None
     if side:
-        parts, lines, size, side_pw, ph_h, side_h, y = side_layout(text, label, psize, source)
+        parts, lines, size, side_pw, ph_h, side_h, y = plan
     else:
-        parts, lines, size, ph_h, y = layout(text, label, psize, source)
+        parts, lines, size, ph_h, y = layout(text, label, psize, source, link)
 
     img = cp._paper((W, H), PAPER, seed=int(rng.integers(1 << 20))).copy()
     light = cp._crumple((W, H), int(rng.integers(1 << 20)), 0.7, folds=3)
@@ -546,10 +604,10 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
         yy += ph + LABEL_VSEP
     if parts and side:
         top = y + h + GAP + TILT_PAD
-        rest = side_h + source_height(source)
+        rest = side_h + tail_height(source, link)
         y = max(min((top - GAP) + (LOGO_Y - (top - GAP) - rest) / 2, BOTTOM - rest), top)
     elif parts:
-        y = content_y(y + h + GAP + (TILT_PAD if photo is not None else 0), lines, size, ph_h, source)
+        y = content_y(y + h + GAP + (TILT_PAD if photo is not None else 0), lines, size, ph_h, source, link)
 
     # foto inclinata a caso a destra o a sinistra, pochi gradi come le strisce
     tilt = _tilt(rng, 1.5, 3.5)
@@ -584,11 +642,16 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     # inclinato a caso a destra o a sinistra
     src = source_word(source)
     if src is not None:
-        y += SRC_GAP - (_line_gap(size) if lines else 0)
+        y += SRC_GAP - (_line_gap(size) if lines and not side else 0)
         bh = src.height + 2 * SRC_PAD[1]
         img = _piece(img, src, (W / 2 + rng.uniform(-8, 8), y + bh / 2), _tilt(rng, 1.5, 2.5),
                      block, letters, int(rng.integers(1 << 20)), pad=SRC_PAD)
         y += bh
+
+    if link:
+        y += LINK_GAP - (_line_gap(size) if lines and src is None and not side else 0)
+        img = _link_space(img, y, block, letters, rng, link_width(link_text))
+        y += LINK_H
 
     logo = LOGO_COLORS.get(text_color(color))
     img = _logo_stamp(img, LOGO_Y, int(rng.integers(1 << 20)), ink=_rgb(logo) if logo else block)

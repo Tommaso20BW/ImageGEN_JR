@@ -483,6 +483,7 @@
             <div class="photo-head">
               <h1>Storia</h1>
               <button id="igColorBtn" class="head-ico" type="button" aria-label="Colore del testo" title="Colore del testo"><span id="igColorDot" class="ig-dot"></span></button>
+              <button id="igLinkBtn" class="head-ico ig-link-btn" type="button" aria-label="Spazio per il link" title="Spazio per il link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></button>
             </div>
             <div id="igColors" class="ig-colors" role="radiogroup" aria-label="Colore del testo" hidden></div>
             <div class="field-label">Etichetta</div>
@@ -887,6 +888,13 @@
   </div>
 </div>
 <div id="modOv" class="mod-ov"><div id="modSh" class="mod-sh"></div></div>
+<!-- Storia IG: link, popup come quello del Modulo -->
+<div id="igLinkOv" class="mod-ov ig-pop"><div class="mod-sh">
+  <div class="mod-top"><button type="button" id="igLinkClear">Togli</button><b>Link</b><button type="button" id="igLinkDone">Fine</button></div>
+  <input id="igLinkText" class="field-input" maxlength="40" spellcheck="false" autocomplete="off" enterkeyhint="done"
+    placeholder="Cosa scriverai sul pulsante link">
+  <div class="hint">Sotto la notizia resta una striscia vuota lunga quanto il pulsante con questo testo: il pulsante lo metti dall'editor di Instagram. Vuoto: niente striscia.</div>
+</div></div>
 <div id="jrcOv" class="jrc-ov"><div id="jrcSh" class="jrc-sh" role="dialog" aria-modal="true" aria-label="Colore personalizzato">
   <div class="jrc-top"><b>Personalizzato</b><button id="jrcDone" type="button">Fine</button></div>
   <div class="jrc-sprev" aria-hidden="true"><div class="jrc-tile"></div></div>

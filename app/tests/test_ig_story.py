@@ -96,6 +96,26 @@ class RenderTests(unittest.TestCase):
         out = S.render(text='Notizia.', label='custom', label_text='Esclusiva', seed=2)
         self.assertEqual(Image.open(io.BytesIO(out)).size, (S.W, S.H))
 
+    def test_link_space_fits(self):
+        long = 'Notizia di prova molto lunga. ' * 16
+        for photo in (None, (1600, 1000), (800, 1200)):
+            for label in ('breaking', 'none'):
+                with self.subTest(photo=photo, label=label):
+                    if photo and S.side_plan(long, label, photo, 'Fonte', True):
+                        pass   # side_plan controlla da sé che tutto stia nella zona
+                    else:
+                        parts, lines, size, ph_h, y = S.layout(long, label, photo, 'Fonte', True)
+                        blocks = bool(parts) + bool(photo) + 1
+                        total = (S._label_height(parts) + S.text_height(lines, size) + ph_h
+                                 + S.GAP * (blocks - 1) + (S.TILT_PAD if parts and photo else 0))
+                        self.assertLessEqual(y + total + S.tail_height('Fonte', True), S.BOTTOM + 1)
+        self.assertEqual(S.link_width(''), S.LINK_W)
+        self.assertLess(S.link_width('Leggi'), S.link_width('Gli aggiornamenti e le novità'))
+        self.assertLessEqual(S.link_width('x' * 200), S.W - 80)
+        out = S.render(text='Notizia.', link=True, link_text='Articolo', source='Fonte',
+                       seed=4)
+        self.assertEqual(Image.open(io.BytesIO(out)).size, (S.W, S.H))
+
     def test_render_photo_only_without_label(self):
         out = S.render(photo=jpeg(800, 1200), label='none', seed=1)
         self.assertEqual(Image.open(io.BytesIO(out)).size, (S.W, S.H))
@@ -123,6 +143,13 @@ class PayloadTests(unittest.TestCase):
         data = self.parse(text='Ciao', label='custom', label_text=' 🔥 ')
         self.assertEqual(data['label'], 'none')
         self.assertNotIn('label_text', data)
+
+    def test_link_space(self):
+        self.assertNotIn('link', self.parse(text='Ciao'))
+        self.assertEqual(self.parse(text='Ciao', link=True)['link'], True)
+        self.assertNotIn('link_text', self.parse(text='Ciao', link=True, link_text=' 👇 '))
+        self.assertEqual(self.parse(text='Ciao', link=True, link_text=' Articolo  completo ')['link_text'],
+                         'Articolo completo')
 
     def test_empty(self):
         with self.assertRaises(ValueError):
