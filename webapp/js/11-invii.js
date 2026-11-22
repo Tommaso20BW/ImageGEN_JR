@@ -336,10 +336,12 @@ const cleanPhrase = v => String(v || '').replace(/\r/g, '').split('\n')
 
 /* ----- Storia IG: etichetta in alto ----- */
 // Stesse chiavi di graphics/ig_story.py (LABELS).
-const IG_LABELS = [['breaking','Breaking News'],['mercato','Calciomercato'],['ufficiale','Ufficiale'],['none','Nessuna']];
+// Nessuna scelta = nessun titolo; "Personalizzato" apre il campo per scriverlo.
+const IG_LABELS = [['breaking','Breaking News'],['mercato','Calciomercato'],['ufficiale','Ufficiale'],['custom','Personalizzato']];
 
 function setIgLabel(key) {
   igLabel = IG_LABELS.some(l => l[0] === key) ? key : '';
+  $('igLabelText').hidden = igLabel !== 'custom';
   $('igLabels').querySelectorAll('.ig-seg').forEach(b => {
     const on = b.dataset.l === igLabel;
     b.classList.toggle('selected', on);
@@ -348,7 +350,7 @@ function setIgLabel(key) {
 }
 
 // Selettore a segmenti come quelli di iOS: nomi corti, la grafica scrive quello completo.
-const IG_LABEL_SHORT = {breaking: 'Breaking', mercato: 'Mercato', ufficiale: 'Ufficiale', none: 'Nessuna'};
+const IG_LABEL_SHORT = {breaking: 'Breaking', mercato: 'Mercato', ufficiale: 'Ufficiale', custom: 'Personalizzato'};
 
 IG_LABELS.forEach(([key, name]) => {
   const b = document.createElement('button');
@@ -358,7 +360,12 @@ IG_LABELS.forEach(([key, name]) => {
   b.textContent = IG_LABEL_SHORT[key];
   b.setAttribute('role', 'radio');
   b.setAttribute('aria-label', name);
-  b.addEventListener('click', () => { haptic('select'); setIgLabel(key); });
+  // un secondo tocco su quello scelto lo toglie: nessun titolo
+  b.addEventListener('click', () => {
+    haptic('select');
+    setIgLabel(igLabel === key ? '' : key);
+    if (igLabel === 'custom' && !$('igLabelText').value.trim()) $('igLabelText').focus();
+  });
   $('igLabels').appendChild(b);
 });
 setIgLabel(igLabel);

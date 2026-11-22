@@ -42,9 +42,11 @@ function buildPayload(ghost=false) {
   if (kind === 'igbn') {
     const text = $('igText').value.trim();
     if (!text && !igb.id) throw new Error('Scrivi un testo o scegli una foto.');
-    if (!igLabel) throw new Error("Scegli l'etichetta.");
+    const labelText = $('igLabelText').value.trim();
+    if (igLabel === 'custom' && !labelText) throw new Error('Scrivi il titolo.');
     const source = $('igSource').value.trim();
-    return {v:1, action:'render', session, data:{kind:'igbn', text, color:igColor, label:igLabel, ...(source ? {source} : {}), ...(igb.id ? {photo_id:igb.id} : {})}};
+    return {v:1, action:'render', session, data:{kind:'igbn', text, color:igColor, label:igLabel || 'none',
+      ...(igLabel === 'custom' ? {label_text:labelText} : {}), ...(source ? {source} : {}), ...(igb.id ? {photo_id:igb.id} : {})}};
   }
   if (kind === 'conv') return convPayload();
   if (kind === 'table') {

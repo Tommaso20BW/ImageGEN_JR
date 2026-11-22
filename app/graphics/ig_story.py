@@ -78,8 +78,11 @@ LABELS = {
     'mercato': ('CALCIOMERCATO',),          # trattative e voci di mercato
     'ufficiale': ('UFFICIALE',),            # confermata dal club
     'none': (),
+    'custom': (),                           # titolo scritto a mano (label_text)
 }
 DEFAULT_LABEL = 'breaking'
+MAX_LABEL = 40                              # titolo personalizzato: lettere al massimo
+LABEL_PIECE = 14                            # e lettere al massimo per pezzo di carta
 
 TEXT_COLOR = '#1a1612'
 # Colori del testo scelti nella Mini App (tavolozza dei testi di Instagram). 'black' è quello di base.
@@ -111,6 +114,27 @@ def text_color(value):
 def label_key(value):
     """Chiave dell'etichetta valida (BREAKING NEWS se manca o non esiste)."""
     return value if value in LABELS else DEFAULT_LABEL
+
+
+def clean_label(value):
+    """Titolo personalizzato: senza emoji, su una riga, in maiuscolo, al massimo MAX_LABEL lettere."""
+    return ' '.join(tidy(value).split()).upper()[:MAX_LABEL].strip()
+
+
+def label_words(label, label_text=''):
+    """Parole dei pezzi di carta in alto. Il titolo personalizzato va a capo ogni LABEL_PIECE lettere
+    circa, senza spezzare le parole."""
+    if isinstance(label, tuple):
+        return label
+    if label != 'custom':
+        return LABELS[label_key(label)]
+    pieces = []
+    for w in clean_label(label_text).split():
+        if pieces and len(pieces[-1]) + 1 + len(w) <= LABEL_PIECE:
+            pieces[-1] += ' ' + w
+        else:
+            pieces.append(w)
+    return tuple(pieces)
 
 
 # Firma da togliere (con l'eventuale manina davanti) e emoji: pittogrammi, simboli, bandiere, ZWJ,
@@ -226,10 +250,12 @@ LABEL_STEP = 150    # ogni pezzo sotto sporge di tanto a destra rispetto a quell
 def _label_words(words, size):
     """Parole dell'etichetta, una per pezzo di carta, uno sotto l'altro."""
     out = []
+    # i pezzi sono sfalsati di LABEL_STEP: con più pezzi ognuno si stringe, così il gruppo resta nel foglio
+    limit = min(900, W - 100 - 2 * LABEL_PAD - LABEL_STEP * max(len(words) - 1, 0))
     for w in words:
         t = cp._word(w, size, ANTON, 5)
-        if t.width > 900:
-            t = t.resize((900, max(1, int(t.height * 900 / t.width))), Image.LANCZOS)
+        if t.width > limit:
+            t = t.resize((limit, max(1, int(t.height * limit / t.width))), Image.LANCZOS)
         out.append(t)
     return out
 
@@ -255,7 +281,7 @@ def source_height(source):
 def layout(text, label, photo_size=None, source=''):
     """Misure della colonna: (parole etichetta, righe del testo, grandezza, altezza foto, y di partenza).
     photo_size = (larghezza, altezza) della foto o None. source: fonte (blocco nero sotto il testo)."""
-    parts = _label_words(LABELS[label_key(label)], 150 if photo_size else 200)
+    parts = _label_words(label_words(label), 150 if photo_size else 200)
     room = BOTTOM - TOP - source_height(source)
     lab_h = _label_height(parts)
     gaps = GAP * max(bool(parts) + bool(photo_size) + bool(text) - 1, 0) + (TILT_PAD if parts and photo_size else 0)
@@ -294,7 +320,7 @@ def is_side(text, photo_size):
 def side_layout(text, label, photo_size, source=''):
     """Foto a sinistra e testo a destra: (parole etichetta, righe, grandezza, larghezza e altezza foto,
     altezza del blocco, y di partenza). La foto non si ritaglia: se serve si rimpicciolisce tutta."""
-    parts = _label_words(LABELS[label_key(label)], 150)
+    parts = _label_words(label_words(label), 150)
     lab_h = _label_height(parts)
     room = BOTTOM - TOP - source_height(source) - lab_h - (GAP + TILT_PAD if parts else 0)
     ar = photo_size[1] / photo_size[0]
@@ -477,7 +503,7 @@ def _tilt(rng, lo, hi):
 
 
 # ---------------------------------------------------------------- grafica
-def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None, source=''):
+def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None, source='', label_text=''):
     text, found = split_source(text)
     text = clean_text(text)
     source = clean_source(source or found)
@@ -491,6 +517,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     if seed is None:
         seed = int(np.random.default_rng().integers(1 << 30))
     rng = np.random.default_rng(seed)
+    label = label_words(label, label_text)
     side = is_side(text, psize)
     if side:
         parts, lines, size, side_pw, ph_h, side_h, y = side_layout(text, label, psize, source)

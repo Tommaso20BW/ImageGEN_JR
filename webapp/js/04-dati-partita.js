@@ -98,7 +98,7 @@ function validateCurrent() {
   if (step === 'igcontent') {
     if (igb.uploading) { showError('Attendi il caricamento della foto.'); return false; }
     if (!$('igText').value.trim() && !igb.id) { showError('Scrivi un testo o scegli una foto.'); return false; }
-    if (!igLabel) { showError("Scegli l'etichetta."); return false; }
+    if (igLabel === 'custom' && !$('igLabelText').value.trim()) { showError('Scrivi il titolo.'); return false; }
   }
 
   if (step === 'calmonth') {

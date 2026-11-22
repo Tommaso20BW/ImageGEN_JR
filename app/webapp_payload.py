@@ -355,6 +355,12 @@ def _build_state(envelope, catalog, now, expected_session):
         # seed: gli angoli delle strisce cambiano a ogni grafica, ma la stessa grafica rifatta resta uguale
         data = {'kind': 'igbn', 'text': text, 'color': ig_story.text_color(incoming.get('color')),
                 'label': ig_story.label_key(incoming.get('label')), 'seed': random.randrange(1 << 30)}
+        if data['label'] == 'custom':
+            # titolo scritto a mano: se resta vuoto (solo emoji o spazi) niente titolo
+            data['label_text'] = ig_story.clean_label(incoming.get('label_text'))
+            if not data['label_text']:
+                data['label'] = 'none'
+                del data['label_text']
         if source:
             data['source'] = source
         if photo_id:

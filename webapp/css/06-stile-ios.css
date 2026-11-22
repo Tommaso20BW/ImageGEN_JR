@@ -435,6 +435,9 @@ html[data-theme="dark"] .jrc-seg button.on{background:#636366}
 /* selettore a segmenti stile iOS: quello scelto è bianco in rilievo */
 .ig-seg{flex:1;min-width:0;height:34px;padding:0 2px;border:0;border-radius:8px;background:none;color:var(--text);
   font:inherit;font-size:13.5px;font-weight:500;white-space:nowrap;cursor:pointer;transition:background .15s,box-shadow .15s}
+.ig-seg[data-l="custom"]{flex:1.45}
+.ig-label-text{margin:-6px 0 16px;text-transform:uppercase}
+.ig-label-text[hidden]{display:none}
 .ig-seg.selected{background:var(--surface);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
 .ig-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .ig-tiles + .ig-tiles{margin-top:10px}

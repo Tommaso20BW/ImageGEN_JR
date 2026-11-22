@@ -88,6 +88,14 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(one, S.render(text='Notizia di prova.', label='breaking', seed=3))
         self.assertNotEqual(one, S.render(text='Notizia di prova.', label='breaking', seed=4))
 
+    def test_custom_label_pieces(self):
+        self.assertEqual(S.label_words('custom', 'accordo raggiunto con il club'),
+                         ('ACCORDO', 'RAGGIUNTO CON', 'IL CLUB'))
+        self.assertEqual(S.label_words('custom', ''), ())
+        self.assertEqual(S.label_words('mercato', 'boh'), ('CALCIOMERCATO',))
+        out = S.render(text='Notizia.', label='custom', label_text='Esclusiva', seed=2)
+        self.assertEqual(Image.open(io.BytesIO(out)).size, (S.W, S.H))
+
     def test_render_photo_only_without_label(self):
         out = S.render(photo=jpeg(800, 1200), label='none', seed=1)
         self.assertEqual(Image.open(io.BytesIO(out)).size, (S.W, S.H))
@@ -108,6 +116,13 @@ class PayloadTests(unittest.TestCase):
         self.assertIsInstance(data['seed'], int)
         self.assertEqual(self.parse(text='Ciao', label='???')['label'], 'breaking')
         self.assertEqual(self.parse(text='Ciao')['label'], 'breaking')
+
+    def test_custom_label(self):
+        data = self.parse(text='Ciao', label='custom', label_text='  esclusiva 🔥 jr ')
+        self.assertEqual((data['label'], data['label_text']), ('custom', 'ESCLUSIVA JR'))
+        data = self.parse(text='Ciao', label='custom', label_text=' 🔥 ')
+        self.assertEqual(data['label'], 'none')
+        self.assertNotIn('label_text', data)
 
     def test_empty(self):
         with self.assertRaises(ValueError):
