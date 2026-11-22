@@ -472,10 +472,25 @@ def story_jr_alpha():
         return a.crop(a.getbbox())
 
 
-@lru_cache(maxsize=1)
-def story_jr_stamp_alpha():
+# Timbro chiaro (bianco su blu, rosso, blu notte): sbiadito e consumato si perdeva nello sfondo,
+# quindi inchiostro pieno e consumato poco. Il timbro scuro su carta resta sbiadito.
+STAMP_DARK = (.78, .55)     # forza dell'inchiostro, quanto è consumato
+STAMP_LIGHT = (1.0, .3)
+
+
+def _light(color):
+    """Colore chiaro? (r, g, b) o '#rrggbb'."""
+    if isinstance(color, str):
+        h = color.lstrip('#')
+        color = tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) if len(h) == 6 else (0, 0, 0)
+    return sum(color[:3]) > 3 * 160
+
+
+@lru_cache(maxsize=2)
+def story_jr_stamp_alpha(light=False):
     """Logo JR a timbro come nelle Storie IG normali (ig_story._logo_stamp): bordo morbido,
-    inchiostro sbiadito (78%) e consumato a chiazze. Misura del logo su una storia 1080x1920."""
+    inchiostro sbiadito (78%) e consumato a chiazze; chiaro: pieno e consumato poco.
+    Misura del logo su una storia 1080x1920."""
     import numpy as np
     from PIL import Image, ImageFilter
     from graphics import compleanno as cp
@@ -484,15 +499,16 @@ def story_jr_stamp_alpha():
     w = round(a.width * h / a.height)
     m = np.asarray(a.resize((w, h), Image.LANCZOS).filter(ImageFilter.GaussianBlur(.6)), np.float32) / 255
     x, y = (1080 - w) // 2, STORY_JR_TOP
-    m *= cp._ink_breakup((1080, STORY_H), 11, .55)[y:y + h, x:x + w] * .78
+    strength, wear = STAMP_LIGHT if light else STAMP_DARK
+    m *= cp._ink_breakup((1080, STORY_H), 11, wear)[y:y + h, x:x + w] * strength
     return Image.fromarray(np.uint8(np.clip(m, 0, 1) * 255 + .5))
 
 
-@lru_cache(maxsize=1)
-def _story_jr_mask_uri():
+@lru_cache(maxsize=2)
+def _story_jr_mask_uri(light=False):
     import io
     from PIL import Image
-    a = story_jr_stamp_alpha()
+    a = story_jr_stamp_alpha(light)
     img = Image.new('RGBA', a.size, (255, 255, 255, 255))
     img.putalpha(a)
     buf = io.BytesIO()
@@ -507,14 +523,14 @@ def story_jr_html(color, page_w=DESIGN_W, page_h=STORY_H):
     w = a.width * h / a.height
     return (f'<div style="position:absolute;left:{(page_w - w) / 2}px;top:{STORY_JR_TOP * page_h / STORY_H}px;'
             f'width:{w}px;height:{h}px;background:{color};z-index:9;'
-            f'-webkit-mask:url({_story_jr_mask_uri()}) center/100% 100% no-repeat;'
-            f'mask:url({_story_jr_mask_uri()}) center/100% 100% no-repeat"></div>')
+            f'-webkit-mask:url({_story_jr_mask_uri(_light(color))}) center/100% 100% no-repeat;'
+            f'mask:url({_story_jr_mask_uri(_light(color))}) center/100% 100% no-repeat"></div>')
 
 
 def story_jr_paste(img, color):
     """Logo JR della storia su un'immagine PIL 9:16 (qualsiasi misura), colore (r, g, b)."""
     from PIL import Image
-    a = story_jr_stamp_alpha()
+    a = story_jr_stamp_alpha(_light(color))
     h = round(STORY_JR_H * img.height / STORY_H)
     w = round(a.width * h / a.height)
     mask = a.resize((w, h), Image.LANCZOS)
