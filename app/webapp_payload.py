@@ -697,13 +697,22 @@ def _build_state(envelope, catalog, now, expected_session):
     }
 
 
+# Grafiche in due formati: 3:4 e storia IG (9:16). "story": true chiede la storia.
+STORY_KINDS = ('bday', 'bdold', 'xi', 'pxi', 'squad', 'table')
+
+
 def parse_webapp_request(envelope, catalog, now, expected_session):
-    return _build_state(
+    state = _build_state(
         envelope,
         catalog,
         now,
         expected_session,
     )
+    data = state['data']
+    if (data.get('kind') in STORY_KINDS and data.get('team') != 'italy'
+            and envelope['data'].get('story') is True):
+        data['story'] = True
+    return state
 
 
 def parse_webapp_envelope(state, envelope, catalog, now, expected_session):

@@ -9,7 +9,9 @@ import unicodedata
 from functools import lru_cache
 from pathlib import Path
 
-from graphics.common import logo_fill, DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, render_html, team_logo
+from graphics.common import (logo_fill, DESIGN_H, DESIGN_W, OUT_H, OUT_W, STORY_H, STORY_OUT_H, STORY_SAFE_BOTTOM,
+                             STORY_JR_CUT, STORY_SAFE_TOP, asset_dir, data_uri, esc, render_html, story_bg, story_file,
+                             story_jr_html, team_logo)
 
 from graphics.uefa import ALL as KITS, base_kit, is_theme, meta_for, probabili_bg
 # Foto della testa per maglia: (suffisso giocatori, maglia portiere).
@@ -198,7 +200,63 @@ def check_layout(module):
     return clashes
 
 
-def build_html(*, kit, module, players, shirt=None, home_name, home_id, away_name, away_id, layout=None, **_):
+# Storia IG (1080x1920): loghi delle squadre subito sotto la zona alta di Instagram, poi il titolo,
+# campo allungato in verticale fino al logo JR in basso. Le card non si deformano: cambia solo
+# dove stanno in altezza (e sono un po' più grandi).
+STORY_TITLE = 186                  # fine della fascia del titolo nel 3:4
+STORY_FIELD_END = 1320             # fondo del campo (col rilievo) nel 3:4
+STORY_LOGO_ROW = 110               # storia: loghi delle squadre in alto, sopra il titolo (alti 95)
+STORY_TITLE_TOP = STORY_SAFE_TOP + STORY_LOGO_ROW
+STORY_FIELD_TOP = STORY_TITLE_TOP + STORY_TITLE
+STORY_K = (STORY_SAFE_BOTTOM - 10 - STORY_FIELD_TOP) / (STORY_FIELD_END - STORY_TITLE)
+STORY_BIG = 1.06
+
+
+def story_y(y):
+    """Altezza nel 3:4 -> altezza nella storia."""
+    if y <= STORY_TITLE:
+        return y + STORY_TITLE_TOP
+    if y <= STORY_FIELD_END:
+        return STORY_FIELD_TOP + (y - STORY_TITLE) * STORY_K
+    return STORY_FIELD_TOP + (STORY_FIELD_END - STORY_TITLE) * STORY_K + (y - STORY_FIELD_END)
+
+
+@lru_cache(maxsize=6)
+def story_field_bg(bg_path, kit):
+    """Sfondo storia: sfondo 9:16 di Meta AI (canva/story/bg_<maglia>.jpg) con sopra titolo, JR
+    e campo del 3:4 (maschera del campo), il campo allungato in verticale. Data uri JPEG."""
+    import base64
+    import io
+
+    import numpy as np
+    from PIL import Image, ImageOps
+    from graphics.uefa import _pitch_mask
+
+    ready = story_file(f'bg_{kit}')
+    if ready is None:
+        return story_bg(bg_path)
+    page = ImageOps.fit(Image.open(ready).convert('RGB'), (OUT_W, STORY_OUT_H), Image.LANCZOS)
+    src = Image.open(bg_path).convert('RGB').resize((OUT_W, OUT_H), Image.LANCZOS)
+    mask = _pitch_mask()
+    if not isinstance(mask, Image.Image):
+        mask = Image.fromarray(np.clip(np.asarray(mask, dtype=np.float32) * 255 + .5, 0, 255).astype('uint8'))
+    f = OUT_W / DESIGN_W
+    title, end = round(STORY_TITLE * f), round(STORY_FIELD_END * f)
+    # titolo senza il JR in alto a destra: nella storia il logo sta in basso (story_jr_html)
+    title_mask = mask.crop((0, 0, OUT_W, title))
+    title_mask.paste(0, (round(OUT_W * STORY_JR_CUT), 0, OUT_W, title))
+    page.paste(src.crop((0, 0, OUT_W, title)), (0, round(STORY_TITLE_TOP * f)), title_mask)
+    h = round((end - title) * STORY_K)
+    field = src.crop((0, title, OUT_W, end)).resize((OUT_W, h), Image.LANCZOS)
+    field_mask = mask.crop((0, title, OUT_W, end)).resize((OUT_W, h), Image.LANCZOS)
+    page.paste(field, (0, round(STORY_FIELD_TOP * f)), field_mask)
+    buf = io.BytesIO()
+    page.save(buf, 'JPEG', quality=95, subsampling=0)
+    return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
+
+
+def build_html(*, kit, module, players, shirt=None, home_name, home_id, away_name, away_id, layout=None, story=False, **_):
+    """story=True: storia IG 9:16 (campo allungato fra le zone di Instagram, vedi story_y)."""
     if kit not in KITS:
         raise ValueError('Maglia non valida.')
     import layouts
@@ -218,13 +276,18 @@ def build_html(*, kit, module, players, shirt=None, home_name, home_id, away_nam
         import layouts
         layout = layouts.get(module)
     s = layout['scale']
+    placed = place_cards(layout['cards'], s * STORY_BIG if story else s)
+    if story:
+        s *= STORY_BIG
+        placed = [(cx, story_y(top)) for cx, top in placed]
+    page_h = STORY_H if story else DESIGN_H
     k = meta['head_rect'][2] * s / (HEAD_CROP[2] - HEAD_CROP[0])
 
     # Amichevoli: solo i nomi, senza foto dei giocatori e senza lastre sfumate (effetto luce).
     names_only = kit == 'friendly'
     cards, labels, names = [], [], []   # lastre+teste sotto, blocchi coi nomi sempre sopra
     shown = label_names(players)
-    for i, ((cx, top), player) in enumerate(zip(place_cards(layout['cards'], s), players)):
+    for i, ((cx, top), player) in enumerate(zip(placed, players)):
         if names_only:
             # Niente foto sopra il nome: l'etichetta sale al centro dello spazio della card,
             # dove starebbe il giocatore (le posizioni salvate restano quelle di sempre).
@@ -255,22 +318,27 @@ def build_html(*, kit, module, players, shirt=None, home_name, home_id, away_nam
     logos = ''.join(
         f'<div class="logo" style="left:{x}px;top:{y}px;width:{size}px;height:{size}px;background:{logo_fill(meta, kit, text.get('texture'))};'
         f'--m:url({data_uri(team_logo(name, team_id))})"></div>'
-        for (x, y, size), (name, team_id) in zip(meta['logos'], ((home_name, home_id), (away_name, away_id)))
+        for (x, y, size), (name, team_id) in zip(
+            [(x, STORY_SAFE_TOP + 5, size) for x, y, size in meta['logos']] if story else meta['logos'], ((home_name, home_id), (away_name, away_id)))
     )
     poppins = data_uri(asset_dir() / 'fonts' / 'Poppins-Medium.ttf')
+    bg = story_field_bg(str(canva / meta['bg']), kit) if story else data_uri(canva / meta['bg'])
+    bg = f'<img class="abs" src="{bg}" style="left:0;top:0;width:{DESIGN_W}px;height:{page_h}px">'
+    body = (f'{bg}{"".join(cards)}{"".join(labels)}{logos}'
+            f'<svg width="{DESIGN_W}" height="{page_h}" viewBox="0 0 {DESIGN_W} {page_h}">{"".join(names)}</svg>')
+    if story:
+        body += story_jr_html(meta.get('logo_color') or '#121212')
 
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#fff}}
+html,body{{width:{DESIGN_W}px;height:{page_h}px;overflow:hidden;background:#fff}}
 .abs{{position:absolute}}
 .head{{position:absolute;overflow:hidden}} .head img{{position:absolute}}
 .logo{{position:absolute;-webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}}
 @font-face{{font-family:'Poppins';font-weight:500;src:url({poppins})}}
 svg{{position:absolute;left:0;top:0}}
 </style></head><body>
-<img class="abs" src="{data_uri(canva / meta['bg'])}" style="left:0;top:0;width:{DESIGN_W}px;height:{DESIGN_H}px">
-{''.join(cards)}{''.join(labels)}{logos}
-<svg width="{DESIGN_W}" height="{DESIGN_H}" viewBox="0 0 {DESIGN_W} {DESIGN_H}">{''.join(names)}</svg>
+{body}
 <script>
 // Nomi lunghi: si stringono per restare dentro l'etichetta.
 document.fonts.ready.then(() => document.querySelectorAll('text[data-fit]').forEach(t => {{
@@ -282,4 +350,4 @@ document.fonts.ready.then(() => document.querySelectorAll('text[data-fit]').forE
 
 
 def render(**kwargs):
-    return render_html(build_html(**kwargs))
+    return render_html(build_html(**kwargs), page=(DESIGN_W, STORY_H) if kwargs.get('story') else None)

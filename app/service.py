@@ -23,7 +23,7 @@ from catalog import Catalog
 from logo_bundle import build_team_bundle
 from render import Renderer
 from telegram import DeliveryUncertain, NotSent, Telegram, TelegramError
-from webapp_payload import parse_webapp_request
+from webapp_payload import STORY_KINDS, parse_webapp_request
 from graphics.common import overlay_preview
 from graphics.starting_xi import MAX_PHOTO_BYTES, check_photo
 
@@ -538,6 +538,7 @@ class Service:
         self.operation_lock = threading.Lock()
         self.preview_cache_lock = threading.Lock()
         self.preview_cache = None
+        self.preview_cache_prev = None     # quella prima: 3:4 e storia restano pronte tutte e due
         # Passo reale del render in corso, letto dalla Mini App tramite GET /progress.
         self.progress_stage = 'idle'
         # Foto caricate dalla Mini App (solo in memoria, per questa sessione).
@@ -908,12 +909,24 @@ class Service:
         """La classifica scade presto (cambia live); le altre grafiche no."""
         return data.get('kind') != 'table' or time.time() - cached.get('updated', 0) <= max_age
 
+    def _cache_get(self, fingerprint):
+        """Anteprima in memoria con questa impronta (le ultime due: 3:4 e storia), altrimenti l'ultima."""
+        for cached in (self.preview_cache, self.preview_cache_prev):
+            if cached and cached.get('fingerprint') == fingerprint:
+                return cached
+        return self.preview_cache
+
+    def _cache_put(self, entry):
+        if self.preview_cache and self.preview_cache.get('fingerprint') != entry['fingerprint']:
+            self.preview_cache_prev = self.preview_cache
+        self.preview_cache = entry
+
     def _render_and_cache(self, request_state, *, force=False):
         data = copy.deepcopy(request_state['data'])
         fingerprint = self._fingerprint(data)
 
         with self.preview_cache_lock:
-            cached = self.preview_cache
+            cached = self._cache_get(fingerprint)
             if (
                 not force
                 and cached
@@ -929,14 +942,14 @@ class Service:
         png = self.renderer.render(data, progress=self._set_stage)
 
         with self.preview_cache_lock:
-            self.preview_cache = {
+            self._cache_put({
                 'fingerprint': fingerprint,
                 'request_id': request_state['id'],
                 'data': data,
                 'png': png,
                 'updated': time.time(),
                 'fast_cutout': self.renderer.used_fast_cutout,
-            }
+            })
 
         return png, request_state['id']
 
@@ -956,14 +969,15 @@ class Service:
             self.operation_lock.release()
 
     def save_file(self, envelope):
-        """Storia IG al posto dell'invio sul canale: la grafica intera resta qui sotto un codice a caso
-        e la Mini App la fa scaricare a Telegram nella galleria del telefono."""
+        """Storia IG (anche la versione 9:16 delle grafiche doppie) al posto dell'invio sul canale: la grafica
+        intera resta qui sotto un codice a caso e la Mini App la fa scaricare a Telegram nella galleria del telefono."""
         if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
             raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
         try:
             request_state = self._parse_request(envelope)
-            if request_state['data'].get('kind') != 'igbn':
-                raise ValueError('Si salva nel telefono solo la storia Instagram.')
+            data = request_state['data']
+            if data.get('kind') != 'igbn' and not (data.get('story') and data.get('kind') in STORY_KINDS):
+                raise ValueError('Si salvano nel telefono solo le storie Instagram.')
             png, _ = self._render_and_cache(request_state)
         finally:
             self._set_stage('idle')
@@ -1195,6 +1209,23 @@ class Service:
         return self.preview_jpeg_cache['jpeg']
 
     def submit(self, envelope):
+        """Invio. Grafiche in due formati (3:4 e storia IG): "formats" dice quali mandare
+        (una o tutte e due, una foto per formato); senza, quella della richiesta."""
+        formats = (envelope.get('data') or {}).get('formats') if isinstance(envelope, dict) else None
+        if not isinstance(formats, list):
+            return self._submit_one(envelope)
+        formats = [f for f in ('34', 'story') if f in formats]
+        if not formats:
+            raise ValueError('Scegli quale versione inviare.')
+        ids = []
+        for fmt in formats:
+            one = copy.deepcopy(envelope)
+            one['data'].pop('formats', None)
+            one['data']['story'] = fmt == 'story'
+            ids.append(self._submit_one(one))
+        return ids[0]
+
+    def _submit_one(self, envelope):
         # Un nuovo tentativo della Mini App (rete instabile) aspetta il primo invece di fallire.
         asked = time.time()
         if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
@@ -1214,7 +1245,7 @@ class Service:
                 return sent[0]
 
             with self.preview_cache_lock:
-                cached = self.preview_cache
+                cached = self._cache_get(fingerprint)
                 if (
                     cached
                     and cached.get('fingerprint') == fingerprint
@@ -1235,13 +1266,13 @@ class Service:
                 log.info('INVIO', f"{log.graphic_name(data)}: {reason}")
                 png = self.renderer.render(data)
                 with self.preview_cache_lock:
-                    self.preview_cache = {
+                    self._cache_put({
                         'fingerprint': fingerprint,
                         'request_id': request_state['id'],
                         'data': data,
                         'png': png,
                         'updated': time.time(),
-                    }
+                    })
             else:
                 log.info('INVIO', f"{log.graphic_name(data)}: uso l'anteprima già pronta")
 
@@ -1254,7 +1285,8 @@ class Service:
                     return sent[0]
 
             sending = time.time()
-            text = caption.safe_build(data)
+            # La storia IG arriva senza testo: la didascalia resta solo sul post 3:4.
+            text = None if data.get('story') else caption.safe_build(data)
             message_id = self._send_photo(png, f"{data['kind']}-{request_state['id']}.png",
                                           log.graphic_name(data), text)
             self.generated_message_ids.append(int(message_id))
@@ -2008,7 +2040,7 @@ def _warm_up_renderer():
         log.warn('AVVIO', f'Font della classifica non preparati: {type(exc).__name__}: {exc}')
     try:
         from graphics.squad_list import warm_up as squad_warm_up
-        squad_warm_up()          # geometria della foto della rivista (circa 30 s, una volta sola)
+        squad_warm_up()          # geometria della foto della rivista, 3:4 e storia (circa 1 minuto, una volta sola)
         log.info('AVVIO', 'Squad List pronta')
     except Exception as exc:  # noqa: BLE001 - si calcola alla prima Squad List
         log.warn('AVVIO', f'Squad List non preparata: {type(exc).__name__}: {exc}')

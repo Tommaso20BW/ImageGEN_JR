@@ -13,6 +13,7 @@ import base64
 import io
 import json
 import re
+import threading
 import unicodedata
 from datetime import date
 from functools import lru_cache
@@ -23,6 +24,14 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from graphics.common import asset_dir
 
 W, H = 1500, 2000
+BASE_H = 2000                     # pagina 3:4
+STORY_H = round(W * 16 / 9)       # storia IG 9:16: stessa grafica, carta più alta
+TOP = 0                           # di quanto scendono data, titolo e JR (storia: sotto la zona alta di IG)
+PLAYER_SCALE = 1.0                # storia: giocatore più grande, riempie l'altezza
+# Storia IG 9:16: data subito sotto la zona alta di Instagram (~14%), striscia del nome sopra
+# il logo JR (in basso come nelle Storie IG), giocatore ingrandito nel mezzo.
+STORY_TOP, STORY_STRIP_Y, STORY_FOOT, STORY_PLAYER = 205, 2090, 2185, 1.15
+_PAGE_LOCK = threading.Lock()     # H, TOP e le misure legate cambiano durante il render della storia
 M = 80
 ANTON = 'Anton-Regular.ttf'
 MONO = 'SpecialElite-Regular.ttf'
@@ -422,7 +431,7 @@ def _player_layers(path, frame=None):
     else:
         with Image.open(path) as im:
             p, base = im.convert('RGBA'), base_height(path.name)
-    height = max(50, int(base * frame['zoom']))
+    height = max(50, int(base * frame['zoom'] * PLAYER_SCALE))
     p = p.crop(p.getbbox())
     p = p.resize((max(1, int(p.width * height / p.height)), height), Image.LANCZOS)
     alpha, lum = _mask(), np.ones((H, W), np.float32)
@@ -430,7 +439,7 @@ def _player_layers(path, frame=None):
     g = np.clip((np.asarray(p.convert('L'), np.float32) / 255 - 0.5) * 1.5 + 0.55, 0, 1)
     h, w = a.shape
     x = int(PLAYER_CX + frame['x'] * W - w / 2)
-    y = int(PLAYER_FOOT + frame['y'] * H - h)
+    y = int(PLAYER_FOOT + frame['y'] * BASE_H - h)
     x0, y0, x1, y1 = max(x, 0), max(y, 0), min(x + w, W), min(y + h, H)
     alpha[y0:y1, x0:x1] = a[y0 - y:y1 - y, x0 - x:x1 - x]
     lum[y0:y1, x0:x1] = g[y0 - y:y1 - y, x0 - x:x1 - x]
@@ -534,14 +543,30 @@ def _jr_logo():
     """Logo JR nero in alto a destra: overlay 3:4 della FOTO + JR, portato a 1500x2000."""
     from graphics.photo_jr import _meta
     with Image.open(asset_dir() / 'canva' / _meta()['black']['overlay']) as im:
-        lg = np.asarray(im.convert('RGBA').resize((W, H), Image.LANCZOS), np.float32) / 255
-    return lg
+        lg = np.asarray(im.convert('RGBA').resize((W, BASE_H), Image.LANCZOS), np.float32) / 255
+    out = np.zeros((H, W, 4), np.float32)
+    out[TOP:TOP + BASE_H] = lg
+    return out
 
 
 # ---------------------------------------------------------------- grafica
-def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False, person=None):
+def render(*, story=False, **kwargs):
     """ghost=True: poster senza giocatore (sfondo dell'editor dove lo si sposta e zooma).
-    person = foto scontornata (byte o PIL) di un giocatore aggiunto a mano, al posto di photo."""
+    person = foto scontornata (byte o PIL) di un giocatore aggiunto a mano, al posto di photo.
+    story=True: storia IG 9:16 (1500x2667): stessa carta, data e titolo in alto, nome in basso
+    fuori dalle zone di Instagram, giocatore più grande."""
+    global H, TOP, PLAYER_FOOT, STRIP_Y, PLAYER_SCALE
+    with _PAGE_LOCK:
+        if story:
+            H, TOP, STRIP_Y, PLAYER_FOOT, PLAYER_SCALE = STORY_H, STORY_TOP, STORY_STRIP_Y, STORY_FOOT, STORY_PLAYER
+        try:
+            return _render(**kwargs)
+        finally:
+            H, TOP, PLAYER_SCALE = BASE_H, 0, 1.0
+            PLAYER_FOOT, STRIP_Y = BASE_H - 110, BASE_H - 205
+
+
+def _render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False, person=None):
     name = clean_name(name)
     born = parse_birth(birth)
     if not name:
@@ -561,7 +586,7 @@ def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False
     black, gold = _mask(), _mask()
 
     # riga alta: data ed età centrate, linea a tutta larghezza
-    y = 95
+    y = 95 + TOP
     _put(black, _word(f'{born:%d.%m.%Y}   •   {age} YEARS OLD', 34, MONO, 6), (W / 2, y), 'mm')
     black[y + 32:y + 35, M:W - M] = 1
 
@@ -569,8 +594,8 @@ def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False
     title = _mask()
     h1 = _fit_w(_word('HAPPY', 600, tracking=4), W - 2 * M)
     h2 = _fit_w(_word('BIRTHDAY', 600, tracking=2), W - 2 * M)
-    _put(title, h1, (W / 2, 160), 'mt')
-    _put(title, h2, (W / 2, 160 + h1.height + 18), 'mt')
+    _put(title, h1, (W / 2, 160 + TOP), 'mt')
+    _put(title, h2, (W / 2, 160 + TOP + h1.height + 18), 'mt')
 
     # giocatore ritagliato a forbici: il ritaglio finisce sotto la striscia del nome, lungo il suo
     # bordo alto (anche oltre le estremità della striscia: niente carta che sbuca di lato)
@@ -599,10 +624,14 @@ def render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False
     img = _print(paper, [(gold, GOLD), (black, INK)], seed=11)
     img = img * (1 - 0.42 * np.minimum(np.maximum(sh * (1 - lab), lsh), 1.3))[..., None]
     img = _finish(img, light)
-    lg = _jr_logo()
-    img = img * (1 - lg[..., 3:4]) + lg[..., :3] * lg[..., 3:4]
+    if H == BASE_H:
+        lg = _jr_logo()
+        img = img * (1 - lg[..., 3:4]) + lg[..., :3] * lg[..., 3:4]
 
     out = Image.fromarray(np.uint8(np.clip(img, 0, 1) * 255 + 0.5))
+    if H != BASE_H:          # storia: logo JR in basso, dove sta il timbro delle Storie IG
+        from graphics.common import story_jr_paste
+        story_jr_paste(out, tuple(int(c * 255) for c in INK))
     buf = io.BytesIO()
     out.save(buf, 'PNG')
     return buf.getvalue()

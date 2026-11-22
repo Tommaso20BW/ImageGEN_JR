@@ -7,6 +7,21 @@
   box-shadow:var(--preview-shadow);
 }
 .note{color:var(--muted);font-size:12.5px;text-align:center}
+/* Due versioni (3:4 e storia IG): stessa altezza, si tocca quella da inviare (anche tutte e due);
+   appena se ne sceglie una, quella non scelta diventa grigia. */
+.pv-dual{display:flex;gap:12px;justify-content:center;align-items:flex-start;width:100%}
+.pv-dual[hidden]{display:none}
+.pv{position:relative;display:grid;gap:8px;justify-items:center;padding:0;border:0;background:none;color:var(--text);
+  font:inherit;cursor:pointer;transition:filter .25s ease,opacity .25s ease,transform .18s var(--spring)}
+.pv img{display:block;height:min(56vh,calc((100vw - 56px) / 1.3125),540px);width:auto;border-radius:12px;
+  border:1px solid var(--line);background:var(--surface);box-shadow:var(--preview-shadow);
+  outline:3px solid transparent;outline-offset:3px;transition:outline-color .2s ease}
+.pv-lab{font-size:13px;font-weight:700}
+.pv.on img{outline-color:var(--accent)}
+.pv.on::after{content:'\2713';position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:15px;font-weight:800;display:grid;place-items:center}
+.pv-dual.picked .pv:not(.on){filter:grayscale(1);opacity:.45}
+.pv:active{transform:scale(.98)}
 
 /* Bottom bar */
 .bar{

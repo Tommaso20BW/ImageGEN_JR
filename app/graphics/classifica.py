@@ -22,6 +22,42 @@ from graphics.common import asset_dir, render_html
 
 TEMPLATE = Path(__file__).resolve().parent.parent / 'data' / 'classifica' / 'template.html'
 PAGE = (900, 1200)
+# Storia IG: pagina 900x1600 (uscita 1920x3413). Intestazione sotto la zona alta di Instagram
+# (~160 px), legenda sopra il logo JR (in basso come nelle Storie IG); le righe si allungano e il testo cresce.
+STORY_PAGE = (900, 1600)
+STORY_PAD_TOP, STORY_PAD_BOTTOM = 160, 240
+# Sfondi UEFA 9:16 fatti con Meta AI (canva/story/cl_<coppa>.jpg).
+STORY_BG = {'UCL': ('cl_ucl', '#050f61'), 'UEL': ('cl_uel', '#ff6900'), 'UECL': ('cl_uecl', '#00c91a')}
+
+
+def story_backgrounds(prefix):
+    """CSS degli sfondi UEFA per la storia (body.<prefix>UCL ...), se gli sfondi 9:16 ci sono."""
+    from graphics.common import story_file
+    css = []
+    for comp, (name, color) in STORY_BG.items():
+        path = story_file(name)
+        if path:
+            css.append(f'html.story body.{prefix}{comp}{{background:{color} url("{_data_uri(path, "image/jpeg")}") '
+                       f'center / cover no-repeat;}}')
+    return '\n'.join(css)
+
+
+def story_html(html, css):
+    """Pagina in versione storia: classe "story" su <html> e regole in più."""
+    html = html.replace('<html lang="it">', '<html lang="it" class="story">', 1)
+    return html.replace('</head>', f'<style>\n{css}\n</style>\n</head>', 1)
+
+
+STORY_CSS = f'''html.story,html.story body{{height:{STORY_PAGE[1]}px;}}
+html.story{{font-size:17.5px;}}
+html.story body{{box-sizing:border-box;padding-bottom:{STORY_PAD_BOTTOM}px;}}
+html.story .header{{height:calc(var(--head-h) + {STORY_PAD_TOP}px);padding-top:{STORY_PAD_TOP + 13}px;}}
+html.story body.comp-SA{{padding-bottom:0;}}
+html.story body.comp-SA .legend{{height:calc(var(--leg-h) + {STORY_PAD_BOTTOM}px);padding-bottom:{STORY_PAD_BOTTOM}px;}}
+html.story body.comp-SA{{background:
+  linear-gradient(180deg,transparent 0 {136 + STORY_PAD_TOP}px,rgba(239,246,255,.80) {136 + STORY_PAD_TOP}px 100%),
+  repeating-linear-gradient(135deg,rgba(22,111,255,.035) 0 2px,transparent 2px 34px),#f6f9fd;}}
+'''
 
 # Serie A e UCL: texture bianca; UEL e UECL: nera.
 TEXTURES = {'SA': 'texture_white.png', 'UCL': 'texture_white.png',
@@ -63,26 +99,29 @@ window.__ready = new Promise(r => setTimeout(r, 0))
 </script>'''
 
 
-def render(competition):
-    """PNG 1920x2560 della classifica aggiornata (SA, UCL, UEL o UECL)."""
+def render(competition, story=False):
+    """PNG 1920x2560 della classifica aggiornata (SA, UCL, UEL o UECL); story=True: storia IG 1920x3413."""
     import classifica_data
 
     data = classifica_data.fetch(competition)
-    png = render_data(data)
+    png = render_data(data, story)
     _last[data['competition']] = data
     return png
 
 
-def render_data(data):
+def render_data(data, story=False):
     data = json.loads(json.dumps(data))
     _embed_logos(data)
+    html = build_html(data)
+    if story:
+        html = story_html(html, STORY_CSS + story_backgrounds('comp-'))
     try:
-        png = render_html(build_html(data), page=PAGE)
+        png = render_html(html, page=STORY_PAGE if story else PAGE)
     except Exception as exc:  # noqa: BLE001 - errore della pagina -> messaggio leggibile
         if 'Classifica incompleta' in str(exc):
             raise ValueError('Classifica incompleta: alcuni loghi non si vedono. Riprova tra poco.') from exc
         raise
-    return _texture(png, TEXTURES.get(data['competition']))
+    return _texture(png, TEXTURES.get(data['competition']), story)
 
 
 def build_html(data):
@@ -185,13 +224,18 @@ def warm_up_fonts():
         log.info('AVVIO', 'Font di classifica e tabellone pronti')
 
 
-def _texture(png, name):
+def _texture(png, name, story=False):
+    """Logo JR in alto a destra (texture 3:4). Storia: in basso al centro, come il timbro delle Storie IG."""
     base = Image.open(io.BytesIO(png)).convert('RGBA')
     if name:
-        texture = Image.open(images_dir() / name).convert('RGBA')
-        if texture.size != base.size:
-            texture = texture.resize(base.size, Image.Resampling.LANCZOS)
-        base.paste(texture, (0, 0), texture)
+        if story:            # logo JR in basso, dove sta il timbro delle Storie IG
+            from graphics.common import story_jr_paste
+            story_jr_paste(base, (255, 255, 255) if 'white' in name else (5, 5, 5))
+        else:
+            texture = Image.open(images_dir() / name).convert('RGBA')
+            if texture.size != base.size:
+                texture = texture.resize(base.size, Image.Resampling.LANCZOS)
+            base.paste(texture, (0, 0), texture)
     out = io.BytesIO()
     base.convert('RGB').save(out, 'PNG')
     return out.getvalue()

@@ -9,11 +9,18 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from graphics.classifica import IMAGES, PAGE, TEXTURES, _data_uri, _font_css, _logo, _texture, images_dir
+from graphics.classifica import (IMAGES, PAGE, STORY_PAD_BOTTOM, STORY_PAD_TOP, STORY_PAGE, TEXTURES, _data_uri,
+                                 _font_css, _logo, _texture, images_dir, story_backgrounds, story_html)
 from graphics.common import render_html
 
 _last = {}      # competizione -> ultimo tabellone letto (per riconoscere i doppioni)
 TEMPLATE = Path(__file__).resolve().parent.parent / 'data' / 'classifica' / 'tabellone.html'
+# Storia IG (900x1600): intestazione e pannello fra le zone di Instagram, il tabellone si allunga.
+STORY_CSS = f'''html.story,html.story body{{height:{STORY_PAGE[1]}px;}}
+html.story{{font-size:17px;}}
+html.story .header{{top:{STORY_PAD_TOP}px;}}
+html.story #panel{{top:{136 + STORY_PAD_TOP}px;bottom:{STORY_PAD_BOTTOM}px;}}
+'''
 
 READY = '''<script>
 window.__ready = new Promise(r => setTimeout(r, 0))
@@ -26,16 +33,16 @@ window.__ready = new Promise(r => setTimeout(r, 0))
 </script>'''
 
 
-def render(competition):
-    """PNG 1920x2560 del tabellone aggiornato (CI, UCL, UEL o UECL)."""
+def render(competition, story=False):
+    """PNG 1920x2560 del tabellone aggiornato (CI, UCL, UEL o UECL); story=True: storia IG 1920x3413."""
     import tabellone_data
     data = tabellone_data.fetch(competition)
-    png = render_data(data)
+    png = render_data(data, story)
     _last[data['competition']] = data
     return png
 
 
-def render_data(data):
+def render_data(data, story=False):
     data = json.loads(json.dumps(data))
     teams = [t for r in data['rounds'] for c in r['cells'] for t in c['teams'] if t and t.get('logo')]
     urls = sorted({t['logo'] for t in teams})
@@ -43,14 +50,17 @@ def render_data(data):
         found = dict(zip(urls, pool.map(_logo, urls)))
     for t in teams:
         t['logo'] = found[t['logo']]
+    html = build_html(data)
+    if story:
+        html = story_html(html, STORY_CSS + story_backgrounds('th-'))
     try:
-        png = render_html(build_html(data), page=PAGE)
+        png = render_html(html, page=STORY_PAGE if story else PAGE)
     except Exception as exc:  # noqa: BLE001 - errore della pagina -> messaggio leggibile
         if 'Tabellone incompleto' in str(exc):
             raise ValueError('Tabellone incompleto: alcuni loghi non si vedono. Riprova tra poco.') from exc
         raise
     theme = data.get('theme') or data['competition']
-    return _texture(png, 'texture_white.png' if theme == 'CI' else TEXTURES.get(theme))
+    return _texture(png, 'texture_white.png' if theme == 'CI' else TEXTURES.get(theme), story)
 
 
 def build_html(data):

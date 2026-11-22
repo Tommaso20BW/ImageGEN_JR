@@ -285,10 +285,10 @@ class Renderer:
             if data.get('view') == 'bracket':
                 from graphics import tabellone
 
-                return tabellone.render(data['competition'])
+                return tabellone.render(data['competition'], story=bool(data.get('story')))
             from graphics import classifica
 
-            return classifica.render(data['competition'])
+            return classifica.render(data['competition'], story=bool(data.get('story')))
 
         if kind in ('igq', 'xq', 'thq'):
             from graphics import ig_quote
@@ -321,7 +321,7 @@ class Renderer:
             person = self.final_cutout(data['photo_id']) if data.get('photo_id') and not ghost else None
             return compleanno.render(name=data.get('name', ''), birth=data.get('birth', ''),
                                      age=data.get('age'), photo=data.get('photo', ''), person=person,
-                                     frame=data.get('frame'), ghost=ghost)
+                                     frame=data.get('frame'), ghost=ghost, story=bool(data.get('story')))
 
         if kind == 'bdold':
             from graphics import compleanno_storico
@@ -329,7 +329,8 @@ class Renderer:
             person = None if ghost else self.final_cutout(data['photo_id'])
             return compleanno_storico.render(name=data.get('name', ''), person=person,
                                              frame=data.get('frame'), ghost=ghost,
-                                             vintage=data.get('vintage') is not False)
+                                             vintage=data.get('vintage') is not False,
+                                             story=bool(data.get('story')))
 
         if kind == 'motm':
             from graphics import motm
@@ -542,6 +543,7 @@ class Renderer:
                 photo=None if ghost else self._trail_photo(data),
                 ghost=ghost,
                 frame=data['frame'],
+                story=bool(data.get('story')),
             )
 
         if kind == 'md':
@@ -572,6 +574,7 @@ class Renderer:
                 module=data['module'],
                 players=[roster.get(name) or guest(name) for name in data['players']],
                 layout=data.get('layout'),
+                story=bool(data.get('story')),
             )
 
         if kind == 'squad':
@@ -581,6 +584,7 @@ class Renderer:
                 **teams(data),
                 players=data['players'],
                 competition=data['competition'],
+                story=bool(data.get('story')),
             )
 
         if kind == 'stats':

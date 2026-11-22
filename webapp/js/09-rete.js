@@ -421,6 +421,24 @@ function initLayoutEditor() {
   $('lay').addEventListener('touchmove',e => { if (e.target.closest('#layFrame')) e.preventDefault(); },{passive:false});
 }
 
+const DUAL_KINDS = new Set(['bday','bdold','xi','pxi','squad','table']);
+const isDualPayload = p => !LIVE && !!p && !!p.data && DUAL_KINDS.has(p.data.kind) && p.data.team !== 'italy';
+
+// Il servizio può aspettare un'altra richiesta (fino a 75 s) e poi fare il render.
+async function fetchPreview(raw) {
+  const response = await netFetch(`${directBase}/preview`, {
+    method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body:raw
+  }, 150000, 2, true);
+  if (!response.ok) {
+    let answer = {};
+    try { answer = await response.json(); } catch (_) {}
+    throw new Error(answer.error || `Anteprima non riuscita (${response.status}).`);
+  }
+  const blob = await response.blob();
+  if (!blob || !String(blob.type || '').startsWith('image/')) throw new Error('Anteprima non valida.');
+  return blob;
+}
+
 async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caricamento già aperto (POTM)
   clearError();
   try {
@@ -432,7 +450,8 @@ async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caric
       keepBusy = true;
       await frExport();
     }
-    const raw = JSON.stringify(buildPayload());
+    const payload = buildPayload();
+    const raw = JSON.stringify(payload);
     if (new TextEncoder().encode(raw).length > 4096) throw new Error('Troppi dati per ImageGEN.');
 
     $('nextButton').disabled = true;
@@ -441,23 +460,17 @@ async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caric
     const bracket = kind === 'table' && tableViewOf() === 'bracket';    // tempi e testo a parte: ci mette di più
     if (!(keepBusy && busy)) showBusy('Genero l’anteprima…',bracket ? 'Leggo il tabellone aggiornato da Diretta.it.' : BUSY_SUB[realKind()] || '',bracket ? 'bracket' : realKind());
 
-    // Il servizio può aspettare un'altra richiesta (fino a 75 s) e poi fare il render.
-    const response = await netFetch(`${directBase}/preview`, {
-      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body:raw
-    }, 150000, 2, true);
-
-    if (!response.ok) {
-      let answer = {};
-      try { answer = await response.json(); } catch (_) {}
-      throw new Error(answer.error || `Anteprima non riuscita (${response.status}).`);
+    const blob = await fetchPreview(raw);
+    // Compleanno (anche ex calciatori), Starting XI, Probabili, Squad List, Classifica e Tabellone: anche la versione per le storie IG.
+    let story = null;
+    if (isDualPayload(payload)) {
+      $('busySub').textContent = 'Ora la versione per le storie IG.';
+      story = await fetchPreview(JSON.stringify({...payload, data:{...payload.data, story:true}}));
     }
-
-    const blob = await response.blob();
-    if (!blob || !String(blob.type || '').startsWith('image/')) throw new Error('Anteprima non valida.');
 
     await finishBusy();
     previewPayloadText = raw;
-    openPreview(URL.createObjectURL(blob));
+    openPreview(URL.createObjectURL(blob), story ? URL.createObjectURL(story) : null);
   } catch (error) {
     const message = sessionExpired()
       ? EXPIRED_MESSAGE
@@ -481,14 +494,14 @@ function telegramDownload(url, name) {
     catch (_) { resolve(null); }
   });
 }
-async function saveStoryToGallery() {
+async function saveStoryToGallery(body=null) {
   $('nextButton').disabled = true;
   $('backButton').disabled = true;
   $('nextButton').textContent = 'Preparo…';
   try {
     const response = await netFetch(`${directBase}/savefile`, {
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-      body:previewPayloadText || JSON.stringify(buildPayload())
+      body:body || previewPayloadText || JSON.stringify(buildPayload())
     }, 150000, 2, true);
     let answer = {};
     try { answer = await response.json(); } catch (_) {}
@@ -502,11 +515,12 @@ async function saveStoryToGallery() {
       a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
       saved = true;
     }
-    if (saved === false) { $('nextButton').textContent = sendLabel(); return; }   // annullato da te
+    if (saved === false) { $('nextButton').textContent = sendLabel(); return false; }   // annullato da te
     if (saved === null) throw new Error('Telegram non riesce a scaricare: aggiornalo e riprova.');
     haptic('success');
     $('nextButton').textContent = 'Salvata ✓';
     setTimeout(() => { $('nextButton').textContent = sendLabel(); }, 2500);
+    return true;
   } catch (error) {
     $('nextButton').textContent = sendLabel();
     setPreviewError(sessionExpired() ? EXPIRED_MESSAGE
@@ -517,13 +531,47 @@ async function saveStoryToGallery() {
   }
 }
 
+/* Tutte e due le versioni: prima il post 3:4 su Telegram, poi la storia nella galleria (la Mini App resta aperta). */
+async function sendThenSave(raw, storyRaw) {
+  $('nextButton').disabled = true;
+  $('backButton').disabled = true;
+  $('nextButton').textContent = 'Invio…';
+  try {
+    const response = await netFetch(`${directBase}/submit`, {
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body:raw
+    }, 150000, 2, true);
+    let answer = {};
+    try { answer = await response.json(); } catch (_) {}
+    if (!response.ok || answer.ok === false) throw new Error(answer.error || `Invio non riuscito (${response.status}).`);
+    if (typeof rememberSent === 'function') rememberSent(answer.message_id);
+    previewPick.delete('34');          // il post è partito: se rifai, si salva solo la storia
+    renderPreviewPick();
+  } catch (error) {
+    $('nextButton').disabled = sessionExpired();
+    $('backButton').disabled = false;
+    $('nextButton').textContent = sendLabel();
+    setPreviewError(sessionExpired() ? EXPIRED_MESSAGE
+      : (error && error.name === 'AbortError' ? 'ImageGEN non risponde. Controlla la chat del bot: la foto potrebbe essere arrivata.' : (error.message || 'Invio non riuscito.')));
+    return;
+  }
+  return saveStoryToGallery(storyRaw);
+}
+
 async function submitPreviewGraphic() {
   setPreviewError('');
   if (kind === 'igbn' && directBase) return saveStoryToGallery();
   try {
     if (!directBase) throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
 
-    const raw = previewPayloadText || JSON.stringify(buildPayload());
+    let raw = previewPayloadText || JSON.stringify(buildPayload());
+    if (previewStoryUrl) {          // due versioni: il 3:4 va su Telegram, la storia nella galleria del telefono
+      if (!previewPick.size) { setPreviewError('Tocca la versione da usare (anche tutte e due).'); haptic('error'); return; }
+      const payload = JSON.parse(raw);
+      const storyRaw = JSON.stringify({...payload, data:{...payload.data, story:true}});
+      if (!previewPick.has('34')) return saveStoryToGallery(storyRaw);
+      raw = JSON.stringify({...payload, data:{...payload.data, formats:['34']}});
+      if (previewPick.has('story')) return sendThenSave(raw, storyRaw);
+    }
 
     $('nextButton').disabled = true;
     $('backButton').disabled = true;

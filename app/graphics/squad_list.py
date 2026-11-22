@@ -20,7 +20,7 @@ import re
 import numpy as np
 from PIL import Image
 
-from graphics.common import asset_dir, data_uri, esc, font_face, normalize, render_html, team_logo
+from graphics.common import STORY_OUT_H, asset_dir, data_uri, esc, font_face, normalize, render_html, team_logo
 
 PHOTO = 'squad_list_rivista.jpg'
 OUT_W, OUT_H = 1920, 2560
@@ -28,6 +28,8 @@ PW, PH = 1080, 1512                      # pagina piatta (design)
 # Inquadratura in pixel della foto originale: centro, larghezza del ritaglio 3:4, rotazione
 # (3.9 gradi = piega verticale, libro dritto).
 VIEW = dict(cx=1150, cy=1210, width=1230, angle=3.9)
+# Storia IG: inquadratura più stretta sulla pagina destra (nomi più grandi, riempie l'altezza).
+STORY_VIEW = dict(cx=1187, cy=1205, width=1000, angle=3.9)
 CURVE = 1.0                              # quanto il disegno segue la curvatura della carta (1 = tutta)
 TEXTURE = .045                           # grana della carta
 VERTICAL = ''                            # scritta verticale lungo la piega (es. 'THE SQUAD'; '' = nessuna, contenuto centrato)
@@ -116,9 +118,10 @@ def _mark(file):
 # nella piega), altezza al massimo LOGO_MAX_H (margine sopra e sotto), larghezza al massimo
 # LOGO_MAX_W: così ogni logo è tagliato a sinistra più o meno della stessa parte.
 LOGO_RIGHT, LOGO_MAX_W, LOGO_MAX_H, LOGO_CY = 1000, 680, 1050, 756
+STORY_LOGO_RIGHT = 1045                  # storia: della pagina sinistra si vede meno, logo più vicino alla piega
 
 
-def left_page(competition):
+def left_page(competition, story=False):
     """Logo grande della competizione, tagliato a sinistra dall'inquadratura in modo uguale
     per tutti (LOGO_*). Amichevoli: pagina senza logo."""
     light, base, dark, _table, mark, _name = PALETTES[competition]
@@ -127,7 +130,8 @@ def left_page(competition):
         uri, ratio = _mark(mark)
         h = min(LOGO_MAX_H, LOGO_MAX_W / ratio)
         w = h * ratio
-        logo = (f'<img src="{uri}" style="position:absolute;left:{LOGO_RIGHT - w}px;top:{LOGO_CY - h / 2}px;'
+        right = STORY_LOGO_RIGHT if story else LOGO_RIGHT
+        logo = (f'<img src="{uri}" style="position:absolute;left:{right - w}px;top:{LOGO_CY - h / 2}px;'
                 f'width:{w}px;height:{h}px;opacity:.94">')
     return (f'<!doctype html><html><head><meta charset="utf-8"><style>{_page_css(light, base, dark)}</style></head>'
             f'<body>{logo}{READY}</body></html>')
@@ -173,10 +177,18 @@ window.__ready = document.fonts.ready.then(() => {{
   let s = parseFloat(getComputedStyle(list).fontSize);
   while (s > 10 && !fits()) {{ s -= 1; list.style.fontSize = s + 'px'; }}
   // pochi nomi: righe più larghe fino a riempire, con un massimo
+  // spazio libero vero: il blocco è centrato, scrollHeight non lo vede
+  const used = () => box.lastElementChild.offsetTop + box.lastElementChild.offsetHeight - box.firstElementChild.offsetTop;
   const lines = Math.max(...[...list.children].map(c => c.children.length));
-  const free = box.clientHeight - box.scrollHeight;
-  const lh = Math.min(2.3, 1.42 + Math.max(0, free - 10) / (lines * s));
+  let free = box.clientHeight - used();
+  const lh = Math.min(1.9, 1.42 + Math.max(0, free * .7) / (lines * s));
   list.querySelectorAll('p').forEach(p => p.style.lineHeight = lh);
+  // il resto allarga gli stacchi tra loghi, CONVOCATI, nomi e riga finale
+  free = Math.max(0, box.clientHeight - used() - 10);
+  const lab = box.querySelector('.lab'), foot = box.querySelector('.foot');
+  const add = Math.min(free / 3, 70);
+  lab.style.marginTop = (38 + add) + 'px'; lab.style.marginBottom = (26 + add / 2) + 'px';
+  foot.style.marginTop = (56 + add * 1.5) + 'px';
   return Promise.all([...document.images].map(i => i.decode().catch(() => {{}})));
 }});
 </script></body></html>"""
@@ -264,21 +276,23 @@ def _invert(P, corners, pts):
     return np.clip(u, 0, 1), np.clip(v, 0, 1)
 
 
-@functools.lru_cache(maxsize=1)
-def _geometry(path_key):
-    """Per ogni pixel dell'immagine finale (1920x2560): grigio della foto (luce e ombre),
-    quanto è pagina sinistra/destra e il punto (u, v) della pagina piatta da mostrare."""
+@functools.lru_cache(maxsize=2)
+def _geometry(path_key, out_h=OUT_H):
+    """Per ogni pixel dell'immagine finale (1920x2560, o 1920x3413 per la storia: STORY_VIEW,
+    più stretta sulla pagina dei nomi): grigio della foto (luce e ombre), quanto è pagina sinistra/destra e il punto (u, v)
+    della pagina piatta da mostrare."""
     import cv2
     photo = np.asarray(Image.open(path_key).convert('L'))
     left, right = _pages_mask(photo)
     # pixel finale -> pixel della foto: inquadratura ruotata e ritagliata (3:4)
-    s = VIEW['width'] / OUT_W
-    a = np.deg2rad(VIEW['angle'])
-    X, Y = np.meshgrid(np.arange(OUT_W, dtype=np.float32), np.arange(OUT_H, dtype=np.float32))
-    dx, dy = (X - OUT_W / 2) * s, (Y - OUT_H / 2) * s
+    view = STORY_VIEW if out_h != OUT_H else VIEW
+    s = view['width'] / OUT_W
+    a = np.deg2rad(view['angle'])
+    X, Y = np.meshgrid(np.arange(OUT_W, dtype=np.float32), np.arange(out_h, dtype=np.float32))
+    dx, dy = (X - OUT_W / 2) * s, (Y - out_h / 2) * s
     # rotazione inversa di quella usata per inquadrare (cv2: angolo positivo = antiorario)
-    px = (VIEW['cx'] + np.cos(a) * dx - np.sin(a) * dy).astype(np.float32)
-    py = (VIEW['cy'] + np.sin(a) * dx + np.cos(a) * dy).astype(np.float32)
+    px = (view['cx'] + np.cos(a) * dx - np.sin(a) * dy).astype(np.float32)
+    py = (view['cy'] + np.sin(a) * dx + np.cos(a) * dy).astype(np.float32)
     gray = cv2.remap(photo.astype(np.float32), px, py, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
     gray = np.clip(gray, 0, 255)                     # il bicubico può uscire di poco da 0..255
     white = np.percentile(photo[right], 97)
@@ -290,7 +304,7 @@ def _geometry(path_key):
         P, corners = _surface(mask)
         pts = np.stack([px[inside], py[inside]], -1).astype(float)
         u, v = _invert(P, corners, pts)
-        uu = np.full((OUT_H, OUT_W), -1, np.float32); vv = np.full((OUT_H, OUT_W), -1, np.float32)
+        uu = np.full((out_h, OUT_W), -1, np.float32); vv = np.full((out_h, OUT_W), -1, np.float32)
         uu[inside], vv[inside] = u, v
         pages.append((alpha.astype(np.float32), uu, vv))
     return gray.astype(np.float32), float(white), pages
@@ -301,8 +315,9 @@ def _photo_path():
 
 
 def warm_up():
-    """Calcola la geometria della foto in anticipo (all'avvio del servizio)."""
+    """Calcola la geometria della foto in anticipo (all'avvio del servizio): 3:4 e storia."""
     _geometry(_photo_path())
+    _geometry(_photo_path(), STORY_OUT_H)
 
 
 def _texture(h, w, seed=7):
@@ -315,7 +330,7 @@ def _texture(h, w, seed=7):
     return 1 + TEXTURE * (.65 * fine + .35 * blot)
 
 
-_TEXTURE = None
+_TEXTURE = {}
 
 
 def _render_page(html):
@@ -323,20 +338,21 @@ def _render_page(html):
     return np.asarray(Image.open(io.BytesIO(png)).convert('RGB')).astype(np.float32)
 
 
-def build_pages(*, players, competition, home_name, home_id, away_name, away_id, **_):
+def build_pages(*, players, competition, home_name, home_id, away_name, away_id, story=False, **_):
     if competition not in PALETTES:
         competition = 'club.friendly'
     names = sorted((p if isinstance(p, str) else p[0] for p in players), key=normalize)
-    return (left_page(competition),
+    return (left_page(competition, story),
             right_page(competition, names, (home_name, home_id), (away_name, away_id)), competition)
 
 
 def render(**kwargs):
-    """PNG 1920x2560."""
+    """PNG 1920x2560; story=True: storia IG 1920x3413 (inquadratura stretta sulla pagina dei nomi)."""
     import cv2
-    global _TEXTURE
+    story = bool(kwargs.get('story'))
+    out_h = STORY_OUT_H if story else OUT_H
     left_html, right_html, competition = build_pages(**kwargs)
-    gray, white, pages = _geometry(_photo_path())
+    gray, white, pages = _geometry(_photo_path(), out_h)
     # tavolo e riviste: chiari e scuri della foto nel colore della competizione
     tint = np.array(PALETTES[competition][3], np.float32)
     out = np.clip(tint * 1.6 * (gray[..., None] / 150.0) ** 1.5, 0, 255)
@@ -347,12 +363,16 @@ def render(**kwargs):
         page = cv2.remap(design, uu * (dw - 1), vv * (dh - 1), cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
         a = alpha[..., None]
         out = out * (1 - a) + np.clip(page * shade, 0, 255) * a
-    if _TEXTURE is None:
-        _TEXTURE = _texture(OUT_H, OUT_W)
-    out = np.clip(out * _TEXTURE[..., None], 0, 255).astype(np.uint8)
+    if out_h not in _TEXTURE:
+        _TEXTURE[out_h] = _texture(out_h, OUT_W)
+    out = np.clip(out * _TEXTURE[out_h][..., None], 0, 255).astype(np.uint8)
     img = Image.fromarray(out).convert('RGBA')
-    jr = Image.open(asset_dir() / 'canva' / 'jr_white_overlay.png').convert('RGBA').resize((OUT_W, OUT_H))
-    img.alpha_composite(jr)
+    if story:                # logo JR in basso, dove sta il timbro delle Storie IG
+        from graphics.common import story_jr_paste
+        story_jr_paste(img, (255, 255, 255))
+    else:
+        jr = Image.open(asset_dir() / 'canva' / 'jr_white_overlay.png').convert('RGBA').resize((OUT_W, OUT_H))
+        img.alpha_composite(jr, (0, 0))
     buf = io.BytesIO()
     img.convert('RGB').save(buf, 'PNG')
     return buf.getvalue()

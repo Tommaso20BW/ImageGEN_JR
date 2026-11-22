@@ -11,9 +11,9 @@ from functools import lru_cache
 
 from PIL import Image, ImageFont
 
-from graphics.common import canva_layers, photo_layer, logo_fill, page_background
+from graphics.common import canva_layers, photo_layer, logo_fill, page_background, story_canva_layers
 from graphics.common import (
-    DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, font_face, render_html, team_logo,
+    DESIGN_H, DESIGN_W, STORY_H, STORY_SAFE_BOTTOM, STORY_SAFE_TOP, asset_dir, data_uri, esc, font_face, render_html, team_logo,
 )
 
 from graphics.uefa import ALL as KITS, meta_for
@@ -31,6 +31,11 @@ LOGO_BOXES = ((313.02, 213.2), (427.43, 213.2))
 LOGO_SIZE = 138.09
 
 PLAYERS = 11
+# Storia IG: titolo, JR e loghi scendono sotto la barra di Instagram; gli 11 nomi si allargano fino
+# sopra la barra della risposta, più grandi.
+STORY_SHIFT = STORY_SAFE_TOP
+STORY_ROW_STEP = (STORY_SAFE_BOTTOM - 30 - NAME_BASE - STORY_SHIFT) / (PLAYERS - 1)
+STORY_SCALE = 1.1
 MAX_PHOTO_BYTES = 12 * 1024 * 1024
 
 
@@ -119,17 +124,17 @@ def name_size(names):
     return max(NAME_MIN_SIZE, min(NAME_SIZE, NAME_MAX_W / widest))
 
 
-def _text_rows(role, values, style, x, base, anchor, attrs):
+def _text_rows(role, values, style, x, base, anchor, attrs, step=ROW_STEP, shift=0):
     out = []
     for k, value in enumerate(values):
-        y = base + k * ROW_STEP
+        y = base + k * step
         text = f'<text x="{x}" y="{y}" text-anchor="{anchor}" {attrs}>{esc(value)}</text>'
         if 'rows' in style:
             plate = style['rows'][k]
             out.append(
                 f'<clipPath id="{role}{k}">{text}</clipPath>'
                 f'<image href="{data_uri(asset_dir() / "canva" / plate["file"])}" '
-                f'x="{plate["x"]}" y="{plate["y"]}" width="{plate["w"]}" height="{plate["h"]}" '
+                f'x="{plate["x"]}" y="{plate["y"] + shift + k * (step - ROW_STEP)}" width="{plate["w"]}" height="{plate["h"]}" '
                 f'preserveAspectRatio="none" clip-path="url(#{role}{k})"/>'
             )
         else:
@@ -137,32 +142,44 @@ def _text_rows(role, values, style, x, base, anchor, attrs):
     return ''.join(out)
 
 
-def build_html(*, kit, lineup, photo, frame, home_name, home_id, away_name, away_id, **_):
+def build_html(*, kit, lineup, photo, frame, home_name, home_id, away_name, away_id, story=False, **_):
+    """story=True: storia IG 9:16: foto a tutta pagina, titolo e loghi sotto la barra di Instagram,
+    nomi distribuiti fino sopra la barra della risposta e più grandi."""
     if kit not in KITS:
         raise ValueError('Maglia non valida.')
     meta = meta_for('starting_xi', kit, _meta())
     canva = asset_dir() / 'canva'
-    photo_html, page_bg = photo_layer(photo, frame)
+    photo_html, page_bg = photo_layer(photo, frame, (DESIGN_W, STORY_H) if story else None)
 
+    shift, step, big = (STORY_SHIFT, STORY_ROW_STEP, STORY_SCALE) if story else (0, ROW_STEP, 1)
     numbers = _text_rows(
-        'n', [n for n, _ in lineup], meta['text']['number'], NUMBER_RIGHT, NUMBER_BASE, 'end',
-        f'font-family="Allogist" font-style="italic" font-size="{NUMBER_SIZE}"',
+        'n', [n for n, _ in lineup], meta['text']['number'], NUMBER_RIGHT, NUMBER_BASE + shift, 'end',
+        f'font-family="Allogist" font-style="italic" font-size="{NUMBER_SIZE * big:.2f}"', step, shift,
     )
     upper = [name.upper() for _, name in lineup]
-    size = name_size(upper)
+    size = name_size(upper) * big
     names = _text_rows(
-        'p', upper, meta['text']['name'], NAME_X, NAME_BASE, 'start',
+        'p', upper, meta['text']['name'], NAME_X, NAME_BASE + shift, 'start',
         f'font-family="Bebas Neue" font-size="{size:.2f}" letter-spacing="{NAME_SPACING * size / NAME_SIZE:.3f}"',
+        step, shift,
     )
     logos = ''.join(
-        f'<div class="logo" style="left:{x}px;top:{y}px;background:{logo_fill(meta, kit)};'
+        f'<div class="logo" style="left:{x}px;top:{y + shift}px;background:{logo_fill(meta, kit)};'
         f'--m:url({data_uri(team_logo(name, team_id))})"></div>'
         for (x, y), (name, team_id) in zip(LOGO_BOXES, ((home_name, home_id), (away_name, away_id)))
     )
 
+    page_h = STORY_H if story else DESIGN_H
+    svg = f'<svg width="{DESIGN_W}" height="{page_h}" viewBox="0 0 {DESIGN_W} {page_h}">{numbers}{names}</svg>'
+    if story:
+        fx, text = story_canva_layers(meta, shift)
+        body = page_background(kit, photo, 'starting_xi', story=True) + photo_html + fx + text + logos + svg
+    else:
+        body = page_background(kit, photo, 'starting_xi') + photo_html + canva_layers(meta, photo, frame) + logos + svg
+
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{page_bg}}}
+html,body{{width:{DESIGN_W}px;height:{STORY_H if story else DESIGN_H}px;overflow:hidden;background:{page_bg}}}
 .abs{{position:absolute}}
 .logo{{position:absolute;width:{LOGO_SIZE}px;height:{LOGO_SIZE}px;
 -webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}}
@@ -170,15 +187,11 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{pa
 @font-face{{font-family:'Allogist';font-style:italic;src:url({data_uri(asset_dir() / 'fonts' / 'AllogistItalic.ttf')})}}
 svg{{position:absolute;left:0;top:0}}
 </style></head><body>
-{page_background(kit, photo, 'starting_xi')}
-{photo_html}
-{canva_layers(meta, photo, frame)}
-{logos}
-<svg width="{DESIGN_W}" height="{DESIGN_H}" viewBox="0 0 {DESIGN_W} {DESIGN_H}">{numbers}{names}</svg>
+{body}
 </body></html>'''
 
 
 def render(ghost=False, **kwargs):
     if ghost:
         kwargs['photo'] = None
-    return render_html(build_html(**kwargs), ghost=ghost)
+    return render_html(build_html(**kwargs), ghost=ghost, page=(DESIGN_W, STORY_H) if kwargs.get('story') else None)

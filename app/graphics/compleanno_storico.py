@@ -22,6 +22,14 @@ NAME_MIN_SQUEEZE = 0.4            # nomi lunghi: si schiacciano fino a qui, poi 
 GOLD_TOP, GOLD_BOTTOM = (226, 192, 128), (186, 146, 84)
 PERSON_H = 1480                    # altezza della persona a zoom 1 (base in fondo alla pagina)
 PERSON_MAX_W = 1560
+# Storia IG 9:16 (1500x2667): sfondo allungato con Meta AI (canva/story/compleanno_storico.jpg,
+# HAPPY / BIRTHDAY su due righe), sceso di STORY_SHIFT perché il nome sopra il titolo resti fuori
+# dalla zona alta di Instagram; persona più grande; logo JR in basso come il timbro delle Storie IG.
+STORY_H = round(W * 16 / 9)
+STORY_SHIFT = 160
+STORY_TITLE_TOP = 301 + STORY_SHIFT     # cima di HAPPY nello sfondo della storia (già sceso)
+TITLE_TOP = 256                          # cima di HAPPY nello sfondo 3:4
+STORY_PERSON = 1.2
 
 
 @lru_cache(maxsize=1)
@@ -83,14 +91,15 @@ def nostalgia(person):
     return Image.fromarray(np.uint8(out * 255 + 0.5), 'RGBA')
 
 
-def person_box(size, frame=None):
+def person_box(size, frame=None, story=False):
     """(x, y, larghezza, altezza) della persona ritagliata nella pagina."""
     frame = clean_frame(frame)
     w, h = size
-    scale = min(PERSON_H / h, PERSON_MAX_W / w) * frame['zoom']
+    big = STORY_PERSON if story else 1
+    scale = min(PERSON_H * big / h, PERSON_MAX_W * big / w) * frame['zoom']
     pw, ph = max(1, round(w * scale)), max(1, round(h * scale))
     cx = W / 2 + frame['x'] * W
-    bottom = H + frame['y'] * H
+    bottom = (STORY_H if story else H) + frame['y'] * H
     return round(cx - pw / 2), round(bottom - ph), pw, ph
 
 
@@ -118,6 +127,29 @@ def trim(person):
     return person.crop(box) if box else person
 
 
+@lru_cache(maxsize=1)
+def _story_background():
+    """Sfondo 9:16: quello di Meta AI sceso di STORY_SHIFT (sopra continua specchiato e sfocato).
+    Senza il file: lo sfondo 3:4 al centro, sopra e sotto specchiato."""
+    from PIL import ImageOps
+    from graphics.common import story_file
+    path = story_file('compleanno_storico')
+    page = Image.new('RGB', (W, STORY_H))
+    if path:
+        with Image.open(path) as im:
+            bg = ImageOps.fit(im.convert('RGB'), (W, STORY_H), Image.LANCZOS)
+        top, src = STORY_SHIFT, bg
+    else:
+        src, top = _background(), (STORY_H - H) // 2
+    page.paste(src, (0, top))
+    fill = ImageOps.flip(src.crop((0, 0, W, top))).filter(ImageFilter.GaussianBlur(8))
+    page.paste(fill, (0, 0))
+    below = top + src.height
+    if below < STORY_H:
+        page.paste(ImageOps.flip(src.crop((0, src.height - (STORY_H - below), W, src.height))), (0, below))
+    return page
+
+
 def _gold(mask):
     """Maschera L -> RGBA nell'oro del nome, sfumato dall'alto verso il basso."""
     grad = np.linspace(0, 1, mask.height, dtype=np.float32)[:, None, None]
@@ -136,19 +168,22 @@ def _logo():
     return _gold(alpha.crop(box)), box[:2]
 
 
-def render(*, name, person=None, frame=None, ghost=False, vintage=True):
+def render(*, name, person=None, frame=None, ghost=False, vintage=True, story=False):
     """PNG della grafica. person = PNG scontornato (byte o Image). ghost=True: pagina senza persona (editor).
-    vintage=False: senza il filtro d'epoca (colori della foto)."""
+    vintage=False: senza il filtro d'epoca (colori della foto). story=True: storia IG 1500x2667."""
     name = clean_name(name)
     if not name:
         raise ValueError('Scrivi il nome.')
-    page = _background().convert('RGBA')
+    page = (_story_background() if story else _background()).convert('RGBA')
+    page_h = page.height
 
-    # nome in oro spaziato e logo JR nello stesso oro
+    # nome in oro spaziato (stessa distanza dal titolo) e logo JR nello stesso oro
     m = _name_mask(name)
-    page.alpha_composite(_gold(m), (round(W / 2 - m.width / 2), round(NAME_Y - m.height / 2)))
-    logo, at = _logo()
-    page.alpha_composite(logo, at)
+    name_y = NAME_Y + (STORY_TITLE_TOP - TITLE_TOP if story else 0)
+    page.alpha_composite(_gold(m), (round(W / 2 - m.width / 2), round(name_y - m.height / 2)))
+    if not story:
+        logo, at = _logo()
+        page.alpha_composite(logo, at)
 
     if not ghost:
         if person is None:
@@ -156,15 +191,28 @@ def render(*, name, person=None, frame=None, ghost=False, vintage=True):
         if isinstance(person, (bytes, bytearray)):
             person = Image.open(io.BytesIO(person))
         p = trim(person)
-        x, y, pw, ph = person_box(p.size, frame)
+        x, y, pw, ph = person_box(p.size, frame, story)
         p = enhance(p.resize((pw, ph), Image.LANCZOS))     # nitida come le foto del Goal
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        layer = Image.new('RGBA', (W, page_h), (0, 0, 0, 0))
         layer.paste(p, (x, y), p)
+        if story:           # la persona sfuma prima del logo JR in basso: il logo resta sullo sfondo
+            from graphics.common import STORY_JR_TOP
+            end = round(STORY_JR_TOP * page_h / 1920) - 20
+            fade = np.clip((end - np.arange(page_h, dtype=np.float32)) / 260, 0, 1)
+            alpha = np.asarray(layer.getchannel('A'), np.float32) * fade[:, None]
+            layer.putalpha(Image.fromarray(np.uint8(alpha + .5)))
         # ombra morbida dietro la persona, per staccarla dal titolo
         sh = layer.getchannel('A').filter(ImageFilter.GaussianBlur(28)).point(lambda v: int(v * 0.55))
-        shadow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        shadow = Image.new('RGBA', (W, page_h), (0, 0, 0, 0))
         shadow.putalpha(sh)
         page = Image.alpha_composite(Image.alpha_composite(page, shadow), layer)
+
+    if story:               # logo JR in oro, in basso al centro come il timbro delle Storie IG
+        from graphics.common import STORY_JR_H, STORY_JR_TOP, story_jr_alpha
+        a = story_jr_alpha()
+        lh = round(STORY_JR_H * page_h / 1920)
+        a = a.resize((round(a.width * lh / a.height), lh), Image.LANCZOS)
+        page.alpha_composite(_gold(a), ((W - a.width) // 2, round(STORY_JR_TOP * page_h / 1920)))
 
     # filtro d'epoca su tutta l'immagine (sfondo, nome, logo e persona insieme)
     if vintage:

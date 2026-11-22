@@ -15,7 +15,13 @@ const LIVE = urlParams.get('mode') === 'live';
 const LIVE_SLOT = urlParams.get('slot') || 'half';
 const LIVE_PHASE = urlParams.get('phase') || 'half';
 const SEND_LABEL = LIVE ? 'Conferma' : 'Invia';
-const sendLabel = () => kind === 'igbn' ? 'Salva in galleria' : SEND_LABEL;   // storia IG: nel telefono, non sul canale
+// storia IG: nel telefono, non sul canale. Grafiche doppie: il 3:4 si invia, la storia si salva.
+const sendLabel = () => {
+  if (kind === 'igbn') return 'Salva in galleria';
+  if (previewStoryUrl && previewPick.has('story'))
+    return previewPick.has('34') ? 'Invia e salva' : 'Salva in galleria';
+  return SEND_LABEL;
+};
 let liveTitle = '';
 // Scadenza reale della sessione (ms epoch), passata da service.py. Senza, il timer resta nascosto.
 // Si aggiorna: all'apertura si legge quella vera dal servizio (può essere stata allungata).
@@ -445,16 +451,55 @@ function setPreviewError(message='') {
   $('previewError').style.display = message ? 'block' : 'none';
 }
 
-function openPreview(url) {
+// Grafiche in due versioni (3:4 e storia IG): storyUrl = anteprima della storia. Nessuna è scelta
+// all'inizio: si tocca quella da inviare (anche tutte e due).
+let previewStoryUrl = null;
+const previewPick = new Set();
+
+function openPreview(url, storyUrl=null) {
   if (previewObjectUrl && previewObjectUrl !== url) {
     try { URL.revokeObjectURL(previewObjectUrl); } catch (_) {}
   }
+  if (previewStoryUrl && previewStoryUrl !== storyUrl) {
+    try { URL.revokeObjectURL(previewStoryUrl); } catch (_) {}
+  }
   previewObjectUrl = url;
-  if (url) $('previewImage').src = url;
+  previewStoryUrl = storyUrl;
+  previewPick.clear();
+  $('previewImage').hidden = !!storyUrl;
+  $('previewDual').hidden = !storyUrl;
+  if (storyUrl) {
+    $('previewImage34').src = url;
+    $('previewImageStory').src = storyUrl;
+  } else if (url) $('previewImage').src = url;
+  renderPreviewPick();
   setPreviewError('');
   previewMode = true;
   haptic('success');
   renderFlow();
+}
+
+function renderPreviewPick() {
+  document.querySelectorAll('#previewDual .pv').forEach(b => {
+    const on = previewPick.has(b.dataset.fmt);
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  $('previewDual').classList.toggle('picked', previewPick.size > 0);
+  if (previewMode) $('nextButton').textContent = sendLabel();
+  $('previewLead').textContent = previewStoryUrl
+    ? 'Tocca la versione da usare (anche tutte e due): il post 3:4 va su Telegram, la storia nella galleria del telefono.'
+    : 'Se è tutto ok, premi “Invia”. Altrimenti torna indietro e modifica i dati.';
+  $('previewNote').textContent = previewStoryUrl
+    ? 'A sinistra il post 3:4 (con il testo, su Telegram), a destra la storia IG (senza testo, nella galleria).'
+    : 'Questa è l’anteprima reale della grafica che verrà inviata su Telegram.';
+}
+
+function togglePreviewPick(fmt) {
+  if (previewPick.has(fmt)) previewPick.delete(fmt); else previewPick.add(fmt);
+  haptic('select');
+  setPreviewError('');
+  renderPreviewPick();
 }
 
 function closePreview() {
