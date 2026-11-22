@@ -170,12 +170,12 @@ def _ground_shadow(solid):
         return None
     low = H - 1 - np.argmax(solid[::-1], 0)           # punto più basso di ogni colonna
     ground = low[has].max()
-    near = np.where(has, np.exp(-((ground - low) / 30) ** 2), 0).astype(np.float32)
+    near = np.where(has, np.exp(-((ground - low) / 17) ** 2), 0).astype(np.float32)
     core_x = gaussian_filter(near, 10)
     halo_x = gaussian_filter(near, 46)
     halo_x /= max(halo_x.max(), 1e-6)
     d = np.arange(H, dtype=np.float32) - ground
-    core = np.exp(-.5 * ((d - 1) / 6) ** 2)[:, None] * core_x[None] * GROUND_SHADOW[0]
+    core = np.exp(-.5 * ((d - 3.5) / 5.5) ** 2)[:, None] * core_x[None] * GROUND_SHADOW[0]
     halo = np.exp(-.5 * ((d - 7) / 19) ** 2)[:, None] * halo_x[None] * GROUND_SHADOW[1]
     sh = 1 - (1 - core) * (1 - halo)
     return Image.fromarray(np.uint8(np.clip(sh, 0, 1) * 255 + .5))

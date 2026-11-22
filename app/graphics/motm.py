@@ -306,7 +306,7 @@ def _ground_shadow(c, a, x, y):
         return
     low = ph - 1 - np.argmax(solid[::-1], 0)          # punto più basso di ogni colonna
     ground = low[has].max()
-    near = np.where(has, np.exp(-((ground - low) / (22 * K)) ** 2), 0).astype(np.float32)
+    near = np.where(has, np.exp(-((ground - low) / (12 * K)) ** 2), 0).astype(np.float32)
     m = int(140 * K)                                  # margine: l'ombra arriva a zero prima del bordo
     near = np.pad(near, m)
     core_x = gaussian_filter(near, 7 * K)
@@ -315,7 +315,7 @@ def _ground_shadow(c, a, x, y):
     gy = y + ground
     rows = np.arange(gy - int(40 * K), gy + int(60 * K), dtype=np.float32)
     d = rows - gy
-    core = np.exp(-.5 * ((d - 1 * K) / (4.5 * K)) ** 2)[:, None] * core_x[None] * GROUND_SHADOW[0]
+    core = np.exp(-.5 * ((d - 2.5 * K) / (4 * K)) ** 2)[:, None] * core_x[None] * GROUND_SHADOW[0]
     halo = np.exp(-.5 * ((d - 5 * K) / (14 * K)) ** 2)[:, None] * halo_x[None] * GROUND_SHADOW[1]
     sh = 1 - (1 - core) * (1 - halo)
     x0, y0 = x - m, int(rows[0])
