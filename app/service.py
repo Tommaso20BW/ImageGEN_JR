@@ -536,6 +536,8 @@ class Service:
         self.http_thread = None
 
         self.operation_lock = threading.Lock()
+        # Storia IG delle grafiche doppie: corsia sua, così 3:4 e storia si preparano insieme.
+        self.story_lock = threading.Lock()
         self.preview_cache_lock = threading.Lock()
         self.preview_cache = None
         self.preview_cache_prev = None     # quella prima: 3:4 e storia restano pronte tutte e due
@@ -953,9 +955,17 @@ class Service:
 
         return png, request_state['id']
 
+    def _lock_for(self, envelope):
+        """Corsia della richiesta: la storia delle grafiche doppie va in parallelo al 3:4."""
+        data = envelope.get('data') if isinstance(envelope, dict) else None
+        if isinstance(data, dict) and data.get('story') is True and data.get('kind') in STORY_KINDS:
+            return self.story_lock
+        return self.operation_lock
+
     def preview(self, envelope):
         # Un nuovo tentativo aspetta quello in corso e poi riusa l'anteprima già pronta.
-        if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
+        lock = self._lock_for(envelope)
+        if not lock.acquire(timeout=LOCK_WAIT_SECONDS):
             raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
         started = time.time()
         try:
@@ -966,12 +976,13 @@ class Service:
             return png
         finally:
             self._set_stage('idle')
-            self.operation_lock.release()
+            lock.release()
 
     def save_file(self, envelope):
         """Storia IG (anche la versione 9:16 delle grafiche doppie) al posto dell'invio sul canale: la grafica
         intera resta qui sotto un codice a caso e la Mini App la fa scaricare a Telegram nella galleria del telefono."""
-        if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
+        lock = self._lock_for(envelope)
+        if not lock.acquire(timeout=LOCK_WAIT_SECONDS):
             raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
         try:
             request_state = self._parse_request(envelope)
@@ -981,7 +992,7 @@ class Service:
             png, _ = self._render_and_cache(request_state)
         finally:
             self._set_stage('idle')
-            self.operation_lock.release()
+            lock.release()
         token = secrets.token_urlsafe(16)
         now = time.time()
         with self.preview_cache_lock:

@@ -31,7 +31,6 @@ PLAYER_SCALE = 1.0                # storia: giocatore più grande, riempie l'alt
 # Storia IG 9:16: data subito sotto la zona alta di Instagram (~14%), striscia del nome sopra
 # il logo JR (in basso come nelle Storie IG), giocatore ingrandito nel mezzo.
 STORY_TOP, STORY_STRIP_Y, STORY_FOOT, STORY_PLAYER = 205, 2090, 2185, 1.15
-_PAGE_LOCK = threading.Lock()     # H, TOP e le misure legate cambiano durante il render della storia
 M = 80
 ANTON = 'Anton-Regular.ttf'
 MONO = 'SpecialElite-Regular.ttf'
@@ -47,6 +46,15 @@ PLAYER_H = {'point_sky': 1560}
 PLAYER_H_DEFAULT = 1250
 STRIP_Y = H - 205                # centro della striscia del nome (il ritaglio finisce qui)
 NAME_SIZE, NAME_MAX_SIZE = 170, 210
+
+
+class _Layout(threading.local):
+    """Misure della pagina per il render in corso, una copia per thread: il 3:4 e la storia
+    (più alta) si preparano insieme senza pestarsi."""
+    H, TOP, PLAYER_FOOT, STRIP_Y, PLAYER_SCALE = H, TOP, PLAYER_FOOT, STRIP_Y, PLAYER_SCALE
+
+
+_L = _Layout()
 STRIP_MARGIN = 90                 # la striscia nera resta sempre ad almeno 90 px dai bordi
 NAME_MAX_W = W - 2 * STRIP_MARGIN - 2 * 70 - 40   # oltre questa larghezza il nome si schiaccia
 NAME_MIN_SQUEEZE = 0.5            # oltre questo schiacciamento il nome si rimpicciolisce anche
@@ -344,7 +352,7 @@ def _ink_breakup(size, seed=0, amount=0.35, scale=220):
 
 # ---------------------------------------------------------------- maschere
 def _mask():
-    return np.zeros((H, W), np.float32)
+    return np.zeros((_L.H, W), np.float32)
 
 
 def _blur(m, r):
@@ -363,7 +371,7 @@ def _put(dst, m, xy, anchor='mm', angle=0):
     h, w = a.shape
     x = int(round(xy[0] - {'l': 0, 'm': w / 2, 'r': w}[anchor[0]]))
     y = int(round(xy[1] - {'t': 0, 'm': h / 2, 'b': h}[anchor[1]]))
-    x0, y0, x1, y1 = max(x, 0), max(y, 0), min(x + w, W), min(y + h, H)
+    x0, y0, x1, y1 = max(x, 0), max(y, 0), min(x + w, W), min(y + h, _L.H)
     if x1 > x0 and y1 > y0:
         dst[y0:y1, x0:x1] = np.maximum(dst[y0:y1, x0:x1], a[y0 - y:y1 - y, x0 - x:x1 - x])
     return dst
@@ -394,7 +402,7 @@ def _fit_w(m, width):
 
 def _screen(tone, cell, angle, soft=0.9):
     """Retino AM: tono 0..1 -> copertura a punti."""
-    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    yy, xx = np.mgrid[0:_L.H, 0:W].astype(np.float32)
     t = np.deg2rad(angle)
     u = (xx * np.cos(t) + yy * np.sin(t)) / cell
     v = (-xx * np.sin(t) + yy * np.cos(t)) / cell
@@ -431,16 +439,16 @@ def _player_layers(path, frame=None):
     else:
         with Image.open(path) as im:
             p, base = im.convert('RGBA'), base_height(path.name)
-    height = max(50, int(base * frame['zoom'] * PLAYER_SCALE))
+    height = max(50, int(base * frame['zoom'] * _L.PLAYER_SCALE))
     p = p.crop(p.getbbox())
     p = p.resize((max(1, int(p.width * height / p.height)), height), Image.LANCZOS)
-    alpha, lum = _mask(), np.ones((H, W), np.float32)
+    alpha, lum = _mask(), np.ones((_L.H, W), np.float32)
     a = np.asarray(p.split()[-1], np.float32) / 255
     g = np.clip((np.asarray(p.convert('L'), np.float32) / 255 - 0.5) * 1.5 + 0.55, 0, 1)
     h, w = a.shape
     x = int(PLAYER_CX + frame['x'] * W - w / 2)
-    y = int(PLAYER_FOOT + frame['y'] * BASE_H - h)
-    x0, y0, x1, y1 = max(x, 0), max(y, 0), min(x + w, W), min(y + h, H)
+    y = int(_L.PLAYER_FOOT + frame['y'] * BASE_H - h)
+    x0, y0, x1, y1 = max(x, 0), max(y, 0), min(x + w, W), min(y + h, _L.H)
     alpha[y0:y1, x0:x1] = a[y0 - y:y1 - y, x0 - x:x1 - x]
     lum[y0:y1, x0:x1] = g[y0 - y:y1 - y, x0 - x:x1 - x]
     # niente alone semitrasparente del ritaglio (farebbe "fumo" sulle lettere)
@@ -461,9 +469,9 @@ def _scissor_mask(alpha, gap=22, smooth=30, eps=14, jitter=7, seed=4):
         return _mask()
     poly = cv2.approxPolyDP(max(cnts, key=cv2.contourArea), eps, True)[:, 0, :].astype(np.float32)
     poly += np.random.default_rng(seed).normal(0, jitter, poly.shape)
-    big = np.zeros((H * 2, W * 2), np.uint8)
+    big = np.zeros((_L.H * 2, W * 2), np.uint8)
     cv2.fillPoly(big, [np.int32(poly * 2)], 255, cv2.LINE_AA)
-    return np.asarray(Image.fromarray(big).resize((W, H), Image.LANCZOS), np.float32) / 255
+    return np.asarray(Image.fromarray(big).resize((W, _L.H), Image.LANCZOS), np.float32) / 255
 
 
 def name_size(name):
@@ -520,22 +528,22 @@ def _below_strip(lab, tuck=30):
     tops = np.argmax(lab[:, cols] > 0.5, 0)
     k, q = np.polyfit(cols, tops, 1)
     line = k * np.arange(W) + q + tuck
-    return np.float32(np.arange(H)[:, None] >= line[None, :])
+    return np.float32(np.arange(_L.H)[:, None] >= line[None, :])
 
 
 def _print(paper, inks, seed=0, breakup=0.15):
     out = paper.copy()
     for i, (cov, col) in enumerate(inks):
-        cov = (cov * _ink_breakup((W, H), seed + 7 * i, breakup))[..., None]
+        cov = (cov * _ink_breakup((W, _L.H), seed + 7 * i, breakup))[..., None]
         out = out * (1 - cov * (1 - col[None, None]))
     return out
 
 
 def _finish(img, light, grain=0.035, seed=1, vignette=0.12):
-    img = img + np.random.default_rng(seed).normal(0, grain, (H, W, 1)).astype(np.float32)
+    img = img + np.random.default_rng(seed).normal(0, grain, (_L.H, W, 1)).astype(np.float32)
     img = img * light[..., None]
-    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    r = np.sqrt(((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2) / np.sqrt(2)
+    yy, xx = np.mgrid[0:_L.H, 0:W].astype(np.float32)
+    r = np.sqrt(((xx - W / 2) / (W / 2)) ** 2 + ((yy - _L.H / 2) / (_L.H / 2)) ** 2) / np.sqrt(2)
     return np.clip(img * (1 - vignette * r ** 2)[..., None], 0, 1)
 
 
@@ -544,8 +552,8 @@ def _jr_logo():
     from graphics.photo_jr import _meta
     with Image.open(asset_dir() / 'canva' / _meta()['black']['overlay']) as im:
         lg = np.asarray(im.convert('RGBA').resize((W, BASE_H), Image.LANCZOS), np.float32) / 255
-    out = np.zeros((H, W, 4), np.float32)
-    out[TOP:TOP + BASE_H] = lg
+    out = np.zeros((_L.H, W, 4), np.float32)
+    out[_L.TOP:_L.TOP + BASE_H] = lg
     return out
 
 
@@ -554,16 +562,14 @@ def render(*, story=False, **kwargs):
     """ghost=True: poster senza giocatore (sfondo dell'editor dove lo si sposta e zooma).
     person = foto scontornata (byte o PIL) di un giocatore aggiunto a mano, al posto di photo.
     story=True: storia IG 9:16 (1500x2667): stessa carta, data e titolo in alto, nome in basso
-    fuori dalle zone di Instagram, giocatore più grande."""
-    global H, TOP, PLAYER_FOOT, STRIP_Y, PLAYER_SCALE
-    with _PAGE_LOCK:
-        if story:
-            H, TOP, STRIP_Y, PLAYER_FOOT, PLAYER_SCALE = STORY_H, STORY_TOP, STORY_STRIP_Y, STORY_FOOT, STORY_PLAYER
-        try:
-            return _render(**kwargs)
-        finally:
-            H, TOP, PLAYER_SCALE = BASE_H, 0, 1.0
-            PLAYER_FOOT, STRIP_Y = BASE_H - 110, BASE_H - 205
+    fuori dalle zone di Instagram, giocatore più grande. Le misure valgono solo per questo
+    render (thread suo): 3:4 e storia si preparano insieme."""
+    if story:
+        _L.H, _L.TOP, _L.STRIP_Y, _L.PLAYER_FOOT, _L.PLAYER_SCALE = STORY_H, STORY_TOP, STORY_STRIP_Y, STORY_FOOT, STORY_PLAYER
+    try:
+        return _render(**kwargs)
+    finally:
+        _L.__dict__.clear()          # di nuovo le misure del 3:4
 
 
 def _render(*, name, birth, photo, age=None, player=None, frame=None, ghost=False, person=None):
@@ -581,12 +587,12 @@ def _render(*, name, birth, photo, age=None, player=None, frame=None, ghost=Fals
     else:
         path = photo_path(photo, player)
 
-    paper = _paper((W, H), CREAM, seed=3)
-    light = _crumple((W, H), 5, 0.45)
+    paper = _paper((W, _L.H), CREAM, seed=3)
+    light = _crumple((W, _L.H), 5, 0.45)
     black, gold = _mask(), _mask()
 
     # riga alta: data ed età centrate, linea a tutta larghezza
-    y = 95 + TOP
+    y = 95 + _L.TOP
     _put(black, _word(f'{born:%d.%m.%Y}   •   {age} YEARS OLD', 34, MONO, 6), (W / 2, y), 'mm')
     black[y + 32:y + 35, M:W - M] = 1
 
@@ -594,13 +600,13 @@ def _render(*, name, birth, photo, age=None, player=None, frame=None, ghost=Fals
     title = _mask()
     h1 = _fit_w(_word('HAPPY', 600, tracking=4), W - 2 * M)
     h2 = _fit_w(_word('BIRTHDAY', 600, tracking=2), W - 2 * M)
-    _put(title, h1, (W / 2, 160 + TOP), 'mt')
-    _put(title, h2, (W / 2, 160 + TOP + h1.height + 18), 'mt')
+    _put(title, h1, (W / 2, 160 + _L.TOP), 'mt')
+    _put(title, h2, (W / 2, 160 + _L.TOP + h1.height + 18), 'mt')
 
     # giocatore ritagliato a forbici: il ritaglio finisce sotto la striscia del nome, lungo il suo
     # bordo alto (anche oltre le estremità della striscia: niente carta che sbuca di lato)
-    lab, txt = _label_strip(name, (W / 2, STRIP_Y), angle=strip_angle(name, age))
-    alpha, lum = _player_layers(path, frame) if path is not None else (_mask(), np.ones((H, W), np.float32))
+    lab, txt = _label_strip(name, (W / 2, _L.STRIP_Y), angle=strip_angle(name, age))
+    alpha, lum = _player_layers(path, frame) if path is not None else (_mask(), np.ones((_L.H, W), np.float32))
     cut = _scissor_mask(alpha)
     below = _below_strip(lab)
     alpha *= 1 - below
@@ -624,12 +630,12 @@ def _render(*, name, birth, photo, age=None, player=None, frame=None, ghost=Fals
     img = _print(paper, [(gold, GOLD), (black, INK)], seed=11)
     img = img * (1 - 0.42 * np.minimum(np.maximum(sh * (1 - lab), lsh), 1.3))[..., None]
     img = _finish(img, light)
-    if H == BASE_H:
+    if _L.H == BASE_H:
         lg = _jr_logo()
         img = img * (1 - lg[..., 3:4]) + lg[..., :3] * lg[..., 3:4]
 
     out = Image.fromarray(np.uint8(np.clip(img, 0, 1) * 255 + 0.5))
-    if H != BASE_H:          # storia: logo JR in basso, dove sta il timbro delle Storie IG
+    if _L.H != BASE_H:          # storia: logo JR in basso, dove sta il timbro delle Storie IG
         from graphics.common import story_jr_paste
         story_jr_paste(out, tuple(int(c * 255) for c in INK))
     buf = io.BytesIO()

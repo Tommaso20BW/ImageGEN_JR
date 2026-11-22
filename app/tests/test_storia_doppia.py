@@ -72,7 +72,7 @@ class SaveFileTests(unittest.TestCase):
     def svc(self, data):
         import threading
         svc = service.Service.__new__(service.Service)
-        svc.operation_lock, svc.preview_cache_lock = threading.Lock(), threading.Lock()
+        svc.operation_lock, svc.preview_cache_lock, svc.story_lock = threading.Lock(), threading.Lock(), threading.Lock()
         svc.saved_files = {}
         svc._set_stage = lambda *_: None
         svc._parse_request = lambda env: {'data': data, 'id': 1}
@@ -87,6 +87,18 @@ class SaveFileTests(unittest.TestCase):
     def test_34_not_saved(self):
         with self.assertRaises(ValueError):
             self.svc({'kind': 'bday'}).save_file({})
+
+
+class LaneTests(unittest.TestCase):
+    """3:4 e storia si preparano insieme: la storia delle grafiche doppie ha una corsia sua."""
+    def test_story_own_lock(self):
+        import threading
+        svc = service.Service.__new__(service.Service)
+        svc.operation_lock, svc.story_lock = threading.Lock(), threading.Lock()
+        self.assertIs(svc._lock_for({'data': {'kind': 'bday', 'story': True}}), svc.story_lock)
+        self.assertIs(svc._lock_for({'data': {'kind': 'bday'}}), svc.operation_lock)
+        self.assertIs(svc._lock_for({'data': {'kind': 'igbn', 'story': True}}), svc.operation_lock)
+        self.assertIs(svc._lock_for(None), svc.operation_lock)
 
 
 class CacheTests(unittest.TestCase):

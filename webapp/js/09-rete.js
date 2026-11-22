@@ -460,13 +460,14 @@ async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caric
     const bracket = kind === 'table' && tableViewOf() === 'bracket';    // tempi e testo a parte: ci mette di più
     if (!(keepBusy && busy)) showBusy('Genero l’anteprima…',bracket ? 'Leggo il tabellone aggiornato da Diretta.it.' : BUSY_SUB[realKind()] || '',bracket ? 'bracket' : realKind());
 
-    const blob = await fetchPreview(raw);
-    // Compleanno (anche ex calciatori), Starting XI, Probabili, Squad List, Classifica e Tabellone: anche la versione per le storie IG.
-    let story = null;
-    if (isDualPayload(payload)) {
-      $('busySub').textContent = 'Ora la versione per le storie IG.';
-      story = await fetchPreview(JSON.stringify({...payload, data:{...payload.data, story:true}}));
-    }
+    // Compleanno (anche ex calciatori), Starting XI, Probabili, Squad List, Classifica e Tabellone:
+    // anche la versione per le storie IG, preparata insieme al 3:4.
+    const dual = isDualPayload(payload);
+    if (dual) $('busySub').textContent = 'Preparo insieme il post 3:4 e la storia IG.';
+    const [blob, story] = await Promise.all([
+      fetchPreview(raw),
+      dual ? fetchPreview(JSON.stringify({...payload, data:{...payload.data, story:true}})) : null,
+    ]);
 
     await finishBusy();
     previewPayloadText = raw;
@@ -494,49 +495,68 @@ function telegramDownload(url, name) {
     catch (_) { resolve(null); }
   });
 }
+// Il servizio prepara la storia e risponde con l'indirizzo del file da scaricare.
+async function prepareStoryFile(body) {
+  const response = await netFetch(`${directBase}/savefile`, {
+    method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+    body:body || previewPayloadText || JSON.stringify(buildPayload())
+  }, 150000, 2, true);
+  let answer = {};
+  try { answer = await response.json(); } catch (_) {}
+  if (!response.ok || !answer.ok) throw new Error(answer.error || `Salvataggio non riuscito (${response.status}).`);
+  return directBase + answer.path;
+}
+// true = salvata, false = annullato da te
+async function downloadStory(url) {
+  const name = `storia-${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}.png`;
+  if (tg && typeof tg.isVersionAtLeast === 'function' && tg.isVersionAtLeast('8.0')) {
+    const saved = await telegramDownload(url, name);
+    if (saved === null) throw new Error('Telegram non riesce a scaricare: aggiornalo e riprova.');
+    return saved;
+  }
+  const a = document.createElement('a');           // fuori da Telegram (o Telegram vecchio): scarica il browser
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  return true;
+}
+// Fatto: la Mini App si chiude da sola.
+function closeMiniAppSoon() {
+  setTimeout(() => {
+    try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}
+    try { if (tg && typeof tg.close === 'function') tg.close(); } catch (_) {}
+  }, 900);
+}
+function storyError(error) {
+  setPreviewError(sessionExpired() ? EXPIRED_MESSAGE
+    : (error && error.name === 'AbortError' ? 'ImageGEN non risponde. Riprova tra qualche secondo.' : (error.message || 'Salvataggio non riuscito.')));
+}
+
 async function saveStoryToGallery(body=null) {
   $('nextButton').disabled = true;
   $('backButton').disabled = true;
   $('nextButton').textContent = 'Preparo…';
   try {
-    const response = await netFetch(`${directBase}/savefile`, {
-      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-      body:body || previewPayloadText || JSON.stringify(buildPayload())
-    }, 150000, 2, true);
-    let answer = {};
-    try { answer = await response.json(); } catch (_) {}
-    if (!response.ok || !answer.ok) throw new Error(answer.error || `Salvataggio non riuscito (${response.status}).`);
-    const url = directBase + answer.path;
-    const name = `storia-${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}.png`;
-    let saved;
-    if (tg && typeof tg.isVersionAtLeast === 'function' && tg.isVersionAtLeast('8.0')) saved = await telegramDownload(url, name);
-    else {                                          // fuori da Telegram (o Telegram vecchio): scarica il browser
-      const a = document.createElement('a');
-      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-      saved = true;
-    }
-    if (saved === false) { $('nextButton').textContent = sendLabel(); return false; }   // annullato da te
-    if (saved === null) throw new Error('Telegram non riesce a scaricare: aggiornalo e riprova.');
+    const url = await prepareStoryFile(body);
+    if (!await downloadStory(url)) { $('nextButton').textContent = sendLabel(); return false; }   // annullato da te
     haptic('success');
     $('nextButton').textContent = 'Salvata ✓';
-    setTimeout(() => { $('nextButton').textContent = sendLabel(); }, 2500);
+    closeMiniAppSoon();
     return true;
   } catch (error) {
     $('nextButton').textContent = sendLabel();
-    setPreviewError(sessionExpired() ? EXPIRED_MESSAGE
-      : (error && error.name === 'AbortError' ? 'ImageGEN non risponde. Riprova tra qualche secondo.' : (error.message || 'Salvataggio non riuscito.')));
+    storyError(error);
   } finally {
     $('nextButton').disabled = sessionExpired();
     $('backButton').disabled = false;
   }
 }
 
-/* Tutte e due le versioni: prima il post 3:4 su Telegram, poi la storia nella galleria (la Mini App resta aperta). */
+/* Tutte e due le versioni, insieme: il post 3:4 parte per Telegram mentre la storia si prepara;
+   poi Telegram salva la storia nella galleria e la Mini App si chiude. */
 async function sendThenSave(raw, storyRaw) {
   $('nextButton').disabled = true;
   $('backButton').disabled = true;
-  $('nextButton').textContent = 'Invio…';
-  try {
+  $('nextButton').textContent = 'Invio e preparo…';
+  const send = (async () => {
     const response = await netFetch(`${directBase}/submit`, {
       method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session}, body:raw
     }, 150000, 2, true);
@@ -545,16 +565,28 @@ async function sendThenSave(raw, storyRaw) {
     if (!response.ok || answer.ok === false) throw new Error(answer.error || `Invio non riuscito (${response.status}).`);
     if (typeof rememberSent === 'function') rememberSent(answer.message_id);
     previewPick.delete('34');          // il post è partito: se rifai, si salva solo la storia
+  })();
+  const file = prepareStoryFile(storyRaw);
+  try {
+    const [sent, url] = await Promise.allSettled([send, file]);
     renderPreviewPick();
+    if (sent.status === 'rejected') {
+      const e = sent.reason;
+      throw new Error(e && e.name === 'AbortError' ? 'ImageGEN non risponde. Controlla la chat del bot: la foto potrebbe essere arrivata.' : (e && e.message) || 'Invio non riuscito.');
+    }
+    if (url.status === 'rejected') throw url.reason;
+    $('nextButton').textContent = 'Salvo…';
+    if (!await downloadStory(url.value)) { $('nextButton').textContent = sendLabel(); return; }   // annullato: il post è già partito
+    haptic('success');
+    $('nextButton').textContent = 'Inviato e salvato ✓';
+    closeMiniAppSoon();
   } catch (error) {
+    $('nextButton').textContent = sendLabel();
+    storyError(error);
+  } finally {
     $('nextButton').disabled = sessionExpired();
     $('backButton').disabled = false;
-    $('nextButton').textContent = sendLabel();
-    setPreviewError(sessionExpired() ? EXPIRED_MESSAGE
-      : (error && error.name === 'AbortError' ? 'ImageGEN non risponde. Controlla la chat del bot: la foto potrebbe essere arrivata.' : (error.message || 'Invio non riuscito.')));
-    return;
   }
-  return saveStoryToGallery(storyRaw);
 }
 
 async function submitPreviewGraphic() {
