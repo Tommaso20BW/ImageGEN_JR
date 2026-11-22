@@ -698,7 +698,7 @@ def _build_state(envelope, catalog, now, expected_session):
 
 
 # Grafiche in due formati: 3:4 e storia IG (9:16). "story": true chiede la storia.
-STORY_KINDS = ('bday', 'bdold', 'xi', 'pxi', 'squad', 'table')
+STORY_KINDS = ('bday', 'bdold', 'xi', 'pxi', 'squad', 'table', 'motm')
 
 
 def parse_webapp_request(envelope, catalog, now, expected_session):

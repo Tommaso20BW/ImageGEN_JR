@@ -450,10 +450,26 @@ def story_jr_alpha():
 
 
 @lru_cache(maxsize=1)
+def story_jr_stamp_alpha():
+    """Logo JR a timbro come nelle Storie IG normali (ig_story._logo_stamp): bordo morbido,
+    inchiostro sbiadito (78%) e consumato a chiazze. Misura del logo su una storia 1080x1920."""
+    import numpy as np
+    from PIL import Image, ImageFilter
+    from graphics import compleanno as cp
+    a = story_jr_alpha()
+    h = STORY_JR_H
+    w = round(a.width * h / a.height)
+    m = np.asarray(a.resize((w, h), Image.LANCZOS).filter(ImageFilter.GaussianBlur(.6)), np.float32) / 255
+    x, y = (1080 - w) // 2, STORY_JR_TOP
+    m *= cp._ink_breakup((1080, STORY_H), 11, .55)[y:y + h, x:x + w] * .78
+    return Image.fromarray(np.uint8(np.clip(m, 0, 1) * 255 + .5))
+
+
+@lru_cache(maxsize=1)
 def _story_jr_mask_uri():
     import io
     from PIL import Image
-    a = story_jr_alpha()
+    a = story_jr_stamp_alpha()
     img = Image.new('RGBA', a.size, (255, 255, 255, 255))
     img.putalpha(a)
     buf = io.BytesIO()
@@ -475,7 +491,7 @@ def story_jr_html(color, page_w=DESIGN_W, page_h=STORY_H):
 def story_jr_paste(img, color):
     """Logo JR della storia su un'immagine PIL 9:16 (qualsiasi misura), colore (r, g, b)."""
     from PIL import Image
-    a = story_jr_alpha()
+    a = story_jr_stamp_alpha()
     h = round(STORY_JR_H * img.height / STORY_H)
     w = round(a.width * h / a.height)
     mask = a.resize((w, h), Image.LANCZOS)
@@ -571,3 +587,35 @@ def matchday_pose(player, kit, pose):
     if not path.is_file():
         raise ValueError(f'Manca la posa di {player.name} con questa maglia.')
     return path
+
+
+@lru_cache(maxsize=4)
+def _story_paper_light(w, h, seed):
+    """Luce di carta stropicciata + vignettatura delle storie IG normali (ig_story), già pronta da moltiplicare."""
+    import numpy as np
+    from graphics import compleanno as cp
+    light = cp._crumple((w, h), seed, 0.7, folds=3)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    r = np.sqrt(((xx - w / 2) / (w / 2)) ** 2 + ((yy - h / 2) / (h / 2)) ** 2) / np.sqrt(2)
+    return (light * (1 - .18 * r ** 2)).astype(np.float32)
+
+
+def story_paper(data, seed=7):
+    """Effetto carta delle storie IG normali sopra una storia 9:16 già pronta (bytes PNG/JPEG -> stessi bytes)."""
+    import io
+    import numpy as np
+    from PIL import Image
+    with Image.open(io.BytesIO(data)) as im:
+        fmt = (im.format or 'PNG').upper()
+        rgb = im.convert('RGB')
+    w, h = rgb.size
+    a = np.asarray(rgb, np.float32) / 255
+    a = a + np.random.default_rng(seed).normal(0, .035, (h, w, 1)).astype(np.float32)
+    a = np.clip(a * _story_paper_light(w, h, seed)[..., None], 0, 1)
+    out = io.BytesIO()
+    img = Image.fromarray(np.uint8(a * 255 + .5))
+    if fmt == 'JPEG':
+        img.save(out, 'JPEG', quality=95, subsampling=0)
+    else:
+        img.save(out, 'PNG')
+    return out.getvalue()

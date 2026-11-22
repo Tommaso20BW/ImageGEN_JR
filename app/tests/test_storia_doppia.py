@@ -1,4 +1,4 @@
-"""Compleanno, Starting XI, Probabili, Squad List e Classifica/Tabellone in due versioni: 3:4 e storia IG (9:16)."""
+"""Compleanno, Starting XI, Probabili, Squad List, Classifica/Tabellone e Man of the Match in due versioni: 3:4 e storia IG (9:16)."""
 import copy
 import io
 import unittest
@@ -30,7 +30,7 @@ class PayloadTests(unittest.TestCase):
         self.assertIs(parse(bday(story=True))['story'], True)
 
     def test_story_kinds(self):
-        self.assertEqual(set(webapp_payload.STORY_KINDS), {'bday', 'bdold', 'xi', 'pxi', 'squad', 'table'})
+        self.assertEqual(set(webapp_payload.STORY_KINDS), {'bday', 'bdold', 'xi', 'pxi', 'squad', 'table', 'motm'})
 
 
 class SubmitTests(unittest.TestCase):
@@ -120,6 +120,21 @@ class RenderTests(unittest.TestCase):
         story = Image.open(io.BytesIO(C.render(story=True, **args)))
         self.assertEqual(story.size, (1500, round(1500 * 16 / 9)))
         self.assertEqual((C.H, C.TOP, C.STRIP_Y), (2000, 0, 2000 - 205))      # dopo la storia torna il 3:4
+
+    def test_motm_story(self):
+        from PIL import Image
+        from graphics import motm
+        args = dict(surname='YILDIZ', name='Kenan', home='Juventus', away='Inter', comp='Serie A', ghost=True)
+        self.assertEqual(Image.open(io.BytesIO(motm.render(**args))).size, (1500, 2000))
+        self.assertEqual(Image.open(io.BytesIO(motm.render(story=True, **args))).size, (1500, 2667))
+
+    def test_story_paper(self):
+        from PIL import Image
+        buf = io.BytesIO()
+        Image.new('RGB', (540, 960), (200, 30, 30)).save(buf, 'JPEG')
+        out = Image.open(io.BytesIO(common.story_paper(buf.getvalue())))
+        self.assertEqual((out.format, out.size), ('JPEG', (540, 960)))
+        self.assertEqual(common.story_jr_stamp_alpha().height, common.STORY_JR_H)
 
     def test_story_bg(self):
         import base64

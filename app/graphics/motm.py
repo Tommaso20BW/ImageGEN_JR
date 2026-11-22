@@ -379,8 +379,38 @@ def _plain(text):
     return ''.join(ch for ch in raw if not unicodedata.combining(ch))
 
 
-def render(*, surname, name='', home='', away='', comp='', person=None, frame=None, ghost=False):
-    """PNG del poster. person = PNG scontornato (byte o Image); ghost=True: senza giocatore (editor)."""
+# Storia IG 9:16 (1500x2667): stesso poster (fondo crema uniforme, si allunga senza cuciture) più in
+# basso, fuori dalla zona alta di Instagram, e logo JR dove sta il timbro delle Storie IG.
+STORY_H = round(W * 16 / 9)
+# Centrata nello spazio che si vede davvero: tra la zona alta di Instagram (nome del profilo) e il logo JR.
+# Il poster va da 58 px (MAN OF THE MATCH) a 1895 px (nome del campionato).
+POSTER_TOP, POSTER_BOTTOM = 58, 1895
+
+
+def _story_shift():
+    from graphics.common import STORY_H as REF_H, STORY_JR_TOP, STORY_SAFE_TOP
+    top, jr = STORY_SAFE_TOP * STORY_H / REF_H, STORY_JR_TOP * STORY_H / REF_H
+    return round((top + jr) / 2 - (POSTER_TOP + POSTER_BOTTOM) / 2)
+
+
+def render(*, story=False, **kwargs):
+    """PNG del poster. person = PNG scontornato (byte o Image); ghost=True: senza giocatore (editor).
+    story=True: storia IG 9:16."""
+    if not story:
+        return _render(**kwargs)
+    from graphics.common import story_jr_paste
+    poster = Image.open(io.BytesIO(_render(jr=False, **kwargs))).convert('RGB')
+    page = np.ones((STORY_H, W, 3), np.float32) * np.array(BG, np.float32) / 255
+    page += np.random.default_rng(2).normal(0, .006, (STORY_H, W, 1)).astype(np.float32)
+    out = Image.fromarray(np.uint8(np.clip(page, 0, 1) * 255 + .5))
+    out.paste(poster, (0, _story_shift()))
+    story_jr_paste(out, INK)
+    buf = io.BytesIO()
+    out.save(buf, 'PNG')
+    return buf.getvalue()
+
+
+def _render(*, surname, name='', home='', away='', comp='', person=None, frame=None, ghost=False, jr=True):
     surname = clean_text(surname, SURNAME_MAX)
     name = clean_name(name)
     home, away = clean_text(home, TEAM_MAX), clean_text(away, TEAM_MAX)
@@ -398,8 +428,9 @@ def render(*, surname, name='', home='', away='', comp='', person=None, frame=No
     c.put(j, W / 2 - j.width / 2, LOGO_Y, GOLD_TXT)
     c.line(*HLINE_L, HLINE_Y, True)
     c.line(*HLINE_R, HLINE_Y, False)
-    jr = _jr_logo()
-    c.a = c.a * (1 - jr[..., 3:]) + jr[..., :3] * jr[..., 3:]
+    if jr:
+        logo = _jr_logo()
+        c.a = c.a * (1 - logo[..., 3:]) + logo[..., :3] * logo[..., 3:]
 
     # cognome vellutato
     sm = _surname_mask(surname)

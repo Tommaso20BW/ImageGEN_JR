@@ -253,6 +253,15 @@ class Renderer:
         return photo
 
     def render(self, data, progress=None, ghost=False):
+        out = self._render(data, progress, ghost)
+        if isinstance(data, dict) and data.get('story') is True and isinstance(out, (bytes, bytearray)):
+            from graphics.common import story_paper
+            from webapp_payload import STORY_KINDS
+            if data.get('kind') in STORY_KINDS:
+                return story_paper(bytes(out))
+        return out
+
+    def _render(self, data, progress=None, ghost=False):
         """ghost=True (grafiche con foto): versione leggera senza foto per l'editor."""
         """Render a graphic. `progress(stage)` is called at the real steps of HALF/END/FULL TIME."""
         from livescore.graphics import goal as g
@@ -338,7 +347,8 @@ class Renderer:
             person = None if ghost else self.final_cutout(data['photo_id'])
             return motm.render(surname=data.get('surname', ''), name=data.get('name', ''),
                                home=data.get('home', ''), away=data.get('away', ''), comp=data.get('comp', ''),
-                               person=person, frame=data.get('frame'), ghost=ghost)
+                               person=person, frame=data.get('frame'), ghost=ghost,
+                               story=bool(data.get('story')))
 
         if kind == 'potm':
             from graphics import potm

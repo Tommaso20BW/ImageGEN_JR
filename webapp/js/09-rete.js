@@ -421,7 +421,7 @@ function initLayoutEditor() {
   $('lay').addEventListener('touchmove',e => { if (e.target.closest('#layFrame')) e.preventDefault(); },{passive:false});
 }
 
-const DUAL_KINDS = new Set(['bday','bdold','xi','pxi','squad','table']);
+const DUAL_KINDS = new Set(['bday','bdold','xi','pxi','squad','table','motm']);
 const isDualPayload = p => !LIVE && !!p && !!p.data && DUAL_KINDS.has(p.data.kind) && p.data.team !== 'italy';
 
 // Il servizio può aspettare un'altra richiesta (fino a 75 s) e poi fare il render.
@@ -460,7 +460,7 @@ async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caric
     const bracket = kind === 'table' && tableViewOf() === 'bracket';    // tempi e testo a parte: ci mette di più
     if (!(keepBusy && busy)) showBusy('Genero l’anteprima…',bracket ? 'Leggo il tabellone aggiornato da Diretta.it.' : BUSY_SUB[realKind()] || '',bracket ? 'bracket' : realKind());
 
-    // Compleanno (anche ex calciatori), Starting XI, Probabili, Squad List, Classifica e Tabellone:
+    // Compleanno (anche ex calciatori), Starting XI, Probabili, Squad List, Classifica, Tabellone e Man of the Match:
     // anche la versione per le storie IG, preparata insieme al 3:4.
     const dual = isDualPayload(payload);
     if (dual) $('busySub').textContent = 'Preparo insieme il post 3:4 e la storia IG.';
