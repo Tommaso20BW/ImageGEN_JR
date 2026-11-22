@@ -253,10 +253,10 @@ async function pickIgSent(item) {
 // Pagina a parte (dal riquadro "Frasi pronte"): un tocco mette la frase nel testo e si torna alla
 // storia; "×" la toglie; "Salva il testo attuale" la aggiunge. Restano nel repo degli asset (sent_store.py).
 let igPhrases = [];
-async function phrasesCall(action, text='', color='black') {
+async function phrasesCall(action, text='', color='black', extra={}) {
   const response = await netFetch(`${directBase}/phrases`, {
     method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
-    body:JSON.stringify({v:1, action, session, text, color})
+    body:JSON.stringify({v:1, action, session, text, color, ...extra})
   }, 20000, 2);
   const body = await response.json().catch(() => ({}));
   if (!response.ok || !body.ok) throw new Error(body.error || 'Frasi non disponibili.');
@@ -284,17 +284,27 @@ function renderPhrases() {
   const box = $('igPhrases');
   box.querySelectorAll('.ig-phrase').forEach(el => el.remove());
   const save = $('igPhraseSave');
-  igPhrases.forEach(({text, color}) => {
+  igPhrases.forEach(phrase => {
+    const {text, color} = phrase;
     const row = document.createElement('div');
     row.className = 'ios-row ig-phrase';
-    row.innerHTML = '<button class="ig-ph-use" type="button"><span class="ig-ph-dot"></span><span class="ig-ph-txt"></span></button>' +
+    row.innerHTML = '<button class="ig-ph-use" type="button"><span class="ig-ph-dot"></span><span class="ig-ph-body">' +
+      '<span class="ig-ph-txt"></span><span class="ig-ph-meta"></span></span></button>' +
       '<button class="ig-ph-del" type="button" aria-label="Elimina la frase">×</button>';
     row.querySelector('.ig-ph-txt').textContent = text;
+    row.querySelector('.ig-ph-meta').textContent = phraseMeta(phrase);
     row.querySelector('.ig-ph-dot').style.background = igHex(color);
     row.querySelector('.ig-ph-use').addEventListener('click', () => {
       haptic('select');
       $('igText').value = text;
       setIgColor(color, false);
+      if ('label' in phrase) {          // salvata con etichetta, fonte e link: torna tutto com'era
+        setIgLabel(phrase.label);
+        $('igLabelText').value = phrase.label === 'custom' ? phrase.label_text || '' : '';
+        $('igSource').value = phrase.source || '';
+        $('igLinkText').value = phrase.link_text || '';
+        renderIgLink();
+      }
       clearError();
       igRefresh();
       renderPhrases();
@@ -303,9 +313,11 @@ function renderPhrases() {
     row.querySelector('.ig-ph-del').addEventListener('click', () => deletePhrase(text));
     box.appendChild(row);
   });
-  // Già salvata uguale (stesso testo e stesso colore): niente da salvare.
+  // Già salvata uguale (stesso testo, colore, etichetta, fonte e link): niente da salvare.
   const current = cleanPhrase($('igText').value);
-  save.disabled = !current || igPhrases.some(p => p.text === current && p.color === igColor);
+  const extra = phraseExtra();
+  save.disabled = !current || igPhrases.some(p => p.text === current && p.color === igColor &&
+    'label' in p && Object.keys(extra).every(k => (p[k] || '') === extra[k]));
   $('igPhrasesEmpty').hidden = igPhrases.length > 0;
   $('igPhrCount').textContent = igPhrases.length === 1 ? '1 frase' : igPhrases.length ? `${igPhrases.length} frasi` : 'Salvate da te';
 }
@@ -313,7 +325,7 @@ function renderPhrases() {
 async function savePhrase() {
   const text = $('igText').value.trim();
   if (!text) { showError('Scrivi prima il testo da salvare.'); return; }
-  try { await phrasesCall('add', text, igColor); haptic('success'); }
+  try { await phrasesCall('add', text, igColor, phraseExtra()); haptic('success'); }
   catch (error) { showError(error.message || 'Frase non salvata.'); }
 }
 
@@ -328,6 +340,19 @@ function deletePhrase(text) {
     try { tg.showConfirm(msg, go); return; } catch (_) {}
   }
   go(window.confirm(msg));
+}
+
+// Etichetta, titolo, fonte e link di adesso: si salvano con la frase.
+function phraseExtra() {
+  const one = v => String(v || '').split(/\s+/).filter(Boolean).join(' ');
+  return {label: igLabel || '', label_text: igLabel === 'custom' ? one($('igLabelText').value).toUpperCase() : '',
+          source: one($('igSource').value), link_text: one($('igLinkText').value)};
+}
+// Sotto la frase, in piccolo: cosa si rimette con lei.
+function phraseMeta(p) {
+  if (!('label' in p)) return '';
+  const label = p.label === 'custom' ? p.label_text : (IG_LABELS.find(l => l[0] === p.label) || [])[1];
+  return [label, p.source && `Fonte: ${p.source}`, p.link_text && `Link: ${p.link_text}`].filter(Boolean).join(' · ');
 }
 
 // Come sent_store.clean_phrase: spazi in più tolti riga per riga, a capo conservati.

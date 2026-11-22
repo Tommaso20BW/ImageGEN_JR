@@ -1443,13 +1443,15 @@ class Service:
         action = (envelope or {}).get('action')
         text = sent_store.clean_phrase((envelope or {}).get('text'))
         color = ig_story.text_color((envelope or {}).get('color'))
+        # Con la frase si salvano anche etichetta, titolo personalizzato, fonte e testo del link.
+        extra = self._phrase_extra(envelope or {}) if action == 'add' else {}
         with self.history_lock:
             phrases = list(self.ig_phrases)
             if action == 'add':
                 if not text:
                     raise ValueError('Scrivi prima la frase.')
                 # Stessa frase già salvata: si aggiorna il colore e torna in cima.
-                phrases = [{'text': text, 'color': color}] + [p for p in phrases if p['text'] != text]
+                phrases = [{'text': text, 'color': color, **extra}] + [p for p in phrases if p['text'] != text]
             elif action == 'delete':
                 phrases = [p for p in phrases if p['text'] != text]
             elif action != 'list':
@@ -1461,6 +1463,16 @@ class Service:
             log.info('SALVATAGGIO', f"Frasi pronte: {'aggiunta' if action == 'add' else 'tolta'} una frase "
                                     f'({len(self.ig_phrases)} in tutto)')
         return {'phrases': self.ig_phrases}
+
+    @staticmethod
+    def _phrase_extra(envelope):
+        from graphics import ig_story
+        label = envelope.get('label') or ''
+        label = label if label in ig_story.LABELS and label != 'none' else ''
+        label_text = ig_story.clean_label(envelope.get('label_text')) if label == 'custom' else ''
+        source = ig_story.clean_source(str(envelope.get('source') or '')[:ig_story.MAX_SOURCE])
+        return {'label': label, 'label_text': label_text, 'source': source,
+                'link_text': ig_story.clean_link_text(envelope.get('link_text'))}
 
     def erase(self, envelope):
         """POST /erase: la gomma è un lavoro in background, come lo scontorno.

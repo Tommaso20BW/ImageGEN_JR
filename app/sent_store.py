@@ -64,14 +64,21 @@ def clean_phrase(value):
     return '\n'.join(lines).strip()[:PHRASE_MAX]
 
 
+PHRASE_EXTRA = ('label', 'label_text', 'source', 'link_text')   # etichetta, titolo, fonte, link
+
+
 def load_phrases():
-    """Frasi pronte: [{'text', 'color'}] (le prime salvate erano solo testo: colore di base)."""
+    """Frasi pronte: [{'text', 'color'}] (le prime salvate erano solo testo: colore di base).
+    Quelle salvate dopo hanno anche etichetta, titolo, fonte e link ('label' c'è sempre, anche vuota)."""
     out = []
     for item in _read(PHRASES, []):
         row = item if isinstance(item, dict) else {'text': item}
         text = clean_phrase(row.get('text'))
         if text:
-            out.append({'text': text, 'color': str(row.get('color') or 'black')})
+            phrase = {'text': text, 'color': str(row.get('color') or 'black')}
+            if 'label' in row:
+                phrase.update({k: str(row.get(k) or '') for k in PHRASE_EXTRA})
+            out.append(phrase)
     return out[:PHRASES_KEEP]
 
 
