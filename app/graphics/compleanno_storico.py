@@ -30,6 +30,7 @@ STORY_SHIFT = 160
 STORY_TITLE_TOP = 301 + STORY_SHIFT     # cima di HAPPY nello sfondo della storia (già sceso)
 TITLE_TOP = 256                          # cima di HAPPY nello sfondo 3:4
 STORY_PERSON = 1.2
+STORY_FADE = (.7, .88)                   # storia: sfumatura nera da sotto (inizio, pieno), copre il taglio del 3:4
 
 
 @lru_cache(maxsize=1)
@@ -197,21 +198,19 @@ def render(*, name, person=None, frame=None, ghost=False, vintage=True, story=Fa
         p, x, y = rotate_person(p, x, y, frame)
         layer = Image.new('RGBA', (W, page_h), (0, 0, 0, 0))
         layer.paste(p, (x, y), p)
-        if story:           # la persona sfuma prima del logo JR in basso: il logo resta sullo sfondo
-            from graphics.common import STORY_JR_TOP
-            end = round(STORY_JR_TOP * page_h / 1920) - 20
-            fade = np.clip((end - np.arange(page_h, dtype=np.float32)) / 260, 0, 1)
-            alpha = np.asarray(layer.getchannel('A'), np.float32) * fade[:, None]
-            layer.putalpha(Image.fromarray(np.uint8(alpha + .5)))
         # ombra morbida dietro la persona, per staccarla dal titolo
         sh = layer.getchannel('A').filter(ImageFilter.GaussianBlur(28)).point(lambda v: int(v * 0.55))
         shadow = Image.new('RGBA', (W, page_h), (0, 0, 0, 0))
         shadow.putalpha(sh)
         page = Image.alpha_composite(Image.alpha_composite(page, shadow), layer)
 
-    if story:               # logo JR in oro, in basso al centro come il timbro delle Storie IG
-        from graphics.common import STORY_JR_H, STORY_JR_TOP, story_jr_alpha
-        a = story_jr_alpha()
+    if story:               # sfumatura nera da sotto, poi timbro JR in oro come nelle altre storie
+        from graphics.common import STORY_JR_H, STORY_JR_TOP, story_jr_stamp_alpha
+        t = np.clip((np.linspace(0, 1, page_h) - STORY_FADE[0]) / (STORY_FADE[1] - STORY_FADE[0]), 0, 1)
+        dark = Image.new('RGBA', (W, page_h), (0, 0, 0, 0))
+        dark.putalpha(Image.fromarray(np.uint8(np.tile((t * t * (3 - 2 * t))[:, None], (1, W)) * 255 + .5)))
+        page = Image.alpha_composite(page, dark)
+        a = story_jr_stamp_alpha(True)
         lh = round(STORY_JR_H * page_h / 1920)
         a = a.resize((round(a.width * lh / a.height), lh), Image.LANCZOS)
         page.alpha_composite(_gold(a), ((W - a.width) // 2, round(STORY_JR_TOP * page_h / 1920)))
