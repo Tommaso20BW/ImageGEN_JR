@@ -604,3 +604,19 @@ async function pickIgTg(post, photoUrl) {
   flowIndex = 0;
   renderFlow();            // Contenuto: igPicking torna false e il percorso si accorcia
 }
+
+/* ----- Storia IG: si salva nella galleria del telefono, non va sul canale -----
+   Testi dell'anteprima per la storia; con le altre grafiche tornano quelli di prima. */
+const GALLERY_TEXT = {
+  previewLead: 'Se è tutto ok, premi “Salva in galleria”. Altrimenti torna indietro e modifica i dati.',
+  previewNote: 'Questa è la storia vera: finisce nella galleria del telefono, sul canale non arriva.',
+};
+function galleryPreviewText() {
+  for (const [id, text] of Object.entries(GALLERY_TEXT)) {
+    const el = $(id);
+    if (!el) continue;
+    if (kind === 'igbn') {
+      if (el.textContent !== text) { el.dataset.orig = el.textContent; el.textContent = text; }
+    } else if (el.textContent === text && el.dataset.orig) el.textContent = el.dataset.orig;
+  }
+}

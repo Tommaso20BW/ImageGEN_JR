@@ -469,12 +469,57 @@ async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caric
     hideBusy();
     $('nextButton').disabled = sessionExpired();
     $('backButton').disabled = backLocked();
-    $('nextButton').textContent = previewMode ? SEND_LABEL : (isLastStep() ? 'Anteprima' : 'Avanti ›');
+    $('nextButton').textContent = previewMode ? sendLabel() : (isLastStep() ? 'Anteprima' : 'Avanti ›');
+  }
+}
+
+/* Storia IG: invece del canale, nella galleria del telefono. Il servizio prepara il file e
+   Telegram lo scarica (chiede lui conferma: senza quel tocco non si può salvare). */
+function telegramDownload(url, name) {
+  return new Promise(resolve => {
+    try { tg.downloadFile({url, file_name:name}, ok => resolve(!!ok)); }
+    catch (_) { resolve(null); }
+  });
+}
+async function saveStoryToGallery() {
+  $('nextButton').disabled = true;
+  $('backButton').disabled = true;
+  $('nextButton').textContent = 'Preparo…';
+  try {
+    const response = await netFetch(`${directBase}/savefile`, {
+      method:'POST', headers:{'Content-Type':'application/json','X-ImageGEN-Session':session},
+      body:previewPayloadText || JSON.stringify(buildPayload())
+    }, 150000, 2, true);
+    let answer = {};
+    try { answer = await response.json(); } catch (_) {}
+    if (!response.ok || !answer.ok) throw new Error(answer.error || `Salvataggio non riuscito (${response.status}).`);
+    const url = directBase + answer.path;
+    const name = `storia-${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}.png`;
+    let saved;
+    if (tg && typeof tg.isVersionAtLeast === 'function' && tg.isVersionAtLeast('8.0')) saved = await telegramDownload(url, name);
+    else {                                          // fuori da Telegram (o Telegram vecchio): scarica il browser
+      const a = document.createElement('a');
+      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      saved = true;
+    }
+    if (saved === false) { $('nextButton').textContent = sendLabel(); return; }   // annullato da te
+    if (saved === null) throw new Error('Telegram non riesce a scaricare: aggiornalo e riprova.');
+    haptic('success');
+    $('nextButton').textContent = 'Salvata ✓';
+    setTimeout(() => { $('nextButton').textContent = sendLabel(); }, 2500);
+  } catch (error) {
+    $('nextButton').textContent = sendLabel();
+    setPreviewError(sessionExpired() ? EXPIRED_MESSAGE
+      : (error && error.name === 'AbortError' ? 'ImageGEN non risponde. Riprova tra qualche secondo.' : (error.message || 'Salvataggio non riuscito.')));
+  } finally {
+    $('nextButton').disabled = sessionExpired();
+    $('backButton').disabled = false;
   }
 }
 
 async function submitPreviewGraphic() {
   setPreviewError('');
+  if (kind === 'igbn' && directBase) return saveStoryToGallery();
   try {
     if (!directBase) throw new Error('Sessione vecchia. Riavvia ImageGen dal workflow.');
 
@@ -512,7 +557,7 @@ async function submitPreviewGraphic() {
     hideBusy();
     $('nextButton').disabled = sessionExpired();
     $('backButton').disabled = false;
-    $('nextButton').textContent = SEND_LABEL;
+    $('nextButton').textContent = sendLabel();
     const message = sessionExpired()
       ? EXPIRED_MESSAGE
       : (error && error.name === 'AbortError'

@@ -15,6 +15,7 @@ const LIVE = urlParams.get('mode') === 'live';
 const LIVE_SLOT = urlParams.get('slot') || 'half';
 const LIVE_PHASE = urlParams.get('phase') || 'half';
 const SEND_LABEL = LIVE ? 'Conferma' : 'Invia';
+const sendLabel = () => kind === 'igbn' ? 'Salva in galleria' : SEND_LABEL;   // storia IG: nel telefono, non sul canale
 let liveTitle = '';
 // Scadenza reale della sessione (ms epoch), passata da service.py. Senza, il timer resta nascosto.
 // Si aggiorna: all'apertura si legge quella vera dal servizio (può essere stata allungata).
@@ -582,7 +583,8 @@ function renderFlow() {
   $('backButton').textContent = (!previewMode && flowIndex === 0 && !LIVE) ? '‹ Home' : '‹ Indietro';
   // Calendario compilato da solo: "Modifica" in alto apre l'elenco partite.
   $('previewEdit').hidden = !(previewMode && (kind === 'cal' || kind === 'pxi'));
-  $('nextButton').textContent = previewMode ? SEND_LABEL : kind === 'sent' ? 'Rimanda' : (isLastStep() ? 'Anteprima' : 'Avanti ›');
+  $('nextButton').textContent = previewMode ? sendLabel() : kind === 'sent' ? 'Rimanda' : (isLastStep() ? 'Anteprima' : 'Avanti ›');
+  if (previewMode) galleryPreviewText();
 
   clearError();
   updateScreenValues();

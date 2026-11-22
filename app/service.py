@@ -37,6 +37,8 @@ MAX_PHOTOS = 24               # il collage ne usa fino a 9, più quelle dell'alt
 # Campi che spostano o cambiano solo le foto: non cambiano la sagoma dell'editor.
 PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame', 'trail', 'photo')
 GHOST_CACHE_SIZE = 12
+SAVED_FILES = 6               # storie IG pronte da salvare nel telefono
+SAVED_FILE_SECONDS = 15 * 60
 
 
 def _ghost_webp(png):
@@ -137,6 +139,22 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parts = urlsplit(self.path)
+        if parts.path.startswith('/storyfile/'):
+            # Storia IG da salvare nel telefono: la scarica Telegram, che non manda la sessione;
+            # basta il codice a caso e vale pochi minuti.
+            token = parts.path[len('/storyfile/'):].removesuffix('.png')
+            png = self.service.saved_file(token)
+            if png is None:
+                self._json(404, {'ok': False, 'error': 'File scaduto: rifai Salva in galleria.'})
+                return
+            self.send_response(200)
+            self._cors()
+            self.send_header('Content-Type', 'image/png')
+            self.send_header('Content-Disposition', 'attachment; filename="storia.png"')
+            self.send_header('Content-Length', str(len(png)))
+            self.end_headers()
+            self.wfile.write(png)
+            return
         if parts.path.rstrip('/') == '/fixtures':
             query = dict(parse_qsl(parts.query))
             if query.get('session', '') != self.service.session:
@@ -368,7 +386,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost', '/colors', '/templates', '/playerphoto', '/posethumbs', '/bdayphotos', '/bdaybirths', '/bdoldcut', '/erase', '/tgposts', '/tgphoto', '/translate'):
+                        '/usesent', '/phrases', '/igpost', '/colors', '/templates', '/playerphoto', '/posethumbs', '/bdayphotos', '/bdaybirths', '/bdoldcut', '/erase', '/tgposts', '/tgphoto', '/translate', '/savefile'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
@@ -465,6 +483,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 self._png(self.service.ghost(envelope), 'image/webp')
                 return
 
+            if path == '/savefile':
+                self._json(200, {'ok': True, **self.service.save_file(envelope)})
+                return
+
             if path == '/preview':
                 png = self.service.preview(envelope)
                 # Al telefono va un JPEG leggero; a Telegram resta il PNG.
@@ -529,6 +551,7 @@ class Service:
         self.erase_jobs_lock = threading.Lock()
         self.preview_jpeg_cache = {}
         self.ghost_cache = {}
+        self.saved_files = {}             # codice -> (png, quando): storie IG da salvare nel telefono
         self.recent_sends = {}
         self.renderer.photos = self.photos
         # Ultimi invii (dal più recente): rimandabili dalla Mini App senza rifare la grafica.
@@ -931,6 +954,36 @@ class Service:
         finally:
             self._set_stage('idle')
             self.operation_lock.release()
+
+    def save_file(self, envelope):
+        """Storia IG al posto dell'invio sul canale: la grafica intera resta qui sotto un codice a caso
+        e la Mini App la fa scaricare a Telegram nella galleria del telefono."""
+        if not self.operation_lock.acquire(timeout=LOCK_WAIT_SECONDS):
+            raise BusyError('Sto già elaborando una richiesta. Attendi qualche secondo.')
+        try:
+            request_state = self._parse_request(envelope)
+            if request_state['data'].get('kind') != 'igbn':
+                raise ValueError('Si salva nel telefono solo la storia Instagram.')
+            png, _ = self._render_and_cache(request_state)
+        finally:
+            self._set_stage('idle')
+            self.operation_lock.release()
+        token = secrets.token_urlsafe(16)
+        now = time.time()
+        with self.preview_cache_lock:
+            self.saved_files = {k: v for k, v in self.saved_files.items() if now - v[1] < SAVED_FILE_SECONDS}
+            self.saved_files[token] = (png, now)
+            while len(self.saved_files) > SAVED_FILES:
+                self.saved_files.pop(next(iter(self.saved_files)))
+        log.info('GALLERIA', f"{log.graphic_name(request_state['data'])}: pronta da salvare nel telefono")
+        return {'path': f'/storyfile/{token}.png'}
+
+    def saved_file(self, token):
+        with self.preview_cache_lock:
+            item = self.saved_files.get(token)
+        if not item or time.time() - item[1] >= SAVED_FILE_SECONDS:
+            return None
+        return item[0]
 
     def ghost(self, envelope):
         """Grafica senza foto, trasparente e leggera: l'editor la mostra sopra la foto.
