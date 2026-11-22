@@ -32,6 +32,8 @@ VIEW = dict(cx=1150, cy=1210, width=1230, angle=3.9)
 STORY_VIEW = dict(cx=1187, cy=1205, width=1000, angle=3.9)
 CURVE = 1.0                              # quanto il disegno segue la curvatura della carta (1 = tutta)
 TEXTURE = .045                           # grana della carta
+BOTTOM_EDGE = 8                          # px del bordo inferiore delle pagine senza il filo chiaro della foto
+LOWER_MAGAZINE = (1120, 1880, 1792, 2400)  # foto originale: rivista sotto, il suo spigolo ha un riflesso bianco
 VERTICAL = ''                            # scritta verticale lungo la piega (es. 'THE SQUAD'; '' = nessuna, contenuto centrato)
 
 # pagina (chiaro, base, scuro), colore del tavolo, logo competizione, nome
@@ -276,6 +278,31 @@ def _invert(P, corners, pts):
     return np.clip(u, 0, 1), np.clip(v, 0, 1)
 
 
+def _no_magazine_glint(photo):
+    """Toglie il riflesso bianco dallo spigolo della rivista sotto: non supera il grigio della carta vicina."""
+    import cv2
+    x0, y0, x1, y1 = LOWER_MAGAZINE
+    clean = photo.copy()
+    area = clean[y0:y1, x0:x1]
+    usual = cv2.medianBlur(area, 21)
+    glint = cv2.dilate(((area.astype(np.int16) - usual) > 10).astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+    paper = cv2.dilate(usual, np.ones((9, 9), np.uint8))      # il grigio della rivista lì accanto: lo spigolo resta vivo
+    area[glint] = np.minimum(area, paper)[glint]
+    return clean
+
+
+def _no_bottom_glow(gray, solid):
+    """Il bordo inferiore delle pagine nella foto è più chiaro: lì la luce non supera quella della carta sopra."""
+    import cv2
+    page = solid.astype(np.uint8)
+    above = np.roll(page, -BOTTOM_EDGE, axis=0)
+    above[-BOTTOM_EDGE:] = 0
+    edge = cv2.dilate(page & (1 - above), np.ones((5, 1), np.uint8)).astype(bool)
+    weight = cv2.GaussianBlur(page.astype(np.float32), (0, 0), 10) + 1e-3
+    around = cv2.GaussianBlur(gray * page, (0, 0), 10) / weight
+    return np.where(edge, np.minimum(gray, around), gray)
+
+
 @functools.lru_cache(maxsize=2)
 def _geometry(path_key, out_h=OUT_H):
     """Per ogni pixel dell'immagine finale (1920x2560, o 1920x3413 per la storia: STORY_VIEW,
@@ -293,20 +320,23 @@ def _geometry(path_key, out_h=OUT_H):
     # rotazione inversa di quella usata per inquadrare (cv2: angolo positivo = antiorario)
     px = (view['cx'] + np.cos(a) * dx - np.sin(a) * dy).astype(np.float32)
     py = (view['cy'] + np.sin(a) * dx + np.cos(a) * dy).astype(np.float32)
-    gray = cv2.remap(photo.astype(np.float32), px, py, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
+    gray = cv2.remap(_no_magazine_glint(photo).astype(np.float32), px, py, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
     gray = np.clip(gray, 0, 255)                     # il bicubico può uscire di poco da 0..255
     white = np.percentile(photo[right], 97)
     pages = []
+    solid = np.zeros((out_h, OUT_W), bool)
     for mask in (left, right):
         alpha = cv2.remap(mask.astype(np.float32), px, py, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
         alpha = cv2.GaussianBlur(alpha, (0, 0), 1.5)
         inside = alpha > .002
+        solid |= alpha > .5
         P, corners = _surface(mask)
         pts = np.stack([px[inside], py[inside]], -1).astype(float)
         u, v = _invert(P, corners, pts)
         uu = np.full((out_h, OUT_W), -1, np.float32); vv = np.full((out_h, OUT_W), -1, np.float32)
         uu[inside], vv[inside] = u, v
         pages.append((alpha.astype(np.float32), uu, vv))
+    gray = _no_bottom_glow(gray, solid)
     return gray.astype(np.float32), float(white), pages
 
 
