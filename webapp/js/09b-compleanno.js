@@ -556,7 +556,8 @@ function bdStepValue(step) {
   if (step === 'bdophoto') return bdo.loading ? 'Scontorno…' : bdo.id ? 'Caricata' : '';
   if (step === 'bdpos') {
     const f = bd.frame;
-    return f.x || f.y || f.zoom !== 1 ? `Zoom ${Math.round(f.zoom * 100)}%` : 'Automatica';
+    const zoom = f.x || f.y || f.zoom !== 1 ? `Zoom ${Math.round(f.zoom * 100)}%` : '';
+    return [zoom, f.rot ? `${Math.round(f.rot)}°` : ''].filter(Boolean).join(' · ') || 'Automatica';
   }
   if (step === 'bdinfo') {
     const d = $('bdBirth').value, a = $('bdAge').value.trim();
@@ -628,11 +629,15 @@ function initBirthday() {
 
 /* --- Posizione: il poster senza giocatore (sagoma del servizio) e sopra la sagoma del giocatore,
    tagliata alla striscia del nome come nella grafica. Stesse misure della pagina 1500x2000. */
+let bdRotShow = () => {};
+
 function bdLayout() {
   const frame = $('bdFrame'), img = $('bdPlayer'), page = bdCurPage(), p = bdCur();
   if (!frame.offsetParent || !page || !p) return;
   const stage = $('stage');
-  const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 34;
+  bdRotShow();
+  const dial = $('bdRotDial');
+  const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 34 - (dial.hidden ? 0 : dial.offsetHeight + 8);
   frame.style.width = `${Math.floor(Math.max(200, Math.min(frame.parentElement.clientWidth, free * page.w / page.h)))}px`;
   const [zmin, zmax] = page.zoom || [0.4, 2.5];
   const f = bd.frame;
@@ -652,6 +657,7 @@ function bdLayout() {
   img.style.height = `${h * k}px`;
   img.style.left = `${(page.cx + f.x * page.w - w * (page.ax != null ? page.ax : 0.5)) * k}px`;   // ax: baricentro
   img.style.top = `${(page.foot + f.y * page.h - h) * k}px`;
+  img.style.transform = f.rot ? `rotate(${f.rot}deg)` : '';         // attorno al centro, come rotate_person
   $('bdClip').style.height = `${page.cut / page.h * 100}%`;
 }
 
@@ -743,6 +749,8 @@ function initBirthdayEditor() {
     renderSteps();
   },{passive:false});
   frame.addEventListener('touchmove',e => e.preventDefault(),{passive:false});
+  bdRotShow = makeRotDial($('bdRotDial'), {get:() => bd.frame.rot, set:r => { if (r) bd.frame.rot = r; else delete bd.frame.rot; },
+    ready:() => !!bdCur(), after:() => { bdLayout(); renderSteps(); }});
   $('bdPosReset').addEventListener('click',() => { haptic('select'); bd.frame = {x:0, y:0, zoom:1}; bdLayout(); renderSteps(); });
   window.addEventListener('resize',bdLayout);
 }

@@ -74,7 +74,8 @@ def clean_frame(frame):
         except (TypeError, ValueError):
             v = d
         out[k] = round(min(hi, max(lo, v if np.isfinite(v) else d)), 5)
-    return out
+    from graphics.common import frame_rot
+    return frame_rot(out, frame)
 
 
 def centroid(person):
@@ -332,11 +333,16 @@ def _place_player(c, person, frame):
     p = enhance(p.resize((pw, ph), Image.LANCZOS))
     a = _arr(p.getchannel('A'))
     # foto tagliata in basso (mezzo busto): il taglio sfuma invece dell'ombra delle scarpe
+    # (prima della rotazione, così sfuma lungo il taglio anche se il giocatore è ruotato)
     cut = (a[-1] > .5).mean() > .3
     if cut:
         fade = np.clip(np.arange(ph)[::-1] / (90 * K), 0, 1)[:, None]
-        a = a * fade
-    else:
+        p.putalpha(Image.fromarray(np.uint8(np.clip(a * fade, 0, 1) * 255 + .5)))
+    from graphics.common import rotate_person
+    p, x, y = rotate_person(p, x, y, frame)
+    pw, ph = p.size
+    a = _arr(p.getchannel('A'))
+    if not cut:
         # ombra a terra: solo dove il giocatore tocca (o quasi) il pavimento, più scura dove appoggia
         # e più chiara dove resta sollevato; sfuma da sola ai lati, mai tagliata
         _ground_shadow(c, a, x, y)

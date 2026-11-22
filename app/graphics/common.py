@@ -319,6 +319,28 @@ def _smooth_bg(path):
     return 'data:image/jpeg;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
 
 
+def frame_rot(out, frame):
+    """Aggiunge a una posizione già pulita (clean_frame) la rotazione scelta con la rotella, se c'è."""
+    from graphics.starting_xi import photo_rot
+    rot = photo_rot(frame if isinstance(frame, dict) else {})
+    if rot:
+        out['rot'] = round(rot, 2)
+    return out
+
+
+def rotate_person(p, x, y, frame):
+    """Giocatore scontornato (PIL RGBA già alla misura, in x, y) ruotato attorno al centro del suo
+    riquadro come nell'editor (frame['rot'] gradi, positivo = orario). -> (immagine, x, y)."""
+    from PIL import Image
+    from graphics.starting_xi import photo_rot
+    rot = photo_rot(frame if isinstance(frame, dict) else {})
+    if not rot:
+        return p, x, y
+    cx, cy = x + p.width / 2, y + p.height / 2
+    r = p.convert('RGBA').rotate(-rot, resample=Image.BICUBIC, expand=True)
+    return r, round(cx - r.width / 2), round(cy - r.height / 2)
+
+
 def _transparent(raw):
     """True se la foto è un PNG con trasparenza vera (persona scontornata)."""
     if raw[:4] != bytes((0x89,)) + b'PNG':

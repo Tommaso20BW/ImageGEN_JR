@@ -180,3 +180,20 @@ class PhotoRotTests(unittest.TestCase):
         self.assertEqual(_frame({'x': 0, 'y': 0, 'zoom': 1}), {'x': 0.0, 'y': 0.0, 'zoom': 1.0})
         self.assertEqual(_frame({'zoom': 1, 'rot': 90})['rot'], 45.0)
         self.assertEqual(_frame({'zoom': .5}, min_zoom=.5)['zoom'], .5)
+
+
+class PersonRotTests(unittest.TestCase):
+    def test_clean_frames_keep_rot(self):
+        from graphics import affare_fatto, compleanno, motm
+        for mod in (affare_fatto, compleanno, motm):
+            self.assertEqual(mod.clean_frame({'x': 0, 'y': 0, 'zoom': 1, 'rot': -80})['rot'], -45)
+            self.assertNotIn('rot', mod.clean_frame({'x': 0, 'y': 0, 'zoom': 1}))
+
+    def test_rotate_person_keeps_center(self):
+        from PIL import Image
+        p = Image.new('RGBA', (100, 300), (255, 0, 0, 255))
+        r, x, y = common.rotate_person(p, 10, 20, {'rot': 30})
+        self.assertGreater(r.width, 100)
+        self.assertAlmostEqual(x + r.width / 2, 60, delta=1)
+        self.assertAlmostEqual(y + r.height / 2, 170, delta=1)
+        self.assertEqual(common.rotate_person(p, 10, 20, {})[1:], (10, 20))

@@ -121,53 +121,53 @@ function layoutPhoto() {
    Tocca il numero per tornare a 0°. Vibra passando dallo 0 e ogni 5°. */
 const ROT_STEP = 9;      // pixel tra una tacca (1°) e l'altra
 
-function rotDialBuild() {
-  const ticks = $('rotTicks');
-  if (ticks.childElementCount) return;
+// Una rotella: dial = contenitore (.rot-dial con .rot-val, .rot-track e .rot-ticks dentro),
+// get/set = rotazione in gradi, ready = c'è qualcosa da ruotare, after = ridisegna.
+function makeRotDial(dial, {get, set, ready, after}) {
+  const val = dial.querySelector('.rot-val'), track = dial.querySelector('.rot-track'), ticks = dial.querySelector('.rot-ticks');
   for (let d = -45; d <= 45; d++) {
     const t = document.createElement('i');
     t.className = d === 0 ? 'zero' : d % 5 === 0 ? 'major' : '';
     t.style.left = `${(d + 45) * ROT_STEP}px`;
     ticks.appendChild(t);
   }
-}
-
-function rotDialShow() {
-  const dial = $('rotDial');
-  if (!dial) return;
-  dial.hidden = !photoState.id;
-  const r = Math.round((photoState.rot || 0) * 10) / 10;
-  $('rotVal').textContent = `${Math.round(r)}°`;
-  $('rotVal').classList.toggle('on', Math.round(r) !== 0);
-  $('rotTicks').style.transform = `translateX(${-(r + 45) * ROT_STEP}px)`;
-}
-
-function initRotDial() {
-  const dial = $('rotDial'), track = dial.querySelector('.rot-track');
-  rotDialBuild();
+  const show = () => {
+    dial.hidden = !ready();
+    const r = Math.round((get() || 0) * 10) / 10;
+    val.textContent = `${Math.round(r)}°`;
+    val.classList.toggle('on', Math.round(r) !== 0);
+    ticks.style.transform = `translateX(${-(r + 45) * ROT_STEP}px)`;
+  };
   let startX = null, startRot = 0, lastStep = 0;
   track.addEventListener('pointerdown', e => {
-    if (!photoState.id) return;
+    if (!ready()) return;
     track.setPointerCapture(e.pointerId);
-    startX = e.clientX; startRot = photoState.rot || 0; lastStep = Math.round(startRot);
+    startX = e.clientX; startRot = get() || 0; lastStep = Math.round(startRot);
     dial.classList.add('dragging');
   });
   track.addEventListener('pointermove', e => {
     if (startX === null) return;
-    let r = startRot - (e.clientX - startX) / ROT_STEP;
-    r = Math.max(-45, Math.min(45, r));
+    let r = Math.max(-45, Math.min(45, startRot - (e.clientX - startX) / ROT_STEP));
     if (Math.abs(r) < .6) r = 0;                       // si ferma volentieri sullo 0
     const step = Math.round(r);
     if (step !== lastStep && (step === 0 || step % 5 === 0)) haptic('select');
     lastStep = step;
-    photoState.rot = Math.round(r * 10) / 10;
-    layoutPhoto();
+    set(Math.round(r * 10) / 10);
+    after();
   });
   const end = () => { startX = null; dial.classList.remove('dragging'); };
   track.addEventListener('pointerup', end);
   track.addEventListener('pointercancel', end);
   track.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
-  $('rotVal').addEventListener('click', () => { if (photoState.rot) { photoState.rot = 0; haptic('select'); layoutPhoto(); } });
+  val.addEventListener('click', () => { if (get()) { set(0); haptic('select'); after(); } });
+  return show;
+}
+
+let rotDialShow = () => {};
+
+function initRotDial() {
+  rotDialShow = makeRotDial($('rotDial'), {get:() => photoState.rot, set:r => { photoState.rot = r; },
+    ready:() => !!photoState.id, after:layoutPhoto});
 }
 
 /* ---------- Sagome fisse ----------

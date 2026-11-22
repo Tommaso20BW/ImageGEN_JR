@@ -427,7 +427,8 @@ def clean_frame(frame):
         except (TypeError, ValueError):
             v = d
         out[k] = round(min(hi, max(lo, v if np.isfinite(v) else d)), 5)
-    return out
+    from graphics.common import frame_rot
+    return frame_rot(out, frame)
 
 
 def _player_layers(path, frame=None):
@@ -442,12 +443,14 @@ def _player_layers(path, frame=None):
     height = max(50, int(base * frame['zoom'] * _L.PLAYER_SCALE))
     p = p.crop(p.getbbox())
     p = p.resize((max(1, int(p.width * height / p.height)), height), Image.LANCZOS)
+    x = int(PLAYER_CX + frame['x'] * W - p.width / 2)
+    y = int(_L.PLAYER_FOOT + frame['y'] * BASE_H - p.height)
+    from graphics.common import rotate_person
+    p, x, y = rotate_person(p, x, y, frame)
     alpha, lum = _mask(), np.ones((_L.H, W), np.float32)
     a = np.asarray(p.split()[-1], np.float32) / 255
     g = np.clip((np.asarray(p.convert('L'), np.float32) / 255 - 0.5) * 1.5 + 0.55, 0, 1)
     h, w = a.shape
-    x = int(PLAYER_CX + frame['x'] * W - w / 2)
-    y = int(_L.PLAYER_FOOT + frame['y'] * BASE_H - h)
     x0, y0, x1, y1 = max(x, 0), max(y, 0), min(x + w, W), min(y + h, _L.H)
     alpha[y0:y1, x0:x1] = a[y0 - y:y1 - y, x0 - x:x1 - x]
     lum[y0:y1, x0:x1] = g[y0 - y:y1 - y, x0 - x:x1 - x]

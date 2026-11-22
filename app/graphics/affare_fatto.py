@@ -59,7 +59,8 @@ def clean_frame(frame):
         except (TypeError, ValueError):
             v = d
         out[k] = round(min(hi, max(lo, v if np.isfinite(v) else d)), 5)
-    return out
+    from graphics.common import frame_rot
+    return frame_rot(out, frame)
 
 
 def base_scale(size):
@@ -351,6 +352,9 @@ def _player(img, person, frame):
     p = M.trim(person)
     x, y, pw, ph = person_box(p.size, frame, M.centroid(p))
     p = p.resize((pw, ph), Image.LANCZOS)
+    from graphics.common import rotate_person
+    p, x, y = rotate_person(p, x, y, frame)
+    pw, ph = p.size
     pa = np.clip((_f32(p.getchannel('A')) / 255 - .5) * 3 + .5, 0, 1)
     c = grade(p)
     PL, PA = np.zeros((H, W, 3), np.float32), np.zeros((H, W), np.float32)

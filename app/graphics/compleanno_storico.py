@@ -193,6 +193,8 @@ def render(*, name, person=None, frame=None, ghost=False, vintage=True, story=Fa
         p = trim(person)
         x, y, pw, ph = person_box(p.size, frame, story)
         p = enhance(p.resize((pw, ph), Image.LANCZOS))     # nitida come le foto del Goal
+        from graphics.common import rotate_person
+        p, x, y = rotate_person(p, x, y, frame)
         layer = Image.new('RGBA', (W, page_h), (0, 0, 0, 0))
         layer.paste(p, (x, y), p)
         if story:           # la persona sfuma prima del logo JR in basso: il logo resta sullo sfondo
