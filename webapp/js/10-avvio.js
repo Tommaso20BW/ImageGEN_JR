@@ -127,6 +127,7 @@ document.addEventListener('keydown',event => {
 });
 
 document.querySelectorAll('#previewDual .pv').forEach(b => b.addEventListener('click',() => togglePreviewPick(b.dataset.fmt)));
+bindPvSlider();
 $('nextButton').addEventListener('click',() => { haptic('light'); nextField(true); });
 $('backButton').addEventListener('click',() => { haptic('light'); previousField(); });
 $('closeWorkflowButton').addEventListener('click',askCloseWorkflow);

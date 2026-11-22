@@ -267,6 +267,14 @@ def _order_like_previous(rounds):
 
 
 def fetch(comp_key):
+    """Come _fetch, ma post 3:4 e storia IG chiesti insieme leggono Diretta.it una volta sola."""
+    import diretta_cache
+    from classifica_data import SHARED_SECONDS
+    key = (comp_key or '').upper()
+    return diretta_cache.shared(('tabellone', key), SHARED_SECONDS, lambda: _fetch(key))
+
+
+def _fetch(comp_key):
     """Tabellone della fase finale, pronto per la grafica."""
     comp_key = (comp_key or '').upper()
     comp = COMPETIZIONI.get(comp_key)

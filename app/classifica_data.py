@@ -4,6 +4,7 @@ Viene dal vecchio bot Classifica_JR (aggiorna_classifica.py): stessa lettura del
 pagina, stessi controlli e stesse fasce colorate. Qui la classifica non si salva su
 file: `fetch()` la restituisce alla grafica.
 """
+import diretta_cache
 import log
 import os
 import re
@@ -151,8 +152,10 @@ def _intero(valore, campo: str, squadra: str) -> int:
         ) from exc
 
 
-# Stemmi grandi già trovati in questa sessione: la seconda classifica chiede meno pagine.
+# Stemmi grandi già trovati: la seconda classifica chiede meno pagine. Restano su disco
+# 30 giorni, così anche dopo un riavvio non si riaprono le 20-36 pagine delle squadre.
 _LOGHI_TROVATI: dict[str, str] = {}
+LOGHI_GIORNI = 30
 
 
 def _logo_grande_diretta(team_url: str, fallback: str) -> str:
@@ -162,6 +165,10 @@ def _logo_grande_diretta(team_url: str, fallback: str) -> str:
         return fallback
     if team_url in _LOGHI_TROVATI:
         return _LOGHI_TROVATI[team_url]
+    salvato = diretta_cache.disk_get(f'logo-grande:{team_url}', LOGHI_GIORNI * 86400)
+    if salvato:
+        _LOGHI_TROVATI[team_url] = salvato
+        return salvato
     for tentativo in (1, 2):
         try:
             response = requests.get(
@@ -173,6 +180,7 @@ def _logo_grande_diretta(team_url: str, fallback: str) -> str:
             match = LOGO_GRANDE_RE.search(response.text)
             if match:
                 _LOGHI_TROVATI[team_url] = urljoin(response.url, match.group(1))
+                diretta_cache.disk_put(f'logo-grande:{team_url}', _LOGHI_TROVATI[team_url])
                 return _LOGHI_TROVATI[team_url]
             break
         except Exception as exc:
@@ -298,8 +306,15 @@ def _applica_zone_serie_a(
     return modalita, _legenda_serie_a(classifica)
 
 
+COPPA_ITALIA_ORE = 6      # la finale si gioca una volta l'anno: basta ricontrollare ogni 6 ore
+
+
 def _coppa_italia_decisa(page, url: str) -> bool:
-    """Rileva una finale conclusa dalla dicitura 'Vincitore' di Diretta.it."""
+    """Rileva una finale conclusa dalla dicitura 'Vincitore' di Diretta.it.
+    Il risultato resta su disco 6 ore: la pagina della Coppa Italia costava ~30 secondi a classifica."""
+    salvato = diretta_cache.disk_get(f'coppa-italia-decisa:{url}', COPPA_ITALIA_ORE * 3600)
+    if isinstance(salvato, bool):
+        return salvato
     try:
         page.goto(url, wait_until="domcontentloaded", timeout=45_000)
         page.locator(".event__round").first.wait_for(
@@ -331,6 +346,7 @@ def _coppa_italia_decisa(page, url: str) -> bool:
         )
         stato = "conclusa" if decisa else "non conclusa"
         log.info('CLASSIFICA', f"Coppa Italia {stato}: {resolved_url}")
+        diretta_cache.disk_put(f'coppa-italia-decisa:{url}', decisa)
         return decisa
     except Exception as exc:
         log.warn('CLASSIFICA', "Stato Coppa Italia non verificabile; per sicurezza considero "
@@ -483,8 +499,16 @@ class ClassificaError(ValueError):
     """Classifica non disponibile: il messaggio si mostra nella Mini App."""
 
 
+SHARED_SECONDS = 45      # post 3:4 e storia IG chiesti insieme: una lettura sola
+
+
 def fetch(comp_key: str) -> dict:
     """Classifica aggiornata di SA, UCL, UEL o UECL, pronta per la grafica."""
+    comp_key = (comp_key or "").upper()
+    return diretta_cache.shared(('classifica', comp_key), SHARED_SECONDS, lambda: _fetch(comp_key))
+
+
+def _fetch(comp_key: str) -> dict:
     comp_key = (comp_key or "").upper()
     comp = COMPETIZIONI.get(comp_key)
     if not comp:

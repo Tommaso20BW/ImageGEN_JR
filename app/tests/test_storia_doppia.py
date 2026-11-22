@@ -104,7 +104,7 @@ class LaneTests(unittest.TestCase):
 class CacheTests(unittest.TestCase):
     def test_keeps_both_previews(self):
         svc = service.Service.__new__(service.Service)
-        svc.preview_cache = svc.preview_cache_prev = None
+        svc.preview_cache = svc.preview_cache_prev = svc.preview_cache_old = None
         svc._cache_put({'fingerprint': 'a', 'png': b'1'})
         svc._cache_put({'fingerprint': 'b', 'png': b'2'})
         self.assertEqual(svc._cache_get('a')['png'], b'1')

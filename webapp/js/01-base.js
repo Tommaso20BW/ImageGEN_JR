@@ -188,10 +188,12 @@ let shirt = '';
 const needsShirt = () => kind === 'pxi' && !!UEFA_THEMES[kit] && kit !== 'friendly';
 const JR_COLORS = [['black','Nero'],['white','Bianco'],['gold','Oro']];
 const TABLE_COMPS = [['SA','Serie A'],['CI','Coppa Italia'],['UCL','Champions League'],['UEL','Europa League'],['UECL','Conference League']];
-// Coppa Italia: solo tabellone. Serie A: classifica o risultati. Coppe europee: tutte e tre.
-const TABLE_VIEWS = [['table','Classifica'],['bracket','Tabellone'],['results','Risultati']];
-const tableViews = () => tableComp === 'SA' ? TABLE_VIEWS.filter(([v]) => v !== 'bracket') : TABLE_VIEWS;
-const tableViewOf = () => tableComp === 'CI' ? 'bracket' : tableView;
+// Serie A: solo classifica. Coppa Italia: solo tabellone. Coppe europee: si sceglie.
+// Classifica e tabellone della Coppa Italia: il post è un album con i risultati della giornata.
+const TABLE_VIEWS = [['table','Classifica'],['bracket','Tabellone']];
+const tableViews = () => TABLE_VIEWS;
+const tableViewOf = () => tableComp === 'SA' ? 'table' : tableComp === 'CI' ? 'bracket' : tableView;
+const tableWithResults = () => tableViewOf() === 'table' || tableComp === 'CI';
 const IQ_MODES = [['post','Post'],['story','Storia']];
 const JR_STYLES = [['classic','Classica'],['blur','Sfocata'],['collage','Collage'],['title','Titolo']];
 // Formati della Classica: larghezza fissa 1080, cambia l'altezza (come graphics/photo_jr.py RATIOS).

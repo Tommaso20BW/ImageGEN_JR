@@ -22,6 +22,32 @@
   background:var(--accent);color:#fff;font-size:15px;font-weight:800;display:grid;place-items:center}
 .pv-dual.picked .pv:not(.on){filter:grayscale(1);opacity:.45}
 .pv:active{transform:scale(.98)}
+/* Album (classifica + risultati): metà e metà nel riquadro 3:4. Trascinando in un punto qualsiasi
+   si sposta il taglio e si scopre tutta una foto o tutta l'altra; un tocco seleziona la casella.
+   Il cursore sta nella fascia in basso, così non copre mai squadre e risultati. */
+.pv img[hidden]{display:none}
+.pv-pair{display:block;line-height:0}
+.pv-cap,.pv-grip{display:none}
+.pv.split .pv-pair{--cut:50%;position:relative;display:block;height:min(56vh,calc((100vw - 56px) / 1.3125),540px);
+  aspect-ratio:3/4;overflow:hidden;border-radius:12px;background:var(--surface);box-shadow:var(--preview-shadow);
+  outline:3px solid transparent;outline-offset:3px;transition:outline-color .2s ease;
+  touch-action:pan-y;cursor:ew-resize;user-select:none;-webkit-user-select:none}
+.pv.split .pv-pair img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0;border-radius:0;
+  outline:0;box-shadow:none;pointer-events:none;-webkit-user-drag:none}
+.pv.split .pv-pair img + img{clip-path:inset(0 0 0 var(--cut))}
+.pv.split .pv-pair::after{content:"";position:absolute;top:0;bottom:0;left:var(--cut);width:9px;pointer-events:none;
+  background:linear-gradient(90deg,rgba(3,18,60,.09),transparent)}
+.pv.split .pv-grip{position:absolute;left:clamp(23px,var(--cut),calc(100% - 23px));bottom:5px;transform:translateX(-50%);display:grid;place-items:center;
+  width:38px;height:22px;border-radius:99px;background:#fff;color:#0757d7;box-shadow:0 3px 10px rgba(0,0,0,.34);
+  transition:width .15s ease,height .15s ease}
+.pv.split .pv-pair.drag .pv-grip{width:46px;height:25px}
+.pv.split .pv-cap{position:absolute;bottom:7px;display:block;padding:4px 7px;border-radius:99px;line-height:1;
+  background:rgba(5,30,90,.74);color:#fff;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  white-space:nowrap;transition:opacity .15s ease}
+.pv.split .pv-cap.l{right:calc(max(100% - var(--cut),23px) + 24px)}
+.pv.split .pv-cap.r{left:calc(max(var(--cut),23px) + 24px)}
+.pv.split .pv-pair.no-l .pv-cap.l,.pv.split .pv-pair.no-r .pv-cap.r{opacity:0}
+.pv.split.on .pv-pair{outline-color:var(--accent)}
 
 /* Bottom bar */
 .bar{

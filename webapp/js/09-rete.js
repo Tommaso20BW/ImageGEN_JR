@@ -57,8 +57,9 @@ function buildPayload(ghost=false) {
   if (kind === 'conv') return convPayload();
   if (kind === 'table') {
     if (!tableComp) throw new Error('Scegli la competizione.');
-    if (!tableViewOf()) throw new Error('Scegli classifica, tabellone o risultati.');
-    return {v:1, action:'render', session, data:{kind:'table', competition:tableComp, view:tableViewOf()}};
+    if (!tableViewOf()) throw new Error('Scegli classifica o tabellone.');
+    return {v:1, action:'render', session, data:{kind:'table', competition:tableComp, view:tableViewOf(),
+      ...(tableWithResults() ? {with_results:true} : {})}};
   }
   if (kind === 'cal') {
     return {v:1, action:'render', session, data:{
@@ -464,22 +465,24 @@ async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caric
     $('backButton').disabled = true;
     $('nextButton').textContent = 'Anteprima…';
     const bracket = kind === 'table' && tableViewOf() === 'bracket';    // tempi e testo a parte: ci mette di più
-    const results = kind === 'table' && tableViewOf() === 'results';
     if (!(keepBusy && busy)) showBusy('Genero l’anteprima…',bracket ? 'Leggo il tabellone aggiornato da Diretta.it.'
-      : results ? 'Leggo i risultati aggiornati da Diretta.it.' : BUSY_SUB[realKind()] || '',bracket ? 'bracket' : realKind());
+      : BUSY_SUB[realKind()] || '',bracket ? 'bracket' : realKind());
 
     // Compleanno (anche ex calciatori), Starting XI, Probabili, Squad List, Classifica, Tabellone e Man of the Match:
     // anche la versione per le storie IG, preparata insieme al 3:4.
     const dual = isDualPayload(payload);
-    if (dual) $('busySub').textContent = 'Preparo insieme il post 3:4 e la storia IG.';
-    const [blob, story] = await Promise.all([
+    // Classifica (e tabellone della Coppa Italia): anche i risultati, seconda foto dell'album.
+    const album = kind === 'table' && payload.data.with_results === true;
+    if (dual) $('busySub').textContent = album ? `Preparo ${payload.data.competition === 'CI' ? 'tabellone' : 'classifica'}, risultati e storia IG.` : 'Preparo insieme il post 3:4 e la storia IG.';
+    const [blob, story, results] = await Promise.all([
       fetchPreview(raw),
       dual ? fetchPreview(JSON.stringify({...payload, data:{...payload.data, story:true}})) : null,
+      album ? fetchPreview(JSON.stringify({...payload, data:{kind:'table', competition:payload.data.competition, view:'results'}})) : null,
     ]);
 
     await finishBusy();
     previewPayloadText = raw;
-    openPreview(URL.createObjectURL(blob), story ? URL.createObjectURL(story) : null);
+    openPreview(URL.createObjectURL(blob), story ? URL.createObjectURL(story) : null, results ? URL.createObjectURL(results) : null);
   } catch (error) {
     const message = sessionExpired()
       ? EXPIRED_MESSAGE
@@ -572,7 +575,8 @@ async function sendThenSave(raw, storyRaw) {
     try { answer = await response.json(); } catch (_) {}
     if (!response.ok || answer.ok === false) throw new Error(answer.error || `Invio non riuscito (${response.status}).`);
     if (typeof rememberSent === 'function') rememberSent(answer.message_id);
-    previewPick.delete('34');          // il post è partito: se rifai, si salva solo la storia
+    previewPick.add('story');          // il post è partito: se rifai, si salva solo la storia
+    previewPick.delete('34');
   })();
   const file = prepareStoryFile(storyRaw);
   try {
@@ -605,12 +609,12 @@ async function submitPreviewGraphic() {
 
     let raw = previewPayloadText || JSON.stringify(buildPayload());
     if (previewStoryUrl) {          // due versioni: il 3:4 va su Telegram, la storia nella galleria del telefono
-      if (!previewPick.size) { setPreviewError('Tocca la versione da usare (anche tutte e due).'); haptic('error'); return; }
+      const both = !previewPick.size;   // nessuna scelta = tutte e due
       const payload = JSON.parse(raw);
       const storyRaw = JSON.stringify({...payload, data:{...payload.data, story:true}});
-      if (!previewPick.has('34')) return saveStoryToGallery(storyRaw);
+      if (!both && !previewPick.has('34')) return saveStoryToGallery(storyRaw);
       raw = JSON.stringify({...payload, data:{...payload.data, formats:['34']}});
-      if (previewPick.has('story')) return sendThenSave(raw, storyRaw);
+      if (both || previewPick.has('story')) return sendThenSave(raw, storyRaw);
     }
 
     $('nextButton').disabled = true;

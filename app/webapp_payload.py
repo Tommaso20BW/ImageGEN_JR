@@ -310,13 +310,17 @@ def _build_state(envelope, catalog, now, expected_session):
     if kind == 'table':
         if competition not in TABLE_COMPETITIONS:
             raise ValueError('Scegli Serie A, Coppa Italia, Champions, Europa o Conference League.')
-        # Coppa Italia: solo tabellone. Serie A: classifica o risultati. Coppe europee: tutte e tre.
+        # Coppa Italia: solo tabellone. Serie A: solo classifica. Coppe europee: classifica o tabellone.
+        # "results": i risultati della giornata da soli (l'anteprima della Mini App per l'album).
         view = 'bracket' if competition == 'CI' else str(incoming.get('view') or 'table')
         if view not in ('table', 'bracket', 'results') or (competition == 'SA' and view == 'bracket'):
-            raise ValueError('Scegli classifica, tabellone o risultati.')
+            raise ValueError('Scegli classifica o tabellone.')
         data = {'kind': 'table', 'competition': competition}
         if view != 'table':
             data['view'] = view
+        # Classifica (e tabellone della Coppa Italia): il post è un album con i risultati come seconda foto.
+        if incoming.get('with_results') is True and (view == 'table' or competition == 'CI'):
+            data['with_results'] = True
         return {
             'id': uuid.uuid4().hex[:10],
             'data': data,
@@ -720,6 +724,7 @@ def parse_webapp_request(envelope, catalog, now, expected_session):
     if (data.get('kind') in STORY_KINDS and data.get('team') != 'italy' and data.get('view') != 'results'
             and envelope['data'].get('story') is True):          # risultati: solo post, niente storia
         data['story'] = True
+        data.pop('with_results', None)                           # la storia è della sola classifica
     return state
 
 

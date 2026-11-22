@@ -18,8 +18,8 @@ const SEND_LABEL = LIVE ? 'Conferma' : 'Invia';
 // storia IG: nel telefono, non sul canale. Grafiche doppie: il 3:4 si invia, la storia si salva.
 const sendLabel = () => {
   if (kind === 'igbn') return 'Salva in galleria';
-  if (previewStoryUrl && previewPick.has('story'))
-    return previewPick.has('34') ? 'Invia e salva' : 'Salva in galleria';
+  if (previewStoryUrl && (!previewPick.size || previewPick.has('story')))     // nessuna scelta = tutte e due
+    return !previewPick.size || previewPick.has('34') ? 'Invia e salva' : 'Salva in galleria';
   return SEND_LABEL;
 };
 let liveTitle = '';
@@ -279,7 +279,7 @@ function buildFlow() {
     : ['jrstyle','jrratio','jrcolor','photo'];
   else if (kind === 'cal') flow = ['calmonth','calrows'];
   else if (kind === 'conv') flow = ['convlist'];
-  else if (kind === 'table') flow = tableComp && tableComp !== 'CI' ? ['tablecomp','tableview'] : ['tablecomp'];
+  else if (kind === 'table') flow = ['UCL','UEL','UECL'].includes(tableComp) ? ['tablecomp','tableview'] : ['tablecomp'];
   else if (kind === 'rin') flow = ['rincontent'];
   else if (kind === 'award') flow = ['awkind'];                     // MOTM e POTM: prima si sceglie quale
   else if (kind === 'potm') flow = ['awkind','awplayer','potminfo','bdophoto'];
@@ -454,9 +454,21 @@ function setPreviewError(message='') {
 // Grafiche in due versioni (3:4 e storia IG): storyUrl = anteprima della storia. Nessuna è scelta
 // all'inizio: si tocca quella da inviare (anche tutte e due).
 let previewStoryUrl = null;
+let previewResultsUrl = null;    // album: seconda foto del post (risultati), accanto alla classifica
 const previewPick = new Set();
 
-function openPreview(url, storyUrl=null) {
+function openPreview(url, storyUrl=null, resultsUrl=null) {
+  if (previewResultsUrl && previewResultsUrl !== resultsUrl) {
+    try { URL.revokeObjectURL(previewResultsUrl); } catch (_) {}
+  }
+  previewResultsUrl = resultsUrl;
+  $('pv34').classList.toggle('split', !!resultsUrl);
+  $('previewImageRes').hidden = !resultsUrl;
+  if (resultsUrl) $('previewImageRes').src = resultsUrl;
+  $('pv34Lab').textContent = resultsUrl ? 'Post 3:4 · 2 foto' : 'Post 3:4';
+  cancelAnimationFrame(pvAnim);
+  setPvCut(50);
+  if (resultsUrl) nudgePvCut();
   if (previewObjectUrl && previewObjectUrl !== url) {
     try { URL.revokeObjectURL(previewObjectUrl); } catch (_) {}
   }
@@ -488,14 +500,82 @@ function renderPreviewPick() {
   $('previewDual').classList.toggle('picked', previewPick.size > 0);
   if (previewMode) $('nextButton').textContent = sendLabel();
   $('previewLead').textContent = previewStoryUrl
-    ? 'Tocca la versione da usare (anche tutte e due): il post 3:4 va su Telegram, la storia nella galleria del telefono.'
+    ? 'Se non tocchi nulla partono tutte e due: il post su Telegram, la storia nella galleria. Tocca una versione per usare solo quella.'
     : 'Se è tutto ok, premi “Invia”. Altrimenti torna indietro e modifica i dati.';
-  $('previewNote').textContent = previewStoryUrl
+  $('previewNote').textContent = previewStoryUrl && previewResultsUrl
+    ? `A sinistra il post: album di 2 foto, prima ${tableComp === 'CI' ? 'il tabellone' : 'la classifica'} e poi i risultati (con il testo, su Telegram). A destra la storia IG ${tableComp === 'CI' ? 'del tabellone' : 'della classifica'} (nella galleria).`
+    : previewStoryUrl
     ? 'A sinistra il post 3:4 (con il testo, su Telegram), a destra la storia IG (senza testo, nella galleria).'
     : 'Questa è l’anteprima reale della grafica che verrà inviata su Telegram.';
 }
 
+// Album: cursore tra classifica e risultati.
+let pvCut = 50, pvAnim = 0, pvSkipClick = false, pvHinted = false;
+function setPvCut(value) {
+  pvCut = Math.max(0, Math.min(100, value));
+  const pair = $('pv34').querySelector('.pv-pair');
+  pair.style.setProperty('--cut', `${pvCut}%`);
+  pair.classList.toggle('no-l', pvCut < 36);    // l'etichetta sparisce quando non c'è più posto
+  pair.classList.toggle('no-r', pvCut > 64);
+}
+// La prima volta il taglio oscilla un attimo: si capisce che si può trascinare.
+function nudgePvCut() {
+  if (pvHinted || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  pvHinted = true;
+  const start = performance.now() + 350, length = 1200;
+  const step = now => {
+    const k = (now - start) / length;
+    if (k >= 1) { setPvCut(50); return; }
+    if (k > 0) setPvCut(50 + 14 * Math.sin(k * Math.PI * 2) * (1 - k));
+    pvAnim = requestAnimationFrame(step);
+  };
+  pvAnim = requestAnimationFrame(step);
+}
+function bindPvSlider() {
+  const card = $('pv34'), pair = card.querySelector('.pv-pair');
+  let press = null;
+  const finish = dragged => {
+    if (press && press.drag) {
+      pair.classList.remove('drag');
+      if (dragged) {
+        pvSkipClick = true;           // il trascinamento non conta come tocco sulla casella
+        if (pvCut < 10) setPvCut(0); else if (pvCut > 90) setPvCut(100);
+        haptic('select');
+      }
+    }
+    press = null;
+  };
+  card.addEventListener('pointerdown', e => {
+    if (!card.classList.contains('split')) return;
+    cancelAnimationFrame(pvAnim);
+    pvSkipClick = false;
+    press = {id:e.pointerId, x:e.clientX, y:e.clientY, drag:false};
+  });
+  card.addEventListener('pointermove', e => {
+    if (!press || e.pointerId !== press.id) return;
+    if (!press.drag) {
+      const dx = Math.abs(e.clientX - press.x), dy = Math.abs(e.clientY - press.y);
+      if (dx < 6 || dx < dy) return;
+      press.drag = true;
+      pair.classList.add('drag');
+      try { card.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    e.preventDefault();
+    const box = pair.getBoundingClientRect();
+    setPvCut((e.clientX - box.left) / box.width * 100);
+  });
+  card.addEventListener('pointerup', () => finish(true));
+  card.addEventListener('pointercancel', () => finish(false));
+  card.addEventListener('keydown', e => {
+    if (!card.classList.contains('split') || !['ArrowLeft','ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
+    cancelAnimationFrame(pvAnim);
+    setPvCut(pvCut + (e.key === 'ArrowLeft' ? -10 : 10));
+  });
+}
+
 function togglePreviewPick(fmt) {
+  if (fmt === '34' && pvSkipClick) { pvSkipClick = false; return; }
   if (previewPick.has(fmt)) previewPick.delete(fmt); else previewPick.add(fmt);
   haptic('select');
   setPreviewError('');

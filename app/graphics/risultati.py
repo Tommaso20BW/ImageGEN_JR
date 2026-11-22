@@ -21,7 +21,7 @@ window.__ready = new Promise(r => setTimeout(r, 0))
   .then(() => Promise.all([...document.images].map(i => i.decode().catch(() => {}))))
   .then(() => {
     const broken = [...document.querySelectorAll('.t-logo img')].filter(i => !i.naturalWidth).length;
-    const rows = document.querySelectorAll('#tableArea .m, #tableArea .card').length;
+    const rows = document.querySelectorAll('#tableArea .m, #tableArea .card, #tableArea .tile').length;
     if (broken || !rows) throw new Error(`Risultati incompleti: ${rows} partite, ${broken} loghi mancanti`);
   });
 </script>'''
@@ -54,7 +54,7 @@ def render_data(data, story=False):
         if 'Risultati incompleti' in str(exc):
             raise ValueError('Risultati incompleti: alcuni loghi non si vedono. Riprova tra poco.') from exc
         raise
-    return cl._texture(png, cl.TEXTURES.get(data['competition']), story)
+    return cl._texture(png, cl.TEXTURES.get(data['competition'], 'texture_white.png'), story)
 
 
 def build_html(data):
@@ -68,7 +68,7 @@ def build_html(data):
     payload = json.dumps(data, ensure_ascii=False).replace('</', '<\\/')
     html = html[:i] + f'<script>window.__RISULTATI__ = {payload};</script>\n' + script + html[j:]
     html = html.replace('</head>', style + '\n</head>', 1)
-    for name in cl.IMAGES:
+    for name in cl.IMAGES + ('coppa-italia-mark.png',):
         html = html.replace(name, cl._data_uri(cl.images_dir() / name))
     match = re.search(r'href="(https://fonts\.googleapis\.com/css2[^"]+)"', html)
     html = re.sub(r'<link[^>]+fonts\.(?:googleapis|gstatic)[^>]*>', '', html)

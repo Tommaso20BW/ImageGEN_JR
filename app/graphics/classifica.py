@@ -143,12 +143,16 @@ def _data_uri(path, mime='image/png'):
 
 
 def _logo(url):
+    import diretta_cache
     if url.startswith('data:'):
         return url
     if url not in _logos:
         custom = CUSTOM_LOGOS.get(url)
+        saved = None if custom else diretta_cache.disk_get(f'stemma:{url}', 30 * 86400)
         if custom:
             _logos[url] = _data_uri(images_dir() / custom)
+        elif isinstance(saved, str) and saved.startswith('data:image/'):
+            _logos[url] = saved            # stemma già scaricato nei giorni scorsi
         else:
             response = requests.get(url, headers=LOGO_HEADERS, timeout=25)
             response.raise_for_status()
@@ -156,6 +160,7 @@ def _logo(url):
             if not kind.startswith('image/') or not response.content:
                 raise ValueError(f'risposta non valida ({kind or "senza tipo"})')
             _logos[url] = f'data:{kind};base64,' + base64.b64encode(response.content).decode('ascii')
+            diretta_cache.disk_put(f'stemma:{url}', _logos[url])
     return _logos[url]
 
 
@@ -191,8 +196,13 @@ def _font_css(css_url):
     """Font di Google incorporati (stessi del template). Se non si scaricano, font di sistema.
     Solo alfabeto latino ed esteso (Google ne dà anche cirillico, greco, vietnamita: 99 file
     invece di 50) e scaricati in parallelo: da circa 33 secondi a pochi."""
+    import diretta_cache
     if css_url in _fonts:
         return _fonts[css_url]
+    saved = diretta_cache.disk_get(f'font:{css_url}', 30 * 86400)
+    if isinstance(saved, str) and saved:       # font su disco: niente download (stasera fallivano dopo 24 s)
+        _fonts[css_url] = saved
+        return saved
     try:
         css = requests.get(css_url, headers={'User-Agent': UA}, timeout=20)
         css.raise_for_status()
@@ -211,6 +221,7 @@ def _font_css(css_url):
             fmt = 'woff2' if 'woff2' in url else 'woff' if 'woff' in url else 'truetype'
             text = text.replace(url, f'data:font/{fmt};base64,' + base64.b64encode(content).decode('ascii'))
         _fonts[css_url] = text
+        diretta_cache.disk_put(f'font:{css_url}', text)
     except Exception as exc:  # noqa: BLE001 - meglio i font di sistema che nessuna grafica
         log.warn('DATI', f'Font della classifica non scaricati: {exc}')
         return ''

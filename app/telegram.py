@@ -89,6 +89,7 @@ class Telegram:
             if response.status_code >= 500 and method in {
                 'sendPhoto',
                 'sendDocument',
+                'sendMediaGroup',
             }:
                 raise DeliveryUncertain('Invio immagine con esito incerto')
 
@@ -113,7 +114,7 @@ class Telegram:
             # Connessione mai aperta: la foto non è partita.
             raise NotSent(f'{method}: connessione non riuscita') from None
         except (requests.RequestException, ValueError, KeyError, TypeError):
-            if method in {'sendPhoto', 'sendDocument'}:
+            if method in {'sendPhoto', 'sendDocument', 'sendMediaGroup'}:
                 raise DeliveryUncertain(
                     'Invio immagine con esito incerto'
                 ) from None
@@ -216,6 +217,45 @@ class Telegram:
                 },
             )
         return True
+
+    def album(self, pngs, filename='grafica', caption=None):
+        """Più foto in un unico messaggio (album), il testo sotto la prima. Come photo():
+        se Telegram rifiuta il testo, l'album riparte senza. Restituisce gli id dei messaggi."""
+        for png in pngs:
+            if not png.startswith(b'\x89PNG\r\n\x1a\n'):
+                raise TelegramError('Il renderer non ha prodotto un PNG')
+        jpegs = [_jpeg(png) for png in pngs]
+
+        def send(text):
+            media = []
+            for i in range(len(jpegs)):
+                item = {'type': 'photo', 'media': f'attach://p{i}'}
+                if i == 0 and text:
+                    item.update(caption=text, parse_mode='HTML')
+                media.append(item)
+            files = {f'p{i}': (f'{filename}-{i + 1}.jpg', jpeg, 'image/jpeg') for i, jpeg in enumerate(jpegs)}
+            return self.call('sendMediaGroup', {'chat_id': self.chat_id, 'media': json.dumps(media)},
+                             files=files, timeout=(10, 60), fresh=True)
+
+        self.caption_dropped = False
+        try:
+            result = send(caption)
+        except TelegramError as exc:
+            if not caption or type(exc) is not TelegramError or 'HTTP 400' not in str(exc):
+                raise
+            self.caption_dropped = True
+            result = send(None)
+        try:
+            ids = [int(m['message_id']) for m in result]
+        except (KeyError, TypeError, ValueError):
+            raise DeliveryUncertain('Telegram non ha confermato l\'album') from None
+        if not ids:
+            raise DeliveryUncertain('Telegram non ha confermato l\'album')
+        sizes = [s for s in (result[0].get('photo') or []) if isinstance(s, dict) and s.get('file_id')]
+        sizes.sort(key=lambda s: int(s.get('width') or 0))
+        small = next((s for s in sizes if int(s.get('width') or 0) >= 240), sizes[0] if sizes else {})
+        self.last_photo = {'file_id': sizes[-1]['file_id'] if sizes else '', 'thumb_id': small.get('file_id', '')}
+        return ids
 
     def photo(self, png, filename='grafica.png', caption=None):
         """Invia la foto Telegram: PNG (bytes) oppure il file_id di una foto già inviata.

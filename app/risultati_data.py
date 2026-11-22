@@ -9,10 +9,10 @@ import os
 import re
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date
+from datetime import date, timedelta
 
 import log
-from classifica_data import (COMPETIZIONI, _logo_grande_diretta, _logo_personalizzato,
+from classifica_data import (COMPETIZIONI, COPPA_ITALIA_RISULTATI_URL, _logo_grande_diretta, _logo_personalizzato,
                              stagione_corrente_da_data, stagione_da_testo)
 
 MESI = ('', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio',
@@ -39,11 +39,20 @@ ROWS_JS = '''() => [...document.querySelectorAll('.event__round, .event__match')
   })'''
 
 
+# Turni a eliminazione diretta come li scrive Diretta.it -> come si dicono.
+TURNI = {'1/32 finale': 'Trentaduesimi di finale', '1/16 finale': 'Sedicesimi di finale',
+         '1/8 finale': 'Ottavi di finale', '1/4 finale': 'Quarti di finale', '1/2 finale': 'Semifinali',
+         'semifinali': 'Semifinali', 'finale': 'Finale'}
+NOMI = {**{k: v['nome'] for k, v in COMPETIZIONI.items()}, 'CI': 'Coppa Italia'}
+
+
 class RisultatiError(ValueError):
     """Risultati non disponibili: il messaggio si mostra nella Mini App."""
 
 
 def _url(comp_key, pagina):
+    if comp_key == 'CI':
+        return COPPA_ITALIA_RISULTATI_URL.replace('/risultati/', f'/{pagina}/')
     return COMPETIZIONI[comp_key]['url'].replace('/classifiche/', f'/{pagina}/')
 
 
@@ -140,10 +149,23 @@ def _date_label(giorni):
     return f'{a.day} {MESI[a.month]} – {b.day} {MESI[b.month]}'
 
 
+def _nome(text):
+    """Nome della squadra senza le aggiunte di Diretta.it ("FiorentinaQualificato: Fiorentina")."""
+    return re.sub(r'Qualificat[oa]\s*:.*$', '', text or '').strip()
+
+
+def _gol(text):
+    """'1(4)' -> (1, 4): gol e rigori (None se non ci sono). '-' -> (None, None)."""
+    m = re.fullmatch(r'\s*(\d+)\s*(?:\((\d+)\))?\s*', text or '')
+    return (int(m.group(1)), int(m.group(2)) if m.group(2) else None) if m else (None, None)
+
+
 def _partita(row):
+    row = {**row, 'home': _nome(row.get('home')), 'away': _nome(row.get('away'))}
     giorno, ora = _quando(row.get('time', ''))
-    finita = not row.get('scheduled') and not row.get('live') and row.get('hs', '').isdigit() and row.get('as', '').isdigit()
-    live = bool(row.get('live')) and row.get('hs', '').isdigit()
+    (hs, hr), (as_, ar) = _gol(row.get('hs')), _gol(row.get('as'))
+    finita = not row.get('scheduled') and not row.get('live') and hs is not None and as_ is not None
+    live = bool(row.get('live')) and hs is not None
     stato = 'finita' if finita else 'live' if live else 'rinviata' if re.search(r'rinv|annul|sosp', row.get('stage', ''), re.I) else 'da_giocare'
     home_url, away_url = _team_urls(row)
     out = {
@@ -154,7 +176,12 @@ def _partita(row):
         'quando': f'{GIORNI[giorno.weekday()]} {giorno.day}/{giorno.month}' + (f' · {ora}' if ora else '') if giorno else ora,
     }
     if stato in ('finita', 'live'):
-        out['gol_casa'], out['gol_trasferta'] = int(row['hs']), int(row['as'])
+        out['gol_casa'], out['gol_trasferta'] = hs, as_
+        extra = (row.get('time', '') + ' ' + row.get('stage', '')).lower()
+        if hr is not None and ar is not None:
+            out['rigori'] = [hr, ar]
+        elif 'suppl' in extra:
+            out['dts'] = True
     return out
 
 
@@ -175,11 +202,20 @@ def _loghi(partite):
 
 
 def fetch(comp_key: str) -> dict:
-    """Ultima giornata di SA, UCL, UEL o UECL: partite finite (e quelle ancora da giocare)."""
+    """Come _fetch, ma richieste uguali nello stesso momento leggono Diretta.it una volta sola."""
+    import diretta_cache
+    from classifica_data import SHARED_SECONDS
+    key = (comp_key or '').upper()
+    return diretta_cache.shared(('risultati', key), SHARED_SECONDS, lambda: _fetch(key))
+
+
+def _fetch(comp_key: str) -> dict:
+    """Ultima giornata di SA, UCL, UEL o UECL: partite finite (e quelle ancora da giocare).
+    Coppa Italia: un turno dura settimane, quindi solo le partite della settimana dell'ultima giocata."""
     comp_key = (comp_key or '').upper()
-    comp = COMPETIZIONI.get(comp_key)
-    if not comp:
-        raise RisultatiError('Competizione non valida: scegli Serie A, Champions, Europa o Conference.')
+    if comp_key not in NOMI:
+        raise RisultatiError('Competizione non valida: scegli Serie A, Coppa Italia, Champions, Europa o Conference.')
+    comp = {'nome': NOMI[comp_key]}
     log.info('RISULTATI', f"{comp['nome']}: leggo risultati e calendario da Diretta.it")
     try:
         pagine, titolo = _scrape({'risultati': _url(comp_key, 'risultati'), 'calendario': _url(comp_key, 'calendario')})
@@ -197,6 +233,11 @@ def fetch(comp_key: str) -> dict:
     righe = finite + [r for r in altre if (r['home'], r['away']) not in visti]
 
     partite = [_partita(r) for r in righe if r.get('home') and r.get('away')]
+    if comp_key == 'CI':
+        ultima = max((p['_giorno'] for p in partite if p['stato'] == 'finita' and p['_giorno']), default=None)
+        if ultima:
+            lunedi = ultima - timedelta(days=ultima.weekday())
+            partite = [p for p in partite if p['_giorno'] and lunedi <= p['_giorno'] < lunedi + timedelta(days=7)]
     # In ordine di calendario: prima le partite più vecchie, come si leggono nella giornata.
     partite.sort(key=lambda p: (p['_giorno'] or date.max, p['quando']))
     _loghi(partite)
@@ -209,7 +250,7 @@ def fetch(comp_key: str) -> dict:
         'competition': comp_key,
         'competition_name': comp['nome'],
         'giornata': int(m.group(1)) if m and etichetta.lower().startswith('giornata') else None,
-        'turno': etichetta,
+        'turno': TURNI.get(etichetta.strip().lower(), etichetta),
         'date': _date_label(giorni),
         'stagione': stagione_da_testo(titolo) or stagione_corrente_da_data(),
         'partite': partite,

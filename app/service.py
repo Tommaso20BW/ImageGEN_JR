@@ -538,9 +538,11 @@ class Service:
         self.operation_lock = threading.Lock()
         # Storia IG delle grafiche doppie: corsia sua, così 3:4 e storia si preparano insieme.
         self.story_lock = threading.Lock()
+        self.results_lock = threading.Lock()   # risultati dell'album: in parallelo a classifica e storia
         self.preview_cache_lock = threading.Lock()
         self.preview_cache = None
         self.preview_cache_prev = None     # quella prima: 3:4 e storia restano pronte tutte e due
+        self.preview_cache_old = None      # e una terza: classifica, storia e risultati dell'album
         # Passo reale del render in corso, letto dalla Mini App tramite GET /progress.
         self.progress_stage = 'idle'
         # Foto caricate dalla Mini App (solo in memoria, per questa sessione).
@@ -917,13 +919,15 @@ class Service:
 
     def _cache_get(self, fingerprint):
         """Anteprima in memoria con questa impronta (le ultime due: 3:4 e storia), altrimenti l'ultima."""
-        for cached in (self.preview_cache, self.preview_cache_prev):
+        for cached in (self.preview_cache, self.preview_cache_prev, self.preview_cache_old):
             if cached and cached.get('fingerprint') == fingerprint:
                 return cached
         return self.preview_cache
 
     def _cache_put(self, entry):
         if self.preview_cache and self.preview_cache.get('fingerprint') != entry['fingerprint']:
+            if not (self.preview_cache_prev and self.preview_cache_prev.get('fingerprint') == entry['fingerprint']):
+                self.preview_cache_old = self.preview_cache_prev
             self.preview_cache_prev = self.preview_cache
         self.preview_cache = entry
 
@@ -964,6 +968,8 @@ class Service:
         data = envelope.get('data') if isinstance(envelope, dict) else None
         if isinstance(data, dict) and data.get('story') is True and data.get('kind') in STORY_KINDS:
             return self.story_lock
+        if isinstance(data, dict) and data.get('kind') == 'table' and data.get('view') == 'results':
+            return getattr(self, 'results_lock', self.operation_lock)
         return self.operation_lock
 
     def preview(self, envelope):
@@ -1299,11 +1305,25 @@ class Service:
                     log.info('INVIO', f"{log.graphic_name(data)}: classifica identica inviata poco fa, non la rimando")
                     return sent[0]
 
+            # Classifica (o tabellone della Coppa Italia) + risultati: un album di 2 foto.
+            extra = None
+            if data.get('with_results') and not data.get('story'):
+                try:
+                    extra = self._results_png(data)
+                except Exception as exc:       # niente risultati (giornata non trovata): parte la sola classifica
+                    log.warn('INVIO', f"{log.graphic_name(data)}: risultati non pronti ({exc}), invio solo la prima foto")
+
             sending = time.time()
             # La storia IG arriva senza testo: la didascalia resta solo sul post 3:4.
             text = None if data.get('story') else caption.safe_build(data)
-            message_id = self._send_photo(png, f"{data['kind']}-{request_state['id']}.png",
-                                          log.graphic_name(data), text)
+            if extra:
+                ids = self._send_album([png, extra], f"{data['kind']}-{request_state['id']}",
+                                       log.graphic_name(data), text)
+                message_id = ids[0]
+                self.generated_message_ids.extend(ids[1:])
+            else:
+                message_id = self._send_photo(png, f"{data['kind']}-{request_state['id']}.png",
+                                              log.graphic_name(data), text)
             self.generated_message_ids.append(int(message_id))
             self.recent_sends[fingerprint] = (int(message_id), time.time())
             self._remember_send(message_id, data, png, text)
@@ -1319,6 +1339,38 @@ class Service:
             return int(message_id)
         finally:
             self.operation_lock.release()
+
+    def _results_png(self, data):
+        """Risultati della giornata per l'album: l'anteprima appena fatta, se recente, o un render nuovo."""
+        results = {'kind': 'table', 'competition': data['competition'], 'view': 'results'}
+        fingerprint = self._fingerprint(results)
+        with self.preview_cache_lock:
+            cached = self._cache_get(fingerprint)
+            if (cached and cached.get('fingerprint') == fingerprint and cached.get('png')
+                    and self._cache_fresh(cached, results, TABLE_SEND_REUSE_SECONDS)):
+                return cached['png']
+        log.info('INVIO', 'Risultati: preparo la seconda foto dell\'album')
+        png = self.renderer.render(results)
+        with self.preview_cache_lock:
+            self._cache_put({'fingerprint': fingerprint, 'request_id': 'risultati', 'data': results,
+                             'png': png, 'updated': time.time()})
+        return png
+
+    def _send_album(self, pngs, filename, name, text=None):
+        """Album su Telegram, con gli stessi nuovi tentativi di _send_photo."""
+        for attempt in range(1, SEND_TRIES + 1):
+            try:
+                ids = self.telegram.album(pngs, filename, text)
+                if getattr(self.telegram, 'caption_dropped', False):
+                    log.warn('INVIO', f'{name}: Telegram ha rifiutato la didascalia, album inviato senza testo')
+                return ids
+            except NotSent as exc:
+                if attempt >= SEND_TRIES:
+                    log.warn('INVIO', f"{name}: Telegram non ha ricevuto l'album dopo {SEND_TRIES} tentativi ({exc})")
+                    raise
+                wait = min(10, exc.retry_after or 2 * attempt)
+                log.warn('INVIO', f"{name}: Telegram non ha ricevuto l'album ({exc}), riprovo tra {wait} s")
+                time.sleep(wait)
 
     def _send_photo(self, png, filename, name, text=None):
         """Foto su Telegram. Se Telegram dice che non l'ha ricevuta (troppe richieste,

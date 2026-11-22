@@ -1,89 +1,166 @@
 <!-- RISULTATI DELLA GIORNATA: si aggiunge alla pagina della classifica (template.html), che
      dà intestazione, colori e sfondi di ogni competizione. Qui solo le righe delle partite. -->
 <style>
-  /* Fino a 10 partite: una colonna, casa a sinistra e trasferta a destra.
-     Di più (coppe, 18 partite): due colonne di schede a due righe. */
-  .table-area{display:flex;flex-direction:column;gap:0;}
-  .res-list{flex:1;display:flex;flex-direction:column;min-height:0;}
-  .res-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:column;column-gap:18px;row-gap:9px;min-height:0;}
+  /* Quattro impaginazioni (data.layout): wide = righe con riquadro, cards = schede a due righe,
+     slim = righe sottili staccate, tiles = tessere con i due stemmi. Colori da variabili per competizione. */
+  body{--acc:#0757d7;--acc-ink:#fff;--box:linear-gradient(105deg,#052878 0%,#0757d7 60%,#168bd4 100%);
+       --name:var(--ink);--dim:var(--ink-dim);--tile:var(--panel-row);--tile-line:var(--line);--stripe:transparent;
+       --hl:rgba(255,255,255,.14);--hl-ink:#fff;--hl-acc:#fff;--shadow:none;--radius:6px;}
+  /* Serie A: stessi colori delle righe della classifica (a strisce #f7faff / #edf4ff), così le 2 foto dell'album si somigliano */
+  body.comp-SA{--acc:#0757d7;--name:#08245e;--dim:#7d96ba;--tile:#edf4ff;--tile-line:#dce8f8;--stripe:#edf4ff;
+       --hl:linear-gradient(105deg,#052878 0%,#0757d7 60%,#168bd4 100%);--hl-acc:#fff;--shadow:none;--radius:10px;}
+  body.comp-SA .res-list .m:nth-child(odd),body.comp-SA .res-tiles .tile:nth-child(odd){background:#f7faff;}
+  body.comp-UCL{--acc:#45e9ff;--acc-ink:#04124f;--box:#45e9ff;--stripe:rgba(255,255,255,.035);
+       --hl:linear-gradient(90deg,#1d58c4 0%,#0b2a8f 85%);--hl-acc:#45e9ff;}
+  body.comp-UEL{--acc:#ff7a2a;--acc-ink:#140600;--box:#ff7a2a;--stripe:rgba(255,255,255,.035);
+       --hl:linear-gradient(90deg,#5a2209 0%,#1a0b05 85%);--hl-acc:#ff7a2a;}
+  body.comp-UECL{--acc:#21df72;--acc-ink:#021409;--box:#21df72;--stripe:rgba(255,255,255,.035);
+       --hl:linear-gradient(90deg,#0a4d28 0%,#06170e 85%);--hl-acc:#21df72;}
+  body.comp-CI{--acc:#ff4655;--acc-ink:#fff;--box:#ff4655;--tile:rgba(255,255,255,.07);--stripe:rgba(255,255,255,.04);
+       --dim:#e39aa1;--hl:rgba(255,255,255,.18);--hl-acc:#fff;--radius:4px;}
 
-  /* ── riga larga ── */
-  .m{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 58px 150px 58px minmax(0,1fr);
-     align-items:center;border-bottom:1px solid var(--line);padding:0 10px;}
-  .m:last-child{border-bottom:0;}
-  .m .t-name{font-family:var(--f-display),sans-serif;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-     font-size:1.32rem;font-weight:700;color:var(--ink);letter-spacing:-.005em;}
-  .m .t-name.home{text-align:right;padding-right:6px;}
-  .m .t-name.away{text-align:left;padding-left:6px;}
-  .m .t-logo{display:flex;align-items:center;justify-content:center;}
-  .m .t-logo img{width:46px;height:46px;object-fit:contain;}
-  .m .lose{color:var(--ink-dim);font-weight:600;}
+  .table-area{display:flex;flex-direction:column;gap:0;padding:16px 22px 14px;}
+  body.comp-SA .table-area{padding:16px 27px 14px;}
+  .t-name{font-family:var(--f-display),sans-serif;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+     font-weight:700;color:var(--name);}
+  .lose{color:var(--dim) !important;font-weight:600;}
+  .t-logo{display:flex;align-items:center;justify-content:center;}
+  .t-logo img{object-fit:contain;}
+  body.comp-SA .t-logo.white img{filter:brightness(0);}
+  .num{font-family:var(--f-num),sans-serif;font-weight:900;font-variant-numeric:tabular-nums;}
+  .note,.live-tag{font:800 .62rem/1 var(--f-body),sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);white-space:nowrap;}
+  .live-tag{color:#ff4d5e;}
+  .hl .t-name,.hl .when b,.hl .when span{color:var(--hl-ink);}
+  .hl .lose{color:var(--hl-ink) !important;opacity:.6;}
+  .hl .note{color:var(--hl-ink);opacity:.75;}
 
-  .score{justify-self:center;display:flex;align-items:center;justify-content:center;gap:12px;min-width:118px;height:58px;padding:0 14px;
-     font-family:var(--f-num),sans-serif;font-weight:900;font-size:2.2rem;font-variant-numeric:tabular-nums;letter-spacing:.01em;}
-  .score i{font-style:normal;opacity:.55;font-weight:700;font-size:.8em;}
-  .when{justify-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;
-     font-family:var(--f-body),sans-serif;font-weight:800;text-transform:uppercase;color:var(--ink-dim);}
-  .when b{font-size:1.02rem;letter-spacing:.08em;}
-  .when span{font-size:1.32rem;color:var(--ink);font-family:var(--f-num),sans-serif;font-variant-numeric:tabular-nums;margin-top:3px;}
-  .live-tag{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);font:800 .62rem/1 var(--f-body),sans-serif;
-     letter-spacing:.18em;text-transform:uppercase;color:#ff4d5e;}
+  /* ── righe (wide, slim) ── */
+  .res-list{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;}
+  /* --k: più grande quando le partite sono poche (Coppa Italia), così il riquadro si riempie */
+  body{--k:1;--kn:1;}
+  .m{position:relative;flex:1;min-height:0;max-height:calc(112px * var(--k));display:grid;align-items:center;padding:0 12px;
+     grid-template-columns:minmax(0,1fr) calc(54px * var(--k)) calc(150px * var(--kn)) calc(54px * var(--k)) minmax(0,1fr);}
+  .m .t-name{font-size:calc(1.3rem * var(--kn));}
+  .m .t-name.home{text-align:right;padding-right:8px;}
+  .m .t-name.away{text-align:left;padding-left:8px;}
+  .m .t-logo img{width:calc(44px * var(--k));height:calc(44px * var(--k));}
+  .m .note,.m .live-tag{position:absolute;left:50%;bottom:calc(6px * var(--k));transform:translateX(-50%);font-size:calc(.62rem * var(--kn));}
+  .score{justify-self:center;display:flex;align-items:center;justify-content:center;gap:12px;min-width:112px;height:calc(54px * var(--k));
+     padding:0 14px;font-size:calc(2.1rem * var(--k));}
+  .score i{font-style:normal;font-weight:700;font-size:.8em;opacity:.55;}
+  .when{justify-self:center;display:flex;flex-direction:column;align-items:center;line-height:1.05;
+     font:800 calc(1rem * var(--kn))/1.05 var(--f-body),sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);}
+  .when span{font:900 calc(1.3rem * var(--kn))/1 var(--f-num),sans-serif;color:var(--name);margin-top:4px;letter-spacing:.02em;}
+  .many .m{max-height:none;grid-template-columns:minmax(0,1fr) 40px 118px 40px minmax(0,1fr);padding:0 8px;}
+  .many .m .t-name{font-size:1.02rem;}
+  .many .m .t-logo img{width:30px;height:30px;}
+  .many .score{height:38px;min-width:88px;font-size:1.5rem;gap:8px;}
+  .many .when{font-size:.74rem;} .many .when span{font-size:1rem;margin-top:2px;}
+  .many .m .note,.many .m .live-tag{bottom:2px;font-size:.5rem;}
+  .many.lay-slim .m .score{margin-top:-6px;}
 
-  /* ── scheda a due righe (coppe) ── */
-  .card{position:relative;min-height:0;display:grid;grid-template-rows:1fr 1fr;padding:0 14px 0 12px;background:var(--panel-row,var(--row-odd));
-     border:1px solid var(--line);}
-  .card .side{display:grid;grid-template-columns:38px minmax(0,1fr) 44px;align-items:center;min-height:0;}
-  .card .side + .side{border-top:1px solid var(--line);}
-  .card .t-logo{display:flex;align-items:center;justify-content:flex-start;}
-  .card .t-logo img{width:30px;height:30px;object-fit:contain;}
-  .card .t-name{font-family:var(--f-display),sans-serif;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-     font-size:1.02rem;font-weight:700;color:var(--ink);}
-  .card .goal{text-align:right;font-family:var(--f-num),sans-serif;font-weight:900;font-size:1.5rem;font-variant-numeric:tabular-nums;color:var(--ink);}
-  .card .lose{color:var(--ink-dim);font-weight:600;}
-  .card .when-card{position:absolute;right:14px;top:50%;transform:translateY(-50%);text-align:right;line-height:1.1;
-     font:800 .74rem/1.15 var(--f-body),sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);}
-  .card .when-card span{display:block;font-size:1.05rem;color:var(--ink);letter-spacing:.02em;}
+  /* wide: righe alternate, risultato nel riquadro colorato */
+  .lay-wide .m{border-bottom:1px solid var(--line);}
+  .lay-wide .m:last-child{border-bottom:0;}
+  .lay-wide .m:nth-child(even){background:var(--stripe);}
+  .lay-wide .score{background:var(--box);color:var(--acc-ink);border-radius:var(--radius);box-shadow:var(--shadow);}
+  .lay-wide .m.hl{background:var(--hl);}
+  .lay-wide .m.hl .score{background:#fff;color:#0a1a44;box-shadow:none;}
 
-  /* ── colori per competizione ── */
-  body.comp-SA .table-area{padding:14px 27px 12px;}
-  body.comp-SA .m{border-bottom:1px solid #dce8f8;}
-  body.comp-SA .m:nth-child(even){background:#edf4ff;}
-  body.comp-SA .m .t-name{color:#08245e;}
-  body.comp-SA .m .lose{color:#6f8bb3;}
-  body.comp-SA .score{color:#fff;background:linear-gradient(105deg,#052878 0%,#0757d7 60%,#168bd4 100%);border-radius:6px;
-     box-shadow:0 6px 16px rgba(7,63,170,.18);}
-  body.comp-SA .when{color:#5681b7;}
-  body.comp-SA .when span{color:#08245e;}
-  body.comp-SA .m.hl{background:linear-gradient(90deg,#063d9e,#0c70dd);}
-  body.comp-SA .m.hl .t-name{color:#fff;}
-  body.comp-SA .m.hl .score{background:#fff;color:#063d9e;box-shadow:none;}
-  body.comp-SA .m.hl .when,body.comp-SA .m.hl .when span{color:#fff;}
+  /* slim: righe staccate, risultato grande senza riquadro */
+  .lay-slim .res-list{gap:calc(10px * var(--k));}
+  .lay-slim .res-list .m{max-height:none;}
+  .lay-slim.many .res-list{gap:5px;}
+  .lay-slim .m{background:var(--tile);border:1px solid var(--tile-line);border-radius:var(--radius);box-shadow:var(--shadow);}
+  .lay-slim .score{background:none;color:var(--name);font-size:calc(2.5rem * var(--k));gap:calc(16px * var(--k));}
+  .lay-slim.many .score{font-size:1.7rem;gap:10px;}
+  .lay-slim .score i{color:var(--acc);opacity:1;}
+  .lay-slim .m.hl{background:var(--hl);border-color:transparent;}
+  .lay-slim .m.hl .score{color:var(--hl-ink);}
+  .lay-slim .m.hl .score i{color:var(--hl-acc);opacity:.85;}
 
-  body.comp-UCL .score{color:#45e9ff;} body.comp-UEL .score{color:#ff7a2a;} body.comp-UECL .score{color:#21df72;}
-  body.comp-UCL .card .goal{color:#45e9ff;} body.comp-UEL .card .goal{color:#ff7a2a;} body.comp-UECL .card .goal{color:#21df72;}
-  body.comp-UCL .card .goal.lose,body.comp-UEL .card .goal.lose,body.comp-UECL .card .goal.lose{color:var(--ink-dim);}
-  body.comp-UCL .m.hl,body.comp-UCL .card.hl{background:linear-gradient(90deg,#17459b 0%,var(--panel-row) 78%);}
-  body.comp-UEL .m.hl,body.comp-UEL .card.hl{background:linear-gradient(90deg,#3a1708 0%,var(--panel-row) 78%);}
-  body.comp-UECL .m.hl,body.comp-UECL .card.hl{background:linear-gradient(90deg,#07351d 0%,var(--panel-row) 78%);}
-  body.comp-UCL .card,body.comp-UEL .card,body.comp-UECL .card{border-color:var(--line);}
-  body.comp-UCL .table-area,body.comp-UEL .table-area,body.comp-UECL .table-area{padding:16px 18px 14px;}
-  .card.hl .t-name.win,.m.hl .t-name.win{font-weight:900;}
+  /* ── cards: schede a due righe su due colonne ── */
+  .res-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:column;column-gap:18px;row-gap:10px;min-height:0;}
+  .card{position:relative;min-height:0;display:grid;grid-template-rows:1fr 1fr;padding:0 18px 0 16px;overflow:hidden;
+     background:var(--tile);border:1px solid var(--tile-line);border-radius:var(--radius);box-shadow:var(--shadow);}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--acc);}
+  .card .side{display:grid;grid-template-columns:var(--cl,46px) minmax(0,1fr) 50px;align-items:center;min-height:0;}
+  .card .side + .side{border-top:1px solid var(--tile-line);}
+  .card .t-logo{justify-content:flex-start;}
+  .card .t-logo img{width:var(--ci,36px);height:var(--ci,36px);}
+  .card .t-name{font-size:var(--cf,1.2rem);}
+  .card .goal{text-align:right;font-size:var(--cg,1.9rem);color:var(--acc);}
+  .card .when-card{position:absolute;right:18px;top:50%;transform:translateY(-50%);text-align:right;
+     font:800 .74rem/1.15 var(--f-body),sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);}
+  .card .when-card span{display:block;font:900 1.1rem/1.1 var(--f-num),sans-serif;color:var(--name);}
+  .card .note{position:absolute;right:72px;top:50%;transform:translateY(-50%);}
+  .card.hl{background:var(--hl);border-color:transparent;}
+  .card.hl::before{background:#fff;}
+  .card.hl .goal{color:var(--hl-acc);}
+  .card.hl .side + .side{border-top-color:rgba(255,255,255,.2);}
+  .many .card{--cl:38px;--ci:28px;--cf:1rem;--cg:1.45rem;}
+
+  /* ── tiles: tessere con i due stemmi grandi e il risultato in mezzo ── */
+  .res-tiles{flex:1;display:grid;gap:14px;min-height:0;}
+  .tile{position:relative;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-rows:1fr auto;
+     align-items:center;padding:14px 16px 12px;background:var(--tile);border:1px solid var(--tile-line);
+     border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+  .tile .t-logo img{width:var(--ti,62px);height:var(--ti,62px);}
+  .tile .score{grid-column:2;background:none;color:var(--name);font-size:var(--ts,2.6rem);height:auto;min-width:0;padding:0 6px;gap:10px;}
+  .tile .score i{color:var(--acc);opacity:1;}
+  .tile .when{grid-column:2;font-size:.8rem;} .tile .when span{font-size:1.25rem;}
+  .tile .t-name{font-size:var(--tf,1.05rem);text-align:center;margin-top:8px;grid-row:2;}
+  .tile .t-name.home{grid-column:1;} .tile .t-name.away{grid-column:3;}
+  .tile .note,.tile .live-tag{position:absolute;left:50%;top:8px;transform:translateX(-50%);}
+  .tile.hl{background:var(--hl);border-color:transparent;}
+  .tile.hl .score{color:var(--hl-ink);} .tile.hl .score i{color:var(--hl-acc);}
+  /* tessere grandi (poche partite): stemmi e risultato crescono con --k, i nomi sotto agli stemmi */
+  .big .res-tiles{gap:calc(12px * var(--k));}
+  .big .tile{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-rows:auto auto;align-content:center;padding:18px 28px;}
+  .big .tile .t-logo img{width:calc(96px * var(--k));height:calc(96px * var(--k));}
+  .big .tile .score{font-size:calc(3.6rem * var(--k));gap:calc(22px * var(--k));padding:0 calc(20px * var(--k));}
+  .big .tile .when{font-size:calc(1rem * var(--k));} .big .tile .when span{font-size:calc(1.6rem * var(--k));}
+  .big .tile .t-name{margin-top:calc(10px * var(--k));}
+  .big .tile .t-name{font-size:min(calc(1.35rem * var(--k)), 1.9rem);}
+  .big .tile .note,.big .tile .live-tag{top:auto;bottom:calc(12px * var(--k));font-size:calc(.7rem * var(--k));}
+  .many .tile{--ti:44px;--ts:1.9rem;--tf:.84rem;padding:10px 10px 9px;}
+  .many .tile .t-name{margin-top:5px;}
+  .many .res-tiles{gap:10px;}
+
+  /* ════ COPPA ITALIA: bordeaux a righe diagonali come il suo tabellone ════ */
+  body.comp-CI{
+    background:repeating-linear-gradient(135deg,rgba(0,0,0,.14) 0 3px,transparent 3px 26px),
+               linear-gradient(170deg,#7d0f1a 0%,#5a0a12 55%,#3b060b 100%);
+    --f-display:'Archivo';--f-body:'Archivo';--f-num:'Archivo';
+    --ink:#fff;--ink-dim:#f0b6bb;--line:rgba(255,255,255,.22);--panel-row:rgba(255,255,255,.07);--head-ink:#fff;
+  }
+  body.comp-CI::after{content:none;}
+  body.comp-CI .header-title{font-weight:900;font-size:3.38rem;letter-spacing:-.035em;}
+  body.comp-CI .competition-mark{width:80px;height:104px;}
+  body.comp-CI .competition-mark img{filter:brightness(0) invert(1);}
+  body.comp-CI .table-area{margin:0 28px;padding:16px 18px 14px;background:rgba(20,0,3,.55);}
+  body.comp-CI .legend{margin:0 28px 26px;background:rgba(20,0,3,.55);border-top:1px solid var(--line);}
+  body.comp-CI .legend-item{color:#f0b6bb;}
 
   .legend-item.date{font-size:.92rem;letter-spacing:.14em;}
   body.comp-SA .legend-item.date{font-size:.8rem;}
 </style>
 <script>
-const HIGHLIGHT_R = new Set(['Juventus']);
-const TITOLI = {SA:'SERIE A', UCL:'CHAMPIONS LEAGUE', UEL:'EUROPA LEAGUE', UECL:'CONFERENCE LEAGUE'};
-const ICONE = {SA:'serie-a-scudetto.png', UCL:'ucl-mark.png', UEL:'uel-mark.png', UECL:'uecl-mark.png'};
+const TITOLI = {SA:'SERIE A', CI:'COPPA ITALIA', UCL:'CHAMPIONS LEAGUE', UEL:'EUROPA LEAGUE', UECL:'CONFERENCE LEAGUE'};
+const ICONE = {SA:'serie-a-scudetto.png', CI:'coppa-italia-mark.png', UCL:'ucl-mark.png', UEL:'uel-mark.png', UECL:'uecl-mark.png'};
+function nota(p){
+  // Ritorno: totale delle due partite (gol della squadra di casa di stasera prima), poi supplementari o rigori
+  const parti = [];
+  if (p.andata) parti.push(`Andata ${p.andata[1]}–${p.andata[0]} · Tot. ${p.gol_casa + p.andata[1]}–${p.gol_trasferta + p.andata[0]}`);
+  if (p.rigori) parti.push(`d.c.r. ${p.rigori[0]}–${p.rigori[1]}`);
+  else if (p.dts) parti.push('d.t.s.');
+  return parti.join(' · ');
+}
 
 function esc(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function logo(src){ return `<div class="t-logo"><img src="${esc(src)}" alt=""></div>`; }
-function esito(p){
-  if (p.stato !== 'finita' && p.stato !== 'live') return ['', ''];
-  if (p.gol_casa === p.gol_trasferta) return ['', ''];
-  return p.gol_casa > p.gol_trasferta ? ['win', 'lose'] : ['lose', 'win'];
-}
+const BIANCHI = new Set(['Juventus']);   // stemmi bianchi: su fondo chiaro diventano neri
+function logo(src, nome){ return `<div class="t-logo${BIANCHI.has(nome) ? ' white' : ''}"><img src="${esc(src)}" alt=""></div>`; }
+function esito(p){ return ['', '']; }   // vincenti e perdenti scritte uguali
 function quando(p){
   const [g, o] = String(p.quando || '').split(' · ');
   return p.stato === 'rinviata' ? ['Rinviata', ''] : [g || '', o || ''];
@@ -91,39 +168,64 @@ function quando(p){
 
 function riga(p){
   const [h, a] = esito(p);
-  const hl = HIGHLIGHT_R.has(p.home) || HIGHLIGHT_R.has(p.away) ? ' hl' : '';
+  const hl = '';
   let mid;
-  if (p.stato === 'finita' || p.stato === 'live') mid = `<div class="score">${p.gol_casa}<i>–</i>${p.gol_trasferta}</div>`;
+  if (p.stato === 'finita' || p.stato === 'live') mid = `<div class="score num">${p.gol_casa}<i>–</i>${p.gol_trasferta}</div>`;
   else { const [g, o] = quando(p); mid = `<div class="when"><b>${esc(g)}</b>${o ? `<span>${esc(o)}</span>` : ''}</div>`; }
   return `<div class="m${hl}">
-    <div class="t-name home ${h}">${esc(p.home)}</div>${logo(p.home_logo)}${mid}${logo(p.away_logo)}
-    <div class="t-name away ${a}">${esc(p.away)}</div>${p.stato === 'live' ? '<div class="live-tag">In corso</div>' : ''}</div>`;
+    <div class="t-name home ${h}">${esc(p.home)}</div>${logo(p.home_logo, p.home)}${mid}${logo(p.away_logo, p.away)}
+    <div class="t-name away ${a}">${esc(p.away)}</div>${p.stato === 'live' ? '<div class="live-tag">In corso</div>'
+      : nota(p) ? `<div class="note">${nota(p)}</div>` : ''}</div>`;
+}
+
+function tessera(p){
+  const [h, a] = esito(p);
+  const hl = '';
+  let mid;
+  if (p.stato === 'finita' || p.stato === 'live') mid = `<div class="score num">${p.gol_casa}<i>–</i>${p.gol_trasferta}</div>`;
+  else { const [g, o] = quando(p); mid = `<div class="when"><b>${esc(g)}</b>${o ? `<span>${esc(o)}</span>` : ''}</div>`; }
+  const tag = p.stato === 'live' ? '<div class="live-tag">In corso</div>' : nota(p) ? `<div class="note">${nota(p)}</div>` : '';
+  return `<div class="tile${hl}">${logo(p.home_logo, p.home)}${mid}${logo(p.away_logo, p.away)}
+    <div class="t-name home ${h}">${esc(p.home)}</div><div class="t-name away ${a}">${esc(p.away)}</div>${tag}</div>`;
 }
 
 function scheda(p){
   const [h, a] = esito(p);
-  const hl = HIGHLIGHT_R.has(p.home) || HIGHLIGHT_R.has(p.away) ? ' hl' : '';
+  const hl = '';
   const giocata = p.stato === 'finita' || p.stato === 'live';
-  const side = (nome, src, gol, cls) => `<div class="side">${logo(src)}<div class="t-name ${cls}">${esc(nome)}</div>
-    <div class="goal ${cls}">${giocata ? gol : ''}</div></div>`;
+  const side = (nome, src, gol, cls) => `<div class="side">${logo(src, nome)}<div class="t-name ${cls}">${esc(nome)}</div>
+    <div class="goal num ${cls}">${giocata ? gol : ''}</div></div>`;
   const [g, o] = quando(p);
   return `<div class="card${hl}">${side(p.home, p.home_logo, p.gol_casa, h)}${side(p.away, p.away_logo, p.gol_trasferta, a)}
-    ${giocata ? '' : `<div class="when-card">${esc(g)}${o ? `<span>${esc(o)}</span>` : ''}</div>`}</div>`;
+    ${giocata ? (nota(p) ? `<div class="note">${nota(p)}</div>` : '') : `<div class="when-card">${esc(g)}${o ? `<span>${esc(o)}</span>` : ''}</div>`}</div>`;
 }
 
 function renderRisultati(data){
   const key = (data.competition || 'SA').toUpperCase();
-  document.body.className = 'comp-' + key;
+  const partite = data.partite || [];
+  const many = partite.length > 10;
+  const layout = data.layout || 'slim';
+  document.body.className = `comp-${key} lay-${layout}${many ? ' many' : ''}`;
+  const n = partite.length, k = n <= 6 ? 1.45 : n <= 8 ? 1.12 : 1;
+  document.body.style.setProperty('--k', k);
+  document.body.style.setProperty('--kn', Math.min(k, 1.2));    // i nomi crescono meno: devono starci
   document.getElementById('heroTitle').textContent = TITOLI[key] || TITOLI.SA;
   document.getElementById('competitionIcon').src = ICONE[key] || ICONE.SA;
   const turno = data.giornata ? `Giornata ${data.giornata}` : (data.turno || '');
   document.getElementById('heroSub').textContent = ['Risultati', turno, data.stagione].filter(Boolean).join(' · ');
-  const partite = data.partite || [];
   const area = document.getElementById('tableArea');
-  if (partite.length <= 10) area.innerHTML = `<div class="res-list">${partite.map(riga).join('')}</div>`;
-  else {
+  if (layout === 'slim' && n <= 4) {
+    // Poche partite (Coppa Italia): una tessera grande per partita, alte quanto serve a riempire il riquadro
+    document.body.classList.add('big');
+    document.body.style.setProperty('--k', n <= 2 ? 1.75 : n === 3 ? 1.4 : 1.15);
+    area.innerHTML = `<div class="res-tiles" style="grid-template-columns:1fr;grid-template-rows:repeat(${n},1fr)">${partite.map(tessera).join('')}</div>`;
+  } else if (layout === 'wide' || layout === 'slim') area.innerHTML = `<div class="res-list">${partite.map(riga).join('')}</div>`;
+  else if (layout === 'tiles') {
+    const cols = many ? 3 : 2, rows = Math.ceil(partite.length / cols);
+    area.innerHTML = `<div class="res-tiles" style="grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},minmax(0,${many ? '1fr' : '220px'}));align-content:center">${partite.map(tessera).join('')}</div>`;
+  } else {
     const per = Math.ceil(partite.length / 2);
-    area.innerHTML = `<div class="res-grid" style="grid-template-rows:repeat(${per},1fr)">${partite.map(scheda).join('')}</div>`;
+    area.innerHTML = `<div class="res-grid" style="grid-template-rows:repeat(${per},${many ? "1fr" : "minmax(0,170px)"});align-content:center">${partite.map(scheda).join('')}</div>`;
   }
   document.getElementById('legend').innerHTML = data.date ? `<div class="legend-item date">${esc(data.date)}</div>` : '';
 }
