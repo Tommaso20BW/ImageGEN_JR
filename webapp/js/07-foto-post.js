@@ -5,7 +5,7 @@
 // Stessi calcoli di graphics/starting_xi.py (photo_box), così l'anteprima coincide.
 const DESIGN_W = 1080, DESIGN_H = 1440;
 const OVERLAY_NAMES = {xi:'starting_xi', md:'matchday', jr:'jr'};
-const photoState = {id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, uploading:false};
+const photoState = {id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, rot:0, uploading:false};
 // STORIE IG: foto facoltativa sotto il testo (nessun editor: il servizio la adatta da solo).
 const igb = {id:'', url:'', uploading:false};
 let igColor = 'black';     // colore del testo (tavolozza in 11-invii.js)
@@ -51,7 +51,7 @@ async function uploadIgPhoto(file) {
 
 function clearPhoto() {
   if (photoState.url && photoState.url.startsWith('blob:')) { try { URL.revokeObjectURL(photoState.url); } catch (_) {} }
-  Object.assign(photoState,{id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, uploading:false});
+  Object.assign(photoState,{id:'', w:0, h:0, url:'', x:0, y:0, zoom:1, rot:0, uploading:false});
   $('photoImg').hidden = true;
   $('photoImg').removeAttribute('src');
   $('photoEmpty').hidden = false;
@@ -68,7 +68,8 @@ function photoDims() {
 function fitPhotoFrame() {
   const frame = $('photoFrame'), stage = $('stage');
   if (!frame.offsetParent) return;
-  const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 34;
+  const dial = $('rotDial');
+  const free = stage.getBoundingClientRect().bottom - frame.getBoundingClientRect().top - 34 - (dial && !dial.hidden ? dial.offsetHeight + 8 : 0);
   const [pw, ph] = photoDims();
   frame.style.aspectRatio = `${pw} / ${ph}`;
   const width = Math.max(200, Math.min(frame.parentElement.clientWidth, free * pw / ph));
@@ -80,30 +81,93 @@ const FREE_ZOOM_MIN = .5, FREE_KEEP = .2;   // come FREE_ZOOM_MIN / FREE_KEEP in
 
 function layoutPhoto() {
   fitPhotoFrame();
+  rotDialShow();
   if (!photoState.w) return;
   const [PW, PH] = photoDims();
   const frameW = $('photoFrame').clientWidth || 1;
   const k = frameW / PW;
   const cover = Math.max(PW / photoState.w, PH / photoState.h);
   // Matchday e Starting XI: il giocatore è scontornato, quindi si sposta libero (anche più piccolo
-  // della pagina); basta che ne resti dentro almeno un pezzo. Stessi conti di photo_box(free=True).
+  // della pagina); basta che ne resti dentro almeno un pezzo. Stessi conti di photo_box (starting_xi.py).
   const free = kind === 'md' || kind === 'xi';
   photoState.zoom = Math.min(free ? 6 : 4, Math.max(free ? FREE_ZOOM_MIN : 1, photoState.zoom));
-  const w = photoState.w * cover * photoState.zoom, h = photoState.h * cover * photoState.zoom;
-  let left = (PW - w) / 2 + photoState.x * PW;
-  let top = (PH - h) / 2 + photoState.y * PH;
+  const rot = Math.max(-45, Math.min(45, photoState.rot || 0)) * Math.PI / 180;
+  const c = Math.cos(rot), s = Math.sin(rot);
+  const needW = PW * Math.abs(c) + PH * Math.abs(s), needH = PW * Math.abs(s) + PH * Math.abs(c);
+  // Ruotata, la foto si ingrandisce da sola quanto basta per non lasciare angoli vuoti (come l'iPhone).
+  const zoom = free ? photoState.zoom : Math.max(photoState.zoom, Math.max(needW / photoState.w, needH / photoState.h) / cover);
+  const w = photoState.w * cover * zoom, h = photoState.h * cover * zoom;
+  let dx = photoState.x * PW, dy = photoState.y * PH;
   if (free) {
-    left = Math.min(PW * (1 - FREE_KEEP), Math.max(PW * FREE_KEEP - w, left));
-    top = Math.min(PH * (1 - FREE_KEEP), Math.max(PH * FREE_KEEP - h, top));
+    dx = Math.min(PW * (.5 - FREE_KEEP) + w / 2, Math.max(-PW * (.5 - FREE_KEEP) - w / 2, dx));
+    dy = Math.min(PH * (.5 - FREE_KEEP) + h / 2, Math.max(-PH * (.5 - FREE_KEEP) - h / 2, dy));
   } else {
-    left = Math.min(0, Math.max(PW - w, left));
-    top = Math.min(0, Math.max(PH - h, top));
+    let u = -(dx * c + dy * s), v = -(-dx * s + dy * c);
+    const mu = Math.max(0, (w - needW) / 2), mv = Math.max(0, (h - needH) / 2);
+    u = Math.min(mu, Math.max(-mu, u)); v = Math.min(mv, Math.max(-mv, v));
+    dx = -(u * c - v * s); dy = -(u * s + v * c);
   }
-  photoState.x = (left - (PW - w) / 2) / PW;
-  photoState.y = (top - (PH - h) / 2) / PH;
+  photoState.x = dx / PW;
+  photoState.y = dy / PH;
+  const left = (PW - w) / 2 + dx, top = (PH - h) / 2 + dy;
   const img = $('photoImg');
   img.style.left = `${left * k}px`; img.style.top = `${top * k}px`;
   img.style.width = `${w * k}px`; img.style.height = `${h * k}px`;
+  img.style.transform = photoState.rot ? `rotate(${photoState.rot}deg)` : '';
+}
+
+/* ---------- Rotella per ruotare la foto (come "Raddrizza" sull'iPhone) ----------
+   Righello orizzontale da -45° a 45°: si trascina col dito, la tacca al centro è il valore.
+   Tocca il numero per tornare a 0°. Vibra passando dallo 0 e ogni 5°. */
+const ROT_STEP = 9;      // pixel tra una tacca (1°) e l'altra
+
+function rotDialBuild() {
+  const ticks = $('rotTicks');
+  if (ticks.childElementCount) return;
+  for (let d = -45; d <= 45; d++) {
+    const t = document.createElement('i');
+    t.className = d === 0 ? 'zero' : d % 5 === 0 ? 'major' : '';
+    t.style.left = `${(d + 45) * ROT_STEP}px`;
+    ticks.appendChild(t);
+  }
+}
+
+function rotDialShow() {
+  const dial = $('rotDial');
+  if (!dial) return;
+  dial.hidden = !photoState.id;
+  const r = Math.round((photoState.rot || 0) * 10) / 10;
+  $('rotVal').textContent = `${Math.round(r)}°`;
+  $('rotVal').classList.toggle('on', Math.round(r) !== 0);
+  $('rotTicks').style.transform = `translateX(${-(r + 45) * ROT_STEP}px)`;
+}
+
+function initRotDial() {
+  const dial = $('rotDial'), track = dial.querySelector('.rot-track');
+  rotDialBuild();
+  let startX = null, startRot = 0, lastStep = 0;
+  track.addEventListener('pointerdown', e => {
+    if (!photoState.id) return;
+    track.setPointerCapture(e.pointerId);
+    startX = e.clientX; startRot = photoState.rot || 0; lastStep = Math.round(startRot);
+    dial.classList.add('dragging');
+  });
+  track.addEventListener('pointermove', e => {
+    if (startX === null) return;
+    let r = startRot - (e.clientX - startX) / ROT_STEP;
+    r = Math.max(-45, Math.min(45, r));
+    if (Math.abs(r) < .6) r = 0;                       // si ferma volentieri sullo 0
+    const step = Math.round(r);
+    if (step !== lastStep && (step === 0 || step % 5 === 0)) haptic('select');
+    lastStep = step;
+    photoState.rot = Math.round(r * 10) / 10;
+    layoutPhoto();
+  });
+  const end = () => { startX = null; dial.classList.remove('dragging'); };
+  track.addEventListener('pointerup', end);
+  track.addEventListener('pointercancel', end);
+  track.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
+  $('rotVal').addEventListener('click', () => { if (photoState.rot) { photoState.rot = 0; haptic('select'); layoutPhoto(); } });
 }
 
 /* ---------- Sagome fisse ----------
@@ -271,7 +335,7 @@ async function uploadPhoto(file) {
     const body = await response.json().catch(() => ({}));
     if (!response.ok || !body.ok) throw new Error(body.error || 'Caricamento non riuscito.');
     clearPhoto();
-    Object.assign(photoState,{id:body.photo_id, w, h, url:URL.createObjectURL(blob)});
+    Object.assign(photoState,{id:body.photo_id, w, h, url:URL.createObjectURL(blob), rot:0});
     $('photoImg').src = photoState.url;
     $('photoImg').hidden = false;
     $('photoEmpty').hidden = true;
@@ -363,6 +427,7 @@ function initPhotoEditor() {
   document.querySelectorAll('.src-row .btn').forEach(b => b.addEventListener('click',() => loadPxiSource(b)));
   $('photoFile').addEventListener('change',e => { uploadPhoto(e.target.files && e.target.files[0]); e.target.value = ''; });
   window.addEventListener('resize',layoutPhoto);
+  initRotDial();
   // iOS: il dito sulla foto non deve far scorrere la pagina né chiudere la Mini App.
   frame.addEventListener('touchmove',e => e.preventDefault(),{passive:false});
 }
@@ -1534,7 +1599,7 @@ async function mdpLoad(advance=false) {
     if (!response.ok || !body.ok) throw new Error(body.error || 'Foto del giocatore non disponibile.');
     if (key !== mdpKey()) return;          // scelta cambiata mentre arrivava: vale l'ultima
     clearPhoto();
-    Object.assign(photoState,{id:body.photo_id, w:body.width, h:body.height, url:body.preview, ...(MD_FRAMES[kind] || MD_FRAMES.md)});
+    Object.assign(photoState,{id:body.photo_id, w:body.width, h:body.height, url:body.preview, rot:0, ...(MD_FRAMES[kind] || MD_FRAMES.md)});
     $('photoImg').src = photoState.url;
     $('photoImg').hidden = false;
     $('photoEmpty').hidden = true;

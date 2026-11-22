@@ -159,3 +159,24 @@ class FreePhotoTests(unittest.TestCase):
         self.assertAlmostEqual(w, 540)
         self.assertAlmostEqual(left, 1080 * .8)
         self.assertAlmostEqual(top, 1440 * .8)
+
+
+class PhotoRotTests(unittest.TestCase):
+    def test_rotated_photo_covers_page(self):
+        import math
+        from graphics.starting_xi import photo_box
+        for rot in (-45, -12.5, 7, 30):
+            for x, y in ((0, 0), (.4, -.3), (-3, 3)):
+                left, top, w, h = photo_box((1600, 1000), {'zoom': 1, 'x': x, 'y': y, 'rot': rot})
+                cx, cy, a = left + w / 2, top + h / 2, math.radians(rot)
+                for px, py in ((0, 0), (1080, 0), (0, 1440), (1080, 1440)):
+                    u = (px - cx) * math.cos(a) + (py - cy) * math.sin(a)
+                    v = -(px - cx) * math.sin(a) + (py - cy) * math.cos(a)
+                    self.assertLessEqual(abs(u), w / 2 + .01)
+                    self.assertLessEqual(abs(v), h / 2 + .01)
+
+    def test_payload_rot(self):
+        from webapp_payload import _frame
+        self.assertEqual(_frame({'x': 0, 'y': 0, 'zoom': 1}), {'x': 0.0, 'y': 0.0, 'zoom': 1.0})
+        self.assertEqual(_frame({'zoom': 1, 'rot': 90})['rot'], 45.0)
+        self.assertEqual(_frame({'zoom': .5}, min_zoom=.5)['zoom'], .5)

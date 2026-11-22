@@ -325,3 +325,16 @@ body.live .brand-btn{pointer-events:none}
 .x-dot{flex:none;width:12px;height:12px;border-radius:50%;margin-top:4px}
 .x-sw{flex:none;width:28px;height:28px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
 .x-phr .sp-rm{flex:none}
+
+/* Rotella per ruotare la foto (come "Raddrizza" sull'iPhone) */
+.rot-dial{width:100%;max-width:380px;margin:10px auto 0;display:flex;flex-direction:column;align-items:center;gap:4px;user-select:none;-webkit-user-select:none}
+.rot-dial[hidden]{display:none}
+.rot-val{font:700 13px/1 inherit;font-variant-numeric:tabular-nums;color:var(--muted);background:none;border:0;padding:4px 10px;border-radius:999px;cursor:pointer}
+.rot-val.on{color:var(--text,#fff);background:color-mix(in srgb,currentColor 12%,transparent)}
+.rot-track{position:relative;width:100%;height:34px;overflow:hidden;touch-action:none;cursor:ew-resize;
+  -webkit-mask:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
+.rot-ticks{position:absolute;left:50%;top:0;bottom:0;width:0}
+.rot-ticks i{position:absolute;bottom:8px;width:1px;height:9px;margin-left:-.5px;background:var(--muted);opacity:.55}
+.rot-ticks i.major{height:15px;opacity:.9}
+.rot-ticks i.zero{height:18px;width:2px;margin-left:-1px;opacity:1}
+.rot-needle{position:absolute;left:50%;bottom:4px;width:2px;height:26px;margin-left:-1px;border-radius:1px;background:#f5c84c}

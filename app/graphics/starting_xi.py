@@ -5,6 +5,7 @@ livello fisso Canva (sfumature, grana, titolo, JR), loghi, numeri e nomi.
 """
 import base64
 import io
+import math
 import json
 import re
 from functools import lru_cache
@@ -99,27 +100,47 @@ FREE_ZOOM_MIN, FREE_KEEP = .5, .2
 
 
 def photo_box(size, frame, page=None, free=False):
-    """Posizione della foto in pixel del design.
+    """Posizione della foto in pixel del design: (left, top, larghezza, altezza) del riquadro
+    prima della rotazione (la foto si ruota attorno al suo centro, frame['rot'] gradi).
 
-    frame = {'x', 'y', 'zoom'} dalla Mini App: x/y spostamento del centro
-    (in frazione della pagina), zoom >= 1 rispetto a "riempi la pagina".
+    frame = {'x', 'y', 'zoom', 'rot'} dalla Mini App: x/y spostamento del centro
+    (in frazione della pagina), zoom >= 1 rispetto a "riempi la pagina", rot in gradi
+    (-45..45, positivo = orario) come la rotella dell'iPhone.
     page = (larghezza, altezza) della pagina in pixel design; default 1080x1440.
     """
     w, h = size
     page_w, page_h = page or (DESIGN_W, DESIGN_H)
     cover = max(page_w / w, page_h / h)
     zoom = min(max(float(frame.get('zoom', 1)), FREE_ZOOM_MIN if free else 1), 6)
+    rot = math.radians(photo_rot(frame))
+    c, s = math.cos(rot), math.sin(rot)
+    # Ingombro della pagina vista dalla foto ruotata: la foto deve contenerlo tutto.
+    need_w = page_w * abs(c) + page_h * abs(s)
+    need_h = page_w * abs(s) + page_h * abs(c)
+    if not free:
+        # Ruotata, la foto si ingrandisce da sola quanto basta per non lasciare angoli vuoti.
+        zoom = max(zoom, max(need_w / w, need_h / h) / cover)
     width, height = w * cover * zoom, h * cover * zoom
-    left = (page_w - width) / 2 + float(frame.get('x', 0)) * page_w
-    top = (page_h - height) / 2 + float(frame.get('y', 0)) * page_h
+    dx, dy = float(frame.get('x', 0)) * page_w, float(frame.get('y', 0)) * page_h
     if free:
-        left = min(page_w * (1 - FREE_KEEP), max(page_w * FREE_KEEP - width, left))
-        top = min(page_h * (1 - FREE_KEEP), max(page_h * FREE_KEEP - height, top))
+        dx = min(page_w * (.5 - FREE_KEEP) + width / 2, max(-page_w * (.5 - FREE_KEEP) - width / 2, dx))
+        dy = min(page_h * (.5 - FREE_KEEP) + height / 2, max(-page_h * (.5 - FREE_KEEP) - height / 2, dy))
     else:
-        # Mai bordi vuoti: la foto copre sempre tutta la pagina.
-        left = min(0, max(page_w - width, left))
-        top = min(0, max(page_h - height, top))
-    return left, top, width, height
+        # Mai bordi vuoti: centro pagina (negli assi della foto) dentro il margine libero.
+        u, v = -(dx * c + dy * s), -(-dx * s + dy * c)
+        mu, mv = max(0, (width - need_w) / 2), max(0, (height - need_h) / 2)
+        u, v = min(mu, max(-mu, u)), min(mv, max(-mv, v))
+        dx, dy = -(u * c - v * s), -(u * s + v * c)
+    return (page_w - width) / 2 + dx, (page_h - height) / 2 + dy, width, height
+
+
+def photo_rot(frame):
+    """Rotazione della foto in gradi, -45..45 (0 se assente)."""
+    try:
+        rot = float((frame or {}).get('rot', 0))
+    except (TypeError, ValueError):
+        return 0.0
+    return max(-45.0, min(45.0, rot)) if math.isfinite(rot) else 0.0
 
 
 @lru_cache(maxsize=1)

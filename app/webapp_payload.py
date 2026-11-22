@@ -7,7 +7,7 @@ import uuid
 
 from constants import COMPETITIONS, ITALY_COMPETITIONS, KINDS, STATS, parse_minute, parse_stat_pair
 from graphics.squad_list import parse_squad
-from graphics.starting_xi import PLAYERS as PLAYERS_IN_XI, parse_lineup
+from graphics.starting_xi import FREE_ZOOM_MIN, PLAYERS as PLAYERS_IN_XI, parse_lineup
 from graphics.matchday import parse_info
 from graphics import ig_story, photo_jr
 from graphics.calendar import parse_matches
@@ -185,6 +185,13 @@ def _frame(value, min_zoom=1.0):
     frame['x'] = max(-3.0, min(3.0, frame['x']))
     frame['y'] = max(-3.0, min(3.0, frame['y']))
     frame['zoom'] = max(min_zoom, min(6.0, frame['zoom']))
+    # Rotazione (rotella stile iPhone), -45..45 gradi: solo se c'è.
+    try:
+        rot = float(value.get('rot', 0))
+    except (TypeError, ValueError):
+        rot = 0.0
+    if math.isfinite(rot) and rot:
+        frame['rot'] = max(-45.0, min(45.0, rot))
     return {k: round(v, 5) for k, v in frame.items()}
 
 
@@ -646,13 +653,13 @@ def _build_state(envelope, catalog, now, expected_session):
                 raise ValueError('Lo stesso giocatore è stato scelto due volte.')
         data['lineup'] = lineup
         data['photo_id'] = _photo_id(incoming.get('photo_id'))
-        data['frame'] = _frame(incoming.get('frame'))
+        data['frame'] = _frame(incoming.get('frame'), min_zoom=FREE_ZOOM_MIN)
         # Effetto movimento: acceso di default, "trail": false lo spegne.
         data['trail'] = incoming.get('trail') is not False
 
     elif kind == 'md':
         data['photo_id'] = _photo_id(incoming.get('photo_id'))
-        data['frame'] = _frame(incoming.get('frame'))
+        data['frame'] = _frame(incoming.get('frame'), min_zoom=FREE_ZOOM_MIN)
         data['info'] = parse_info(incoming.get('stadium'), incoming.get('time'), incoming.get('date'))
         # Effetto movimento: acceso di default, "trail": false lo spegne.
         data['trail'] = incoming.get('trail') is not False

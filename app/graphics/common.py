@@ -335,12 +335,13 @@ def photo_layer(photo, frame, page=None, free=False):
     free=True: se la foto è scontornata (PNG trasparente) si sposta libera (photo_box)."""
     if photo is None:
         return '', 'transparent'
-    from graphics.starting_xi import check_photo, photo_box
+    from graphics.starting_xi import check_photo, photo_box, photo_rot
     left, top, width, height = photo_box(check_photo(photo), frame, page, free and _transparent(photo))
+    rot = photo_rot(frame)
     mime = 'image/png' if photo.startswith(b'\x89PNG') else 'image/jpeg'
     uri = f'data:{mime};base64,' + base64.b64encode(photo).decode('ascii')
     return (f'<img src="{uri}" style="position:absolute;left:{left}px;top:{top}px;'
-            f'width:{width}px;height:{height}px">'), '#fff'
+            f'width:{width}px;height:{height}px' + (f';transform:rotate({rot}deg)' if rot else '') + '">'), '#fff'
 
 
 # Maglie con le scritte sfumate: il logo prende la stessa texture delle scritte

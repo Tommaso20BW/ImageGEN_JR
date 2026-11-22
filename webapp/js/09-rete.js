@@ -1,3 +1,8 @@
+/** Posizione della foto per il servizio: spostamento, zoom e (se c'è) rotazione. */
+function photoFrameData() {
+  return {x:photoState.x, y:photoState.y, zoom:photoState.zoom, ...(photoState.rot ? {rot:photoState.rot} : {})};
+}
+
 /* Mini App ImageGen JR. File caricati in ordine da index.html: l'ordine conta. */
 /* ---------- Payload / network ---------- */
 function scorePair(a,b,required=true) {
@@ -26,7 +31,7 @@ function buildPayload(ghost=false) {
     return {v:1, action:'render', session, data:{kind, photo_id:photoState.id || photo.photo_id, ...(iq.story ? {story:true, ...(iq.bars ? {bars:iq.bars} : {})} : {}),
       text:iq.story ? '' : $('iqText').value.trim(), name:$('iqName').value.trim(), ...(iq.avatar ? {avatar_id:iq.avatar} : {}),
       handle:$('iqHandle').value.trim(), verified:!!iq.verified,
-      frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}}};
+      frame:photoFrameData()}};
   }
   if (kind === 'bday') return bdOld() ? bdoPayload() : bdPayload();
   if (kind === 'motm') return motmPayload();
@@ -79,14 +84,14 @@ function buildPayload(ghost=false) {
     if (!jrb.title.trim()) throw new Error('Scrivi il titolo.');
     return {v:1, action:'render', session, data:{
       kind:'jr', style:'title', color:jrColor, title:jrb.title.trim(), title_color:jrb.tcolor,
-      photo_id:photoId, frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}
+      photo_id:photoId, frame:photoFrameData()
     }};
   }
   if (kind === 'jr') {
     if (!photoId) throw new Error('Scegli una foto.');
     return {v:1, action:'render', session, data:{
       kind:'jr', color:jrColor, photo_id:photoId, ratio:jrb.ratio,
-      frame:{x:photoState.x, y:photoState.y, zoom:photoState.zoom}
+      frame:photoFrameData()
     }};
   }
   if (!nat && !selectedTeam) throw new Error('Avversario mancante.');
@@ -124,11 +129,11 @@ function buildPayload(ghost=false) {
     if (!photoId) throw new Error('Scegli il giocatore.');
     data.lineup = lineupRows().map(p => ({number:p.number, name:p.name}));
     data.photo_id = photoId;
-    data.frame = {x:photoState.x, y:photoState.y, zoom:photoState.zoom};
+    data.frame = photoFrameData();
   } else if (kind === 'md') {
     if (!photoId) throw new Error('Scegli il giocatore.');
     data.photo_id = photoId;
-    data.frame = {x:photoState.x, y:photoState.y, zoom:photoState.zoom};
+    data.frame = photoFrameData();
     data.stadium = $('matchStadium').value;
     data.time = $('matchTime').value;
     data.date = $('matchDate').value;

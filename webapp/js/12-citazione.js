@@ -170,7 +170,7 @@ function iqSyncPhoto() {
   // Foto caricata a mano nell'editor: resta quella (non è una del post).
   if (photoState.id && !iq.photos.some(x => x.photo_id === photoState.id)) return;
   clearPhoto();
-  Object.assign(photoState, {id:p.photo_id, w:p.width, h:p.height, url:`${iqThumb(p.photo_id)}&big=1`, x:0, y:0, zoom:1});
+  Object.assign(photoState, {id:p.photo_id, w:p.width, h:p.height, url:`${iqThumb(p.photo_id)}&big=1`, x:0, y:0, zoom:1, rot:0});
   $('photoImg').src = photoState.url;
   $('photoImg').hidden = false;
   $('photoEmpty').hidden = true;
