@@ -4,7 +4,8 @@ Carta stropicciata con grana (le texture del Compleanno) e, in colonna al centro
 
 - etichetta scelta nella Mini App (BREAKING NEWS, CALCIOMERCATO, UFFICIALE o nessuna): ogni
   parola su una striscia strappata, nero e oro alternati;
-- foto (facoltativa): stampa con bordo bianco, inclinata, con due pezzi di nastro adesivo;
+- foto (facoltativa): stampa con bordo bianco, inclinata, con due pezzi di nastro adesivo. Mai
+  ritagliata: si vede tutta. Se è verticale e c'è il testo, va a sinistra e il testo a destra;
 - testo (facoltativo): battuto a macchina (Special Elite), una riga per striscia di carta bianca,
   centrato. La grandezza dipende da quanto è lungo e si riduce finché tutto sta nella zona;
 - in basso il logo JR dritto, stampato come un timbro: senza bordo, un po' sbiadito.
@@ -40,6 +41,13 @@ PHOTO_W = 960                        # larghezza massima della foto
 PHOTO_MIN_H = 420                    # con il testo, alla foto resta almeno questa altezza...
 PHOTO_LOW = 320                      # ...o questa, se il testo è già sceso a FS_KEEP
 FS_KEEP = 36
+# Foto verticale con il testo: foto a sinistra, testo a destra
+SIDE_RATIO = 1.1                     # altezza/larghezza da cui la foto è "lunga"
+SIDE_M = 46                          # margine laterale
+SIDE_PW = 440                        # larghezza massima della foto (senza bordo)
+SIDE_TW = 400                        # larghezza delle righe di testo
+SIDE_GAP = 44                        # tra foto e testo
+SIDE_STEPS = ((80, 40), (160, 36), (10**9, 32))
 FS_MIN = 28
 # Grandezza del testo in base ai caratteri: (fino a N caratteri, grandezza)
 FS_PHOTO_STEPS = ((120, 46), (240, 42), (10**9, 38))
@@ -278,6 +286,32 @@ def layout(text, label, photo_size=None, source=''):
     return parts, lines, size, ph_h, TOP if parts else TOP + max((room - total) / 2, 0)
 
 
+def is_side(text, photo_size):
+    """Foto verticale con il testo: foto a sinistra e testo a destra."""
+    return bool(text) and bool(photo_size) and photo_size[1] / photo_size[0] >= SIDE_RATIO
+
+
+def side_layout(text, label, photo_size, source=''):
+    """Foto a sinistra e testo a destra: (parole etichetta, righe, grandezza, larghezza e altezza foto,
+    altezza del blocco, y di partenza). La foto non si ritaglia: se serve si rimpicciolisce tutta."""
+    parts = _label_words(LABELS[label_key(label)], 150)
+    lab_h = _label_height(parts)
+    room = BOTTOM - TOP - source_height(source) - lab_h - (GAP + TILT_PAD if parts else 0)
+    ar = photo_size[1] / photo_size[0]
+    n = len(text.replace('\n', ''))
+    size = next(s for limit, s in SIDE_STEPS if n <= limit)
+    while size > FS_MIN and text_height(wrap(text, size, SIDE_TW), size) > room:
+        size -= 2
+    lines = wrap(text, size, SIDE_TW)
+    pw = int(min(SIDE_PW, (room - 40) / ar))
+    ph = int(pw * ar)
+    block = max(ph + 40, text_height(lines, size))
+    if parts:
+        return parts, lines, size, pw, ph, block, TOP
+    total = block + source_height(source)
+    return parts, lines, size, pw, ph, block, TOP + max((BOTTOM - TOP - total) / 2, 0)
+
+
 def content_y(top, lines, size, ph_h, source=''):
     """y di foto + testo sotto l'etichetta: stesso spazio sopra (dall'etichetta) e sotto (fino al logo JR),
     almeno GAP dall'etichetta e senza uscire da BOTTOM."""
@@ -384,14 +418,13 @@ def _tape(img, center, angle, seed):
     return _composite(img, center[0], center[1], m, rgb, np.zeros_like(m))
 
 
-def _photo(img, raw, cx, cy, ph_h, angle, rng, min_ratio=0):
-    """Foto con bordo e nastro. min_ratio: larghezza minima rispetto all'altezza (con il testo una foto
-    verticale si ritaglia un po' più larga, invece di restare stretta)."""
+def _photo(img, raw, cx, cy, ph_h, angle, rng, max_w=PHOTO_W):
+    """Foto con bordo e nastro, intera (mai ritagliata): alta al massimo ph_h e larga al massimo max_w."""
     im = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert('RGB')
     ar = im.height / im.width
-    pw = int(min(PHOTO_W, max(ph_h / ar, ph_h * min_ratio)))
-    phh = int(min(ph_h, pw * ar))
-    im = ImageOps.fit(im, (pw, phh), Image.LANCZOS, centering=(.5, .35))
+    pw = max(1, int(min(max_w, ph_h / ar)))
+    phh = max(1, int(pw * ar))
+    im = im.resize((pw, phh), Image.LANCZOS)
     border = 18
     fr = Image.new('RGB', (pw + 2 * border, phh + 2 * border), (245, 242, 235))
     fr.paste(im, (border, border))
@@ -458,7 +491,11 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     if seed is None:
         seed = int(np.random.default_rng().integers(1 << 30))
     rng = np.random.default_rng(seed)
-    parts, lines, size, ph_h, y = layout(text, label, psize, source)
+    side = is_side(text, psize)
+    if side:
+        parts, lines, size, side_pw, ph_h, side_h, y = side_layout(text, label, psize, source)
+    else:
+        parts, lines, size, ph_h, y = layout(text, label, psize, source)
 
     img = cp._paper((W, H), PAPER, seed=int(rng.integers(1 << 20))).copy()
     light = cp._crumple((W, H), int(rng.integers(1 << 20)), 0.7, folds=3)
@@ -480,23 +517,41 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
                      int(rng.integers(1 << 20)), pad=(LABEL_PAD, 16), tear=2,
                      sh=(6, 10, 8, .4), breakup=.08, fringe=True)
         yy += ph + LABEL_VSEP
-    if parts:
+    if parts and side:
+        top = y + h + GAP + TILT_PAD
+        rest = side_h + source_height(source)
+        y = max(min((top - GAP) + (LOGO_Y - (top - GAP) - rest) / 2, BOTTOM - rest), top)
+    elif parts:
         y = content_y(y + h + GAP + (TILT_PAD if photo is not None else 0), lines, size, ph_h, source)
 
-    if photo is not None:
-        img = _photo(img, photo, W / 2, y + ph_h / 2, ph_h, _tilt(rng, 1.5, 4), rng, 1.6 if lines else 0)
-        y += ph_h + GAP
-
+    # foto inclinata a caso a destra o a sinistra, pochi gradi come le strisce
+    tilt = _tilt(rng, 1.5, 3.5)
     ink = _rgb(TEXT_COLORS[text_color(color)])
+    text_x = W / 2
+    if side:
+        frame_w = side_pw + 36
+        img = _photo(img, photo, SIDE_M + frame_w / 2, y + side_h / 2, ph_h, tilt, rng, side_pw)
+        text_x = SIDE_M + frame_w + SIDE_GAP + (W - SIDE_M - frame_w - SIDE_GAP - SIDE_M) / 2
+        y_text = y + (side_h - text_height(lines, size)) / 2
+        y += side_h
+    else:
+        if photo is not None:
+            img = _photo(img, photo, W / 2, y + ph_h / 2, ph_h, tilt, rng)
+            y += ph_h + GAP
+        y_text = y
+
+    yt = y_text
     for ln in lines:
         if not ln:
-            y += int(size * 0.6) + _line_gap(size)
+            yt += int(size * 0.6) + _line_gap(size)
             continue
         t = cp._word(ln, size, MONO, 1)
         h = _line_h(size)
-        img = _piece(img, t, (W / 2 + rng.uniform(-8, 8), y + h / 2), float(rng.uniform(-1.2, 1.2)),
+        img = _piece(img, t, (text_x + rng.uniform(-8, 8), yt + h / 2), float(rng.uniform(-1.2, 1.2)),
                      STRIP, ink, int(rng.integers(1 << 20)), pad=(25, (h - t.height) // 2))
-        y += h + _line_gap(size)
+        yt += h + _line_gap(size)
+    if not side:
+        y = yt
 
     # fonte: blocco del colore scelto (nero = quello dell'etichetta), bordo di carta come le strisce del testo,
     # inclinato a caso a destra o a sinistra
