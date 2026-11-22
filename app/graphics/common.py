@@ -319,13 +319,24 @@ def _smooth_bg(path):
     return 'data:image/jpeg;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
 
 
-def photo_layer(photo, frame, page=None):
+def _transparent(raw):
+    """True se la foto è un PNG con trasparenza vera (persona scontornata)."""
+    if raw[:4] != bytes((0x89,)) + b'PNG':
+        return False
+    import io
+    from PIL import Image
+    with Image.open(io.BytesIO(raw)) as im:
+        return im.mode in ('RGBA', 'LA', 'PA') and im.getchannel('A').getextrema()[0] < 250
+
+
+def photo_layer(photo, frame, page=None, free=False):
     """(<img> della foto, colore di fondo pagina). Senza foto: niente <img> e fondo
-    trasparente, per la versione "fantasma" mostrata sopra la foto nell'editor."""
+    trasparente, per la versione "fantasma" mostrata sopra la foto nell'editor.
+    free=True: se la foto è scontornata (PNG trasparente) si sposta libera (photo_box)."""
     if photo is None:
         return '', 'transparent'
     from graphics.starting_xi import check_photo, photo_box
-    left, top, width, height = photo_box(check_photo(photo), frame, page)
+    left, top, width, height = photo_box(check_photo(photo), frame, page, free and _transparent(photo))
     mime = 'image/png' if photo.startswith(b'\x89PNG') else 'image/jpeg'
     uri = f'data:{mime};base64,' + base64.b64encode(photo).decode('ascii')
     return (f'<img src="{uri}" style="position:absolute;left:{left}px;top:{top}px;'

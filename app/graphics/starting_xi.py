@@ -93,7 +93,12 @@ def check_photo(raw):
         raise ValueError('Foto non valida: usa JPG o PNG.') from None
 
 
-def photo_box(size, frame, page=None):
+# Foto scontornata (pose del Matchday/Starting XI): si sposta libera e può essere più piccola della
+# pagina (zoom da FREE_ZOOM_MIN); ne resta dentro almeno FREE_KEEP della pagina per lato.
+FREE_ZOOM_MIN, FREE_KEEP = .5, .2
+
+
+def photo_box(size, frame, page=None, free=False):
     """Posizione della foto in pixel del design.
 
     frame = {'x', 'y', 'zoom'} dalla Mini App: x/y spostamento del centro
@@ -103,13 +108,17 @@ def photo_box(size, frame, page=None):
     w, h = size
     page_w, page_h = page or (DESIGN_W, DESIGN_H)
     cover = max(page_w / w, page_h / h)
-    zoom = min(max(float(frame.get('zoom', 1)), 1), 6)
+    zoom = min(max(float(frame.get('zoom', 1)), FREE_ZOOM_MIN if free else 1), 6)
     width, height = w * cover * zoom, h * cover * zoom
     left = (page_w - width) / 2 + float(frame.get('x', 0)) * page_w
     top = (page_h - height) / 2 + float(frame.get('y', 0)) * page_h
-    # Mai bordi vuoti: la foto copre sempre tutta la pagina.
-    left = min(0, max(page_w - width, left))
-    top = min(0, max(page_h - height, top))
+    if free:
+        left = min(page_w * (1 - FREE_KEEP), max(page_w * FREE_KEEP - width, left))
+        top = min(page_h * (1 - FREE_KEEP), max(page_h * FREE_KEEP - height, top))
+    else:
+        # Mai bordi vuoti: la foto copre sempre tutta la pagina.
+        left = min(0, max(page_w - width, left))
+        top = min(0, max(page_h - height, top))
     return left, top, width, height
 
 
@@ -149,7 +158,7 @@ def build_html(*, kit, lineup, photo, frame, home_name, home_id, away_name, away
         raise ValueError('Maglia non valida.')
     meta = meta_for('starting_xi', kit, _meta())
     canva = asset_dir() / 'canva'
-    photo_html, page_bg = photo_layer(photo, frame, (DESIGN_W, STORY_H) if story else None)
+    photo_html, page_bg = photo_layer(photo, frame, (DESIGN_W, STORY_H) if story else None, free=True)
 
     shift, step, big = (STORY_SHIFT, STORY_ROW_STEP, STORY_SCALE) if story else (0, ROW_STEP, 1)
     numbers = _text_rows(

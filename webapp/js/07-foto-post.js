@@ -76,6 +76,8 @@ function fitPhotoFrame() {
   frame.style.width = `${Math.floor(width)}px`;
 }
 
+const FREE_ZOOM_MIN = .5, FREE_KEEP = .2;   // come FREE_ZOOM_MIN / FREE_KEEP in starting_xi.py
+
 function layoutPhoto() {
   fitPhotoFrame();
   if (!photoState.w) return;
@@ -83,12 +85,20 @@ function layoutPhoto() {
   const frameW = $('photoFrame').clientWidth || 1;
   const k = frameW / PW;
   const cover = Math.max(PW / photoState.w, PH / photoState.h);
-  photoState.zoom = Math.min(4, Math.max(1, photoState.zoom));
+  // Matchday e Starting XI: il giocatore è scontornato, quindi si sposta libero (anche più piccolo
+  // della pagina); basta che ne resti dentro almeno un pezzo. Stessi conti di photo_box(free=True).
+  const free = kind === 'md' || kind === 'xi';
+  photoState.zoom = Math.min(free ? 6 : 4, Math.max(free ? FREE_ZOOM_MIN : 1, photoState.zoom));
   const w = photoState.w * cover * photoState.zoom, h = photoState.h * cover * photoState.zoom;
   let left = (PW - w) / 2 + photoState.x * PW;
   let top = (PH - h) / 2 + photoState.y * PH;
-  left = Math.min(0, Math.max(PW - w, left));
-  top = Math.min(0, Math.max(PH - h, top));
+  if (free) {
+    left = Math.min(PW * (1 - FREE_KEEP), Math.max(PW * FREE_KEEP - w, left));
+    top = Math.min(PH * (1 - FREE_KEEP), Math.max(PH * FREE_KEEP - h, top));
+  } else {
+    left = Math.min(0, Math.max(PW - w, left));
+    top = Math.min(0, Math.max(PH - h, top));
+  }
   photoState.x = (left - (PW - w) / 2) / PW;
   photoState.y = (top - (PH - h) / 2) / PH;
   const img = $('photoImg');

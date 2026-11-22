@@ -130,7 +130,7 @@ def build_html(*, kit, photo, frame, info, competition, home_name, home_id, away
         raise ValueError('Maglia non valida.')
     meta = meta_for('matchday', kit, _meta())
     canva = asset_dir() / 'canva'
-    photo_html, page_bg = photo_layer(photo, frame)
+    photo_html, page_bg = photo_layer(photo, frame, free=True)
 
     values = {**info, 'competition': competition_label(competition)}
     size, centers = info_layout(values)

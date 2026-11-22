@@ -133,3 +133,14 @@ class RenderTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class FreePhotoTests(unittest.TestCase):
+    def test_free_photo_box(self):
+        from graphics.starting_xi import photo_box
+        frame = {'zoom': .3, 'x': .6, 'y': .6}
+        self.assertEqual(photo_box((1086, 1448), frame), (0, 0, 1080, 1440))
+        left, top, w, h = photo_box((1086, 1448), frame, free=True)
+        self.assertAlmostEqual(w, 540)
+        self.assertAlmostEqual(left, 1080 * .8)
+        self.assertAlmostEqual(top, 1440 * .8)
