@@ -117,8 +117,8 @@ def _mark(file):
 # (da circa 575 px a 1080). Stessa regola per tutti: bordo destro a LOGO_RIGHT (non entra
 # nella piega), altezza al massimo LOGO_MAX_H (margine sopra e sotto), larghezza al massimo
 # LOGO_MAX_W: così ogni logo è tagliato a sinistra più o meno della stessa parte.
-LOGO_RIGHT, LOGO_MAX_W, LOGO_MAX_H, LOGO_CY = 1000, 680, 1050, 756
-STORY_LOGO_RIGHT = 1045                  # storia: della pagina sinistra si vede meno, logo più vicino alla piega
+LOGO_RIGHT, LOGO_MAX_W, LOGO_MAX_H, LOGO_CY = 1040, 850, 1050, 756
+STORY_LOGO_RIGHT, STORY_LOGO_MAX_W = 1072, 620   # storia: si vede solo la parte vicino alla piega, logo grande ma attaccato alla piega
 
 
 def left_page(competition, story=False):
@@ -128,7 +128,7 @@ def left_page(competition, story=False):
     logo = ''
     if mark:
         uri, ratio = _mark(mark)
-        h = min(LOGO_MAX_H, LOGO_MAX_W / ratio)
+        h = min(LOGO_MAX_H, (STORY_LOGO_MAX_W if story else LOGO_MAX_W) / ratio)
         w = h * ratio
         right = STORY_LOGO_RIGHT if story else LOGO_RIGHT
         logo = (f'<img src="{uri}" style="position:absolute;left:{right - w}px;top:{LOGO_CY - h / 2}px;'
