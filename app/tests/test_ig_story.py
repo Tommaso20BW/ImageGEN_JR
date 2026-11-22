@@ -101,14 +101,11 @@ class RenderTests(unittest.TestCase):
         for photo in (None, (1600, 1000), (800, 1200)):
             for label in ('breaking', 'none'):
                 with self.subTest(photo=photo, label=label):
-                    if photo and S.side_plan(long, label, photo, 'Fonte', True):
-                        pass   # side_plan controlla da sé che tutto stia nella zona
-                    else:
-                        parts, lines, size, ph_h, y = S.layout(long, label, photo, 'Fonte', True)
-                        blocks = bool(parts) + bool(photo) + 1
-                        total = (S._label_height(parts) + S.text_height(lines, size) + ph_h
-                                 + S.GAP * (blocks - 1) + (S.TILT_PAD if parts and photo else 0))
-                        self.assertLessEqual(y + total + S.tail_height('Fonte', True), S.BOTTOM + 1)
+                    parts, lines, size, ph_h, y = S.layout(long, label, photo, 'Fonte', True)
+                    blocks = bool(parts) + bool(photo) + 1
+                    total = (S._label_height(parts) + S.text_height(lines, size) + ph_h
+                             + S.GAP * (blocks - 1) + (S.TILT_PAD if parts and photo else 0))
+                    self.assertLessEqual(y + total + S.tail_height('Fonte', True), S.BOTTOM + 1)
         self.assertEqual(S.link_width(''), S.LINK_W)
         self.assertLess(S.link_width('Leggi'), S.link_width('Gli aggiornamenti e le novità'))
         self.assertLessEqual(S.link_width('x' * 200), S.W - 80)
