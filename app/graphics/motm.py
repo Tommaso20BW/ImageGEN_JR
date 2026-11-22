@@ -1,5 +1,5 @@
 """MAN OF THE MATCH: poster chiaro con il cognome enorme vellutato, il nome in firma d'oro (3D leggero
-e bagliori), il giocatore davanti con l'ombra piatta sotto le scarpe e la partita in fondo.
+e bagliori), il giocatore davanti con l'ombra a terra sotto gli appoggi e la partita in fondo.
 L'utente carica la foto (scontornata dal servizio) e la sposta a mano: la testa non sale sopra
 MAN OF THE MATCH e il logo Juventus, i piedi non scendono sotto la riga della partita.
 Font negli asset: Anton-Regular, Inter-Medium, Corinthiago (firma)."""
@@ -291,21 +291,38 @@ def trim(person):
     return person.crop(box) if box else person
 
 
-def _runs(xs, gap):
-    out, s, p = [], None, None
-    for v in xs:
-        if s is None:
-            s = p = v
-        elif v - p > gap:
-            out.append((s, p)); s = v
-        p = v
-    if s is not None:
-        out.append((s, p))
-    return out
-
-
 GRAIN = .03          # grana del giocatore (0 = niente)
 BACK_SHADOW = (16, .09, 8, 10)   # ombra dietro il giocatore: sfocatura, forza, spostamento x, y
+
+
+GROUND_SHADOW = (.5, .2)   # forza: contatto (stretta, sotto i punti d'appoggio), alone (larga e chiara)
+
+
+def _ground_shadow(c, a, x, y):
+    ph, pw = a.shape
+    solid = a > .35
+    has = solid.any(0)
+    if not has.any():
+        return
+    low = ph - 1 - np.argmax(solid[::-1], 0)          # punto più basso di ogni colonna
+    ground = low[has].max()
+    near = np.where(has, np.exp(-((ground - low) / (22 * K)) ** 2), 0).astype(np.float32)
+    m = int(140 * K)                                  # margine: l'ombra arriva a zero prima del bordo
+    near = np.pad(near, m)
+    core_x = gaussian_filter(near, 7 * K)
+    halo_x = gaussian_filter(near, 34 * K)
+    halo_x /= max(halo_x.max(), 1e-6)
+    gy = y + ground
+    rows = np.arange(gy - int(40 * K), gy + int(60 * K), dtype=np.float32)
+    d = rows - gy
+    core = np.exp(-.5 * ((d - 1 * K) / (4.5 * K)) ** 2)[:, None] * core_x[None] * GROUND_SHADOW[0]
+    halo = np.exp(-.5 * ((d - 5 * K) / (14 * K)) ** 2)[:, None] * halo_x[None] * GROUND_SHADOW[1]
+    sh = 1 - (1 - core) * (1 - halo)
+    x0, y0 = x - m, int(rows[0])
+    cx0, cy0 = max(x0, 0), max(y0, 0)
+    cx1, cy1 = min(x0 + sh.shape[1], W), min(y0 + sh.shape[0], H)
+    if cx1 > cx0 and cy1 > cy0:
+        c.a[cy0:cy1, cx0:cx1] *= 1 - sh[cy0 - y0:cy1 - y0, cx0 - x0:cx1 - x0, None]
 
 
 def _place_player(c, person, frame):
@@ -320,29 +337,9 @@ def _place_player(c, person, frame):
         fade = np.clip(np.arange(ph)[::-1] / (90 * K), 0, 1)[:, None]
         a = a * fade
     else:
-        # ombra delle scarpe: ellisse piatta sotto ogni scarpa, attaccata alla suola, che sfuma ai lati
-        k = max(int(ph * .07), 2)
-        band = a[-k:] > .35
-        cols = np.where(band.any(0))[0]
-        pad = int(40 * K)
-        sy0, sy1 = max(y + ph - k - pad, 0), min(y + ph + pad, H)
-        sx0, sx1 = max(x - pad, 0), min(x + pw + pad, W)
-        if sy1 > sy0 and sx1 > sx0:
-            yy, xx = np.mgrid[sy0:sy1, sx0:sx1].astype(np.float32)
-            sh = np.zeros(yy.shape, np.float32)
-            halo = np.zeros(yy.shape, np.float32)
-            for c0, c1 in _runs(cols, 12 * K * ph / PLAYER_H):
-                if c1 - c0 < 15 * K * ph / PLAYER_H:
-                    continue
-                low = ph - 1 - np.argmax(band[::-1, c0:c1 + 1].any(1))
-                cx, w = x + (c0 + c1) / 2, (c1 - c0) / 2 * 1.4
-                cy = y + low
-                e = ((xx - cx) / w) ** 2 * 2.2 + ((yy - cy) / (5 * K)) ** 2 * 2
-                sh = np.maximum(sh, np.exp(-e) * .45)
-                e2 = ((xx - cx) / (w * 1.25)) ** 2 + ((yy - cy - 2 * K) / (11 * K)) ** 2
-                halo = np.maximum(halo, np.exp(-e2 * 2) * .18)
-            sh = np.maximum(gaussian_filter(sh, 2 * K), halo)
-            c.a[sy0:sy1, sx0:sx1] *= 1 - sh[..., None]
+        # ombra a terra: solo dove il giocatore tocca (o quasi) il pavimento, più scura dove appoggia
+        # e più chiara dove resta sollevato; sfuma da sola ai lati, mai tagliata
+        _ground_shadow(c, a, x, y)
     # ombra leggera dietro il giocatore: sagoma sfocata, spostata un po' in basso a destra
     pad = int(60 * K)
     big = np.pad(a, pad)

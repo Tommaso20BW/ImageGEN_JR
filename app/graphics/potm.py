@@ -152,16 +152,33 @@ def _out_shadow(cl, frame_m):
     sh = sh.filter(ImageFilter.GaussianBlur(10))
     shl = Image.new('RGBA', (W, H), (0, 0, 0, 0)); shl.alpha_composite(sh, (10, 12))
     shl.putalpha(ImageChops.multiply(shl.getchannel('A'), out_m))
-    a = np.asarray(cl.getchannel('A')) > 60
-    rows = np.where(a.any(1))[0]
-    if len(rows):
-        foot = rows.max()
-        xs = np.where(a[max(0, foot - int(H * .03)):foot + 1].any(0))[0]
-        cx, half = (xs.min() + xs.max()) / 2, (xs.max() - xs.min()) / 2 * 1.3 + 25
-        g = Image.new('L', (W, H), 0)
-        ImageDraw.Draw(g).ellipse((cx - half, foot - 14, cx + half, foot + 16), fill=95)
-        shl.putalpha(ImageChops.lighter(shl.getchannel('A'), g.filter(ImageFilter.GaussianBlur(12))))
+    g = _ground_shadow(np.asarray(cl.getchannel('A')) > 60)
+    if g is not None:
+        shl.putalpha(ImageChops.lighter(shl.getchannel('A'), g))
     return shl
+
+
+GROUND_SHADOW = (.45, .18)   # forza: contatto (stretta, sotto i punti d'appoggio), alone (larga e chiara)
+
+
+def _ground_shadow(solid):
+    """Ombra a terra solo dove il giocatore tocca (o quasi) il pavimento: più scura dove appoggia,
+    più chiara dove resta sollevato, e sfuma da sola ai lati."""
+    from scipy.ndimage import gaussian_filter
+    has = solid.any(0)
+    if not has.any():
+        return None
+    low = H - 1 - np.argmax(solid[::-1], 0)           # punto più basso di ogni colonna
+    ground = low[has].max()
+    near = np.where(has, np.exp(-((ground - low) / 30) ** 2), 0).astype(np.float32)
+    core_x = gaussian_filter(near, 10)
+    halo_x = gaussian_filter(near, 46)
+    halo_x /= max(halo_x.max(), 1e-6)
+    d = np.arange(H, dtype=np.float32) - ground
+    core = np.exp(-.5 * ((d - 1) / 6) ** 2)[:, None] * core_x[None] * GROUND_SHADOW[0]
+    halo = np.exp(-.5 * ((d - 7) / 19) ** 2)[:, None] * halo_x[None] * GROUND_SHADOW[1]
+    sh = 1 - (1 - core) * (1 - halo)
+    return Image.fromarray(np.uint8(np.clip(sh, 0, 1) * 255 + .5))
 
 
 def _open(image):
