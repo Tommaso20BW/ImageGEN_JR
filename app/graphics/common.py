@@ -151,8 +151,10 @@ class _Renderer:
                     tab.evaluate('() => document.fonts.ready.then(() => window.__ready)')
                     # Pagine non 3:4 (es. 16:9 = 1080x607,5): si scatta una riga in più e si taglia
                     # alla misura esatta (1920x1080), perché Chrome arrotonda l'altezza per difetto.
+                    # Con altezza intera lo scatto è già esatto: niente ritaglio e ricodifica.
+                    shot_h = page_h if float(page_h).is_integer() else math.ceil(page_h) + 1
                     png = tab.screenshot(type='png', omit_background=ghost,
-                                         clip={'x': 0, 'y': 0, 'width': page_w, 'height': math.ceil(page_h) + 1})
+                                         clip={'x': 0, 'y': 0, 'width': page_w, 'height': shot_h})
                     scale = 0.5 if ghost else out_w / page_w
                     done['png'] = _crop_png(png, round(page_w * scale), round(page_h * scale))
                 finally:
