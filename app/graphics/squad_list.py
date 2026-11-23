@@ -346,7 +346,7 @@ def _photo_path():
 
 def warm_up():
     """Calcola la geometria della foto in anticipo (all'avvio del servizio): 3:4 e storia."""
-    _geometry(_photo_path())
+    _geometry(_photo_path(), OUT_H)         # stessa chiave della cache usata da render()
     _geometry(_photo_path(), STORY_OUT_H)
 
 

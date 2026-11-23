@@ -143,11 +143,20 @@ class Renderer:
         self.photos = {}
         # Persone scontornate (id foto -> PNG), riusate da anteprima e invio.
         self.cutouts = {}
-        # True se l'ultima grafica con foto è uscita con lo scontorno veloce (fine non pronto).
-        self.used_fast_cutout = False
+        # Per thread: 3:4 e storia si preparano in parallelo e non devono azzerarsi il segnale.
+        self._render_state = threading.local()
         self.cutout_lock = threading.RLock()
         # Foto del MATCHDAY e della STARTING XI con la scia (id foto -> JPEG).
         self.trails = {}
+
+    @property
+    def used_fast_cutout(self):
+        """True se l'ultima grafica con foto di questo thread ha usato lo scontorno veloce."""
+        return getattr(self._render_state, 'fast_cutout', False)
+
+    @used_fast_cutout.setter
+    def used_fast_cutout(self, value):
+        self._render_state.fast_cutout = bool(value)
 
     def cutout(self, photo_id):
         """Persona scontornata da una foto caricata (PNG, calcolata una volta sola)."""

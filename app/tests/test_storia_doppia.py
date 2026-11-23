@@ -76,7 +76,7 @@ class SaveFileTests(unittest.TestCase):
         svc.saved_files = {}
         svc._set_stage = lambda *_: None
         svc._parse_request = lambda env: {'data': data, 'id': 1}
-        svc._render_and_cache = lambda state: (b'png', 1)
+        svc._render_and_cache = lambda state, **kw: (b'png', 1)
         return svc
 
     def test_story_saved(self):

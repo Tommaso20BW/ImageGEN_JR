@@ -940,7 +940,7 @@ class Service:
             self.preview_cache_prev = self.preview_cache
         self.preview_cache = entry
 
-    def _render_and_cache(self, request_state, *, force=False):
+    def _render_and_cache(self, request_state, *, force=False, final=False):
         data = copy.deepcopy(request_state['data'])
         fingerprint = self._fingerprint(data)
 
@@ -952,6 +952,7 @@ class Service:
                 and cached.get('fingerprint') == fingerprint
                 and cached.get('png')
                 and self._cache_fresh(cached, data, TABLE_PREVIEW_REUSE_SECONDS)
+                and not (final and cached.get('fast_cutout'))   # il file finale vuole lo scontorno fine
             ):
                 return cached['png'], cached.get('request_id') or request_state['id']
 
@@ -1008,7 +1009,7 @@ class Service:
             data = request_state['data']
             if data.get('kind') != 'igbn' and not (data.get('story') and data.get('kind') in STORY_KINDS):
                 raise ValueError('Si salvano nel telefono solo le storie Instagram.')
-            png, _ = self._render_and_cache(request_state)
+            png, _ = self._render_and_cache(request_state, final=True)
         finally:
             self._set_stage('idle')
             lock.release()

@@ -1,7 +1,7 @@
 """Validate ImageGEN Mini App requests."""
+import hashlib
 import json
 import math
-import random
 import re
 import uuid
 
@@ -389,8 +389,9 @@ def _build_state(envelope, catalog, now, expected_session):
         if not text and not photo_id:
             raise ValueError('Scrivi un testo o scegli una foto.')
         # seed: gli angoli delle strisce cambiano a ogni grafica, ma la stessa grafica rifatta resta uguale
+        # (deciso dal contenuto più sotto: anteprima e file salvato devono essere identici)
         data = {'kind': 'igbn', 'text': text, 'color': ig_story.text_color(incoming.get('color')),
-                'label': ig_story.label_key(incoming.get('label')), 'seed': random.randrange(1 << 30)}
+                'label': ig_story.label_key(incoming.get('label'))}
         if data['label'] == 'custom':
             # titolo scritto a mano: se resta vuoto (solo emoji o spazi) niente titolo
             data['label_text'] = ig_story.clean_label(incoming.get('label_text'))
@@ -408,6 +409,8 @@ def _build_state(envelope, catalog, now, expected_session):
                 data['link_text'] = words
         if photo_id:
             data['photo_id'] = _photo_id(photo_id)
+        content = json.dumps(data, sort_keys=True, ensure_ascii=False).encode('utf-8')
+        data['seed'] = int.from_bytes(hashlib.sha256(content).digest()[:4], 'big') % (1 << 30)
         return {
             'id': uuid.uuid4().hex[:10],
             'data': data,
