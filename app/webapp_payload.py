@@ -318,8 +318,9 @@ def _build_state(envelope, catalog, now, expected_session):
         data = {'kind': 'table', 'competition': competition}
         if view != 'table':
             data['view'] = view
-        # Classifica (e tabellone della Coppa Italia): il post è un album con i risultati come seconda foto.
-        if incoming.get('with_results') is True and (view == 'table' or competition == 'CI'):
+        # Solo la classifica: il post è un album con i risultati come seconda foto. Il tabellone
+        # (Coppa Italia compresa) i risultati li ha già dentro, quindi niente seconda foto.
+        if incoming.get('with_results') is True and view == 'table':
             data['with_results'] = True
         return {
             'id': uuid.uuid4().hex[:10],

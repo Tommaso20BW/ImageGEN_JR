@@ -149,9 +149,10 @@
 const TITOLI = {SA:'SERIE A', CI:'COPPA ITALIA', UCL:'CHAMPIONS LEAGUE', UEL:'EUROPA LEAGUE', UECL:'CONFERENCE LEAGUE'};
 const ICONE = {SA:'serie-a-scudetto.png', CI:'coppa-italia-mark.png', UCL:'ucl-mark.png', UEL:'uel-mark.png', UECL:'uecl-mark.png'};
 function nota(p){
-  // Ritorno: totale delle due partite (gol della squadra di casa di stasera prima), poi supplementari o rigori
+  // Andata e ritorno: il punteggio grande è il totale; sotto i due risultati, poi supplementari o rigori
   const parti = [];
-  if (p.andata) parti.push(`Andata ${p.andata[1]}–${p.andata[0]} · Tot. ${p.gol_casa + p.andata[1]}–${p.gol_trasferta + p.andata[0]}`);
+  if (p.andata_res && p.ritorno_res) parti.push(`And. ${p.andata_res[0]}–${p.andata_res[1]} · Rit. ${p.ritorno_res[0]}–${p.ritorno_res[1]}`);
+  else if (p.ritorno_quando) parti.push(`Ritorno ${p.ritorno_quando}`);
   if (p.rigori) parti.push(`d.c.r. ${p.rigori[0]}–${p.rigori[1]}`);
   else if (p.dts) parti.push('d.t.s.');
   return parti.join(' · ');

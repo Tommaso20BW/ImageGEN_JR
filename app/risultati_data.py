@@ -9,7 +9,7 @@ import os
 import re
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, timedelta
+from datetime import date
 
 import log
 from classifica_data import (COMPETIZIONI, COPPA_ITALIA_RISULTATI_URL, _logo_grande_diretta, _logo_personalizzato,
@@ -56,6 +56,26 @@ def _url(comp_key, pagina):
     return COMPETIZIONI[comp_key]['url'].replace('/classifiche/', f'/{pagina}/')
 
 
+def _attendi_righe(page):
+    """Diretta.it disegna le righe a blocchi: si legge solo quando il numero di partite smette di
+    crescere (altrimenti si rischia di prendere la pagina a metà e perdere delle partite)."""
+    ultimo = -1
+    for _ in range(12):
+        n = page.locator('.event__match').count()
+        if n == ultimo:
+            return
+        ultimo = n
+        page.wait_for_timeout(350)
+
+
+def _chiave_giornata(etichetta):
+    """Chiave per riconoscere la stessa giornata nelle due pagine, anche se l'etichetta cambia
+    di spazi (anche non separabili), maiuscole o testo in più: 'Giornata 12' -> ('giornata', 12)."""
+    testo = re.sub(r'\s+', ' ', (etichetta or '').replace('\xa0', ' ')).strip().lower()
+    m = re.match(r'giornata\s*(\d+)\b', testo)
+    return ('giornata', int(m.group(1))) if m else ('testo', testo)
+
+
 def _scrape(urls):
     """{pagina: righe} per ogni url, più il titolo (h1) della prima pagina."""
     from playwright.sync_api import sync_playwright
@@ -75,6 +95,7 @@ def _scrape(urls):
                 except Exception:  # noqa: BLE001 - pagina senza partite (es. calendario finito)
                     out[name] = []
                     continue
+                _attendi_righe(page)
                 out[name] = page.evaluate(ROWS_JS)
                 if not titolo:
                     titolo = page.locator('h1').first.inner_text(timeout=10_000)
@@ -185,6 +206,50 @@ def _partita(row):
     return out
 
 
+def _tie(a, r):
+    """Andata (a) e ritorno (r) della stessa coppia in una partita sola, con il totale.
+    Squadre e stemmi come all'andata; nel ritorno casa e trasferta sono invertite."""
+    t = {k: v for k, v in a.items() if k not in ('gol_casa', 'gol_trasferta', 'rigori', 'dts')}
+    t['_giorno2'] = r['_giorno']
+    giocata = lambda p: p['stato'] in ('finita', 'live')  # noqa: E731
+    if not giocata(a):
+        if giocata(r):
+            return r                       # andata non giocata (rinviata): resta solo il ritorno
+        t['ritorno_quando'] = r['quando']
+        return t
+    t['gol_casa'], t['gol_trasferta'] = a['gol_casa'], a['gol_trasferta']
+    if not giocata(r):
+        t['ritorno_quando'] = r['quando']  # solo l'andata: il totale è l'andata
+        return t
+    rc, rt = r['gol_trasferta'], r['gol_casa']   # gol del ritorno visti dalla parte dell'andata
+    t['andata_res'] = [a['gol_casa'], a['gol_trasferta']]
+    t['ritorno_res'] = [rc, rt]
+    t['gol_casa'], t['gol_trasferta'] = a['gol_casa'] + rc, a['gol_trasferta'] + rt
+    t['stato'] = 'live' if 'live' in (a['stato'], r['stato']) else 'finita'
+    if 'rigori' in r:
+        t['rigori'] = [r['rigori'][1], r['rigori'][0]]
+    elif r.get('dts'):
+        t['dts'] = True
+    return t
+
+
+def _accoppia(partite):
+    """Andata e ritorno (stesse due squadre a campi invertiti nella stessa fase) -> una riga sola."""
+    out, usati = [], set()
+    for i, p in enumerate(partite):
+        if i in usati:
+            continue
+        j = next((k for k in range(i + 1, len(partite)) if k not in usati
+                  and partite[k]['home'] == p['away'] and partite[k]['away'] == p['home']), None)
+        if j is None:
+            out.append(p)
+            continue
+        usati.add(j)
+        a, r = sorted((p, partite[j]), key=lambda x: (x['_giorno'] or date.max, x['quando']))
+        out.append(_tie(a, r))
+    return out
+
+
 def _loghi(partite):
     """Stemmi grandi di Diretta.it (pagina della squadra), salvo Juventus e Roma personalizzati."""
     jobs = []
@@ -210,8 +275,8 @@ def fetch(comp_key: str) -> dict:
 
 
 def _fetch(comp_key: str) -> dict:
-    """Ultima giornata di SA, UCL, UEL o UECL: partite finite (e quelle ancora da giocare).
-    Coppa Italia: un turno dura settimane, quindi solo le partite della settimana dell'ultima giocata."""
+    """Ultima giornata/fase di SA, CI, UCL, UEL o UECL: tutte le partite di quella fase,
+    finite e ancora da giocare (Coppa Italia e coppe europee comprese, senza limiti di settimana)."""
     comp_key = (comp_key or '').upper()
     if comp_key not in NOMI:
         raise RisultatiError('Competizione non valida: scegli Serie A, Coppa Italia, Champions, Europa o Conference.')
@@ -228,20 +293,20 @@ def _fetch(comp_key: str) -> dict:
         raise RisultatiError(f"Diretta.it non mostra ancora risultati di {comp['nome']} in questa stagione.")
     etichetta, finite = giocate[0]
     # Partite della stessa giornata ancora da giocare (o in corso), dal calendario.
-    altre = next((rows for label, rows in _giornate(pagine.get('calendario', [])) if label == etichetta), [])
-    visti = {(r['home'], r['away']) for r in finite}
-    righe = finite + [r for r in altre if (r['home'], r['away']) not in visti]
+    # La giornata si riconosce per numero/etichetta normalizzata, non per testo identico.
+    chiave = _chiave_giornata(etichetta)
+    altre = [r for label, rows in _giornate(pagine.get('calendario', [])) if _chiave_giornata(label) == chiave
+             for r in rows]
+    log.info('RISULTATI', f"{comp['nome']}: '{etichetta}' · {len(finite)} nei risultati, {len(altre)} dal calendario "
+                          f"(giornate del calendario: {[l for l, _ in _giornate(pagine.get('calendario', []))][:3]})")
+    visti = {(_nome(r['home']), _nome(r['away'])) for r in finite}
+    righe = finite + [r for r in altre if (_nome(r['home']), _nome(r['away'])) not in visti]
 
-    partite = [_partita(r) for r in righe if r.get('home') and r.get('away')]
-    if comp_key == 'CI':
-        ultima = max((p['_giorno'] for p in partite if p['stato'] == 'finita' and p['_giorno']), default=None)
-        if ultima:
-            lunedi = ultima - timedelta(days=ultima.weekday())
-            partite = [p for p in partite if p['_giorno'] and lunedi <= p['_giorno'] < lunedi + timedelta(days=7)]
+    partite = _accoppia([_partita(r) for r in righe if r.get('home') and r.get('away')])
     # In ordine di calendario: prima le partite più vecchie, come si leggono nella giornata.
     partite.sort(key=lambda p: (p['_giorno'] or date.max, p['quando']))
     _loghi(partite)
-    giorni = [p.pop('_giorno') for p in partite]
+    giorni = [p.pop('_giorno') for p in partite] + [p.pop('_giorno2', None) for p in partite]
     for p in partite:
         p.pop('_home_url'), p.pop('_away_url')
 

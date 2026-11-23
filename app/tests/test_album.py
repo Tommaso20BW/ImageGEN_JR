@@ -29,9 +29,10 @@ class PayloadTests(unittest.TestCase):
         self.assertIs(self.parse(table(competition='SA', with_results=True))['with_results'], True)
         self.assertIs(self.parse(table(competition='UCL', view='table', with_results=True))['with_results'], True)
 
-    def test_coppa_italia_tabellone_with_results(self):
+    def test_coppa_italia_tabellone_without_results(self):
         data = self.parse(table(competition='CI', with_results=True))
-        self.assertEqual((data['view'], data['with_results']), ('bracket', True))
+        self.assertEqual(data['view'], 'bracket')
+        self.assertNotIn('with_results', data)           # il tabellone ha già i risultati dentro
 
     def test_not_for_european_bracket(self):
         self.assertNotIn('with_results', self.parse(table(competition='UCL', view='bracket', with_results=True)))
