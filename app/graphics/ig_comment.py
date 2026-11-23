@@ -8,7 +8,7 @@ import io
 import json
 
 from graphics.common import DESIGN_H, DESIGN_W, STORY_H, esc, photo_layer, render_html, story_jr_paste
-from graphics.ig_quote import (ICON_LIKE, IG_GRADIENT, TICK_PATH, _font_css, _uri, clean_name, clean_text)
+from graphics.ig_quote import (CARD_BLUR, ICON_LIKE, IG_GRADIENT, TICK_PATH, _font_css, _uri, clean_name, clean_text)
 from graphics.starting_xi import check_photo
 
 DARKEN = .64                     # luminosità della foto (1 = com'è)
@@ -74,10 +74,10 @@ html,body{{width:{DESIGN_W}px;height:{height}px;overflow:hidden;background:{'#00
 #bg{{position:absolute;inset:0;overflow:hidden;filter:brightness({DARKEN})}}
 #fade{{position:absolute;left:0;right:0;bottom:0;height:760px;background:linear-gradient(to bottom,rgba(0,0,0,0),rgba(0,0,0,.28) 45%,rgba(0,0,0,.62))}}
 #box{{position:absolute;left:64px;right:64px;{_place(position, story)};display:flex;align-items:center;gap:28px;
-  min-height:190px;padding:36px 38px;border-radius:30px;background:rgba(12,12,14,.38);border:1.5px solid rgba(255,255,255,.22);
-  backdrop-filter:blur(28px) saturate(1.1);-webkit-backdrop-filter:blur(28px) saturate(1.1);box-shadow:0 14px 44px rgba(0,0,0,.22);
+  min-height:190px;padding:36px 38px;border-radius:30px;background:rgba(8,8,10,.46);border:1.5px solid rgba(255,255,255,.14);
+  backdrop-filter:blur({CARD_BLUR}px);-webkit-backdrop-filter:blur({CARD_BLUR}px);box-shadow:0 18px 60px rgba(0,0,0,.35);
   text-shadow:0 1px 8px rgba(0,0,0,.4);color:#fff;font-family:'Poppins',sans-serif;font-weight:500}}
-#av{{width:118px;height:118px;flex:none;display:block;border-radius:50%;object-fit:cover;object-position:center;padding:4px;background:{IG_GRADIENT}}}
+#av{{width:118px;height:118px;flex:none;display:block;border-radius:50%;object-fit:cover;object-position:center;padding:4px;background:{IG_GRADIENT};background-clip:padding-box}}
 #av.none{{display:grid;place-items:center;font-size:46px}}
 #m{{flex:1;min-width:0;min-height:118px;display:flex;flex-direction:column;justify-content:center;gap:6px}}
 #n{{display:flex;align-items:center;gap:10px;height:32px;line-height:32px;font-size:30px;min-width:0}}

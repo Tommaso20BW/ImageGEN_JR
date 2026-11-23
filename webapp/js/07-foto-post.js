@@ -74,16 +74,18 @@ function fitPhotoFrame() {
     - (pos && !pos.hidden ? pos.offsetHeight + 10 : 0);
   const [pw, ph] = photoDims();
   frame.style.aspectRatio = `${pw} / ${ph}`;
-  const width = Math.max(200, Math.min(frame.parentElement.clientWidth, free * pw / ph));
+  // Minimo basso: sugli schermi piccoli si rimpicciolisce la foto, non finisce la rotella sotto il pulsante.
+  const width = Math.max(110, Math.min(frame.parentElement.clientWidth, free * pw / ph));
   frame.style.maxWidth = 'none';
+  frame.style.minWidth = '0';
   frame.style.width = `${Math.floor(width)}px`;
 }
 
 const FREE_ZOOM_MIN = .5, FREE_KEEP = .2;   // come FREE_ZOOM_MIN / FREE_KEEP in starting_xi.py
 
 function layoutPhoto() {
+  rotDialShow();           // prima: la rotella visibile conta nello spazio lasciato alla foto
   fitPhotoFrame();
-  rotDialShow();
   if (!photoState.w) return;
   const [PW, PH] = photoDims();
   const frameW = $('photoFrame').clientWidth || 1;
@@ -125,7 +127,8 @@ const ROT_STEP = 9;      // pixel tra una tacca (1°) e l'altra
 
 // Una rotella: dial = contenitore (.rot-dial con .rot-val, .rot-track e .rot-ticks dentro),
 // get/set = rotazione in gradi, ready = c'è qualcosa da ruotare, after = ridisegna.
-function makeRotDial(dial, {get, set, ready, after}) {
+// start/finish (facoltativi) = inizio e fine del trascinamento.
+function makeRotDial(dial, {get, set, ready, after, start, finish}) {
   const val = dial.querySelector('.rot-val'), track = dial.querySelector('.rot-track'), ticks = dial.querySelector('.rot-ticks');
   for (let d = -45; d <= 45; d++) {
     const t = document.createElement('i');
@@ -140,15 +143,17 @@ function makeRotDial(dial, {get, set, ready, after}) {
     val.classList.toggle('on', Math.round(r) !== 0);
     ticks.style.transform = `translateX(${-(r + 45) * ROT_STEP}px)`;
   };
-  let startX = null, startRot = 0, lastStep = 0;
+  let startX = null, startRot = 0, lastStep = 0, activeId = null;
   track.addEventListener('pointerdown', e => {
-    if (!ready()) return;
+    if (!ready() || activeId !== null) return;     // un secondo dito non fa saltare la rotazione
+    activeId = e.pointerId;
     track.setPointerCapture(e.pointerId);
     startX = e.clientX; startRot = get() || 0; lastStep = Math.round(startRot);
     dial.classList.add('dragging');
+    if (start) start();
   });
   track.addEventListener('pointermove', e => {
-    if (startX === null) return;
+    if (e.pointerId !== activeId) return;
     let r = Math.max(-45, Math.min(45, startRot - (e.clientX - startX) / ROT_STEP));
     if (Math.abs(r) < .6) r = 0;                       // si ferma volentieri sullo 0
     const step = Math.round(r);
@@ -157,9 +162,15 @@ function makeRotDial(dial, {get, set, ready, after}) {
     set(Math.round(r * 10) / 10);
     after();
   });
-  const end = () => { startX = null; dial.classList.remove('dragging'); };
+  const end = e => {
+    if (e.pointerId !== activeId) return;
+    activeId = null; startX = null;
+    dial.classList.remove('dragging');
+    if (finish) finish();
+  };
   track.addEventListener('pointerup', end);
   track.addEventListener('pointercancel', end);
+  track.addEventListener('lostpointercapture', end);
   track.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
   val.addEventListener('click', () => { if (get()) { set(0); haptic('select'); after(); } });
   return show;
@@ -168,8 +179,12 @@ function makeRotDial(dial, {get, set, ready, after}) {
 let rotDialShow = () => {};
 
 function initRotDial() {
-  rotDialShow = makeRotDial($('rotDial'), {get:() => photoState.rot, set:r => { photoState.rot = r; },
-    ready:() => !!photoState.id, after:layoutPhoto});
+  // Durante il trascinamento si riparte sempre dalla posizione iniziale: ruotare e tornare a 0 non sposta la foto.
+  let base = null;
+  rotDialShow = makeRotDial($('rotDial'), {get:() => photoState.rot,
+    set:r => { photoState.rot = r; if (base) { photoState.x = base.x; photoState.y = base.y; } },
+    ready:() => !!photoState.id, after:layoutPhoto,
+    start:() => { base = {x:photoState.x, y:photoState.y}; }, finish:() => { base = null; }});
 }
 
 /* ---------- Sagome fisse ----------

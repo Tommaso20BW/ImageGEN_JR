@@ -46,6 +46,25 @@ class ParseTests(unittest.TestCase):
         self.assertIsNotNone(c.avatar(image, 140, 50, 34))
         self.assertIsNone(c.avatar(Image.new('RGB', (600, 300)), 140, 50, 34))
 
+    def test_story_ring_removed_from_avatar(self):
+        import io
+        from PIL import Image, ImageDraw
+        image = Image.new('RGB', (600, 300), (0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        draw.ellipse((20, 40, 120, 140), fill=(230, 40, 120))
+        draw.ellipse((26, 46, 114, 134), fill=(0, 0, 0))
+        draw.ellipse((31, 51, 109, 129), fill=(40, 170, 220))
+        got = Image.open(io.BytesIO(c.avatar(image, 150, 60, 34))).convert('RGB')
+        for point in ((92, 6), (6, 92), (178, 92), (92, 178)):
+            r, g, b = got.getpixel(point)
+            self.assertLess(r, 130, point)       # niente rosa dell'anello sul bordo
+
+    def test_avatar_without_ring_not_cropped(self):
+        from PIL import Image, ImageDraw
+        face = Image.new('RGB', (100, 100), (0, 0, 0))
+        ImageDraw.Draw(face).ellipse((1, 1, 98, 98), fill=(200, 60, 90))
+        self.assertIsNone(c._inside_ring(face, [0, 0, 0]))
+
     def test_public_keeps_only_what_the_app_needs(self):
         got = c.public([{'user': 'a', 'text': 'b', 'time': '1 h', 'likes': '3', 'avatar': b'xy', 'box': (1, 2, 3)}])
         self.assertEqual(got, [{'user': 'a', 'text': 'b', 'time': '1 h', 'likes': '3', 'avatar': 'eHk='}])

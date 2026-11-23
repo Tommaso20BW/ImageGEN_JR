@@ -104,9 +104,34 @@ def avatar(image, x, y, h):
     side = max(wide, tall)
     cx, cy = (int(cols[0]) + int(cols[-1])) / 2, top + (first + last) / 2
     box = (round(cx - side / 2), round(cy - side / 2), round(cx + side / 2), round(cy + side / 2))
+    face = image.crop(box)
+    inner = _inside_ring(face, back)
+    if inner:                    # aveva l'anello della storia: resta solo la foto, l'anello lo mette il grafico
+        middle = face.width / 2
+        face = face.crop((round(middle - inner), round(middle - inner), round(middle + inner), round(middle + inner)))
     out = io.BytesIO()
-    image.crop(box).resize((184, 184), Image.LANCZOS).save(out, 'JPEG', quality=92)
+    face.resize((184, 184), Image.LANCZOS).save(out, 'JPEG', quality=92)
     return out.getvalue()
+
+
+def _inside_ring(face, back):
+    """Raggio della foto dentro l'anello della storia (anello, stacco color sfondo, foto); None se non c'è."""
+    pixels = np.asarray(face).astype(int)
+    size = pixels.shape[0]
+    yy, xx = np.indices(pixels.shape[:2])
+    radius = np.hypot(xx - (size - 1) / 2, yy - (size - 1) / 2)
+    near = np.abs(pixels - back).sum(axis=2) <= 36
+    ring_seen, gap = False, None
+    for r in range(int(size * .49), int(size * .34), -1):
+        band = (radius >= r - .5) & (radius < r + .5)
+        share = near[band].mean()
+        if gap is None and share <= .4:
+            ring_seen = True
+        elif ring_seen and share >= .85:
+            gap = r
+        elif gap is not None:
+            return r
+    return None
 
 
 def _key(comment):

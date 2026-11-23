@@ -7,6 +7,7 @@ function updateViewport() {
     ? window.innerHeight
     : (vv ? Math.round(vv.height + vv.offsetTop) : window.innerHeight);
   document.documentElement.style.setProperty('--app-h',`${Math.max(320,h)}px`);
+  if ($('photoFrame') && $('photoFrame').offsetParent) layoutPhoto();   // schermo cambiato: la foto si riadatta
 }
 
 /* ---------- Events ---------- */
