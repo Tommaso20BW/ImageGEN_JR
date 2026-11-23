@@ -628,35 +628,3 @@ def matchday_pose(player, kit, pose):
     if not path.is_file():
         raise ValueError(f'Manca la posa di {player.name} con questa maglia.')
     return path
-
-
-@lru_cache(maxsize=4)
-def _story_paper_light(w, h, seed):
-    """Luce di carta stropicciata + vignettatura delle storie IG normali (ig_story), già pronta da moltiplicare."""
-    import numpy as np
-    from graphics import compleanno as cp
-    light = cp._crumple((w, h), seed, 0.7, folds=3)
-    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-    r = np.sqrt(((xx - w / 2) / (w / 2)) ** 2 + ((yy - h / 2) / (h / 2)) ** 2) / np.sqrt(2)
-    return (light * (1 - .18 * r ** 2)).astype(np.float32)
-
-
-def story_paper(data, seed=7):
-    """Effetto carta delle storie IG normali sopra una storia 9:16 già pronta (bytes PNG/JPEG -> stessi bytes)."""
-    import io
-    import numpy as np
-    from PIL import Image
-    with Image.open(io.BytesIO(data)) as im:
-        fmt = (im.format or 'PNG').upper()
-        rgb = im.convert('RGB')
-    w, h = rgb.size
-    a = np.asarray(rgb, np.float32) / 255
-    a = a + np.random.default_rng(seed).normal(0, .035, (h, w, 1)).astype(np.float32)
-    a = np.clip(a * _story_paper_light(w, h, seed)[..., None], 0, 1)
-    out = io.BytesIO()
-    img = Image.fromarray(np.uint8(a * 255 + .5))
-    if fmt == 'JPEG':
-        img.save(out, 'JPEG', quality=95, subsampling=0)
-    else:
-        img.save(out, 'PNG')
-    return out.getvalue()

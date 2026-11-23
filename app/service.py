@@ -23,7 +23,7 @@ from catalog import Catalog
 from logo_bundle import build_team_bundle
 from render import Renderer
 from telegram import DeliveryUncertain, NotSent, Telegram, TelegramError
-from webapp_payload import STORY_KINDS, parse_webapp_request
+from webapp_payload import is_story_version, parse_webapp_request
 from graphics.common import overlay_preview
 from graphics.starting_xi import MAX_PHOTO_BYTES, check_photo
 
@@ -976,7 +976,7 @@ class Service:
     def _lock_for(self, envelope):
         """Corsia della richiesta: la storia delle grafiche doppie va in parallelo al 3:4."""
         data = envelope.get('data') if isinstance(envelope, dict) else None
-        if isinstance(data, dict) and data.get('story') is True and data.get('kind') in STORY_KINDS:
+        if isinstance(data, dict) and is_story_version(data):
             return self.story_lock
         if isinstance(data, dict) and data.get('kind') == 'table' and data.get('view') == 'results':
             return getattr(self, 'results_lock', self.operation_lock)
@@ -1007,7 +1007,7 @@ class Service:
         try:
             request_state = self._parse_request(envelope)
             data = request_state['data']
-            if data.get('kind') != 'igbn' and not (data.get('story') and data.get('kind') in STORY_KINDS):
+            if data.get('kind') != 'igbn' and not is_story_version(data):
                 raise ValueError('Si salvano nel telefono solo le storie Instagram.')
             png, _ = self._render_and_cache(request_state, final=True)
         finally:

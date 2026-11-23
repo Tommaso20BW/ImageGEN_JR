@@ -430,9 +430,11 @@ function initLayoutEditor() {
   $('lay').addEventListener('touchmove',e => { if (e.target.closest('#layFrame')) e.preventDefault(); },{passive:false});
 }
 
-const DUAL_KINDS = new Set(['bday','bdold','xi','pxi','squad','table','motm','igc']);
+const DUAL_KINDS = new Set(['bday','bdold','xi','pxi','squad','table','motm','igc','igq','xq','thq']);
 // Risultati della giornata: solo post, la storia c'è per la classifica.
 const isDualPayload = p => !LIVE && !!p && !!p.data && DUAL_KINDS.has(p.data.kind) && p.data.team !== 'italy' && p.data.view !== 'results';
+// Versione 9:16: nelle citazioni "story" vuol dire già citare una storia, quindi si chiede con "vertical".
+const storyPayload = p => ({...p, data:{...p.data, ...(isQuoteKind(p.data.kind) ? {vertical:true} : {story:true})}});
 
 // Il servizio può aspettare un'altra richiesta (fino a 75 s) e poi fare il render.
 async function fetchPreview(raw) {
@@ -479,7 +481,7 @@ async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caric
     if (dual) $('busySub').textContent = album ? `Preparo ${payload.data.competition === 'CI' ? 'tabellone' : 'classifica'}, risultati e storia IG.` : 'Preparo insieme il post 3:4 e la storia IG.';
     const [blob, story, results] = await Promise.all([
       fetchPreview(raw),
-      dual ? fetchPreview(JSON.stringify({...payload, data:{...payload.data, story:true}})) : null,
+      dual ? fetchPreview(JSON.stringify(storyPayload(payload))) : null,
       album ? fetchPreview(JSON.stringify({...payload, data:{kind:'table', competition:payload.data.competition, view:'results'}})) : null,
     ]);
 
@@ -614,7 +616,7 @@ async function submitPreviewGraphic() {
     if (previewStoryUrl) {          // due versioni: il 3:4 va su Telegram, la storia nella galleria del telefono
       const both = !previewPick.size;   // nessuna scelta = tutte e due
       const payload = JSON.parse(raw);
-      const storyRaw = JSON.stringify({...payload, data:{...payload.data, story:true}});
+      const storyRaw = JSON.stringify(storyPayload(payload));
       if (!both && !previewPick.has('34')) return saveStoryToGallery(storyRaw);
       raw = JSON.stringify({...payload, data:{...payload.data, formats:['34']}});
       if (both || previewPick.has('story')) return sendThenSave(raw, storyRaw);

@@ -128,12 +128,7 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(Image.open(io.BytesIO(motm.render(**args))).size, (1500, 2000))
         self.assertEqual(Image.open(io.BytesIO(motm.render(story=True, **args))).size, (1500, 2667))
 
-    def test_story_paper(self):
-        from PIL import Image
-        buf = io.BytesIO()
-        Image.new('RGB', (540, 960), (200, 30, 30)).save(buf, 'JPEG')
-        out = Image.open(io.BytesIO(common.story_paper(buf.getvalue())))
-        self.assertEqual((out.format, out.size), ('JPEG', (540, 960)))
+    def test_story_stamp(self):
         self.assertEqual(common.story_jr_stamp_alpha().height, common.STORY_JR_H)
 
     def test_story_bg(self):

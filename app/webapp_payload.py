@@ -346,6 +346,8 @@ def _build_state(envelope, catalog, now, expected_session):
             if isinstance(bars, list) and 1 <= len(bars) <= 30 and all(
                     isinstance(b, (int, float)) and not isinstance(b, bool) and 0 <= b <= 1 for b in bars):
                 data['bars'] = [round(float(b), 2) for b in bars]
+        if incoming.get('vertical') is True:                           # la stessa citazione in formato 9:16
+            data['vertical'] = True
         if incoming.get('avatar_id'):
             data['avatar_id'] = _photo_id(incoming.get('avatar_id'))
         return {
@@ -738,6 +740,14 @@ def _build_state(envelope, catalog, now, expected_session):
 
 # Grafiche in due formati: 3:4 e storia IG (9:16). "story": true chiede la storia.
 STORY_KINDS = ('bday', 'bdold', 'xi', 'pxi', 'squad', 'table', 'motm', 'igc')
+# Citazioni: "story" vuol dire citare una storia altrui, il formato 9:16 si chiede con "vertical".
+VERTICAL_KINDS = ('igq', 'xq', 'thq')
+
+
+def is_story_version(data):
+    """La richiesta è la versione 9:16 di una grafica doppia."""
+    return (data.get('story') is True and data.get('kind') in STORY_KINDS
+            or data.get('vertical') is True and data.get('kind') in VERTICAL_KINDS)
 
 
 def parse_webapp_request(envelope, catalog, now, expected_session):

@@ -91,5 +91,30 @@ class PayloadTests(unittest.TestCase):
             self.parse(text='')
 
 
+class QuoteStoryTests(unittest.TestCase):
+    def parse(self, kind='xq', **extra):
+        import webapp_payload
+        data = {'kind': kind, 'photo_id': 'a' * 16, 'frame': {'x': 0, 'y': 0, 'zoom': 1},
+                'text': 'Gigante', 'name': 'edon', **extra}
+        return webapp_payload.parse_webapp_request({'v': 1, 'action': 'render', 'session': 's', 'data': data},
+                                                   {'teams': [], 'players': []}, 0, 's')['data']
+
+    def test_all_quotes_have_vertical_version(self):
+        import webapp_payload
+        for kind in ('igq', 'xq', 'thq'):
+            data = self.parse(kind, vertical=True)
+            self.assertIs(data['vertical'], True)
+            self.assertTrue(webapp_payload.is_story_version(data))
+            self.assertFalse(webapp_payload.is_story_version(self.parse(kind)))
+
+    def test_quote_of_a_story_has_vertical_version(self):
+        import webapp_payload
+        data = self.parse('igq', story=True, vertical=True, text='')
+        self.assertIs(data['story'], True)
+        self.assertIs(data['vertical'], True)
+        self.assertTrue(webapp_payload.is_story_version(data))
+        self.assertFalse(webapp_payload.is_story_version(self.parse('igq', story=True, text='')))
+
+
 if __name__ == '__main__':
     unittest.main()

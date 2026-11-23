@@ -20,15 +20,18 @@
 Il calcolo della grandezza del testo lo fa Chrome (a-capo reali): il renderer aspetta `window.__ready`.
 """
 import base64
+import io
 import json
 
-from graphics.common import DESIGN_H, DESIGN_W, asset_dir, data_uri, esc, photo_layer, render_html
+from graphics.common import (DESIGN_H, DESIGN_W, STORY_H, asset_dir, data_uri, esc, photo_layer, render_html,
+                             story_jr_paste)
 from graphics.ig_story import FONT_FILE, tidy
 from graphics.starting_xi import check_photo
 
 MAX_NAME = 40
 # Zona del riquadro (pixel design): sotto il logo JR, il riquadro sta al centro e non la supera.
 ZONE = (110, 200, DESIGN_W - 220, 1040)
+ZONE_VERTICAL = (110, 260, DESIGN_W - 220, 1320)   # versione storia 9:16: sopra il timbro JR
 FS_MAX, FS_MIN = 64, 16          # testo lungo: si rimpicciolisce fin qui (nessun limite di caratteri)
 PAD = 56                         # margine interno del riquadro
 TEXT_GAP = 68                    # distanza del testo dal nome (sopra) e dalle icone (sotto): uguale
@@ -108,19 +111,22 @@ window.__ready = (async () => {
 
 
 def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig', handle='', verified=False,
-               story=False, bars=None, **_):
+               story=False, bars=None, vertical=False, **_):
     """photo=None: sagoma per l'editor (sfondo trasparente, la foto la mette la Mini App).
-    frame = posizione e zoom della foto scelti nell'editor ({'x','y','zoom'}, come la FOTO + JR)."""
+    frame = posizione e zoom della foto scelti nell'editor ({'x','y','zoom'}, come la FOTO + JR).
+    story = citazione di una storia altrui; vertical = la stessa grafica (anche quella) in formato 9:16."""
     if photo is not None:
         check_photo(photo)
-    img, _page_bg = photo_layer(photo, frame or {'x': 0, 'y': 0, 'zoom': 1})
+    height = STORY_H if vertical else DESIGN_H
+    img, _page_bg = photo_layer(photo, frame or {'x': 0, 'y': 0, 'zoom': 1}, page=(DESIGN_W, height))
     # Sfondo di X (già scuro, con i graffi): non si scurisce come le foto.
     darken = 1 if photo is not None and platform in ('x', 'threads') and photo == x_background() else DARKEN
     text = clean_text(text)
     name = clean_name(name)
     from graphics.photo_jr import _logo
-    zx, zy, zw, zh = ZONE
-    cfg = {'zone': list(ZONE), 'max': FS_MAX, 'min': FS_MIN}
+    zone = ZONE_VERTICAL if vertical else ZONE
+    zx, zy, zw, zh = zone
+    cfg = {'zone': list(zone), 'max': FS_MAX, 'min': FS_MIN}
     avatar_html = (f'<img id="av" src="{_uri(avatar)}">' if avatar
                    else f'<div id="av" class="none">{esc(name[:1].upper())}</div>')
     x = platform == 'x'
@@ -128,7 +134,8 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
     handle = clean_name(handle)
     # Nome in grassetto, sotto l'@username piccolo (senza username: "Instagram" / "X" / "Threads").
     if story and platform == 'ig' and photo is not None:
-        return build_story_html(photo=photo, name=name, avatar=avatar, handle=handle, verified=verified, bars=bars)
+        return build_story_html(photo=photo, name=name, avatar=avatar, handle=handle, verified=verified, bars=bars,
+                                vertical=vertical)
     sub = f'@{esc(handle)}' if handle else ('X' if x else 'Threads' if th else 'Instagram')
     tick = (f'<svg class="tick" viewBox="0 0 24 24"><path fill="{"#1D9BF0" if x else "#0095F6"}" d="M22.5 12.5'
             'c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1.71-4-3.82-4-.47 0-.92.08-1.34.25C14.81 2.42'
@@ -150,8 +157,9 @@ def build_html(*, photo, text='', name='', avatar=None, frame=None, platform='ig
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 {_font_css()}
 *{{margin:0;padding:0;box-sizing:border-box}}
-html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{'#000' if photo is not None else 'transparent'}}}
+html,body{{width:{DESIGN_W}px;height:{height}px;overflow:hidden;background:{'#000' if photo is not None else 'transparent'}}}
 #bg{{position:absolute;inset:0;overflow:hidden;filter:brightness({darken}) saturate(1.05)}}
+#fade{{position:absolute;left:0;right:0;bottom:0;height:760px;background:linear-gradient(to bottom,rgba(0,0,0,0),rgba(0,0,0,.28) 45%,rgba(0,0,0,.62))}}
 #shade{{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28) 0%,rgba(0,0,0,0) 22%,
   rgba(0,0,0,0) 62%,rgba(0,0,0,.45) 100%)}}
 #zone{{position:absolute;left:{zx}px;top:{zy}px;width:{zw}px;height:{zh}px;display:flex;
@@ -178,15 +186,16 @@ html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:{'#
 img[style*="left:0"]{{position:absolute}}
 </style></head><body>
 <div id="bg">{img}</div>
-<div id="shade"></div>
+<div id="shade"></div>{'<div id="fade"></div>' if vertical else ''}
 <div id="zone">{body}</div>
-{_logo('white')}
+{'' if vertical else _logo('white')}
 <script>{SCRIPT % json.dumps(cfg)}</script>
 </body></html>'''
 
 
 # ---------- Storia ----------
 STORY_CARD = (191, 100, 698, 1241)      # riquadro 9:16 (x, y, larghezza, altezza) in pixel design
+STORY_CARD_TOP, STORY_CARD_H = 190, 1460  # nella versione 9:16: dentro la zona sicura, sopra il timbro JR
 STORY_BLUR = 16                        # sfocatura della foto dietro (px)
 STORY_DARK = .3                        # luminosità della foto dietro
 TICK_PATH = ('M22.5 12.5c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1.71-4-3.82-4-.47 0-.92.08-1.34.25'
@@ -196,7 +205,7 @@ TICK_PATH = ('M22.5 12.5c0-1.58-.88-2.95-2.15-3.6.15-.45.24-.93.24-1.43 0-2.21-1
              '3.82-4 0-.24-.02-.48-.05-.72 1.17-.68 1.97-1.98 1.97-3.48z')
 
 
-def build_story_html(*, photo, name='', avatar=None, handle='', verified=False, bars=None):
+def build_story_html(*, photo, name='', avatar=None, handle='', verified=False, bars=None, vertical=False):
     """Storia Instagram come sul telefono: foto nel riquadro 9:16, dietro la stessa foto sfocata.
     bars: quanto è piena ogni barretta in alto (0-1), lette dallo screenshot; senza, tre barrette."""
     check_photo(photo)
@@ -205,6 +214,11 @@ def build_story_html(*, photo, name='', avatar=None, handle='', verified=False, 
     bars_html = ''.join(f'<i><s style="width:{max(0.0, min(1.0, float(b))) * 100:g}%"></s></i>'
                         for b in (bars or [1, .55, 0])[:30])
     cx, cy, cw, ch = STORY_CARD
+    scale = 1
+    if vertical:                       # stessa storia, più grande: tutto il contenuto cresce insieme
+        scale = STORY_CARD_H / ch
+        cx, cy = round((DESIGN_W - cw * scale) / 2), STORY_CARD_TOP
+    height = STORY_H if vertical else DESIGN_H
     who = esc(handle or name)
     avatar_html = (f'<img id="av" src="{_uri(avatar)}">' if avatar
                    else f'<div id="av" class="none">{esc((handle or name)[:1].upper())}</div>')
@@ -213,10 +227,11 @@ def build_story_html(*, photo, name='', avatar=None, handle='', verified=False, 
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 {_font_css()}
 *{{margin:0;padding:0;box-sizing:border-box}}
-html,body{{width:{DESIGN_W}px;height:{DESIGN_H}px;overflow:hidden;background:#000}}
+html,body{{width:{DESIGN_W}px;height:{height}px;overflow:hidden;background:#000}}
 #back{{position:absolute;inset:-80px;background:url({uri}) center/cover;filter:blur({STORY_BLUR}px) brightness({STORY_DARK}) saturate(1.1)}}
 #card{{position:absolute;left:{cx}px;top:{cy}px;width:{cw}px;height:{ch}px;border-radius:34px;overflow:hidden;
-  background:#111 url({uri}) center/cover;box-shadow:0 0 80px rgba(0,0,0,.8),0 0 24px rgba(0,0,0,.5);border:1.5px solid rgba(255,255,255,.14)}}
+  transform:scale({scale:.5f});transform-origin:0 0;
+  background:#111 url({uri}) center/cover no-repeat;box-shadow:0 0 80px rgba(0,0,0,.8),0 0 24px rgba(0,0,0,.5)}}
 #vig{{position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,0) 16%),radial-gradient(ellipse 75% 70% at 50% 50%,rgba(0,0,0,0) 40%,rgba(0,0,0,.6))}}
 #top{{position:absolute;left:0;right:0;top:0;height:230px;background:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,0))}}
 #bot{{position:absolute;left:0;right:0;bottom:0;height:230px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.55))}}
@@ -244,16 +259,24 @@ body>img{{position:absolute}}
   <div id="hd">{avatar_html}<b>{who}</b>{tick}<i id="ig">{ICON_IG}</i></div>
   <div id="act"><span id="reply">Invia messaggio...</span>{ICON_LIKE}{ICON_SHARE}</div>
 </div>
-{_logo('white')}
+{'' if vertical else _logo('white')}
 <script>window.__ready = (async () => {{ try {{ await document.fonts.load('500 27px Poppins'); }} catch (e) {{}} for (const img of document.images) {{ try {{ await img.decode(); }} catch (e) {{}} }} }})();</script>
 </body></html>'''
 
 
 def render(*, photo, text='', name='', avatar=None, frame=None, ghost=False, platform='ig', handle='',
-           verified=False, story=False, bars=None, **_):
-    return render_html(build_html(photo=None if ghost else photo, text=text, name=name, avatar=avatar,
-                                  frame=frame, platform=platform, handle=handle, verified=verified, story=story, bars=bars),
-                       ghost=ghost)
+           verified=False, story=False, bars=None, vertical=False, **_):
+    vertical = bool(vertical) and not ghost                    # l'editor della foto lavora sul 3:4
+    markup = build_html(photo=None if ghost else photo, text=text, name=name, avatar=avatar, frame=frame,
+                        platform=platform, handle=handle, verified=verified, story=story, bars=bars, vertical=vertical)
+    if not vertical:
+        return render_html(markup, ghost=ghost)
+    from PIL import Image
+    image = Image.open(io.BytesIO(render_html(markup, page=(DESIGN_W, STORY_H)))).convert('RGB')
+    story_jr_paste(image, (255, 255, 255))
+    out = io.BytesIO()
+    image.save(out, 'PNG')
+    return out.getvalue()
 
 
 def x_background():
