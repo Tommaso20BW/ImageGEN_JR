@@ -64,7 +64,7 @@ class DataTests(unittest.TestCase):
 
 
 class GiornataTests(unittest.TestCase):
-    """La giornata unisce i risultati e le partite del calendario anche se l'etichetta non è identica."""
+    """Fase intera per le coppe e andata/ritorno in una riga sola."""
 
     @staticmethod
     def riga(home, away, hs='', as_='', scheduled=False, time='22.11. 15:00'):
@@ -76,21 +76,6 @@ class GiornataTests(unittest.TestCase):
         with patch.object(risultati_data, '_scrape', return_value=(pagine, 'Serie A 2026/2027')), \
                 patch.object(risultati_data, '_loghi', lambda partite: None):
             return risultati_data._fetch('SA')
-
-    def test_chiave_giornata(self):
-        k = risultati_data._chiave_giornata
-        self.assertEqual(k('Giornata 12'), k('Giornata\xa012 '))
-        self.assertEqual(k('Giornata 12'), k('GIORNATA 12 · Mostra'))
-        self.assertNotEqual(k('Giornata 12'), k('Giornata 13'))
-
-    def test_partita_del_calendario_con_etichetta_diversa(self):
-        finite = [{'round': 'Giornata 12'}, self.riga('Juventus', 'Venezia', '4', '0')]
-        da_giocare = [{'round': 'Giornata\xa012 '}, self.riga('Fiorentina', 'Monza', '-', '-', True, '23.11. 20:45'),
-                      {'round': 'Giornata 13'}, self.riga('Venezia', 'Bologna', '-', '-', True, '27.11. 20:45')]
-        out = self.fetch(finite, da_giocare)
-        self.assertEqual({(p['home'], p['away']) for p in out['partite']},
-                         {('Juventus', 'Venezia'), ('Fiorentina', 'Monza')})
-        self.assertEqual(out['giornata'], 12)
 
     def test_coppe_tutta_la_fase_senza_limite_di_settimana(self):
         """Coppa Italia ed europee: tutte le partite del turno, anche giocate in settimane diverse."""

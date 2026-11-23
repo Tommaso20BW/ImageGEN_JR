@@ -56,26 +56,6 @@ def _url(comp_key, pagina):
     return COMPETIZIONI[comp_key]['url'].replace('/classifiche/', f'/{pagina}/')
 
 
-def _attendi_righe(page):
-    """Diretta.it disegna le righe a blocchi: si legge solo quando il numero di partite smette di
-    crescere (altrimenti si rischia di prendere la pagina a metà e perdere delle partite)."""
-    ultimo = -1
-    for _ in range(12):
-        n = page.locator('.event__match').count()
-        if n == ultimo:
-            return
-        ultimo = n
-        page.wait_for_timeout(350)
-
-
-def _chiave_giornata(etichetta):
-    """Chiave per riconoscere la stessa giornata nelle due pagine, anche se l'etichetta cambia
-    di spazi (anche non separabili), maiuscole o testo in più: 'Giornata 12' -> ('giornata', 12)."""
-    testo = re.sub(r'\s+', ' ', (etichetta or '').replace('\xa0', ' ')).strip().lower()
-    m = re.match(r'giornata\s*(\d+)\b', testo)
-    return ('giornata', int(m.group(1))) if m else ('testo', testo)
-
-
 def _scrape(urls):
     """{pagina: righe} per ogni url, più il titolo (h1) della prima pagina."""
     from playwright.sync_api import sync_playwright
@@ -95,7 +75,6 @@ def _scrape(urls):
                 except Exception:  # noqa: BLE001 - pagina senza partite (es. calendario finito)
                     out[name] = []
                     continue
-                _attendi_righe(page)
                 out[name] = page.evaluate(ROWS_JS)
                 if not titolo:
                     titolo = page.locator('h1').first.inner_text(timeout=10_000)
@@ -293,14 +272,9 @@ def _fetch(comp_key: str) -> dict:
         raise RisultatiError(f"Diretta.it non mostra ancora risultati di {comp['nome']} in questa stagione.")
     etichetta, finite = giocate[0]
     # Partite della stessa giornata ancora da giocare (o in corso), dal calendario.
-    # La giornata si riconosce per numero/etichetta normalizzata, non per testo identico.
-    chiave = _chiave_giornata(etichetta)
-    altre = [r for label, rows in _giornate(pagine.get('calendario', [])) if _chiave_giornata(label) == chiave
-             for r in rows]
-    log.info('RISULTATI', f"{comp['nome']}: '{etichetta}' · {len(finite)} nei risultati, {len(altre)} dal calendario "
-                          f"(giornate del calendario: {[l for l, _ in _giornate(pagine.get('calendario', []))][:3]})")
-    visti = {(_nome(r['home']), _nome(r['away'])) for r in finite}
-    righe = finite + [r for r in altre if (_nome(r['home']), _nome(r['away'])) not in visti]
+    altre = next((rows for label, rows in _giornate(pagine.get('calendario', [])) if label == etichetta), [])
+    visti = {(r['home'], r['away']) for r in finite}
+    righe = finite + [r for r in altre if (r['home'], r['away']) not in visti]
 
     partite = _accoppia([_partita(r) for r in righe if r.get('home') and r.get('away')])
     # In ordine di calendario: prima le partite più vecchie, come si leggono nella giornata.
