@@ -21,7 +21,9 @@ c'è, si usa così com'è.
 import copy
 import hashlib
 import json
+import os
 import tempfile
+import threading
 from functools import lru_cache
 from pathlib import Path
 
@@ -294,6 +296,17 @@ def _jr_paint(rgb, weight, theme):
     return rgb
 
 
+def _save_png(image, out):
+    """Salva il PNG in modo atomico. Il file temporaneo ha un nome unico per processo e thread:
+    3:4 e storia partono in parallelo e senza questo si pestano il .tmp (FileNotFoundError)."""
+    tmp = out.with_name(f'{out.stem}.{os.getpid()}.{threading.get_ident()}.tmp')
+    try:
+        image.save(tmp, format='PNG')
+        os.replace(tmp, out)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
 @lru_cache(maxsize=256)
 def recolor_file(name, theme, flat=False):
     """canva/<name> ricolorato: percorso del PNG pronto (in cache).
@@ -309,9 +322,7 @@ def recolor_file(name, theme, flat=False):
                 rgb = recolor_array(a[..., :3], theme, _accent_range(a))
                 rgb = _jr_paint(rgb, a[..., 3] / 255, theme)
             done = np.dstack([np.clip(rgb, 0, 255), a[..., 3]]).astype('uint8')
-        tmp = out.with_suffix('.tmp')
-        Image.fromarray(done, 'RGBA').save(tmp, format='PNG')
-        tmp.replace(out)
+        _save_png(Image.fromarray(done, 'RGBA'), out)
     return out
 
 
@@ -323,7 +334,7 @@ def tint_file(name, theme, color):
         with Image.open(asset_dir() / 'canva' / name) as image:
             a = np.asarray(image.convert('RGBA'))
         rgb = np.broadcast_to(np.array([int(color[i:i + 2], 16) for i in (1, 3, 5)], np.uint8), a[..., :3].shape)
-        Image.fromarray(np.dstack([rgb, a[..., 3]]).astype('uint8'), 'RGBA').save(out, format='PNG')
+        _save_png(Image.fromarray(np.dstack([rgb, a[..., 3]]).astype('uint8'), 'RGBA'), out)
     return out
 
 
@@ -336,7 +347,7 @@ def overlay_file(graphic, theme):
         with Image.open(meta['fx']) as fx, Image.open(meta['text_overlay']) as text:
             layer = fx.convert('RGBA')
             layer.alpha_composite(text.convert('RGBA').resize(layer.size))
-        layer.save(out, format='PNG')
+        _save_png(layer, out)
     return out
 
 
