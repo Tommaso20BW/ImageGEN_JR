@@ -51,9 +51,11 @@ class RisultatiError(ValueError):
 
 
 def _url(comp_key, pagina):
+    """Pagina 'risultati' o 'calendario' della competizione; '' = riepilogo, l'unica con le partite in corso."""
+    parte = f'/{pagina}/' if pagina else '/'
     if comp_key == 'CI':
-        return COPPA_ITALIA_RISULTATI_URL.replace('/risultati/', f'/{pagina}/')
-    return COMPETIZIONI[comp_key]['url'].replace('/classifiche/', f'/{pagina}/')
+        return COPPA_ITALIA_RISULTATI_URL.replace('/risultati/', parte)
+    return COMPETIZIONI[comp_key]['url'].replace('/classifiche/', parte)
 
 
 def _scrape(urls):
@@ -185,6 +187,26 @@ def _partita(row):
     return out
 
 
+def _in_corso(righe, riepilogo):
+    """Partite in corso della stessa giornata, dal riepilogo del torneo: Diretta.it non le mette né nei
+    risultati né nel calendario. Nel riepilogo non hanno la giornata, quindi entrano solo se nessuna delle
+    due squadre gioca già in questa giornata (oppure se sono il ritorno di una partita già presente)."""
+    coppie = {(_nome(r['home']), _nome(r['away'])) for r in righe}
+    squadre = {s for c in coppie for s in c}
+    oggi = date.today().strftime('%d.%m.')
+    out = []
+    for r in riepilogo:
+        if 'round' in r or not r.get('live') or not r.get('home') or not r.get('away'):
+            continue
+        h, a = _nome(r['home']), _nome(r['away'])
+        if (h, a) in coppie or not ((a, h) in coppie or (h not in squadre and a not in squadre)):
+            continue
+        out.append({**r, 'time': oggi})           # nel riepilogo l'ora è il minuto di gioco
+        coppie.add((h, a))
+        squadre |= {h, a}
+    return out
+
+
 def _tie(a, r):
     """Andata (a) e ritorno (r) della stessa coppia in una partita sola, con il totale.
     Squadre e stemmi come all'andata; nel ritorno casa e trasferta sono invertite."""
@@ -262,7 +284,8 @@ def _fetch(comp_key: str) -> dict:
     comp = {'nome': NOMI[comp_key]}
     log.info('RISULTATI', f"{comp['nome']}: leggo risultati e calendario da Diretta.it")
     try:
-        pagine, titolo = _scrape({'risultati': _url(comp_key, 'risultati'), 'calendario': _url(comp_key, 'calendario')})
+        pagine, titolo = _scrape({'risultati': _url(comp_key, 'risultati'), 'calendario': _url(comp_key, 'calendario'),
+                                  'riepilogo': _url(comp_key, '')})
     except Exception as exc:  # noqa: BLE001 - errore della pagina -> messaggio leggibile
         log.warn('RISULTATI', f'Errore durante la lettura da Diretta.it: {exc}')
         raise RisultatiError('Non riesco a leggere i risultati da Diretta.it. Riprova tra poco.') from exc
@@ -275,6 +298,17 @@ def _fetch(comp_key: str) -> dict:
     altre = next((rows for label, rows in _giornate(pagine.get('calendario', [])) if label == etichetta), [])
     visti = {(r['home'], r['away']) for r in finite}
     righe = finite + [r for r in altre if (r['home'], r['away']) not in visti]
+    live = _in_corso(righe, pagine.get('riepilogo', []))
+    righe += live
+    log.info('RISULTATI', f"{comp['nome']} {etichetta}: {len(finite)} finite, {len(righe) - len(finite) - len(live)} "
+                          f"da giocare, {len(live)} in corso")
+    # Giornate di Serie A e coppe europee: squadre/2 partite (10 o 18). Se ne mancano, meglio niente
+    # grafica che una grafica incompleta.
+    attese = (COMPETIZIONI.get(comp_key) or {}).get('squadre', 0) // 2
+    if attese and etichetta.lower().startswith('giornata') and len(righe) < attese:
+        log.warn('RISULTATI', f"{comp['nome']}: {len(righe)} partite su {attese} nella {etichetta}")
+        raise RisultatiError(f"{comp['nome']}, {etichetta}: Diretta.it mostra {len(righe)} partite su {attese}. "
+                             f"Riprova tra qualche minuto.")
 
     partite = _accoppia([_partita(r) for r in righe if r.get('home') and r.get('away')])
     # In ordine di calendario: prima le partite più vecchie, come si leggono nella giornata.

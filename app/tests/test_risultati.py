@@ -1,5 +1,5 @@
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch
 
 import _percorsi  # noqa: F401 - prima degli import del servizio
@@ -71,8 +71,8 @@ class GiornataTests(unittest.TestCase):
         return {'home': home, 'away': away, 'hs': hs, 'as': as_, 'scheduled': scheduled, 'live': False,
                 'time': time, 'stage': '', 'home_logo': '', 'away_logo': '', 'link': ''}
 
-    def fetch(self, risultati, calendario):
-        pagine = {'risultati': risultati, 'calendario': calendario}
+    def fetch(self, risultati, calendario, riepilogo=()):
+        pagine = {'risultati': risultati, 'calendario': calendario, 'riepilogo': list(riepilogo)}
         with patch.object(risultati_data, '_scrape', return_value=(pagine, 'Serie A 2026/2027')), \
                 patch.object(risultati_data, '_loghi', lambda partite: None):
             return risultati_data._fetch('SA')
@@ -121,10 +121,43 @@ class GiornataTests(unittest.TestCase):
         self.assertTrue(p['ritorno_quando'].endswith('17/3 · 21:00'))
         self.assertEqual(out['date'], '10–17 Marzo')
 
+    def altre(self, n):
+        """n partite finite di squadre finte, per arrivare alle 10 della giornata di Serie A."""
+        return [self.riga(f'Casa{i}', f'Ospite{i}', '1', '0') for i in range(n)]
+
     def test_nessun_doppione_tra_risultati_e_calendario(self):
-        finite = [{'round': 'Giornata 12'}, self.riga('Juventus', 'Venezia', '4', '0')]
+        finite = [{'round': 'Giornata 12'}, self.riga('Juventus', 'Venezia', '4', '0'), *self.altre(9)]
         calendario = [{'round': 'Giornata 12'}, self.riga('Juventus', 'Venezia', '-', '-', True)]
-        self.assertEqual(len(self.fetch(finite, calendario)['partite']), 1)
+        self.assertEqual(len(self.fetch(finite, calendario)['partite']), 10)
+
+    def test_partite_in_corso_dal_riepilogo(self):
+        """In corso: solo nel riepilogo, senza giornata. Entrano se le due squadre non giocano già."""
+        finite = [{'round': 'Giornata 12'}, *self.altre(8)]
+        calendario = [{'round': 'Giornata 12'}, self.riga('Inter', 'Como', '-', '-', True, '23.11. 20:45'),
+                      {'round': 'Giornata 13'}, self.riga('Juventus', 'Genoa', '-', '-', True, '29.11. 18:00')]
+        riepilogo = [{**self.riga('Juventus', 'Venezia', '1', '1', time='67'), 'live': True},
+                     {**self.riga('Casa0', 'Ospite1', '0', '0', time='12'), 'live': True},   # squadre già nella giornata
+                     {'round': 'Giornata 12'}, self.riga('Casa0', 'Ospite0', '1', '0')]
+        out = self.fetch(finite, calendario, riepilogo)
+        self.assertEqual(len(out['partite']), 10)
+        live = [p for p in out['partite'] if p['stato'] == 'live']
+        self.assertEqual([(p['home'], p['gol_casa'], p['gol_trasferta']) for p in live], [('Juventus', 1, 1)])
+
+    def test_ritorno_in_corso_si_unisce_all_andata(self):
+        andata = (date.today() - timedelta(days=7)).strftime('%d.%m. 21:00')        # la settimana scorsa
+        finite = [{'round': 'Ottavi di finale'}, self.riga('Inter', 'Porto', '2', '0', time=andata)]
+        riepilogo = [{**self.riga('Porto', 'Inter', '1', '0', time='55'), 'live': True}]
+        pagine = {'risultati': finite, 'calendario': [], 'riepilogo': riepilogo}
+        with patch.object(risultati_data, '_scrape', return_value=(pagine, 'UCL 2026/2027')), \
+                patch.object(risultati_data, '_loghi', lambda partite: None):
+            tie = risultati_data._fetch('UCL')['partite'][0]
+        self.assertEqual((tie['stato'], tie['gol_casa'], tie['gol_trasferta']), ('live', 2, 1))
+
+    def test_giornata_incompleta_non_parte(self):
+        finite = [{'round': 'Giornata 12'}, *self.altre(9)]
+        with self.assertRaises(risultati_data.RisultatiError) as err:
+            self.fetch(finite, [])
+        self.assertIn('9 partite su 10', str(err.exception))
 
 
 class PageTests(unittest.TestCase):
