@@ -1722,24 +1722,30 @@ class Service:
         return path.read_bytes(), 'font/otf' if name.endswith('.otf') else 'font/ttf'
 
     def captions(self, envelope):
-        """Modelli dei messaggi: elenco, salva (testo di base o vuoto = torna quello di base)."""
+        """Modelli dei messaggi: elenco, salva (testo di base o vuoto = torna quello di base).
+        `text` è il testo per Telegram/IG, `x_text` (se c'è) quello per X."""
         if envelope.get('action') == 'caption_save':
             kind = str(envelope.get('kind') or '')
             if kind not in caption.TEMPLATE_KINDS:
                 raise ValueError('Messaggio non valido.')
-            text = caption.clean_template(envelope.get('text'))
+            texts = {kind: envelope.get('text')}
+            if 'x_text' in envelope:
+                texts[caption.X_KEY + kind] = envelope.get('x_text')
             with self.history_lock:
                 saved = dict(caption.CUSTOM)
-                if not text or text == caption.TEMPLATE_KINDS[kind][1]:
-                    saved.pop(kind, None)
-                else:
-                    saved[kind] = text
+                for key, text in texts.items():
+                    text = caption.clean_template(text)
+                    if not text or text == caption.template_default(key):
+                        saved.pop(key, None)
+                    else:
+                        saved[key] = text
                 changed = saved != caption.CUSTOM
                 caption.CUSTOM = saved
             if changed:
                 sent_store.save_captions(saved)
-                log.info('SALVATAGGIO', f"Messaggi: modello {caption.TEMPLATE_KINDS[kind][0]} "
-                                        f"{'cambiato' if kind in saved else 'tornato quello di base'}")
+                log.info('SALVATAGGIO', f"Messaggi: modello {caption.TEMPLATE_KINDS[kind][0]} salvato "
+                                        f"(Telegram {'cambiato' if kind in saved else 'di base'}, "
+                                        f"X {'cambiato' if caption.X_KEY + kind in saved else 'di base'})")
         return {'captions': caption.templates_list()}
 
     def tv_channels(self, envelope):

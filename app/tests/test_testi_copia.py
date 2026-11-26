@@ -54,13 +54,64 @@ class XTextTest(unittest.TestCase):
         self.assertEqual(x({'kind': 'table', 'competition': 'CI', 'view': 'bracket'}),
                          '🆙🇮🇹 Tabellone #CoppaItalia aggiornato.')
 
+    def setUp(self):
+        caption.CUSTOM = {}
+
+    def tearDown(self):
+        caption.CUSTOM = {}
+
     def test_templates_get_hashtags(self):
-        self.assertEqual(x({'kind': 'af', 'name': 'JONATHAN', 'surname': 'DAVID'}),
-                         '✅ HERE WE GO: Jonathan #David alla #Juventus.\n\n📲 @FabrizioRomano')
+        # come sul profilo: ✅🇧🇷 HERE WE GO: #Neto alla #Juventus.
+        with mock.patch('graphics.compleanno.nationality', return_value='BR'):
+            self.assertEqual(x({'kind': 'af', 'name': 'NETO', 'surname': ''}),
+                             '✅🇧🇷 HERE WE GO: #Neto alla #Juventus.\n\n📲 @FabrizioRomano')
+        with mock.patch('graphics.compleanno.nationality', return_value='AR'), \
+                mock.patch('caption._roster_name', return_value='Nico Gonzalez'):
+            self.assertEqual(x({'kind': 'rin', 'name': 'GONZALEZ', 'year': '2030'}),
+                             '✅🇦🇷 UFFICIALE | Nico #Gonzalez rinnova con la #Juventus fino al 2030.')
         text = x({'kind': 'potm', 'name': 'NICO', 'surname': 'GONZALEZ', 'month': 'AGOSTO/SETTEMBRE'})
         self.assertIn('netto: Nico #Gonzalez è stato eletto miglior giocatore della #Juventus nei mesi di agosto e '
                       'settembre', text)
         self.assertNotIn('*', text)
+
+    def test_friendly_matchday_without_hashtag(self):
+        with mock.patch('team_emoji.find', return_value=None):
+            text = x({'kind': 'md', 'competition': 'club.friendly', 'side': 'home', 'opponent': FIO,
+                      'info': {'stadium': 'ALLIANZ STADIUM', 'time': '18:00 CEST'}})
+        self.assertEqual(text, '𝐌𝐀𝐓𝐂𝐇𝐃𝐀𝐘 🔥⚔️\n\n🤝 Amichevole\n🆚 #Fiorentina\n🏟 Allianz Stadium\n'
+                               '📺 Juventus.com\n⏰ 18:00\n📲 #JuveFiorentina')
+
+    def test_x_template_written_in_mini_app(self):
+        caption.CUSTOM = {'x:motm': '⭐️ MOTM {hashtag} ➜ {giocatore} 🔥', 'motm': 'solo Telegram {giocatore}'}
+        data = {'kind': 'motm', 'name': 'NICK', 'surname': 'WOLTEMADE', 'home': 'JUVENTUS', 'away': 'VENEZIA'}
+        self.assertEqual(x(data), '⭐️ MOTM #JuveVenezia ➜ Nick #Woltemade 🔥')
+        self.assertIn('solo Telegram', caption.build(data))
+        rows = {r['kind']: r for r in caption.templates_list()}
+        self.assertTrue(rows['motm']['x']['custom'])
+        self.assertEqual(rows['motm']['x']['text'], '⭐️ MOTM {hashtag} ➜ {giocatore} 🔥')
+        self.assertFalse(rows['xi']['x']['custom'])
+        self.assertEqual(rows['af']['x']['fields'], ['giocatore', 'bandiera'])
+
+    def test_save_both_texts(self):
+        import threading
+        import service
+        fake = mock.Mock(history_lock=threading.Lock())
+        with mock.patch('sent_store.save_captions') as save:
+            body = service.Service.captions(fake, {'action': 'caption_save', 'kind': 'xi',
+                                                   'text': caption.TEMPLATE_KINDS['xi'][1],
+                                                   'x_text': '✅📋 XI {hashtag} 🔥'})
+        self.assertEqual(caption.CUSTOM, {'x:xi': '✅📋 XI {hashtag} 🔥'})
+        save.assert_called_once_with({'x:xi': '✅📋 XI {hashtag} 🔥'})
+        self.assertEqual(next(r for r in body['captions'] if r['kind'] == 'xi')['x']['text'], '✅📋 XI {hashtag} 🔥')
+        with mock.patch('sent_store.save_captions'):     # testo X di base: torna quello di base
+            service.Service.captions(fake, {'action': 'caption_save', 'kind': 'xi', 'text': '',
+                                            'x_text': caption.X_TEMPLATES['xi']})
+        self.assertEqual(caption.CUSTOM, {})
+
+    def test_saved_x_templates_load_back(self):
+        import sent_store
+        with mock.patch('sent_store._read', return_value={'x:af': 'HWG {giocatore}', 'x:boh': 'no', 'xi': 'XI'}):
+            self.assertEqual(sent_store.load_captions(), {'x:af': 'HWG {giocatore}', 'xi': 'XI'})
 
     def test_fallback_is_plain_caption_without_signature(self):
         self.assertEqual(x({'kind': 'cal', 'month': 11, 'year': 2026}), '⚔️📆 𝐍𝐎𝐕𝐄𝐌𝐁𝐑𝐄 𝟐𝟎𝟐𝟔')

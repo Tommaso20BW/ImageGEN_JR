@@ -65,8 +65,23 @@ TEMPLATE_KINDS = {   # tipo -> (nome nella Mini App, testo di base, segnaposto)
     'rin': ('Rinnovo', '{bandiera}✅ **UFFICIALE** | **{giocatore}** rinnova con la **Juventus** fino al {anno}.',
             ('bandiera', 'giocatore', 'anno')),
 }
+# Gli stessi modelli per X (scheda 𝕏 di Impostazioni › Messaggi), come i post di @Juventus_Reborn:
+# emoji normali, niente firma, hashtag al posto del grassetto. {giocatore} = Nick #Woltemade.
+X_TEMPLATES = {
+    'squad': f'☑️📝 I convocati di #{ALLENATORE} per {{hashtag}}.',
+    'pxi': '🆕📋 𝐏𝐑𝐎𝐁𝐀𝐁𝐈𝐋𝐄 𝐗𝐈 {hashtag}',
+    'xi': '✅📋 𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄 {hashtag}',
+    'conv': '🌍📋 I bianconeri convocati dalle rispettive nazionali.',
+    'af': '✅{bandiera} HERE WE GO: {giocatore} alla #Juventus.\n\n📲 @FabrizioRomano',
+    'motm': '⭐️🔝 𝐌𝐎𝐓𝐌 {hashtag}: {giocatore}',
+    'potm': '📊👀 Il verdetto del sondaggio su Telegram è netto: {giocatore} è stato eletto miglior giocatore '
+            'della #Juventus {mesi}.',
+    'rin': '✅{bandiera} UFFICIALE | {giocatore} rinnova con la #Juventus fino al {anno}.',
+}
+X_FIELDS = {'af': ('giocatore', 'bandiera')}      # segnaposto in più nella scheda 𝕏
+X_KEY = 'x:'                       # in CUSTOM (e in captions.json) il modello X di un tipo è "x:<tipo>"
 TEMPLATE_MAX = 900                 # caratteri: la didascalia di Telegram arriva a 1024, firma compresa
-CUSTOM = {}                        # tipo -> testo scritto nella Mini App (lo carica il servizio)
+CUSTOM = {}                        # tipo (o x:tipo) -> testo scritto nella Mini App (lo carica il servizio)
 PREMIUM = {   # emoji scritta nel modello -> emoji personalizzata del canale
     '☑️': E_CHECK, '📝': E_NOTE, '🆕': E_NEW, '✅': E_OFFICIAL, '🌍': E_WORLD, '📲': E_SOURCE,
     '⭐️': E_STAR, '🔝': E_TOP, '📊': E_STATS, '👀': E_EYES, '📰': E_NEWS, '📆': E_DAY, '🔥': E_FIRE,
@@ -81,9 +96,22 @@ def clean_template(text):
     return '\n'.join(lines).strip()[:TEMPLATE_MAX]
 
 
-def template_text(kind):
-    """Modello in uso: quello scritto nella Mini App, o quello di base."""
+def template_text(kind, x=False):
+    """Modello in uso (Telegram, o X con x=True): quello scritto nella Mini App, o quello di base."""
+    if x:
+        return CUSTOM.get(X_KEY + kind) or X_TEMPLATES[kind]
     return CUSTOM.get(kind) or TEMPLATE_KINDS[kind][1]
+
+
+def template_key(key):
+    """Chiave salvata valida (squad, x:squad...) o None."""
+    key = str(key or '')
+    kind = key[len(X_KEY):] if key.startswith(X_KEY) else key
+    return key if kind in TEMPLATE_KINDS else None
+
+
+def template_default(key):
+    return X_TEMPLATES[key[len(X_KEY):]] if key.startswith(X_KEY) else TEMPLATE_KINDS[key][1]
 
 
 def _premium(text):
@@ -108,9 +136,12 @@ def _from_template(kind, **values):
 
 
 def templates_list():
-    """Per la Mini App: ogni modello con il testo in uso, quello di base e i segnaposto."""
+    """Per la Mini App: ogni modello con il testo in uso, quello di base e i segnaposto, per Telegram e per X."""
     return [{'kind': k, 'name': name, 'text': template_text(k), 'default': base, 'fields': list(fields),
-             'custom': k in CUSTOM} for k, (name, base, fields) in TEMPLATE_KINDS.items()]
+             'custom': k in CUSTOM,
+             'x': {'text': template_text(k, x=True), 'default': X_TEMPLATES[k],
+                   'fields': list(X_FIELDS.get(k, fields)), 'custom': X_KEY + k in CUSTOM}}
+            for k, (name, base, fields) in TEMPLATE_KINDS.items()]
 
 # Bandiere animate del canale (codice ISO -> emoji personalizzata); le altre nazioni hanno la bandiera normale.
 FLAGS = {
@@ -541,7 +572,6 @@ X_FLAGS = {'ita.1': '🇮🇹', 'ita.coppa_italia': '🇮🇹', 'ita.super_cup':
            'club.friendly': '🤝'}
 X_TABLES = {'SA': ('🇮🇹', '#SerieA'), 'UCL': ('🇪🇺', '#UCL'), 'UEL': ('🇪🇺', '#UEL'), 'UECL': ('🇪🇺', '#UECL')}
 X_TV = {'DAZN': '@DAZN_IT', 'Sky Sport': '@SkySport'}       # come sul profilo; gli altri restano scritti
-X_SOURCES = {'Fabrizio Romano': '@FabrizioRomano'}
 
 
 def plain(text):
@@ -569,23 +599,21 @@ def x_person(name):
     return f"{words[0]} {x_tag(' '.join(words[1:]))}"
 
 
-def _x_words(text):
-    """Juventus e l'allenatore con l'hashtag, la fonte con la sua pagina (testi dei modelli)."""
-    import re
-    for word in ('Juventus', ALLENATORE):
-        text = re.sub(rf'(?<![#@\w]){word}(?!\w)', f'#{word}', text)
-    for name, handle in X_SOURCES.items():
-        text = text.replace(name, handle)
-    return text
-
-
 def _x_template(kind, **values):
-    """Modello (Impostazioni › Messaggi) come testo per X: senza ** e __, segnaposto già pronti."""
+    """Modello per X (Impostazioni › Messaggi, scheda 𝕏): testo semplice, segnaposto già pronti."""
     import re
-    text = re.sub(r'\*\*(.+?)\*\*', r'\1', template_text(kind), flags=re.S)
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', template_text(kind, x=True), flags=re.S)
     text = re.sub(r'__(.+?)__', r'\1', text, flags=re.S)
-    text = _x_words(text)
-    return re.sub(r'\{(\w+)\}', lambda m: values.get(m.group(1).lower(), m.group(0)), text)
+    return re.sub(r'\{(\w+)\}', lambda m: values.get(m.group(1).lower(), m.group(0)), text).strip()
+
+
+def _nation_flag(name):
+    """Bandiera normale della nazionale del giocatore ('' se non si sa)."""
+    try:
+        from graphics import compleanno
+        return plain(flag(compleanno.nationality(name)))
+    except Exception:  # noqa: BLE001 - senza rete niente bandiera
+        return ''
 
 
 def _x_match(data):
@@ -600,7 +628,9 @@ def _x_match(data):
     if kind == 'md':
         info = data.get('info') or {}
         tv = tv_for(competition)
-        rows = [f"{X_FLAGS.get(competition, plain(m['comp']))} {x_tag(COMPETITION_NAMES.get(competition, ''))}",
+        name = COMPETITION_NAMES.get(competition, '')
+        name = name if competition == 'club.friendly' else x_tag(name)      # 🤝 Amichevole, senza hashtag
+        rows = [f"{X_FLAGS.get(competition, plain(m['comp']))} {name}",
                 f"🆚 {x_tag(opponent)}",
                 f"{'🏟' if m['juve_home'] else '✈️'} {_stadium(info.get('stadium'))}",
                 f"📺 {X_TV.get(tv, tv)}",
@@ -628,24 +658,18 @@ def _x_other(data):
         name = _person_name(data.get('player') or data.get('name'))
         if not name:
             return ''
-        try:
-            from graphics import compleanno
-            icon = plain(flag(compleanno.nationality(name)))
-        except Exception:  # noqa: BLE001 - senza rete niente bandiera
-            icon = ''
-        return f"🎂{icon} Tanti auguri {'ad' if name[:1].lower() == 'a' else 'a'} {x_person(name)}!"
+        return f"🎂{_nation_flag(name)} Tanti auguri {'ad' if name[:1].lower() == 'a' else 'a'} {x_person(name)}!"
     if kind == 'motm':
         return _x_template('motm', hashtag=html.unescape(_motm_tag(data)), giocatore=x_person(_who(data)))
     if kind == 'af':
-        return _x_template('af', giocatore=x_person(_who(data)))
+        # ✅🇧🇷 HERE WE GO: #Neto alla #Juventus.
+        return _x_template('af', bandiera=_nation_flag(_who(data)), giocatore=x_person(_who(data)))
     if kind == 'rin':
         name = _roster_name(data.get('name'))
-        try:
-            from graphics import compleanno
-            icon = plain(flag(compleanno.nationality(name)))
-        except Exception:  # noqa: BLE001
-            icon = ''
-        return _x_template('rin', bandiera=icon, giocatore=x_person(name), anno=str(data.get('year') or ''))
+        return _x_template('rin', bandiera=_nation_flag(name), giocatore=x_person(name),
+                           anno=str(data.get('year') or ''))
+    if kind == 'conv':
+        return _x_template('conv')
     if kind == 'potm':
         return _x_template('potm', giocatore=x_person(_who(data)), mesi=_potm_span(data))
     if kind == 'table':

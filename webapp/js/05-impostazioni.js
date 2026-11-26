@@ -696,7 +696,8 @@ function initSettings() {
     else if (act === 'x-rm') xtraRemove(btn);
     else if (act === 'x-del') { if (!D.confirm) { D.confirm = true; renderSetPage(); } else xtraSave(true); }
     else if (act === 'msg-ins') msgInsert(btn.dataset.f);
-    else if (act === 'msg-base') { D.text = D.m.default; renderSetPage(); }
+    else if (act === 'msg-base') { const S = msgSide(D); D[S.key] = S.base; renderSetPage(); }
+    else if (act === 'msg-tab') { D.tab = btn.dataset.t; haptic('select'); renderSetPage(); }
     else if (act === 'nm-logo') { openFixSheet(T.nm.espn); }
     else if (act === 'nm-reset') {
       if (!T.confirmReset) { T.confirmReset = true; renderSetPage(); return; }
@@ -801,7 +802,17 @@ async function nmSave(reset) {
    {segnaposto}; le emoji del canale diventano animate da sole e la firma si aggiunge sempre. */
 let msgList = null;
 const MSG_SAMPLE = {hashtag:'#JuveNapoli', avversario:'Napoli', giocatore:'Kenan Yildiz', mesi:'nel mese di ottobre 2026', anno:'2030', bandiera:'🇹🇷'};
+// Scheda 𝕏: stessi segnaposto, ma come li scrive il testo per X (cognome e avversario con l'hashtag).
+const MSG_SAMPLE_X = {...MSG_SAMPLE, avversario:'#Napoli', giocatore:'Kenan #Yildiz'};
 const MSG_FIELD = {hashtag:'Hashtag', avversario:'Avversario', giocatore:'Giocatore', mesi:'Mesi', anno:'Anno', bandiera:'Bandiera'};
+
+// Il modello ha due testi: Telegram / IG (D.text) e X (D.xtext). msgSide = quello della scheda aperta.
+function msgSide(D) {
+  const M = D.m, x = D.tab === 'x' && !!M.x;
+  return x ? {x, key:'xtext', text:D.xtext, orig:M.x.text, base:M.x.default, fields:M.x.fields}
+           : {x, key:'text', text:D.text, orig:M.text, base:M.default, fields:M.fields};
+}
+const msgChanged = D => D.text.trim() !== D.m.text || (!!D.m.x && D.xtext.trim() !== D.m.x.text);
 
 async function openMessages() {
   haptic('select');
@@ -816,45 +827,50 @@ function msgOpen(kind) {
   const m = (msgList || []).find(x => x.kind === kind);
   if (!m) return;
   haptic('select');
-  setDraft = {m, text:m.text};
+  setDraft = {m, tab:'tg', text:m.text, xtext:m.x ? m.x.text : ''};
   setStack.push('msg-edit');
   renderSetPage();
 }
 
 // Anteprima come su Telegram (emoji normali al posto di quelle animate, valori d'esempio).
-function msgPreview(text) {
+// Su X: niente grassetto né firma.
+function msgPreview(text, x) {
   if (!text.trim()) return '<span class="msg-none">Nessun testo: la grafica parte da sola.</span>';
-  const h = setEsc(text).replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>').replace(/__([\s\S]+?)__/g, '<i>$1</i>')
-    .replace(/\{(\w+)\}/g, (all, k) => MSG_SAMPLE[k.toLowerCase()] ? setEsc(MSG_SAMPLE[k.toLowerCase()]) : all);
-  return `${h}\n\n👉 @Juventus_Reborn`;
+  const sample = x ? MSG_SAMPLE_X : MSG_SAMPLE;
+  const h = setEsc(text).replace(/\*\*([\s\S]+?)\*\*/g, x ? '$1' : '<b>$1</b>').replace(/__([\s\S]+?)__/g, x ? '$1' : '<i>$1</i>')
+    .replace(/\{(\w+)\}/g, (all, k) => sample[k.toLowerCase()] ? setEsc(sample[k.toLowerCase()]) : all);
+  return x ? h : `${h}\n\n👉 @Juventus_Reborn`;
 }
 
 function msgRender(page) {
   const box = $('setPage'), D = setDraft;
   if (page === 'msg') {
     const rows = (msgList || []).map(m => `<button type="button" class="sp-item" data-sp="msg-open" data-k="${setEsc(m.kind)}">
-      <span>${setEsc(m.name)}</span><span class="sp-v">${m.custom ? 'Modificato' : m.default ? '' : 'Senza testo'}</span><span class="sp-chev">›</span></button>`).join('');
+      <span>${setEsc(m.name)}</span><span class="sp-v">${m.custom || (m.x && m.x.custom) ? 'Modificato' : m.default ? '' : 'Senza testo'}</span><span class="sp-chev">›</span></button>`).join('');
     box.innerHTML = spNav('Messaggi') + `<div class="sp-body">
       ${msgList ? `<div class="sp-list">${rows}</div>` : '<p class="sp-note">Carico…</p>'}</div>`;
     return;
   }
-  const M = D.m;
-  box.innerHTML = spNav(M.name, {save:true, cancel:true, saveOff:D.text.trim() === M.text}) + `<div class="sp-body">
-    <div id="msgPrev" class="msg-prev">${msgPreview(D.text)}</div>
-    <div class="sp-lbl">Testo</div>
-    <div class="sp-list"><textarea id="msgText" class="sp-field msg-ta" maxlength="900" rows="3" spellcheck="false" placeholder="${M.default ? '' : 'Scrivi qui il testo'}">${setEsc(D.text)}</textarea></div>
-    ${M.fields.length ? `<div class="msg-chips">${M.fields.map(f => `<button type="button" data-sp="msg-ins" data-f="${f}">+ ${setEsc(MSG_FIELD[f] || f)}</button>`).join('')}</div>` : ''}
-    <p class="msg-tip">**grassetto** &nbsp; __corsivo__</p>
-    ${D.text !== M.default ? `<button type="button" class="msg-base" data-sp="msg-base">${M.default ? 'Torna al testo di base' : 'Togli il testo'}</button>` : ''}
+  const M = D.m, S = msgSide(D);
+  const tabs = M.x ? `<div class="ig-labels msg-tabs">${[['tg', 'Telegram / IG'], ['x', '𝕏']].map(([t, label]) =>
+    `<button type="button" class="ig-seg${(D.tab === 'x') === (t === 'x') ? ' selected' : ''}" data-sp="msg-tab" data-t="${t}">${label}</button>`).join('')}</div>` : '';
+  box.innerHTML = spNav(M.name, {save:true, cancel:true, saveOff:!msgChanged(D)}) + `<div class="sp-body">
+    ${tabs}
+    <div id="msgPrev" class="msg-prev">${msgPreview(S.text, S.x)}</div>
+    <div class="sp-lbl">${S.x ? 'Testo per X' : 'Testo per Telegram / IG'}</div>
+    <div class="sp-list"><textarea id="msgText" class="sp-field msg-ta" maxlength="900" rows="3" spellcheck="false" placeholder="${S.base ? '' : 'Scrivi qui il testo'}">${setEsc(S.text)}</textarea></div>
+    ${S.fields.length ? `<div class="msg-chips">${S.fields.map(f => `<button type="button" data-sp="msg-ins" data-f="${f}">+ ${setEsc(MSG_FIELD[f] || f)}</button>`).join('')}</div>` : ''}
+    <p class="msg-tip">${S.x ? 'Su X niente grassetto e niente firma: usa gli hashtag (#Juventus)' : '**grassetto** &nbsp; __corsivo__'}</p>
+    ${S.text !== S.base ? `<button type="button" class="msg-base" data-sp="msg-base">${S.base ? 'Torna al testo di base' : 'Togli il testo'}</button>` : ''}
     <div id="setErr" class="sp-err"></div></div>`;
   const ta = $('msgText');
   fitTextarea(ta);
   ta.addEventListener('input', () => {
-    D.text = ta.value;
+    D[S.key] = ta.value;
     fitTextarea(ta);
-    $('msgPrev').innerHTML = msgPreview(D.text);
+    $('msgPrev').innerHTML = msgPreview(ta.value, S.x);
     const save = box.querySelector('[data-sp="save"]');
-    if (save && !setBusy) save.disabled = D.text.trim() === M.text;
+    if (save && !setBusy) save.disabled = !msgChanged(D);
   });
 }
 
@@ -870,10 +886,11 @@ function msgInsert(field) {
 
 async function msgSave() {
   const D = setDraft;
-  if (!D.text.trim() && D.m.default) { $('setErr').textContent = 'Scrivi il testo (o torna a quello di base).'; return; }
+  if (!D.text.trim() && D.m.default) { D.tab = 'tg'; renderSetPage(); $('setErr').textContent = 'Scrivi il testo per Telegram / IG (o torna a quello di base).'; return; }
+  if (D.m.x && !D.xtext.trim()) { D.tab = 'x'; renderSetPage(); $('setErr').textContent = 'Scrivi il testo per X (o torna a quello di base).'; return; }
   setBusy = true; renderSetPage();
   try {
-    const body = await setPost({action:'caption_save', kind:D.m.kind, text:D.text});
+    const body = await setPost({action:'caption_save', kind:D.m.kind, text:D.text, ...(D.m.x ? {x_text:D.xtext} : {})});
     msgList = body.captions || msgList;
     setBusy = false;
     spPop();

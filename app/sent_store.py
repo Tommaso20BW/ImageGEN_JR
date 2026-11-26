@@ -145,7 +145,7 @@ def load_captions():
     out = {}
     for kind, text in _read(CAPTIONS, {}).items():
         text = caption.clean_template(text)
-        if kind in caption.TEMPLATE_KINDS and text:
+        if caption.template_key(kind) and text:      # squad, xi... e i modelli X (x:squad...)
             out[kind] = text
     return out
 
