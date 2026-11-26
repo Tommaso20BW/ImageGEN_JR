@@ -1,4 +1,5 @@
 "Telegram transport for the dedicated manual graphics bot."
+import html
 import json
 from urllib.parse import urlparse
 
@@ -171,6 +172,13 @@ class Telegram:
             data['reply_markup'] = json.dumps(keyboard)
 
         return self.call('sendMessage', data)['message_id']
+
+    def copy_text(self, title, text):
+        """Messaggio con un testo da copiare: titolo in grassetto e testo in un blocco (un tocco = copiato)."""
+        body = f"<b>{html.escape(title)}</b>\n<pre>{html.escape(text)}</pre>"
+        return self.call('sendMessage', {'chat_id': self.chat_id, 'text': body, 'parse_mode': 'HTML',
+                                         'disable_web_page_preview': 'true',
+                                         'disable_notification': 'true'})['message_id']
 
     def reset_menu_button(self):
         return self.call(

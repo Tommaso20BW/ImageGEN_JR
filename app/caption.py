@@ -444,6 +444,14 @@ def _motm_tag(data):
     return team_names.build_hashtag(*teams)
 
 
+def _potm_span(data):
+    """Mesi del sondaggio: "nei mesi di agosto e settembre 2026" / "nel mese di ottobre 2026"."""
+    months = [m.strip().lower() for m in str(data.get('month') or '').split('/') if m.strip()]
+    when = ' e '.join(filter(None, [', '.join(months[:-1]), months[-1] if months else '']))
+    span = f"nei mesi di {when}" if len(months) > 1 else f"nel mese di {when}"
+    return f"{span} {_poll_year(months)}"
+
+
 def _other_caption(data):
     kind = data['kind']
     if kind in ('bday', 'bdold'):
@@ -454,11 +462,7 @@ def _other_caption(data):
     if kind == 'potm':
         # come sul canale: 📊👀 Il verdetto del sondaggio su <i>Telegram</i> è netto: <b>Nico Gonzalez</b> è stato
         # eletto miglior giocatore della <b>Juventus</b> nei mesi di agosto e settembre 2026.
-        months = [m.strip().lower() for m in str(data.get('month') or '').split('/') if m.strip()]
-        when = ' e '.join(filter(None, [', '.join(months[:-1]), months[-1] if months else '']))
-        span = f"nei mesi di {when}" if len(months) > 1 else f"nel mese di {when}"
-        return _from_template('potm', giocatore=html.escape(_who(data)),
-                              mesi=f"{html.escape(span)} {_poll_year(months)}")
+        return _from_template('potm', giocatore=html.escape(_who(data)), mesi=html.escape(_potm_span(data)))
     if kind == 'af':
         # ✅ HERE WE GO: <b>Neto</b> alla <b>Juventus</b>.  +  📲 Fabrizio Romano (senza bandiera)
         return _from_template('af', giocatore=html.escape(_who(data)))
@@ -526,3 +530,160 @@ def safe_build(data):
         import log
         log.warn('INVIO', f'Didascalia non creata ({type(exc).__name__}: {exc}): invio la foto senza testo')
         return ''
+
+
+# --- Testi da copiare (messaggi a parte dopo la foto): uno per X, uno per Telegram/IG ----------------
+# X come i post di @Juventus_Reborn: emoji normali, niente grassetto né firma; squadre, cognomi,
+# allenatore e competizione con l'hashtag, il canale TV con la sua pagina (📺 @DAZN_IT).
+SIGN_PLAIN = '👉 @Juventus_Reborn'
+X_FLAGS = {'ita.1': '🇮🇹', 'ita.coppa_italia': '🇮🇹', 'ita.super_cup': '🇮🇹', 'uefa.champions': '🇪🇺',
+           'uefa.europa': '🇪🇺', 'uefa.europa.conf': '🇪🇺', 'uefa.super_cup': '🇪🇺', 'fifa.cwc': '🌍',
+           'club.friendly': '🤝'}
+X_TABLES = {'SA': ('🇮🇹', '#SerieA'), 'UCL': ('🇪🇺', '#UCL'), 'UEL': ('🇪🇺', '#UEL'), 'UECL': ('🇪🇺', '#UECL')}
+X_TV = {'DAZN': '@DAZN_IT', 'Sky Sport': '@SkySport'}       # come sul profilo; gli altri restano scritti
+X_SOURCES = {'Fabrizio Romano': '@FabrizioRomano'}
+
+
+def plain(text):
+    """HTML di Telegram -> testo semplice da copiare (Instagram, Telegram): emoji normali, niente tag."""
+    import re
+    text = re.sub(r'<tg-emoji[^>]*>(.*?)</tg-emoji>', r'\1', str(text or ''), flags=re.S)
+    text = html.unescape(re.sub(r'<[^>]+>', '', text))
+    lines = [line.rstrip() for line in text.split('\n')]
+    return re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()
+
+
+def x_tag(name):
+    """Nome -> hashtag di X: "Kolo Muani" -> #KoloMuani, "I. Saibari" -> #Saibari."""
+    import re
+    words = [w for w in str(name or '').split() if not re.fullmatch(r'\w\.', w)]
+    word = re.sub(r"[\s'’.\-]", '', ''.join(words))
+    return f'#{word}' if word else ''
+
+
+def x_person(name):
+    """Nome e cognome come su X: Nick #Woltemade, Alessandro #DelPiero; un nome solo: #Neto."""
+    words = str(name or '').split()
+    if len(words) < 2:
+        return x_tag(name)
+    return f"{words[0]} {x_tag(' '.join(words[1:]))}"
+
+
+def _x_words(text):
+    """Juventus e l'allenatore con l'hashtag, la fonte con la sua pagina (testi dei modelli)."""
+    import re
+    for word in ('Juventus', ALLENATORE):
+        text = re.sub(rf'(?<![#@\w]){word}(?!\w)', f'#{word}', text)
+    for name, handle in X_SOURCES.items():
+        text = text.replace(name, handle)
+    return text
+
+
+def _x_template(kind, **values):
+    """Modello (Impostazioni › Messaggi) come testo per X: senza ** e __, segnaposto già pronti."""
+    import re
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', template_text(kind), flags=re.S)
+    text = re.sub(r'__(.+?)__', r'\1', text, flags=re.S)
+    text = _x_words(text)
+    return re.sub(r'\{(\w+)\}', lambda m: values.get(m.group(1).lower(), m.group(0)), text)
+
+
+def _x_match(data):
+    kind = data['kind']
+    m = _match(data)
+    tag = html.unescape(m['tag'])
+    home, away = html.unescape(m['home']), html.unescape(m['away'])
+    opponent = away if m['juve_home'] else home
+    competition = str(data.get('competition') or '')
+    if kind in ('squad', 'pxi', 'xi') and data.get('team') != 'italy':
+        return _x_template(kind, hashtag=tag, avversario=x_tag(opponent))
+    if kind == 'md':
+        info = data.get('info') or {}
+        tv = tv_for(competition)
+        rows = [f"{X_FLAGS.get(competition, plain(m['comp']))} {x_tag(COMPETITION_NAMES.get(competition, ''))}",
+                f"🆚 {x_tag(opponent)}",
+                f"{'🏟' if m['juve_home'] else '✈️'} {_stadium(info.get('stadium'))}",
+                f"📺 {X_TV.get(tv, tv)}",
+                f"⏰ {str(info.get('time') or '').split(' ')[0]}",
+                f"📲 {tag}"]
+        return '𝐌𝐀𝐓𝐂𝐇𝐃𝐀𝐘 🔥⚔️\n\n' + '\n'.join(r for r in rows if r.split(' ', 1)[-1].strip())
+    if kind in PHASES:
+        # come la diretta su X: squadre con l'hashtag (#Juventus 4-1 #Omonia)
+        import re
+        lines = plain(_match_caption(data)).split('\n')
+        for i, line in enumerate(lines):
+            if re.search(r'\d+(?: \(\d+\))?-(?:\(\d+\) )?\d+', line) or (kind == 'kick' and ' - ' in line):
+                for name in sorted({home, away}, key=len, reverse=True):
+                    line = re.sub(rf'(?<![#\w]){re.escape(name)}(?!\w)', x_tag(name), line)
+                lines[i] = line
+        return '\n'.join(lines)
+    return None
+
+
+def _x_other(data):
+    import re
+    kind = data['kind']
+    if kind in ('bday', 'bdold'):
+        # 🎂🇮🇹 Tanti auguri a Vincenzo #Iaquinta!
+        name = _person_name(data.get('player') or data.get('name'))
+        if not name:
+            return ''
+        try:
+            from graphics import compleanno
+            icon = plain(flag(compleanno.nationality(name)))
+        except Exception:  # noqa: BLE001 - senza rete niente bandiera
+            icon = ''
+        return f"🎂{icon} Tanti auguri {'ad' if name[:1].lower() == 'a' else 'a'} {x_person(name)}!"
+    if kind == 'motm':
+        return _x_template('motm', hashtag=html.unescape(_motm_tag(data)), giocatore=x_person(_who(data)))
+    if kind == 'af':
+        return _x_template('af', giocatore=x_person(_who(data)))
+    if kind == 'rin':
+        name = _roster_name(data.get('name'))
+        try:
+            from graphics import compleanno
+            icon = plain(flag(compleanno.nationality(name)))
+        except Exception:  # noqa: BLE001
+            icon = ''
+        return _x_template('rin', bandiera=icon, giocatore=x_person(name), anno=str(data.get('year') or ''))
+    if kind == 'potm':
+        return _x_template('potm', giocatore=x_person(_who(data)), mesi=_potm_span(data))
+    if kind == 'table':
+        comp = str(data.get('competition') or '').upper()
+        if comp == 'CI' or (data.get('view') == 'bracket' and comp not in BRACKET_NAMES):
+            return '🆙🇮🇹 Tabellone #CoppaItalia aggiornato.'
+        icon, name = X_TABLES.get(comp, ('', ''))
+        if data.get('view') == 'bracket':
+            return f"🆙{icon} Tabellone {x_tag(BRACKET_NAMES[comp])} aggiornato."
+        results = data.get('view') == 'results'
+        text = f"{'⚽️' if results else '📊'}{icon} {name} | {'Risultati' if results else 'Classifica'}"
+        round_ = _giornata(comp, 'risultati' if results else 'classifica')
+        return text + (f"\n📆 {round_}ª Giornata" if round_ else '')
+    return None
+
+
+def x_text(data, telegram_text=None):
+    """Testo per X della grafica ('' se non ne ha). Senza una regola apposta: il testo Telegram
+    semplice, senza firma."""
+    if data.get('kind') in NO_CAPTION:
+        return ''
+    telegram_text = build(data) if telegram_text is None else telegram_text
+    if not telegram_text:
+        return ''
+    try:
+        text = _x_match(data) if data['kind'] in MATCH_KINDS else _x_other(data)
+    except Exception:  # noqa: BLE001 - una regola rotta: resta il testo Telegram
+        text = None
+    if text is None:
+        text = plain(telegram_text)
+        if text.endswith(SIGN_PLAIN):
+            text = text[:-len(SIGN_PLAIN)].rstrip()
+    return text.strip()
+
+
+def copy_texts(data, telegram_text):
+    """[(titolo, testo)] dei messaggi da copiare dopo la foto: X e Telegram/IG ([] se la foto non ha testo)."""
+    if not telegram_text:
+        return []
+    out = [('𝕏 Testo per X', x_text(data, telegram_text)), ('✈️ Testo per Telegram / IG', plain(telegram_text))]
+    return [(title, text) for title, text in out if text]

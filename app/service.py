@@ -1358,6 +1358,8 @@ class Service:
                         self.post_files.pop(next(iter(self.post_files)))
             self._remember_send(message_id, data, png, text)
             self._remember_ig_name(data)
+            if text:   # testi da copiare per X e Telegram/IG, in messaggi a parte dopo la foto
+                threading.Thread(target=self._send_copy_texts, args=(data, text), daemon=True).start()
             if data['kind'] == 'xi':
                 threading.Thread(target=self._remember_shirts, args=(data['lineup'],), daemon=True).start()
             if data['kind'] == 'conv':
@@ -1425,6 +1427,14 @@ class Service:
                 log.warn('INVIO', f'{name}: Telegram non ha confermato '
                                   f'({type(exc).__name__}, {time.time() - started:.1f} s, {log.kb(len(png))})')
                 raise
+
+    def _send_copy_texts(self, data, text):
+        """Dopo la foto: un messaggio col testo per X e uno per Telegram/IG, ognuno da copiare con un tocco."""
+        for title, body in caption.copy_texts(data, text):
+            try:
+                self.generated_message_ids.append(int(self.telegram.copy_text(title, body)))
+            except Exception as exc:  # noqa: BLE001 - la foto è già partita: il testo non è indispensabile
+                log.warn('INVIO', f'{log.graphic_name(data)}: {title} non inviato ({type(exc).__name__}: {exc})')
 
     def _remember_send(self, message_id, data, png, text=None):
         """Aggiunge l'invio a "Ultimi invii", con una miniatura per la Mini App, e lo salva nel
