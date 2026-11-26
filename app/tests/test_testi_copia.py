@@ -120,18 +120,18 @@ class XTextTest(unittest.TestCase):
 
 
 class CopyTextsTest(unittest.TestCase):
-    def test_one_message_two_copy_boxes(self):
+    def test_one_message_without_boxes(self):
         data = {'kind': 'squad', 'competition': 'ita.1', 'side': 'away', 'opponent': FIO}
         tg_text = '<tg-emoji emoji-id="5">☑️</tg-emoji>📝 I convocati di <b>Spalletti</b> &amp; co.'
         with mock.patch('caption.x_text', return_value='☑️📝 I convocati di #Spalletti & co.'):
             body = caption.copy_message(data, tg_text)
-        # nel riquadro Telegram: emoji normale al posto di quella personalizzata, niente grassetto
-        self.assertEqual(body, '<b>X</b>\n<pre>☑️📝 I convocati di #Spalletti &amp; co.</pre>\n\n'
-                               '<b>IG/Telegram</b>\n<pre>☑️📝 I convocati di Spalletti &amp; co.</pre>')
+        # niente riquadri: Telegram con le emoji personalizzate, come la didascalia
+        self.assertEqual(body, '<b>X</b>\n☑️📝 I convocati di #Spalletti &amp; co.\n\n'
+                               '<b>IG/Telegram</b>\n' + tg_text)
 
     def test_live_only_end_of_halves_go_to_x(self):
         goal = caption.copy_message({'kind': 'goal'}, '<b>GOAL · 10\' 🎙</b>')
-        self.assertEqual(goal, '<b>IG/Telegram</b>\n<pre>GOAL · 10\' 🎙</pre>')
+        self.assertEqual(goal, '<b>IG/Telegram</b>\n<b>GOAL · 10\' 🎙</b>')
         with mock.patch('caption.x_text', return_value='FINE PARTITA 🏁'):
             self.assertTrue(caption.copy_message({'kind': 'full'}, 'FT').startswith('<b>X</b>'))
 
