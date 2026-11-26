@@ -353,19 +353,43 @@ def _transparent(raw):
         return im.mode in ('RGBA', 'LA', 'PA') and im.getchannel('A').getextrema()[0] < 250
 
 
-def photo_layer(photo, frame, page=None, free=False):
+def photo_layer(photo, frame, page=None, free=False, story_top=None):
     """(<img> della foto, colore di fondo pagina). Senza foto: niente <img> e fondo
     trasparente, per la versione "fantasma" mostrata sopra la foto nell'editor.
-    free=True: se la foto è scontornata (PNG trasparente) si sposta libera (photo_box)."""
+    free=True: se la foto è scontornata (PNG trasparente) si sposta libera (photo_box).
+    story_top: storia 9:16 con il titolo del 3:4 spostato in giù di tanti pixel; la persona
+    scontornata scende con lui e resta dove la metti nel post (vedi _story_box)."""
     if photo is None:
         return '', 'transparent'
     from graphics.starting_xi import check_photo, photo_box, photo_rot
-    left, top, width, height = photo_box(check_photo(photo), frame, page, free and _transparent(photo))
+    size, cutout = check_photo(photo), free and _transparent(photo)
+    if cutout and story_top is not None:
+        left, top, width, height = _story_box(photo_box(size, frame, None, True), story_top)
+    else:
+        left, top, width, height = photo_box(size, frame, page, cutout)
     rot = photo_rot(frame)
     mime = 'image/png' if photo.startswith(b'\x89PNG') else 'image/jpeg'
     uri = f'data:{mime};base64,' + base64.b64encode(photo).decode('ascii')
     return (f'<img src="{uri}" style="position:absolute;left:{left}px;top:{top}px;'
             f'width:{width}px;height:{height}px' + (f';transform:rotate({rot}deg)' if rot else '') + '">'), '#fff'
+
+
+# Nel post la persona "arriva in fondo" se il bordo basso della foto supera l'85% della pagina.
+STORY_BOTTOM_REACH = .85
+
+
+def _story_box(box, shift):
+    """Riquadro della persona scontornata nella storia: la posizione del post 3:4 spostata in giù
+    di `shift` come il titolo; se nel post la foto arrivava in fondo (o quasi: il taglio finiva nella
+    sfumatura), si allarga dall'alto quanto basta per arrivare in fondo anche alla storia
+    (niente taglio netto sopra il logo JR)."""
+    left, top, width, height = box
+    reaches_bottom = top + height >= DESIGN_H * STORY_BOTTOM_REACH
+    top += shift
+    if reaches_bottom:
+        k = max(1, (STORY_H - top) / height)
+        left, width, height = left + width * (1 - k) / 2, width * k, height * k
+    return left, top, width, height
 
 
 # Maglie con le scritte sfumate: il logo prende la stessa texture delle scritte

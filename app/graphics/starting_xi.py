@@ -179,7 +179,8 @@ def build_html(*, kit, lineup, photo, frame, home_name, home_id, away_name, away
         raise ValueError('Maglia non valida.')
     meta = meta_for('starting_xi', kit, _meta())
     canva = asset_dir() / 'canva'
-    photo_html, page_bg = photo_layer(photo, frame, (DESIGN_W, STORY_H) if story else None, free=True)
+    photo_html, page_bg = photo_layer(photo, frame, (DESIGN_W, STORY_H) if story else None, free=True,
+                                       story_top=STORY_SHIFT if story else None)
 
     shift, step, big = (STORY_SHIFT, STORY_ROW_STEP, STORY_SCALE) if story else (0, ROW_STEP, 1)
     numbers = _text_rows(
