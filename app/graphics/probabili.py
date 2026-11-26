@@ -222,7 +222,7 @@ def story_y(y):
 
 
 @lru_cache(maxsize=6)
-def story_field_bg(bg_path, kit):
+def story_field_bg(bg_path, kit, logos=()):
     """Sfondo storia: sfondo 9:16 di Meta AI (canva/story/bg_<maglia>.jpg) con sopra titolo, JR
     e campo del 3:4 (maschera del campo), il campo allungato in verticale. Data uri JPEG."""
     import base64
@@ -232,7 +232,7 @@ def story_field_bg(bg_path, kit):
     from PIL import Image, ImageOps
     from graphics.uefa import _pitch_mask
 
-    ready = story_file(f'bg_{kit}')
+    ready = story_file(f'bg_{kit}', logos)
     if ready is None:
         return story_bg(bg_path)
     page = ImageOps.fit(Image.open(ready).convert('RGB'), (OUT_W, STORY_OUT_H), Image.LANCZOS)
@@ -315,14 +315,15 @@ def build_html(*, kit, module, players, shirt=None, home_name, home_id, away_nam
         else:
             names.append(t.replace('<text ', f'<text fill="{text["color"]}" ', 1))
 
+    boxes = [(x, STORY_SAFE_TOP + 5, size) for x, y, size in meta['logos']] if story else meta['logos']
     logos = ''.join(
         f'<div class="logo" style="left:{x}px;top:{y}px;width:{size}px;height:{size}px;background:{logo_fill(meta, kit, text.get('texture'))};'
         f'--m:url({data_uri(team_logo(name, team_id))})"></div>'
-        for (x, y, size), (name, team_id) in zip(
-            [(x, STORY_SAFE_TOP + 5, size) for x, y, size in meta['logos']] if story else meta['logos'], ((home_name, home_id), (away_name, away_id)))
+        for (x, y, size), (name, team_id) in zip(boxes, ((home_name, home_id), (away_name, away_id)))
     )
     poppins = data_uri(asset_dir() / 'fonts' / 'Poppins-Medium.ttf')
-    bg = story_field_bg(str(canva / meta['bg']), kit) if story else data_uri(canva / meta['bg'])
+    bg = (story_field_bg(str(canva / meta['bg']), kit, tuple((x, y, x + s, y + s) for x, y, s in boxes)) if story
+          else data_uri(canva / meta['bg']))
     bg = f'<img class="abs" src="{bg}" style="left:0;top:0;width:{DESIGN_W}px;height:{page_h}px">'
     body = (f'{bg}{"".join(cards)}{"".join(labels)}{logos}'
             f'<svg width="{DESIGN_W}" height="{page_h}" viewBox="0 0 {DESIGN_W} {page_h}">{"".join(names)}</svg>')

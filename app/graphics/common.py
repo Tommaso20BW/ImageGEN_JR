@@ -224,10 +224,74 @@ def page_background(kit, photo, graphic=None, story=False):
             f'width:{DESIGN_W}px;height:{STORY_H if story else DESIGN_H}px;object-fit:cover">')
 
 
-def story_file(name):
-    """Sfondo 9:16 pronto (canva/story/<nome>.jpg, fatto con Meta AI), se c'è."""
+# Sfondi 9:16 con righe nere su colore (Europa League, Conference): sotto il JR (e sotto gli stemmi
+# delle squadre, `zones`) le righe si tolgono, come nel 3:4.
+STORY_JR_CLEAR = ('bg_uel', 'bg_conference', 'cl_uel', 'cl_uecl')
+
+
+def story_file(name, zones=()):
+    """Sfondo 9:16 pronto (canva/story/<nome>.jpg, fatto con Meta AI), se c'è.
+    zones = altri riquadri (x0, y0, x1, y1, pixel della storia 1080x1920) da pulire oltre al JR."""
     path = asset_dir() / 'canva' / 'story' / f'{name}.jpg'
-    return path if path.is_file() else None
+    if not path.is_file():
+        return None
+    if name in STORY_JR_CLEAR:
+        stat = path.stat()
+        return _story_clear_jr(str(path), stat.st_size, stat.st_mtime_ns, tuple(map(tuple, zones)))
+    return path
+
+
+def _lineless(a):
+    """Lo sfondo senza le righe nere: il colore sotto le righe si ricostruisce (inpaint a bassa
+    risoluzione) e si toglie solo la riga, pixel per pixel, con sotto la grana del fondo."""
+    import cv2
+    import numpy as np
+    h, w = a.shape[:2]
+    small = cv2.resize(a, (w // 4, h // 4), interpolation=cv2.INTER_AREA)
+    lum = small.mean(-1)
+    ref = np.median(lum[lum > np.percentile(lum, 40)])          # luminosità del fondo pieno
+    lines = cv2.dilate((lum < ref * .93).astype(np.uint8), np.ones((7, 7), np.uint8))   # anche le righe chiare
+    filled = cv2.inpaint(np.clip(small, 0, 255).astype(np.uint8), lines * 255, 15, cv2.INPAINT_TELEA)
+    flat = cv2.GaussianBlur(cv2.resize(filled.astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC), (0, 0), 10)
+    alpha = np.clip((flat.mean(-1) - a.mean(-1)) / np.maximum(flat.mean(-1) * .25, 1), 0, 1)
+    alpha = cv2.GaussianBlur(cv2.dilate(alpha, np.ones((9, 9), np.uint8)), (0, 0), 2)
+    y0, x0, s = h * 2 // 5, w * 2 // 5, w // 5
+    patch = a[y0:y0 + s, x0:x0 + s] - cv2.GaussianBlur(a[y0:y0 + s, x0:x0 + s], (0, 0), 20)
+    grain = np.tile(patch, (h // s + 1, w // s + 1, 1))[:h, :w]
+    return a * (1 - alpha[..., None]) + (flat + grain) * alpha[..., None]
+
+
+@lru_cache(maxsize=8)
+def _story_clear_jr(path, size, mtime, zones=()):
+    """Copia dello sfondo 9:16 senza righe sotto il JR (come uefa.themed_background nel 3:4), in cache."""
+    import hashlib
+    import tempfile
+
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFilter
+    key = hashlib.sha1(f'{path}|{size}|{mtime}|{zones}|v3'.encode()).hexdigest()[:10]
+    out = Path(tempfile.gettempdir()) / 'imagegen_story' / f'{Path(path).stem}_{key}.jpg'
+    if out.is_file():
+        return out
+    a = np.asarray(Image.open(path).convert('RGB')).astype(np.float32)
+    h, w = a.shape[:2]
+    k = h / STORY_H
+    jr = story_jr_alpha()
+    jw = jr.width * STORY_JR_H / jr.height
+    x0, x1 = (DESIGN_W - jw) / 2 * k, (DESIGN_W + jw) / 2 * k
+    y0, y1 = STORY_JR_TOP * k, (STORY_JR_TOP + STORY_JR_H) * k
+    zone = Image.new('L', (w, h), 0)
+    draw = ImageDraw.Draw(zone)
+    draw.rounded_rectangle((x0 - 170 * k, y0 - 100 * k, x1 + 170 * k, y1 + 100 * k), radius=round(90 * k), fill=255)
+    for zx0, zy0, zx1, zy1 in zones:
+        draw.rounded_rectangle(((zx0 - 110) * k, (zy0 - 80) * k, (zx1 + 110) * k, (zy1 + 80) * k), radius=round(70 * k), fill=255)
+    m = np.clip(np.asarray(zone.filter(ImageFilter.GaussianBlur(40 * k))).astype(np.float32)[..., None] / 255 * 1.6, 0, 1)
+    a = a * (1 - m) + _lineless(a) * m
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_suffix('.tmp')
+    Image.fromarray(np.clip(a + .5, 0, 255).astype('uint8')).save(tmp, 'JPEG', quality=95, subsampling=0)
+    tmp.replace(out)
+    return out
 
 
 def story_background(name, fallback, smooth=0.0):
