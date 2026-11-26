@@ -8,16 +8,17 @@
        --hl:rgba(255,255,255,.14);--hl-ink:#fff;--hl-acc:#fff;--shadow:none;--radius:6px;}
   /* Serie A: stessi colori delle righe della classifica (a strisce #f7faff / #edf4ff), così le 2 foto dell'album si somigliano */
   body.comp-SA{--acc:#0757d7;--name:#08245e;--dim:#7d96ba;--tile:#edf4ff;--tile-line:#dce8f8;--stripe:#edf4ff;
-       --hl:linear-gradient(105deg,#052878 0%,#0757d7 60%,#168bd4 100%);--hl-acc:#fff;--shadow:none;--radius:10px;}
+       --hl:linear-gradient(90deg,#063d9e,#0c70dd);--hl-acc:#8cc4ff;--shadow:none;--radius:10px;}
   body.comp-SA .res-list .m:nth-child(odd),body.comp-SA .res-tiles .tile:nth-child(odd){background:#f7faff;}
+  body.comp-SA .res-list .m.hl,body.comp-SA .res-tiles .tile.hl{background:var(--hl);}   /* la Juve vince sulle strisce */
   body.comp-UCL{--acc:#45e9ff;--acc-ink:#04124f;--box:#45e9ff;--stripe:rgba(255,255,255,.035);
-       --hl:linear-gradient(90deg,#1d58c4 0%,#0b2a8f 85%);--hl-acc:#45e9ff;}
+       --hl-c:#17459b;--hl-acc:#45e9ff;}
   body.comp-UEL{--acc:#ff7a2a;--acc-ink:#140600;--box:#ff7a2a;--stripe:rgba(255,255,255,.035);
-       --hl:linear-gradient(90deg,#5a2209 0%,#1a0b05 85%);--hl-acc:#ff7a2a;}
+       --hl-c:#3a1708;--hl-acc:#ff7a2a;}
   body.comp-UECL{--acc:#21df72;--acc-ink:#021409;--box:#21df72;--stripe:rgba(255,255,255,.035);
-       --hl:linear-gradient(90deg,#0a4d28 0%,#06170e 85%);--hl-acc:#21df72;}
+       --hl-c:#07351d;--hl-acc:#21df72;}
   body.comp-CI{--acc:#ff4655;--acc-ink:#fff;--box:#ff4655;--tile:rgba(255,255,255,.07);--stripe:rgba(255,255,255,.04);
-       --dim:#e39aa1;--hl:rgba(255,255,255,.18);--hl-acc:#fff;--radius:4px;}
+       --dim:#e39aa1;--hl-c:#a8142a;--hl-acc:#ff4655;--radius:4px;}
 
   .table-area{display:flex;flex-direction:column;gap:0;padding:16px 22px 14px;}
   body.comp-SA .table-area{padding:16px 27px 14px;}
@@ -27,12 +28,17 @@
   .t-logo{display:flex;align-items:center;justify-content:center;}
   .t-logo img{object-fit:contain;}
   body.comp-SA .t-logo.white img{filter:brightness(0);}
+  body.comp-SA .hl .t-logo.white img{filter:none;}   /* sulla riga blu della Juve lo stemma resta bianco */
   .num{font-family:var(--f-num),sans-serif;font-weight:900;font-variant-numeric:tabular-nums;}
   .note,.live-tag{font:800 .62rem/1 var(--f-body),sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);white-space:nowrap;}
   .live-tag{color:#ff4d5e;}
   .hl .t-name,.hl .when b,.hl .when span{color:var(--hl-ink);}
   .hl .lose{color:var(--hl-ink) !important;opacity:.6;}
   .hl .note{color:var(--hl-ink);opacity:.75;}
+  .hl .t-name{font-weight:900;}
+  /* Coppe: come la riga della Juve in classifica, il colore parte dal lato della Juve e sfuma */
+  :is(body.comp-UCL,body.comp-UEL,body.comp-UECL,body.comp-CI) :is(.m,.tile,.card).hl{background:linear-gradient(90deg,var(--hl-c) 0%,var(--tile) 72%);}
+  :is(body.comp-UCL,body.comp-UEL,body.comp-UECL,body.comp-CI) :is(.m,.tile,.card).hl.hl-away{background:linear-gradient(270deg,var(--hl-c) 0%,var(--tile) 72%);}
 
   /* ── righe (wide, slim) ── */
   .res-list{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;}
@@ -75,7 +81,7 @@
   .lay-slim .score{background:none;color:var(--name);font-size:calc(2.5rem * var(--k));gap:calc(16px * var(--k));}
   .lay-slim.many .score{font-size:1.7rem;gap:10px;}
   .lay-slim .score i{color:var(--acc);opacity:1;}
-  .lay-slim .m.hl{background:var(--hl);border-color:transparent;}
+  .lay-slim .m.hl{background:var(--hl);}   /* contorno: lo stesso delle altre partite */
   .lay-slim .m.hl .score{color:var(--hl-ink);}
   .lay-slim .m.hl .score i{color:var(--hl-acc);opacity:.85;}
 
@@ -94,7 +100,7 @@
      font:800 .74rem/1.15 var(--f-body),sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);}
   .card .when-card span{display:block;font:900 1.1rem/1.1 var(--f-num),sans-serif;color:var(--name);}
   .card .note{position:absolute;right:72px;top:50%;transform:translateY(-50%);}
-  .card.hl{background:var(--hl);border-color:transparent;}
+  .card.hl{background:var(--hl);}
   .card.hl::before{background:#fff;}
   .card.hl .goal{color:var(--hl-acc);}
   .card.hl .side + .side{border-top-color:rgba(255,255,255,.2);}
@@ -112,7 +118,7 @@
   .tile .t-name{font-size:var(--tf,1.05rem);text-align:center;margin-top:8px;grid-row:2;}
   .tile .t-name.home{grid-column:1;} .tile .t-name.away{grid-column:3;}
   .tile .note,.tile .live-tag{position:absolute;left:50%;top:8px;transform:translateX(-50%);}
-  .tile.hl{background:var(--hl);border-color:transparent;}
+  .tile.hl{background:var(--hl);}
   .tile.hl .score{color:var(--hl-ink);} .tile.hl .score i{color:var(--hl-acc);}
   /* tessere grandi (poche partite): stemmi e risultato crescono con --k, i nomi sotto agli stemmi */
   .big .res-tiles{gap:calc(12px * var(--k));}
@@ -161,6 +167,8 @@ function nota(p){
 function esc(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const BIANCHI = new Set(['Juventus']);   // stemmi bianchi: su fondo chiaro diventano neri
 function logo(src, nome){ return `<div class="t-logo${BIANCHI.has(nome) ? ' white' : ''}"><img src="${esc(src)}" alt=""></div>`; }
+const EVIDENZA = new Set(['Juventus']);   // la partita della Juve risalta, come la sua riga in classifica
+function juve(p){ return EVIDENZA.has(p.home) || EVIDENZA.has(p.away); }
 function esito(p){ return ['', '']; }   // vincenti e perdenti scritte uguali
 function quando(p){
   const [g, o] = String(p.quando || '').split(' · ');
@@ -169,7 +177,7 @@ function quando(p){
 
 function riga(p){
   const [h, a] = esito(p);
-  const hl = '';
+  const hl = juve(p) ? (EVIDENZA.has(p.home) ? ' hl' : ' hl hl-away') : '';
   let mid;
   if (p.stato === 'finita' || p.stato === 'live') mid = `<div class="score num">${p.gol_casa}<i>–</i>${p.gol_trasferta}</div>`;
   else { const [g, o] = quando(p); mid = `<div class="when"><b>${esc(g)}</b>${o ? `<span>${esc(o)}</span>` : ''}</div>`; }
@@ -181,7 +189,7 @@ function riga(p){
 
 function tessera(p){
   const [h, a] = esito(p);
-  const hl = '';
+  const hl = juve(p) ? (EVIDENZA.has(p.home) ? ' hl' : ' hl hl-away') : '';
   let mid;
   if (p.stato === 'finita' || p.stato === 'live') mid = `<div class="score num">${p.gol_casa}<i>–</i>${p.gol_trasferta}</div>`;
   else { const [g, o] = quando(p); mid = `<div class="when"><b>${esc(g)}</b>${o ? `<span>${esc(o)}</span>` : ''}</div>`; }
@@ -192,7 +200,7 @@ function tessera(p){
 
 function scheda(p){
   const [h, a] = esito(p);
-  const hl = '';
+  const hl = juve(p) ? (EVIDENZA.has(p.home) ? ' hl' : ' hl hl-away') : '';
   const giocata = p.stato === 'finita' || p.stato === 'live';
   const side = (nome, src, gol, cls) => `<div class="side">${logo(src, nome)}<div class="t-name ${cls}">${esc(nome)}</div>
     <div class="goal num ${cls}">${giocata ? gol : ''}</div></div>`;
