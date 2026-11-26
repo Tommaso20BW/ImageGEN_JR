@@ -89,6 +89,49 @@ class SaveFileTests(unittest.TestCase):
             self.svc({'kind': 'bday'}).save_file({})
 
 
+class PostToGalleryTests(unittest.TestCase):
+    """Il post inviato (1 foto, o 2 per l'album classifica + risultati) va anche nella galleria."""
+    def svc(self, data):
+        import threading
+        svc = service.Service.__new__(service.Service)
+        svc.operation_lock, svc.preview_cache_lock = threading.Lock(), threading.Lock()
+        svc.preview_cache = svc.preview_cache_prev = svc.preview_cache_old = None
+        svc.saved_files, svc.recent_sends, svc.generated_message_ids = {}, {}, []
+        svc._parse_request = lambda env: {'data': dict(data), 'id': 1}
+        svc.renderer = type('R', (), {'render': lambda self, d: b'post'})()
+        svc._table_version = lambda d: 'v'
+        svc._results_png = lambda d: b'risultati'
+        svc._send_photo = lambda *a: 41
+        svc._send_album = lambda *a: [51, 52]
+        svc._remember_send = svc._remember_ig_name = lambda *a: None
+        return svc
+
+    def files(self, svc, message_id):
+        return [svc.saved_file(p.split('/')[-1][:-4]) for p in svc.post_files_for(message_id)]
+
+    def test_single_photo(self):
+        svc = self.svc({'kind': 'bday'})
+        self.assertEqual(svc.submit({'data': {}}), 41)
+        self.assertEqual(self.files(svc, 41), [b'post'])
+
+    def test_album_in_order(self):
+        svc = self.svc({'kind': 'table', 'competition': 'SA', 'with_results': True})
+        self.assertEqual(svc.submit({'data': {}}), 51)
+        self.assertEqual(self.files(svc, 51), [b'post', b'risultati'])     # prima la 1, poi la 2
+
+    def test_story_sent_not_kept(self):
+        svc = self.svc({'kind': 'bday', 'story': True})
+        self.assertEqual(svc.post_files_for(svc.submit({'data': {}})), [])
+
+    def test_unknown_message(self):
+        self.assertEqual(self.svc({'kind': 'bday'}).post_files_for(99), [])
+
+    def test_answer_has_files(self):
+        from pathlib import Path
+        src = Path(service.__file__).read_text(encoding='utf-8')
+        self.assertIn("'files': self.service.post_files_for(message_id)", src)
+
+
 class LaneTests(unittest.TestCase):
     """3:4 e storia si preparano insieme: la storia delle grafiche doppie ha una corsia sua."""
     def test_story_own_lock(self):

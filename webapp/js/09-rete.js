@@ -523,8 +523,8 @@ async function prepareStoryFile(body) {
   return directBase + answer.path;
 }
 // true = salvata, false = annullato da te
-async function downloadStory(url) {
-  const name = `storia-${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}.png`;
+async function downloadStory(url, prefix='storia') {
+  const name = `${prefix}-${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}.png`;
   if (tg && typeof tg.isVersionAtLeast === 'function' && tg.isVersionAtLeast('8.0')) {
     const saved = await telegramDownload(url, name);
     if (saved === null) throw new Error('Telegram non riesce a scaricare: aggiornalo e riprova.');
@@ -540,6 +540,21 @@ function closeMiniAppSoon() {
     try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}
     try { if (tg && typeof tg.close === 'function') tg.close(); } catch (_) {}
   }, 900);
+}
+/* Foto del post appena inviato (1, o 2 per l'album): anche nella galleria, una alla volta,
+   prima la 1 e poi la 2 (Telegram chiede conferma per ognuna). Il post è già partito:
+   se qualcosa va storto si dice, ma l'invio resta fatto. */
+async function savePostPhotos(files) {
+  const list = Array.isArray(files) ? files : [];
+  try {
+    for (let i = 0; i < list.length; i++) {
+      await downloadStory(directBase + list[i], list.length > 1 ? `post-${i + 1}` : 'post');
+    }
+    return true;
+  } catch (error) {
+    setPreviewError(`Post inviato, ma non salvato in galleria: ${(error && error.message) || 'riprova.'}`);
+    return false;
+  }
 }
 function storyError(error) {
   setPreviewError(sessionExpired() ? EXPIRED_MESSAGE
@@ -582,6 +597,7 @@ async function sendThenSave(raw, storyRaw) {
     if (typeof rememberSent === 'function') rememberSent(answer.message_id);
     previewPick.add('story');          // il post è partito: se rifai, si salva solo la storia
     previewPick.delete('34');
+    return answer.files;
   })();
   const file = prepareStoryFile(storyRaw);
   try {
@@ -591,8 +607,9 @@ async function sendThenSave(raw, storyRaw) {
       const e = sent.reason;
       throw new Error(e && e.name === 'AbortError' ? 'ImageGEN non risponde. Controlla la chat del bot: la foto potrebbe essere arrivata.' : (e && e.message) || 'Invio non riuscito.');
     }
-    if (url.status === 'rejected') throw url.reason;
     $('nextButton').textContent = 'Salvo…';
+    await savePostPhotos(sent.value);  // prima le foto del post, poi la storia
+    if (url.status === 'rejected') throw url.reason;
     if (!await downloadStory(url.value)) { $('nextButton').textContent = sendLabel(); return; }   // annullato: il post è già partito
     haptic('success');
     $('nextButton').textContent = 'Inviato e salvato ✓';
@@ -642,9 +659,19 @@ async function submitPreviewGraphic() {
 
     if (!LIVE && typeof rememberSent === 'function') rememberSent(answer.message_id);
     await finishBusy();
+    if (!LIVE && Array.isArray(answer.files) && answer.files.length) {
+      $('busySub').textContent = 'Salvo in galleria…';
+      if (!await savePostPhotos(answer.files)) {     // inviato, ma la galleria no: resta aperta per dirlo
+        hideBusy();
+        $('nextButton').textContent = 'Inviato ✓';
+        $('backButton').disabled = false;
+        haptic('success');
+        return;
+      }
+    }
     $('nextButton').textContent = LIVE ? 'Confermata ✓' : 'Inviato ✓';
     $('busyTitle').textContent = LIVE ? 'Confermata ✓' : 'Inviata ✓';
-    $('busySub').textContent = LIVE ? 'Il bot la userà per la grafica al fischio.' : 'Trovi la foto nella chat del bot.';
+    $('busySub').textContent = LIVE ? 'Il bot la userà per la grafica al fischio.' : 'Trovi la foto nella chat del bot e nella galleria.';
     haptic('success');
     setTimeout(() => {
       try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}

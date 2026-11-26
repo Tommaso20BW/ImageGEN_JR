@@ -37,7 +37,7 @@ MAX_PHOTOS = 24               # il collage ne usa fino a 9, più quelle dell'alt
 # Campi che spostano o cambiano solo le foto: non cambiano la sagoma dell'editor.
 PHOTO_FIELDS = ('frame', 'photo_id', 'person_id', 'person_frame', 'trail', 'photo')
 GHOST_CACHE_SIZE = 12
-SAVED_FILES = 6               # storie IG pronte da salvare nel telefono
+SAVED_FILES = 6               # grafiche pronte da salvare nel telefono (storie e foto dei post)
 SAVED_FILE_SECONDS = 15 * 60
 
 
@@ -497,7 +497,8 @@ class _DirectHandler(BaseHTTPRequestHandler):
                 return
 
             message_id = self.service.submit(envelope)
-            self._json(200, {'ok': True, 'message_id': message_id})
+            self._json(200, {'ok': True, 'message_id': message_id,
+                             'files': self.service.post_files_for(message_id)})
 
         except BusyError as exc:
             self._json(409, {'ok': False, 'error': str(exc)})
@@ -559,7 +560,8 @@ class Service:
         self.erase_jobs_lock = threading.Lock()
         self.preview_jpeg_cache = {}
         self.ghost_cache = {}
-        self.saved_files = {}             # codice -> (png, quando): storie IG da salvare nel telefono
+        self.saved_files = {}             # codice -> (png, quando): grafiche da salvare nel telefono
+        self.post_files = {}              # messaggio inviato -> indirizzi delle sue foto per la galleria
         self.recent_sends = {}
         self.renderer.photos = self.photos
         # Ultimi invii (dal più recente): rimandabili dalla Mini App senza rifare la grafica.
@@ -1013,6 +1015,11 @@ class Service:
         finally:
             self._set_stage('idle')
             lock.release()
+        log.info('GALLERIA', f"{log.graphic_name(request_state['data'])}: pronta da salvare nel telefono")
+        return {'path': self._keep_file(png)}
+
+    def _keep_file(self, png):
+        """Tiene la grafica sotto un codice a caso per pochi minuti: Telegram la scarica nella galleria."""
         token = secrets.token_urlsafe(16)
         now = time.time()
         with self.preview_cache_lock:
@@ -1020,8 +1027,13 @@ class Service:
             self.saved_files[token] = (png, now)
             while len(self.saved_files) > SAVED_FILES:
                 self.saved_files.pop(next(iter(self.saved_files)))
-        log.info('GALLERIA', f"{log.graphic_name(request_state['data'])}: pronta da salvare nel telefono")
-        return {'path': f'/storyfile/{token}.png'}
+        return f'/storyfile/{token}.png'
+
+    def post_files_for(self, message_id):
+        """Foto del post appena inviato (1, o 2 per l'album), da salvare anche nella galleria."""
+        with self.preview_cache_lock:
+            paths = getattr(self, 'post_files', {}).get(message_id, [])
+            return [p for p in paths if p.split('/')[-1][:-4] in self.saved_files]
 
     def saved_file(self, token):
         with self.preview_cache_lock:
@@ -1336,6 +1348,14 @@ class Service:
                                               log.graphic_name(data), text)
             self.generated_message_ids.append(int(message_id))
             self.recent_sends[fingerprint] = (int(message_id), time.time())
+            if not data.get('story'):       # le foto del post finiscono anche nella galleria del telefono
+                paths = [self._keep_file(one) for one in ([png, extra] if extra else [png])]
+                with self.preview_cache_lock:
+                    if not hasattr(self, 'post_files'):
+                        self.post_files = {}
+                    self.post_files[int(message_id)] = paths
+                    while len(self.post_files) > SAVED_FILES:
+                        self.post_files.pop(next(iter(self.post_files)))
             self._remember_send(message_id, data, png, text)
             self._remember_ig_name(data)
             if data['kind'] == 'xi':
