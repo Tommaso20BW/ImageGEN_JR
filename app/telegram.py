@@ -172,11 +172,14 @@ class Telegram:
 
         return self.call('sendMessage', data)['message_id']
 
-    def copy_text(self, body):
-        """Messaggio coi testi da copiare (HTML già pronto, vedi caption.copy_message), senza suono."""
-        return self.call('sendMessage', {'chat_id': self.chat_id, 'text': body, 'parse_mode': 'HTML',
-                                         'disable_web_page_preview': 'true',
-                                         'disable_notification': 'true'})['message_id']
+    def copy_text(self, body, reply_to=None):
+        """Messaggio con un testo da copiare (HTML già pronto, vedi caption.copy_messages), senza suono;
+        reply_to = in risposta a quel messaggio."""
+        data = {'chat_id': self.chat_id, 'text': body, 'parse_mode': 'HTML',
+                'disable_web_page_preview': 'true', 'disable_notification': 'true'}
+        if reply_to:
+            data['reply_parameters'] = json.dumps({'message_id': int(reply_to), 'allow_sending_without_reply': True})
+        return self.call('sendMessage', data)['message_id']
 
     def reset_menu_button(self):
         return self.call(

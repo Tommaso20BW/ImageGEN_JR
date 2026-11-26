@@ -706,16 +706,13 @@ def x_text(data, telegram_text=None):
     return text.strip()
 
 
-def copy_message(data, telegram_text):
-    """Un solo messaggio dopo la foto (HTML di Telegram, '' se la foto non ha testo): "X" col testo per X
-    e "IG/Telegram" col testo della didascalia così com'è, emoji personalizzate comprese. Niente
-    riquadri: dentro Telegram non mostra le emoji personalizzate."""
+def copy_messages(data, telegram_text):
+    """Messaggi da copiare dopo la foto (HTML di Telegram), senza scritte sopra:
+    (testo IG/Telegram così com'è, emoji personalizzate comprese;
+     testo per X in un riquadro che si copia con un tocco, da mandare in risposta, '' se non serve).
+    ('', '') se la foto non ha testo."""
     if not telegram_text:
-        return ''
-    parts = []
+        return '', ''
     # Della partita su X vanno solo le fine dei tempi: gol, parate, inizi e statistiche no.
     x = '' if data.get('kind') in LIVE_KINDS - X_LIVE_KINDS else x_text(data, telegram_text)
-    if x:
-        parts.append(f'<b>X</b>\n{html.escape(x, quote=False)}')
-    parts.append(f'<b>IG/Telegram</b>\n{telegram_text.strip()}')
-    return '\n\n'.join(parts)
+    return telegram_text.strip(), (f'<pre>{html.escape(x, quote=False)}</pre>' if x else '')

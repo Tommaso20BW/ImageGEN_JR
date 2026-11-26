@@ -120,32 +120,43 @@ class XTextTest(unittest.TestCase):
 
 
 class CopyTextsTest(unittest.TestCase):
-    def test_one_message_without_boxes(self):
+    def test_telegram_as_caption_then_x_box(self):
         data = {'kind': 'squad', 'competition': 'ita.1', 'side': 'away', 'opponent': FIO}
         tg_text = '<tg-emoji emoji-id="5">☑️</tg-emoji>📝 I convocati di <b>Spalletti</b> &amp; co.'
         with mock.patch('caption.x_text', return_value='☑️📝 I convocati di #Spalletti & co.'):
-            body = caption.copy_message(data, tg_text)
-        # niente riquadri: Telegram con le emoji personalizzate, come la didascalia
-        self.assertEqual(body, '<b>X</b>\n☑️📝 I convocati di #Spalletti &amp; co.\n\n'
-                               '<b>IG/Telegram</b>\n' + tg_text)
+            tg, xb = caption.copy_messages(data, tg_text)
+        self.assertEqual(tg, tg_text)                      # come la didascalia, senza scritte sopra
+        self.assertEqual(xb, '<pre>☑️📝 I convocati di #Spalletti &amp; co.</pre>')
 
     def test_live_only_end_of_halves_go_to_x(self):
-        goal = caption.copy_message({'kind': 'goal'}, '<b>GOAL · 10\' 🎙</b>')
-        self.assertEqual(goal, '<b>IG/Telegram</b>\n<b>GOAL · 10\' 🎙</b>')
+        self.assertEqual(caption.copy_messages({'kind': 'goal'}, '<b>GOAL</b>'), ('<b>GOAL</b>', ''))
         with mock.patch('caption.x_text', return_value='FINE PARTITA 🏁'):
-            self.assertTrue(caption.copy_message({'kind': 'full'}, 'FT').startswith('<b>X</b>'))
+            self.assertEqual(caption.copy_messages({'kind': 'full'}, 'FT')[1], '<pre>FINE PARTITA 🏁</pre>')
 
     def test_no_caption_no_message(self):
-        self.assertEqual(caption.copy_message({'kind': 'jr'}, ''), '')
+        self.assertEqual(caption.copy_messages({'kind': 'jr'}, ''), ('', ''))
 
-    def test_telegram_sends_html_silently(self):
+    def test_x_box_is_a_reply(self):
+        import threading
+        import service
+        sent = []
+        fake = mock.Mock(generated_message_ids=[])
+        fake.telegram.copy_text.side_effect = lambda body, reply_to=None: sent.append((body, reply_to)) or 10 + len(sent)
+        with mock.patch('caption.x_text', return_value='FINE PARTITA 🏁'):
+            service.Service._send_copy_texts(fake, {'kind': 'full'}, '<b>FINE PARTITA</b>')
+        self.assertEqual(sent, [('<b>FINE PARTITA</b>', None), ('<pre>FINE PARTITA 🏁</pre>', 11)])
+        self.assertEqual(fake.generated_message_ids, [11, 12])
+
+    def test_telegram_sends_html_silently_and_replies(self):
+        import json
         import telegram
         tg = telegram.Telegram('t', '1')
         with mock.patch.object(tg, 'call', return_value={'message_id': 7}) as call:
-            self.assertEqual(tg.copy_text('<b>X</b>\n<pre>a</pre>'), 7)
+            self.assertEqual(tg.copy_text('<pre>a</pre>', reply_to=5), 7)
         sent = call.call_args.args[1]
-        self.assertEqual(sent['text'], '<b>X</b>\n<pre>a</pre>')
+        self.assertEqual(sent['text'], '<pre>a</pre>')
         self.assertEqual((sent['parse_mode'], sent['disable_notification']), ('HTML', 'true'))
+        self.assertEqual(json.loads(sent['reply_parameters'])['message_id'], 5)
 
 
 if __name__ == '__main__':

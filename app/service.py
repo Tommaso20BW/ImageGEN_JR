@@ -1429,12 +1429,15 @@ class Service:
                 raise
 
     def _send_copy_texts(self, data, text):
-        """Dopo la foto: un solo messaggio coi testi da copiare, per X e per IG/Telegram."""
-        body = caption.copy_message(data, text)
-        if not body:
+        """Dopo la foto: il testo IG/Telegram com'è e, in risposta, quello per X nel riquadro."""
+        tg_body, x_body = caption.copy_messages(data, text)
+        if not tg_body:
             return
         try:
-            self.generated_message_ids.append(int(self.telegram.copy_text(body)))
+            tg_id = int(self.telegram.copy_text(tg_body))
+            self.generated_message_ids.append(tg_id)
+            if x_body:
+                self.generated_message_ids.append(int(self.telegram.copy_text(x_body, reply_to=tg_id)))
         except Exception as exc:  # noqa: BLE001 - la foto è già partita: il testo non è indispensabile
             log.warn('INVIO', f'{log.graphic_name(data)}: testi da copiare non inviati ({type(exc).__name__}: {exc})')
 
