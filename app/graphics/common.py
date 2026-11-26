@@ -224,9 +224,13 @@ def page_background(kit, photo, graphic=None, story=False):
             f'width:{DESIGN_W}px;height:{STORY_H if story else DESIGN_H}px;object-fit:cover">')
 
 
-# Sfondi 9:16 con righe nere su colore (Europa League, Conference): sotto il JR (e sotto gli stemmi
-# delle squadre, `zones`) le righe si tolgono, come nel 3:4.
+# Sfondi 9:16 con righe nere su colore (Europa League, Conference): in basso, sotto il JR, le righe
+# sfumano nel colore della competizione; con gli stemmi delle squadre in alto (`zones`) anche in cima.
 STORY_JR_CLEAR = ('bg_uel', 'bg_conference', 'cl_uel', 'cl_uecl')
+STORY_FADE_BOTTOM = (1360, 1720)        # da qui inizia a sfumare, da qui è tutto colore (pixel storia)
+# Con gli stemmi in cima (Probabili): la V di righe dietro gli stemmi si toglie, tagliata agli angolini dove
+# incontra le righe di lato (pixel storia). La Conference in cima non si tocca.
+STORY_TOP_CUT = {'bg_uel': ((128, 0), (884, 0), (884, 95), (545, 410), (128, 40))}
 
 
 def story_file(name, zones=()):
@@ -241,52 +245,54 @@ def story_file(name, zones=()):
     return path
 
 
-def _lineless(a):
-    """Lo sfondo senza le righe nere: il colore sotto le righe si ricostruisce (inpaint a bassa
-    risoluzione) e si toglie solo la riga, pixel per pixel, con sotto la grana del fondo."""
-    import cv2
+def _smooth(t):
     import numpy as np
-    h, w = a.shape[:2]
-    small = cv2.resize(a, (w // 4, h // 4), interpolation=cv2.INTER_AREA)
-    lum = small.mean(-1)
-    ref = np.median(lum[lum > np.percentile(lum, 40)])          # luminosità del fondo pieno
-    lines = cv2.dilate((lum < ref * .93).astype(np.uint8), np.ones((7, 7), np.uint8))   # anche le righe chiare
-    filled = cv2.inpaint(np.clip(small, 0, 255).astype(np.uint8), lines * 255, 15, cv2.INPAINT_TELEA)
-    flat = cv2.GaussianBlur(cv2.resize(filled.astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC), (0, 0), 10)
-    alpha = np.clip((flat.mean(-1) - a.mean(-1)) / np.maximum(flat.mean(-1) * .25, 1), 0, 1)
-    alpha = cv2.GaussianBlur(cv2.dilate(alpha, np.ones((9, 9), np.uint8)), (0, 0), 2)
-    y0, x0, s = h * 2 // 5, w * 2 // 5, w // 5
-    patch = a[y0:y0 + s, x0:x0 + s] - cv2.GaussianBlur(a[y0:y0 + s, x0:x0 + s], (0, 0), 20)
-    grain = np.tile(patch, (h // s + 1, w // s + 1, 1))[:h, :w]
-    return a * (1 - alpha[..., None]) + (flat + grain) * alpha[..., None]
+    t = np.clip(t, 0, 1)
+    return t * t * (3 - 2 * t)
 
 
 @lru_cache(maxsize=8)
 def _story_clear_jr(path, size, mtime, zones=()):
-    """Copia dello sfondo 9:16 senza righe sotto il JR (come uefa.themed_background nel 3:4), in cache."""
+    """Copia dello sfondo 9:16 con le righe sfumate nel colore pieno in basso (e in cima se ci sono
+    gli stemmi, `zones`), con la grana del fondo; in cache."""
     import hashlib
     import tempfile
 
+    import cv2
     import numpy as np
-    from PIL import Image, ImageDraw, ImageFilter
-    key = hashlib.sha1(f'{path}|{size}|{mtime}|{zones}|v3'.encode()).hexdigest()[:10]
+    from PIL import Image, ImageDraw
+    key = hashlib.sha1(f'{path}|{size}|{mtime}|{bool(zones)}|{STORY_FADE_BOTTOM}|{STORY_TOP_CUT}|v7'.encode()).hexdigest()[:10]
     out = Path(tempfile.gettempdir()) / 'imagegen_story' / f'{Path(path).stem}_{key}.jpg'
     if out.is_file():
         return out
     a = np.asarray(Image.open(path).convert('RGB')).astype(np.float32)
     h, w = a.shape[:2]
     k = h / STORY_H
-    jr = story_jr_alpha()
-    jw = jr.width * STORY_JR_H / jr.height
-    x0, x1 = (DESIGN_W - jw) / 2 * k, (DESIGN_W + jw) / 2 * k
-    y0, y1 = STORY_JR_TOP * k, (STORY_JR_TOP + STORY_JR_H) * k
-    zone = Image.new('L', (w, h), 0)
-    draw = ImageDraw.Draw(zone)
-    draw.rounded_rectangle((x0 - 170 * k, y0 - 100 * k, x1 + 170 * k, y1 + 100 * k), radius=round(90 * k), fill=255)
-    for zx0, zy0, zx1, zy1 in zones:
-        draw.rounded_rectangle(((zx0 - 110) * k, (zy0 - 80) * k, (zx1 + 110) * k, (zy1 + 80) * k), radius=round(70 * k), fill=255)
-    m = np.clip(np.asarray(zone.filter(ImageFilter.GaussianBlur(40 * k))).astype(np.float32)[..., None] / 255 * 1.6, 0, 1)
-    a = a * (1 - m) + _lineless(a) * m
+    y = np.arange(h, dtype=np.float32) / k
+    start, full = STORY_FADE_BOTTOM
+    m = _smooth((y - start) / (full - start))
+    m = np.repeat(m[:, None], w, 1)
+    cut = STORY_TOP_CUT.get(Path(path).stem) if zones else None
+    if cut:
+        zone = Image.new('L', (w, h), 0)
+        ImageDraw.Draw(zone).polygon([(x * k, yy * k) for x, yy in cut], fill=255)
+        cut_m = cv2.GaussianBlur(np.asarray(zone).astype(np.float32) / 255, (0, 0), 6 * k)
+        m = np.maximum(m, cut_m)
+    lum = a.mean(-1)
+    color = np.median(a[lum > np.percentile(lum, 55)], 0)            # colore pieno della competizione
+    if cut:   # in cima il colore che c'è intorno alla V (ricostruito, morbido), così il taglio non si vede
+        q = 8
+        small = cv2.resize(a, (w // q, h // q), interpolation=cv2.INTER_AREA)
+        hole = cv2.dilate((cv2.resize(cut_m, (w // q, h // q)) > .02).astype(np.uint8), np.ones((5, 5), np.uint8))
+        dark = (small.mean(-1) < np.median(small.mean(-1)) * .9).astype(np.uint8)
+        filled = cv2.inpaint(np.clip(small, 0, 255).astype(np.uint8), np.maximum(hole, dark) * 255, 20, cv2.INPAINT_TELEA)
+        local = cv2.GaussianBlur(cv2.resize(filled.astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC), (0, 0), 30 * k)
+        color = color * (1 - cut_m[..., None]) + local * cut_m[..., None]
+    y0, x0, s = h * 2 // 5, w * 2 // 5, w // 5
+    patch = a[y0:y0 + s, x0:x0 + s] - cv2.GaussianBlur(a[y0:y0 + s, x0:x0 + s], (0, 0), 20)
+    grain = np.tile(patch, (h // s + 1, w // s + 1, 1))[:h, :w]
+    m = m[..., None]
+    a = a * (1 - m) + (color + grain) * m
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix('.tmp')
     Image.fromarray(np.clip(a + .5, 0, 255).astype('uint8')).save(tmp, 'JPEG', quality=95, subsampling=0)
