@@ -724,3 +724,48 @@ def matchday_pose(player, kit, pose):
     if not path.is_file():
         raise ValueError(f'Manca la posa di {player.name} con questa maglia.')
     return path
+
+
+@lru_cache(maxsize=4)
+def _story_paper_light(w, h, seed):
+    """Luce di carta stropicciata + vignettatura delle storie IG normali (ig_story), già pronta da moltiplicare.
+    Dietro il JR in basso la carta è liscia (stessa luce, senza pieghe), così il timbro si legge pulito."""
+    import cv2
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFilter
+    from graphics import compleanno as cp
+    light = cp._crumple((w, h), seed, 0.7, folds=3)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    r = np.sqrt(((xx - w / 2) / (w / 2)) ** 2 + ((yy - h / 2) / (h / 2)) ** 2) / np.sqrt(2)
+    light = light * (1 - .18 * r ** 2)
+    k = h / STORY_H
+    jr = story_jr_alpha()
+    jw = jr.width * STORY_JR_H / jr.height * k
+    x0, x1 = (w - jw) / 2, (w + jw) / 2
+    y0, y1 = STORY_JR_TOP * k, (STORY_JR_TOP + STORY_JR_H) * k
+    zone = Image.new('L', (w, h), 0)
+    ImageDraw.Draw(zone).rounded_rectangle((x0 - 170 * k, y0 - 100 * k, x1 + 170 * k, y1 + 100 * k), radius=round(90 * k), fill=255)
+    m = np.clip(np.asarray(zone.filter(ImageFilter.GaussianBlur(40 * k))).astype(np.float32) / 255 * 1.6, 0, 1)
+    light = light * (1 - m) + cv2.GaussianBlur(light, (0, 0), 60 * k) * m
+    return light.astype(np.float32)
+
+
+def story_paper(data, seed=7):
+    """Effetto carta delle storie IG normali sopra una storia 9:16 già pronta (bytes PNG/JPEG -> stessi bytes)."""
+    import io
+    import numpy as np
+    from PIL import Image
+    with Image.open(io.BytesIO(data)) as im:
+        fmt = (im.format or 'PNG').upper()
+        rgb = im.convert('RGB')
+    w, h = rgb.size
+    a = np.asarray(rgb, np.float32) / 255
+    a = a + np.random.default_rng(seed).normal(0, .035, (h, w, 1)).astype(np.float32)
+    a = np.clip(a * _story_paper_light(w, h, seed)[..., None], 0, 1)
+    out = io.BytesIO()
+    img = Image.fromarray(np.uint8(a * 255 + .5))
+    if fmt == 'JPEG':
+        img.save(out, 'JPEG', quality=95, subsampling=0)
+    else:
+        img.save(out, 'PNG')
+    return out.getvalue()

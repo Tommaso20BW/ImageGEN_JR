@@ -262,7 +262,13 @@ class Renderer:
         return photo
 
     def render(self, data, progress=None, ghost=False):
-        return self._render(data, progress, ghost)
+        out = self._render(data, progress, ghost)
+        if isinstance(data, dict) and data.get('story') is True and isinstance(out, (bytes, bytearray)):
+            from graphics.common import story_paper
+            from webapp_payload import STORY_KINDS
+            if data.get('kind') in STORY_KINDS and data.get('kind') != 'igc':     # il commento resta pulito
+                return story_paper(bytes(out))
+        return out
 
     def _render(self, data, progress=None, ghost=False):
         """ghost=True (grafiche con foto): versione leggera senza foto per l'editor."""
