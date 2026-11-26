@@ -1429,12 +1429,14 @@ class Service:
                 raise
 
     def _send_copy_texts(self, data, text):
-        """Dopo la foto: un messaggio col testo per X e uno per Telegram/IG, ognuno da copiare con un tocco."""
-        for title, body in caption.copy_texts(data, text):
-            try:
-                self.generated_message_ids.append(int(self.telegram.copy_text(title, body)))
-            except Exception as exc:  # noqa: BLE001 - la foto è già partita: il testo non è indispensabile
-                log.warn('INVIO', f'{log.graphic_name(data)}: {title} non inviato ({type(exc).__name__}: {exc})')
+        """Dopo la foto: un solo messaggio coi testi da copiare, per X e per IG/Telegram."""
+        body = caption.copy_message(data, text)
+        if not body:
+            return
+        try:
+            self.generated_message_ids.append(int(self.telegram.copy_text(body)))
+        except Exception as exc:  # noqa: BLE001 - la foto è già partita: il testo non è indispensabile
+            log.warn('INVIO', f'{log.graphic_name(data)}: testi da copiare non inviati ({type(exc).__name__}: {exc})')
 
     def _remember_send(self, message_id, data, png, text=None):
         """Aggiunge l'invio a "Ultimi invii", con una miniatura per la Mini App, e lo salva nel

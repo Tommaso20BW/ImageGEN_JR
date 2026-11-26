@@ -120,24 +120,25 @@ class XTextTest(unittest.TestCase):
 
 
 class CopyTextsTest(unittest.TestCase):
-    def test_two_messages_x_then_telegram(self):
+    def test_one_message_x_then_telegram_with_custom_emoji(self):
         data = {'kind': 'squad', 'competition': 'ita.1', 'side': 'away', 'opponent': FIO}
-        pieces = caption.copy_texts(data, caption.build(data))
-        self.assertEqual([t for t, _ in pieces], ['𝕏 Testo per X', '✈️ Testo per Telegram / IG'])
-        self.assertEqual(pieces[1][1], '☑️📝 I convocati di Spalletti per #FiorentinaJuve.\n\n👉 @Juventus_Reborn')
-        self.assertNotIn('<', pieces[1][1])
+        tg_text = '<tg-emoji emoji-id="5">☑️</tg-emoji>📝 I convocati di <b>Spalletti</b> & co.'
+        with mock.patch('caption.x_text', return_value='☑️📝 I convocati di #Spalletti & co.'):
+            body = caption.copy_message(data, tg_text)
+        self.assertEqual(body, '<b>X</b>\n<pre>☑️📝 I convocati di #Spalletti &amp; co.</pre>\n\n'
+                               '<b>IG/Telegram</b>\n' + tg_text)
 
-    def test_no_caption_no_messages(self):
-        self.assertEqual(caption.copy_texts({'kind': 'jr'}, ''), [])
+    def test_no_caption_no_message(self):
+        self.assertEqual(caption.copy_message({'kind': 'jr'}, ''), '')
 
-    def test_telegram_message_is_copy_block(self):
+    def test_telegram_sends_html_silently(self):
         import telegram
         tg = telegram.Telegram('t', '1')
         with mock.patch.object(tg, 'call', return_value={'message_id': 7}) as call:
-            self.assertEqual(tg.copy_text('𝕏 Testo per X', 'A & B <3'), 7)
+            self.assertEqual(tg.copy_text('<b>X</b>\n<pre>a</pre>'), 7)
         sent = call.call_args.args[1]
-        self.assertEqual(sent['text'], '<b>𝕏 Testo per X</b>\n<pre>A &amp; B &lt;3</pre>')
-        self.assertEqual(sent['parse_mode'], 'HTML')
+        self.assertEqual(sent['text'], '<b>X</b>\n<pre>a</pre>')
+        self.assertEqual((sent['parse_mode'], sent['disable_notification']), ('HTML', 'true'))
 
 
 if __name__ == '__main__':

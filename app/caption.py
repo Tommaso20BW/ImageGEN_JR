@@ -705,9 +705,15 @@ def x_text(data, telegram_text=None):
     return text.strip()
 
 
-def copy_texts(data, telegram_text):
-    """[(titolo, testo)] dei messaggi da copiare dopo la foto: X e Telegram/IG ([] se la foto non ha testo)."""
+def copy_message(data, telegram_text):
+    """Un solo messaggio dopo la foto (HTML di Telegram, '' se la foto non ha testo): "X" col testo per X
+    in un blocco (un tocco = copiato) e "IG/Telegram" col testo della didascalia così com'è, emoji
+    personalizzate comprese (dentro il blocco Telegram non le mostra)."""
     if not telegram_text:
-        return []
-    out = [('𝕏 Testo per X', x_text(data, telegram_text)), ('✈️ Testo per Telegram / IG', plain(telegram_text))]
-    return [(title, text) for title, text in out if text]
+        return ''
+    parts = []
+    x = x_text(data, telegram_text)
+    if x:
+        parts.append(f'<b>X</b>\n<pre>{html.escape(x)}</pre>')
+    parts.append(f'<b>IG/Telegram</b>\n{telegram_text.strip()}')
+    return '\n\n'.join(parts)
