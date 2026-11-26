@@ -532,6 +532,7 @@ MATCH_KINDS = {'goal', 'saved', 'kick', 'half', 'second', 'end_of_90', 'full', '
 
 # Post della diretta (come quelli di LiveScore): sul canale non hanno la firma.
 LIVE_KINDS = {'goal', 'saved', 'kick', 'half', 'second', 'end_of_90', 'full', 'stats'}
+X_LIVE_KINDS = {'half', 'end_of_90', 'full'}      # su X solo le fine dei tempi
 
 
 # Post (testo scritto ogni volta a mano), Storie e Citazioni (per Instagram, X, Threads): niente testo.
@@ -712,8 +713,9 @@ def copy_message(data, telegram_text):
     if not telegram_text:
         return ''
     parts = []
-    x = x_text(data, telegram_text)
+    # Della partita su X vanno solo le fine dei tempi: gol, parate, inizi e statistiche no.
+    x = '' if data.get('kind') in LIVE_KINDS - X_LIVE_KINDS else x_text(data, telegram_text)
     if x:
-        parts.append(f'<b>X</b>\n<pre>{html.escape(x)}</pre>')
+        parts.append(f'<b>X</b>\n<pre>{html.escape(x, quote=False)}</pre>')
     parts.append(f'<b>IG/Telegram</b>\n{telegram_text.strip()}')
     return '\n\n'.join(parts)

@@ -128,6 +128,12 @@ class CopyTextsTest(unittest.TestCase):
         self.assertEqual(body, '<b>X</b>\n<pre>☑️📝 I convocati di #Spalletti &amp; co.</pre>\n\n'
                                '<b>IG/Telegram</b>\n' + tg_text)
 
+    def test_live_only_end_of_halves_go_to_x(self):
+        goal = caption.copy_message({'kind': 'goal'}, '<b>GOAL · 10\' 🎙</b>')
+        self.assertEqual(goal, '<b>IG/Telegram</b>\n<b>GOAL · 10\' 🎙</b>')
+        with mock.patch('caption.x_text', return_value='FINE PARTITA 🏁'):
+            self.assertTrue(caption.copy_message({'kind': 'full'}, 'FT').startswith('<b>X</b>'))
+
     def test_no_caption_no_message(self):
         self.assertEqual(caption.copy_message({'kind': 'jr'}, ''), '')
 
