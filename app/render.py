@@ -263,10 +263,11 @@ class Renderer:
 
     def render(self, data, progress=None, ghost=False):
         out = self._render(data, progress, ghost)
-        if isinstance(data, dict) and data.get('story') is True and isinstance(out, (bytes, bytearray)):
+        # Tutte le storie IG 9:16 hanno l'effetto carta (anche citazioni e commento).
+        if isinstance(data, dict) and isinstance(out, (bytes, bytearray)):
             from graphics.common import story_paper
-            from webapp_payload import STORY_KINDS
-            if data.get('kind') in STORY_KINDS and data.get('kind') != 'igc':     # il commento resta pulito
+            from webapp_payload import is_story_version
+            if is_story_version(data):
                 return story_paper(bytes(out))
         return out
 
