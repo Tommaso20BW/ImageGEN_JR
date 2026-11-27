@@ -1,13 +1,14 @@
 /* Mini App ImageGen JR. File caricati in ordine da index.html: l'ordine conta. */
 /* ---------- DICHIARAZIONI (solo testo) ----------
-   Testo già scritto (conferenza, intervista), anche diviso in blocchi COMPLETO / 240 -> il servizio
-   (app/dichiarazioni.py) fa per ogni blocco la versione Telegram (emoji del canale, nomi e temi in
-   grassetto, firma) e quella per X (hashtag, @SkySport). Si toccano i blocchi da mandare (nessuno è
-   già scelto) e vanno nel bot: prima Telegram, poi X in risposta. Stato in `dich`. */
-const dich = {posts:[], sel:[], busy:false, key:''};
+   Testo già scritto (conferenza, intervista), anche in due blocchi COMPLETO / 240 -> il servizio
+   (app/dichiarazioni.py) fa la versione Telegram dal completo (emoji del canale, nomi e temi in
+   grassetto, parlato in corsivo, firma) e quella per X dal 240 (hashtag, @SkySport); con un blocco
+   solo, lo stesso testo per tutti e due. Si vedono le due versioni e "Invia al bot" le manda:
+   prima Telegram, poi X in risposta. Stato in `dich`. */
+const dich = {post:null, busy:false, key:''};
 
 function dichReset() {
-  Object.assign(dich, {posts:[], sel:[], busy:false, key:''});
+  Object.assign(dich, {post:null, busy:false, key:''});
   if ($('dichText')) { $('dichText').value = ''; $('dichHint').textContent = ''; }
 }
 
@@ -26,15 +27,15 @@ function dichPost(payload, timeout) {
 async function dichConvert() {
   const text = $('dichText').value.trim();
   if (text.length < 5) { showError('Incolla il testo da sistemare.'); return false; }
-  if (dich.key === text && dich.posts.length) return true;
+  if (dich.key === text && dich.post) return true;
   if (dich.busy) return false;
   if (!directBase || !session) { showError('Sessione vecchia. Riavvia ImageGen dal workflow.'); return false; }
   dich.busy = true;
   $('nextButton').disabled = true;
   try {
     const body = await dichPost({text}, 20000);
-    Object.assign(dich, {posts:body.posts || [], sel:[], key:text});
-    if (!dich.posts.length) throw new Error('Nessun testo trovato.');
+    if (!body.post) throw new Error('Nessun testo trovato.');
+    Object.assign(dich, {post:body.post, key:text});
     haptic('success');
     return true;
   } catch (error) {
@@ -46,39 +47,31 @@ async function dichConvert() {
   }
 }
 
-// Una scheda per blocco: Telegram e X uno sotto l'altro, con i caratteri contati come X.
+// Telegram e X uno sotto l'altro, con il blocco da cui vengono e i caratteri contati come X.
 function dichRender() {
   const box = $('dichList');
   box.innerHTML = '';
-  dich.posts.forEach((p, i) => {
-    const card = document.createElement('div');
-    card.className = 'dich-card' + (dich.sel.includes(i) ? ' sel' : '');
-    card.setAttribute('role', 'button');
-    card.tabIndex = 0;
-    const count = n => `<span class="dich-n${p.limit && n > p.limit ? ' over' : ''}">${p.limit ? `${n}/${p.limit}` : n}</span>`;
-    card.innerHTML = `<div class="dich-top"><span class="dich-tema"></span><span class="dich-ck"></span></div>` +
-      `<div class="dich-lab">Telegram ${count(p.tg_len)}</div><div class="dich-txt dich-tg"></div>` +
-      `<div class="dich-lab">X ${count(p.x_len)}</div><div class="dich-txt dich-x"></div>`;
-    card.querySelector('.dich-tema').textContent = p.tema || `Testo ${i + 1}`;
-    card.querySelector('.dich-tg').innerHTML = p.tg;          // HTML di Telegram fatto dal servizio (testo già con l'escape)
-    card.querySelector('.dich-x').textContent = p.x;
-    card.addEventListener('click', () => {
-      haptic('select');
-      dich.sel = dich.sel.includes(i) ? dich.sel.filter(n => n !== i) : [...dich.sel, i].sort((a, b) => a - b);
-      dichRender();
-    });
-    box.appendChild(card);
-  });
+  const p = dich.post;
+  if (!p) return;
+  const card = document.createElement('div');
+  card.className = 'dich-card';
+  // il limite (240) vale solo per X
+  const count = (n, limit) => `<span class="dich-n${limit && n > limit ? ' over' : ''}">${limit ? `${n}/${limit}` : n}</span>`;
+  const from = label => label ? ` · ${label}` : '';
+  card.innerHTML = `<div class="dich-lab">Telegram${from(p.tg_label)} ${count(p.tg_len, 0)}</div><div class="dich-txt dich-tg"></div>` +
+    `<div class="dich-lab">X${from(p.x_label)} ${count(p.x_len, p.limit)}</div><div class="dich-txt dich-x"></div>`;
+  card.querySelector('.dich-tg').innerHTML = p.tg;            // HTML di Telegram fatto dal servizio (testo già con l'escape)
+  card.querySelector('.dich-x').textContent = p.x;
+  box.appendChild(card);
 }
 
-// "Invia al bot": i blocchi scelti arrivano in chat, per ognuno Telegram e poi X in risposta.
+// "Invia al bot": Telegram e poi X in risposta.
 async function dichSend() {
-  if (!dich.sel.length) { showError(dich.posts.length > 1 ? 'Tocca i testi da mandare.' : 'Tocca il testo da mandare.'); return; }
-  if (dich.busy) return;
+  if (!dich.post || dich.busy) return;
   dich.busy = true;
   $('nextButton').disabled = true;
   try {
-    for (const i of dich.sel) await dichPost({post:{raw:dich.posts[i].raw}}, 30000);
+    await dichPost({post:{raw:dich.post.raw}}, 30000);
     haptic('success');
     showToastSafe('Nel bot: Telegram e, in risposta, X.');
   } catch (error) {

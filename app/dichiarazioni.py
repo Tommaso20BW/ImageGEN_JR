@@ -1,7 +1,7 @@
 """Dichiarazioni: testo già scritto (conferenza, intervista) -> versione Telegram e versione X.
 
 Si incolla il testo così come va pubblicato, anche diviso in blocchi con un'etichetta da sola sulla
-riga (COMPLETO, 240...). Ogni blocco diventa una proposta:
+riga (COMPLETO, 240...): il completo va su Telegram, il 240 su X; con un blocco solo, va su tutti e due.
   Telegram: emoji del canale, chi parla in grassetto, temi in grassetto, parlato e testata in corsivo
             (<b>PARTITA</b> – <i>“…”.</i>),
             firma 👉 @Juventus_Reborn in fondo, come i post del canale;
@@ -260,32 +260,48 @@ def x_version(block):
     return '\n'.join(lines)
 
 
-def render(label, block):
+def pick(parts):
+    """(blocco per Telegram, blocco per X): con COMPLETO e 240 il completo va su Telegram e il 240 su X;
+    con un blocco solo, quello va su tutti e due."""
+    if not parts:
+        return None, None
+    tg = next((p for p in parts if not p[0].isdigit()), parts[0])
+    x = next((p for p in parts if p[0].isdigit()), tg)
+    return tg, x
+
+
+def render(parts):
+    """Un risultato solo: versione Telegram e versione X pronte, con i caratteri contati come X."""
     import caption
-    tg = telegram_version(block)
-    x = x_version(block)
-    limit = int(label) if label.isdigit() else None
+    (tg_label, tg_block), (x_label, x_block) = pick(parts)
+    tg, x = telegram_version(tg_block), x_version(x_block)
+    limit = int(x_label) if x_label.isdigit() else None
     x_len = x_length(x)
-    return {'tema': label or 'Testo', 'raw': block, 'tg': tg, 'x': x,
-            'tg_len': x_length(caption.plain(telegram_version(block, sign=False))), 'x_len': x_len,
+    return {'tg_label': tg_label, 'x_label': x_label, 'raw': {'tg': tg_block, 'x': x_block}, 'tg': tg, 'x': x,
+            'tg_len': x_length(caption.plain(telegram_version(tg_block, sign=False))), 'x_len': x_len,
             'limit': limit, 'over': bool(limit and x_len > limit)}
 
 
 def convert(text):
-    """{'posts': [...]}: una proposta per blocco, con le due versioni pronte."""
+    """{'post': {...}}: Telegram dal blocco completo, X dal blocco con il limite (o dallo stesso)."""
     text = str(text or '')
     if len(text.strip()) < 5:
         raise ValueError('Incolla il testo da sistemare.')
     if len(text) > MAX_TEXT:
         raise ValueError(f'Testo troppo lungo (massimo {MAX_TEXT} caratteri).')
-    return {'posts': [render(label, block) for label, block in blocks(text)]}
+    parts = blocks(text)
+    if not parts:
+        raise ValueError('Incolla il testo da sistemare.')
+    return {'post': render(parts)}
 
 
 def send(telegram, post):
     """Bot JR: versione Telegram (pronta per il canale) e, in risposta, la versione per X. -> id."""
-    raw = _clean((post or {}).get('raw'))
-    if not raw:
-        raise ValueError('Nessun testo scelto.')
-    first = int(telegram.copy_text(telegram_version(raw)))
-    second = int(telegram.copy_text(html.escape(x_version(raw), quote=False), reply_to=first))
+    raw = (post or {}).get('raw')
+    tg_block, x_block = (raw.get('tg'), raw.get('x')) if isinstance(raw, dict) else (raw, raw)
+    tg_block, x_block = _clean(tg_block), _clean(x_block or tg_block)
+    if not tg_block:
+        raise ValueError('Nessun testo da mandare.')
+    first = int(telegram.copy_text(telegram_version(tg_block)))
+    second = int(telegram.copy_text(html.escape(x_version(x_block), quote=False), reply_to=first))
     return [first, second]

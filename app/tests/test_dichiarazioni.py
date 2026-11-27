@@ -26,33 +26,36 @@ class BlocchiTest(unittest.TestCase):
         self.assertTrue(parts[0][1].startswith('🗣️ Luciano Spalletti'))
         self.assertEqual(d.blocks('🗣️ Gatti: “Bene”.'), [('', '🗣️ Gatti: “Bene”.')])
 
-    def test_long_block_like_channel(self):
-        p = d.convert(TEXT)['posts'][0]
-        self.assertEqual(p['tema'], 'COMPLETO')
-        self.assertIsNone(p['limit'])
+    def test_complete_on_telegram_240_on_x(self):
+        p = d.convert(TEXT)['post']
+        self.assertEqual((p['tg_label'], p['x_label'], p['limit']), ('COMPLETO', '240', 240))
         tg = p['tg']
         self.assertIn('5370765563226236970', tg)                       # 🗣 del canale
         self.assertIn('</tg-emoji> <b>Luciano Spalletti</b> a <i>Sky Sport</i> post #JuveOmonia:\n', tg)   # ":" aggiunti
         # parlato in corsivo col punto, nomi nelle virgolette normali
         self.assertIn('<b>PARTITA</b> – <i>“Cambiaso ha rimesso a posto le cose con un grande gol”.</i>\n', tg)
+        self.assertNotIn('Ekhator merita', tg)                          # il 240 non va su Telegram
         self.assertTrue(tg.endswith('@Juventus_Reborn'))
-        self.assertTrue(p['x'].startswith('🗣️ Luciano #Spalletti a @SkySport post #JuveOmonia:\n\nPARTITA – “Cambiaso'))
-
-    def test_short_block_like_profile(self):
-        p = d.convert(TEXT)['posts'][1]
         self.assertEqual(p['x'], '🇮🇹🗣️ Luciano #Spalletti a @SkySport post #JuveOmonia: '
                                  '“Cambiaso ha rimesso a posto le cose. Ekhator merita i complimenti”.')
+        self.assertEqual((p['x_len'], p['over']), (d.x_length(p['x']), False))
+
+    def test_single_block_on_both(self):
+        p = d.convert(TEXT.split('240\n\n')[1])['post']
         self.assertIn('<b>Luciano Spalletti</b> a <i>Sky Sport</i> post #JuveOmonia: <i>“Cambiaso', p['tg'])
         self.assertIn('complimenti”.</i>\n\n', p['tg'])
-        self.assertEqual((p['limit'], p['x_len'], p['over']), (240, d.x_length(p['x']), False))
+        self.assertTrue(p['x'].startswith('🇮🇹🗣️ Luciano #Spalletti a @SkySport'))
+        self.assertIsNone(p['limit'])
+        only_full = d.convert(TEXT.split('\n\n240')[0])['post']        # solo COMPLETO: anche X dal completo
+        self.assertTrue(only_full['x'].startswith('🗣️ Luciano #Spalletti a @SkySport post #JuveOmonia:\n\nPARTITA'))
 
     def test_over_limit_and_outlets_only_outside_quotes(self):
-        p = d.convert('240\n\n⚪🗣️ Kenan Yildiz a DAZN: “Guardo Sky Sport. ' + 'parola ' * 40 + '”.')['posts'][0]
+        p = d.convert('240\n\n⚪🗣️ Kenan Yildiz a DAZN: “Guardo Sky Sport. ' + 'parola ' * 40 + '”.')['post']
         self.assertTrue(p['over'])
         self.assertTrue(p['x'].startswith('⚪🗣️ Kenan #Yildiz a @DAZN_IT: “Guardo Sky Sport.'))
 
     def test_full_name_and_pre_post(self):
-        x = lambda t: d.convert(t)['posts'][0]['x']     # noqa: E731
+        x = lambda t: d.convert(t)['post']['x']     # noqa: E731
         self.assertEqual(x('🗣 Kolo Muani prima di #ComoJuve: “Dopo #ComoJuve vediamo”.'),
                          '🗣 Randal #KoloMuani pre #ComoJuve: “Dopo #ComoJuve vediamo”.')   # dentro le virgolette nulla
         self.assertEqual(x('🗣 Carnevali dopo la partita #JuveOmonia: “Ok”.'), '🗣 Giovanni #Carnevali post #JuveOmonia: “Ok”.')
@@ -74,11 +77,12 @@ class SendTest(unittest.TestCase):
     def test_telegram_then_x_as_reply(self):
         tg = mock.Mock()
         tg.copy_text.side_effect = [11, 12]
-        raw = d.convert(TEXT)['posts'][1]['raw']
+        raw = d.convert(TEXT)['post']['raw']
         self.assertEqual(d.send(tg, {'raw': raw}), [11, 12])
         first, second = tg.copy_text.call_args_list
-        self.assertIn('<b>Luciano Spalletti</b>', first.args[0])
+        self.assertIn('<b>PARTITA</b>', first.args[0])                 # Telegram: il completo
         self.assertIn('Luciano #Spalletti a @SkySport post', second.args[0])
+        self.assertIn('Ekhator merita', second.args[0])                 # X: il 240
         self.assertEqual(second.kwargs['reply_to'], 11)
 
 

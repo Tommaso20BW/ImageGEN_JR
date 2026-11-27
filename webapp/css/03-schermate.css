@@ -158,9 +158,9 @@ button.parsed-row{width:100%;text-align:left;color:inherit;font:inherit;font-wei
 .col-cell.snap-x .guides i.v.mid,.col-cell.snap-y .guides i.h.mid{opacity:1}
 .col-th .col-cell .guides{display:none}
 
-/* Dichiarazioni: una scheda per proposta, Telegram sopra e X sotto. Nessuna è già scelta. */
+/* Dichiarazioni: una scheda, Telegram sopra e X sotto. */
 .dich-list{display:flex;flex-direction:column;gap:12px;margin:14px 0}
-.dich-card{background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:12px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.dich-card{background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:4px 14px 12px}
 .dich-card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .dich-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
 .dich-tema{font-weight:700;font-size:15px;color:var(--text)}
