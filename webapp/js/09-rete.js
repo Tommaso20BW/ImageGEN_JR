@@ -506,10 +506,12 @@ async function previewGraphic(keepBusy=false) {   // keepBusy: continua il caric
 
 /* Storia IG: invece del canale, nella galleria del telefono. Il servizio prepara il file e
    Telegram lo scarica (chiede lui conferma: senza quel tocco non si può salvare). */
+// Se Telegram non risponde entro 60 s si va avanti lo stesso (la Mini App deve chiudersi).
 function telegramDownload(url, name) {
   return new Promise(resolve => {
-    try { tg.downloadFile({url, file_name:name}, ok => resolve(!!ok)); }
-    catch (_) { resolve(null); }
+    const timer = setTimeout(() => resolve(false), 60000);
+    try { tg.downloadFile({url, file_name:name}, ok => { clearTimeout(timer); resolve(!!ok); }); }
+    catch (_) { clearTimeout(timer); resolve(null); }
   });
 }
 // Il servizio prepara la storia e risponde con l'indirizzo del file da scaricare.
@@ -619,12 +621,18 @@ async function sendThenSave(raw, storyRaw) {
       throw new Error(e && e.name === 'AbortError' ? 'ImageGEN non risponde. Controlla la chat del bot: la foto potrebbe essere arrivata.' : (e && e.message) || 'Invio non riuscito.');
     }
     $('nextButton').textContent = 'Salvo…';
-    await savePostPhotos(sent.value);  // prima le foto del post, poi la storia
-    if (url.status === 'rejected') throw url.reason;
-    if (!await downloadStory(url.value)) { $('nextButton').textContent = sendLabel(); return; }   // annullato: il post è già partito
     haptic('success');
-    $('nextButton').textContent = 'Inviato e salvato ✓';
-    closeMiniAppSoon();
+    try {
+      await savePostPhotos(sent.value);  // prima le foto del post, poi la storia
+      if (url.status === 'rejected') throw url.reason;
+      const saved = await downloadStory(url.value);
+      $('nextButton').textContent = saved ? 'Inviato e salvato ✓' : 'Inviato ✓';
+      closeMiniAppSoon();
+    } catch (error) {                    // il post è partito: lo si dice e la Mini App si chiude lo stesso
+      $('nextButton').textContent = 'Inviato ✓';
+      setPreviewError(`Post inviato, ma storia non salvata: ${(error && error.message) || 'riprova.'}`);
+      closeMiniAppSoon(2500);
+    }
   } catch (error) {
     $('nextButton').textContent = sendLabel();
     storyError(error);
@@ -672,11 +680,11 @@ async function submitPreviewGraphic() {
     await finishBusy();
     if (!LIVE && Array.isArray(answer.files) && answer.files.length) {
       $('busySub').textContent = 'Salvo in galleria…';
-      if (!await savePostPhotos(answer.files)) {     // inviato, ma la galleria no: resta aperta per dirlo
+      if (!await savePostPhotos(answer.files)) {     // inviato, ma la galleria no: lo dice e si chiude lo stesso
         hideBusy();
         $('nextButton').textContent = 'Inviato ✓';
-        $('backButton').disabled = false;
         haptic('success');
+        closeMiniAppSoon(2500);
         return;
       }
     }

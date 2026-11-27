@@ -151,14 +151,7 @@ async function resendRecent() {
     if (!response.ok || !body.ok) throw new Error(body.error || `Invio non riuscito (${response.status}).`);
     haptic('success');
     next.textContent = 'Inviata ✓';
-    setTimeout(() => {
-      if (kind !== 'sent') return;
-      next.disabled = false;
-      navDir = -1;
-      flowIndex = 0;
-      renderFlow();
-      loadRecent();
-    }, 900);
+    closeMiniAppSoon(700);
   } catch (error) {
     next.disabled = false;
     next.textContent = 'Rimanda';
