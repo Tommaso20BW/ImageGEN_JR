@@ -1563,17 +1563,14 @@ class Service:
         return translate.to_italian((envelope or {}).get('text'))
 
     def dichiarazioni(self, envelope):
-        """Conferenze e interviste -> notizia in due versioni scritta da Claude (dichiarazioni.py), in
-        sottofondo: 'text' la fa partire, 'job' chiede se è pronta; 'post' manda la proposta scelta nel bot."""
+        """Testo già scritto (conferenze, interviste) -> versioni Telegram e X (dichiarazioni.py): 'text' le prepara, 'post' manda nel bot quella scelta."""
         import dichiarazioni
         envelope = envelope or {}
         if envelope.get('post'):
             ids = dichiarazioni.send(self.telegram, envelope['post'])
             self.generated_message_ids.extend(ids)     # via a fine sessione, come gli altri testi da copiare
             return {'sent': len(ids)}
-        if envelope.get('job'):                        # la Mini App chiede se Claude ha finito
-            return dichiarazioni.status(envelope['job'])
-        return dichiarazioni.start(envelope.get('text'), envelope.get('note'), fixtures=self.fixtures)
+        return dichiarazioni.convert(envelope.get('text'))
 
     def _remember_ig_name(self, data):
         """Citazione IG inviata con un nome diverso dall'username: la prossima volta arriva già."""

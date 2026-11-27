@@ -586,24 +586,16 @@
           <section class="screen" data-screen="dichtext">
             <div class="eyebrow">Dichiarazioni</div>
             <h1>Incolla il testo</h1>
-            <p class="lead">Conferenza o intervista, anche lunga: Claude scrive la notizia per Telegram e per X.</p>
-            <textarea id="dichText" class="field-input" style="min-height:220px" spellcheck="true" placeholder="Testo della conferenza o dell’intervista"></textarea>
-            <div class="field-label gap">Chi parla e dove (facoltativo)</div>
-            <div class="ios-list">
-              <label class="ios-row"><input id="dichNote" class="ios-in" maxlength="120" autocomplete="off" placeholder="es. Spalletti a Sky Sport dopo la partita"></label>
-            </div>
+            <p class="lead">Testo già scritto, anche in blocchi (COMPLETO, 240): diventa il post per Telegram e quello per X.</p>
+            <textarea id="dichText" class="field-input" style="min-height:260px" spellcheck="true" placeholder="🗣️ Luciano Spalletti a Sky Sport dopo #JuveOmonia: “…”."></textarea>
             <p id="dichHint" class="note"></p>
           </section>
 
           <section class="screen" data-screen="dichout">
             <div class="eyebrow">Dichiarazioni</div>
-            <h1>Scegli la notizia</h1>
-            <p class="lead">Tocca la proposta da usare: arriva nel bot, prima Telegram e poi X in risposta.</p>
-            <p id="dichEmpty" class="note">Nessuna proposta. Torna indietro e riprova.</p>
+            <h1>Scegli i testi</h1>
+            <p class="lead">Tocca quelli da mandare: arrivano nel bot, prima Telegram e poi X in risposta.</p>
             <div id="dichList" class="dich-list"></div>
-            <div class="ios-list">
-              <button id="dichRetry" class="ios-row ios-act" type="button">Rifai le proposte</button>
-            </div>
           </section>
 
           <section class="screen" data-screen="iqcshot">

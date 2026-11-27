@@ -205,8 +205,6 @@ jobs:
         env:
           MANUAL_GRAPHICS_TELEGRAM_TOKEN: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_TOKEN }}
           MANUAL_GRAPHICS_TELEGRAM_CHAT_ID: ${{ secrets.MANUAL_GRAPHICS_TELEGRAM_CHAT_ID }}
-          # Dichiarazioni (conferenze e interviste -> notizia): la scrive Claude. Senza secret la pagina lo dice.
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MANUAL_GRAPHICS_WEBAPP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/?v=${{ github.sha }}
           # Token del workflow (contents: write): il secret IMAGEGEN_GH_PAT poteva solo leggere
           # (403 in scrittura), quindi posizioni e numeri di maglia non venivano mai salvati.

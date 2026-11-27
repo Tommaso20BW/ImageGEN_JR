@@ -1,43 +1,36 @@
-"""Dichiarazioni: conferenze e interviste (o notizie) -> post pronto in due versioni, solo testo.
+"""Dichiarazioni: testo già scritto (conferenza, intervista) -> versione Telegram e versione X.
 
-Il testo incollato va a Claude con le regole delle news (data/regole_news.md) e con il modo in cui
-il canale scrive il parlato: «🇨🇮🗣 <b>Jeremie Boga</b> a Sky Sport dopo #JuveOmonia: “…”.»
-Claude scrive UNA volta il testo con i segni {Nome|Hashtag} e {@Testata}; le due versioni le fa
-questo file, così sono per forza identiche:
-  Telegram: nomi in grassetto, emoji del canale, firma in fondo;
-  X:        Jeremie #Boga a @SkySport dopo #JuveOmonia: “…”. (come sul profilo, senza firma)
-Il limite di 240 caratteri si conta come X (emoji = 2): se una proposta sfora si chiede di accorciarla.
+Si incolla il testo così come va pubblicato, anche diviso in blocchi con un'etichetta da sola sulla
+riga (COMPLETO, 240...). Ogni blocco diventa una proposta:
+  Telegram: emoji del canale, chi parla in grassetto, temi in grassetto, parlato e testata in corsivo
+            (<b>PARTITA</b> – <i>“…”.</i>),
+            firma 👉 @Juventus_Reborn in fondo, come i post del canale;
+  X:        chi parla con l'hashtag sul cognome e la testata con la sua pagina, come il profilo:
+            🇮🇹🗣️ Luciano #Spalletti a @SkySport dopo #JuveOmonia: “…”.
+Dentro le virgolette non si tocca niente. Un'etichetta numerica (240) è il limite di caratteri,
+contato come X (emoji = 2).
 """
 from __future__ import annotations
 
 import html
-import json
-import os
 import re
-import secrets
-import threading
-import time
-from datetime import datetime, timedelta
-from pathlib import Path
 
-MODEL = 'claude-opus-5-5'
-LIMIT = 240
-MAX_TEXT = 40000                 # caratteri incollati (una conferenza lunga sta ben sotto)
-MAX_POSTS = 3
-RULES_FILE = Path(__file__).resolve().parent / 'data' / 'regole_news.md'
+MAX_TEXT = 40000
 
 # Testate con la loro pagina su X (come le scrive il profilo); le altre restano scritte.
 OUTLETS = {
-    'sky sport': '@SkySport', 'sky': '@SkySport', 'skysport': '@SkySport',
-    'dazn': '@DAZN_IT',
-    'la gazzetta dello sport': '@Gazzetta_it', 'gazzetta dello sport': '@Gazzetta_it', 'gazzetta': '@Gazzetta_it',
-    'tuttosport': '@tuttosport', 'la stampa': '@LaStampa', 'corriere dello sport': '@CorSport',
-    'sportmediaset': '@SportMediaset', 'sport mediaset': '@SportMediaset', 'rai sport': '@RaiSport',
+    'Sky Sport': '@SkySport', 'SkySport': '@SkySport', 'DAZN': '@DAZN_IT',
+    'La Gazzetta dello Sport': '@Gazzetta_it', 'Gazzetta dello Sport': '@Gazzetta_it', 'Gazzetta': '@Gazzetta_it',
+    'Tuttosport': '@tuttosport', 'La Stampa': '@LaStampa', 'Corriere dello Sport': '@CorSport',
+    'Sportmediaset': '@SportMediaset', 'Sport Mediaset': '@SportMediaset', 'Rai Sport': '@RaiSport',
+    'Prime Video': '@PrimeVideoIT', 'Juventus TV': '@juventusfc', 'JTV': '@juventusfc',
 }
+_OUTLET_RE = re.compile(r'(?<![\w@#])(' + '|'.join(re.escape(k) for k in sorted(OUTLETS, key=len, reverse=True))
+                        + r')(?!\w)', re.I)
 
 # Emoji personalizzate usate dal canale nelle dichiarazioni (le bandiere arrivano da caption.flag).
 CUSTOM_EMOJI = {
-    '🗣': '5370765563226236970', '👨‍🦲': '5785405760431207322', '🤵‍♂️': '5940305400933917185',
+    '🗣': '5370765563226236970', '👨‍🦲': '5785405760431207322', '🤵‍♂': '5940305400933917185',
     '👀': '5424885441100782420',
 }
 # Bandiere animate prese dai post del canale, per le nazioni che caption.FLAGS non ha ancora.
@@ -47,60 +40,11 @@ CHANNEL_FLAGS = {
     'SN': '5816763346724069174', 'CL': '5222427035023977899', 'GB-ENG': '5789901070771691820',
 }
 
-CHANNEL_STYLE = """COME IL CANALE SCRIVE LE DICHIARAZIONI (seguilo come le regole)
-- Forma: [emoji]🗣 {Nome Cognome|Cognome} a {@Testata} [pre|dopo] #HashtagPartita: “Citazione”.
-  Esempi veri del canale (già con i segni del formato):
-  🇨🇮🗣 {Jeremie Boga|Boga} a {@Sky Sport} dopo #JuveOmonia: “Abbiamo fatto molto bene, è bello vedere tutti gli attaccanti in gol. Lavoro spesso sul tiro a giro. Le vittorie ci danno fiducia, ora dobbiamo trovare continuità e iniziare meglio le partite”.
-  👨‍🦲🗣 {Luciano Spalletti|Spalletti} a {@DAZN} pre #FiorentinaJuve: “A Firenze il clima sarà molto caldo, con il pubblico e la città che faranno sentire la loro presenza”.
-  🤵‍♂️🗣 {Giovanni Carnevali|Carnevali} ai soci {Juventus|Juventus}: “Spalletti è l’allenatore della Juventus e noi lo sosteniamo”.
-  🇺🇸🗣 {Weston McKennie|McKennie}: “Voglio chiarire che non ho intenzione di lasciare la Juventus. Sono felice qui. Per questo ho firmato un nuovo contratto”.
-  🧐🗣 {Mateu Alemany|Alemany}, ds {Atletico Madrid|AtleticoMadrid}: “Non abbiamo novità sul riscatto di Jonathan David”.
-  🇨🇱🗣 {Arturo Vidal|Vidal} alla {@Gazzetta dello Sport}: “Tornerò alla Juventus da allenatore. Il sesto posto è un fallimento: la Juve deve lottare per vincere”.
-- Emoji iniziale: la bandiera della nazionalità di chi parla (giocatori, ex giocatori, allenatori); 👨‍🦲 per Luciano Spalletti; 🤵‍♂️ per i dirigenti della Juventus; 👀 per chi non ha una bandiera sicura. Subito dopo sempre 🗣.
-- Citazione tra virgolette tipografiche “ ”, il punto finale DOPO la virgoletta di chiusura: “…”.
-- Dentro le virgolette ci sono solo parole dette davvero: puoi scegliere i passaggi, tagliare e unire frasi vicine, ma non cambiare il senso, non aggiungere parole e non rendere più forte quello che ha detto. Una domanda del giornalista si rende come “Tema? Risposta”, ad esempio “Conceição? Ha fatto una grande partita”.
-- Se la fonte non è in italiano, traduci la citazione in un italiano naturale e fedele.
-- Dentro le virgolette i nomi restano scritti normali (niente segni { }).
-- Hashtag della partita (es. #JuveOmonia) solo se la dichiarazione è legata a quella partita: "pre" se detta prima, "dopo" se detta dopo. Se non è chiaro, non metterlo.
-- Nelle dichiarazioni la testata si scrive (a Sky Sport, a DAZN, alla Gazzetta dello Sport, in conferenza stampa) quando è nota: è la "necessità" del punto 9.
-- Se il testo non è una dichiarazione ma una notizia, scrivila secondo le regole (emoji ⚪ ecc.), senza virgolette inventate.
-"""
-
-FORMAT = f"""COME RESTITUIRE IL TESTO
-Il punto 13 (le due versioni) lo fa il programma: tu scrivi il testo UNA volta, con questi segni.
-- {{Nome visibile|Hashtag}} per ogni nome di persona o club FUORI dalle virgolette. L'hashtag è senza # e senza spazi e corrisponde alla parte finale del nome visibile:
-  {{Luciano Spalletti|Spalletti}} diventa "<b>Luciano Spalletti</b>" su Telegram e "Luciano #Spalletti" su X;
-  {{Randal Kolo Muani|KoloMuani}} -> "Randal #KoloMuani"; {{Juventus|Juventus}} -> "#Juventus"; {{Aston Villa|AstonVilla}} -> "#AstonVilla".
-- {{@Testata}} per giornale, TV o sito: {{@Sky Sport}} diventa "Sky Sport" su Telegram e "@SkySport" su X.
-- Nient'altro: niente **, niente <b>, niente # davanti ai nomi, niente firma, niente fonte in fondo, niente titolo. L'hashtag della partita scrivilo così com'è (#JuveOmonia).
-LIMITE: ogni proposta al massimo {LIMIT} caratteri contati come X (ogni emoji vale 2; contano anche # e @ della versione X). Stai fra 200 e 235.
-PROPOSTE: da 1 a {MAX_POSTS}. Un'intervista breve: 1. Una conferenza o un'intervista lunga: i passaggi più forti, uno diverso per proposta, prima quelli più importanti per la Juventus.
-"tema": 1-3 parole che dicono di cosa parla la proposta (es. "Ekhator", "Mercato", "Infortuni")."""
-
-SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'proposte': {
-            'type': 'array',
-            'items': {
-                'type': 'object',
-                'properties': {'tema': {'type': 'string'}, 'testo': {'type': 'string'}},
-                'required': ['tema', 'testo'],
-                'additionalProperties': False,
-            },
-        },
-    },
-    'required': ['proposte'],
-    'additionalProperties': False,
-}
-
-_NAME = re.compile(r'\{([^{}|@][^{}|]*)\|([^{}|]*)\}')
-_OUTLET = re.compile(r'\{@([^{}]+)\}')
-
-
-def system_prompt():
-    rules = RULES_FILE.read_text(encoding='utf-8').strip()
-    return f"Sei la redazione di Juventus Reborn (canale Telegram e profilo X).\n\n{rules}\n\n{CHANNEL_STYLE}\n{FORMAT}"
+_UP = 'A-ZÀ-ÖØ-Þ'
+_LABEL = re.compile(rf'^[{_UP}0-9][{_UP}0-9 ]{{0,24}}$')                     # COMPLETO, 240 (da sola sulla riga)
+_THEME = re.compile(rf'^([{_UP}0-9][{_UP}0-9’\'.,&/ ]{{0,60}}?)\s+[–—-]\s+(.*)$')  # PARTITA – “…”
+_NAME_WORD = rf"[{_UP}][\w’'.\-]*"
+_SPEAKER = re.compile(rf"{_NAME_WORD}(?:\s+(?:(?:de|da|di|del|dos|van|der|von)\s+)*{_NAME_WORD})*")
 
 
 # --- conteggio come X ----------------------------------------------------------------------------
@@ -126,7 +70,7 @@ def graphemes(text):
 
 
 def _is_emoji(g):
-    return any(ord(c) >= 0x1F000 or 0x2600 <= ord(c) <= 0x27BF or ord(c) == 0xFE0F for c in g)
+    return any(ord(c) >= 0x1F000 or 0x2600 <= ord(c) <= 0x27BF for c in g)
 
 
 def x_length(text):
@@ -142,55 +86,69 @@ def x_length(text):
     return n
 
 
-# --- le due versioni ------------------------------------------------------------------------------
-def _word(text):
-    return re.sub(r'[^\w]', '', str(text or ''))
-
-
-def x_name(visible, tag):
-    """Nome per X: l'hashtag prende il posto della parte finale del nome (Luciano #Spalletti)."""
-    tag = _word(tag) or _word(visible.split()[-1] if visible.split() else '')
-    words = visible.split()
-    for i in range(len(words)):
-        if _word(''.join(words[i:])).lower() == tag.lower():
-            return ' '.join(words[:i] + [f'#{tag}'])
-    return f'#{tag}' if tag else visible
-
-
-def x_outlet(name):
-    return OUTLETS.get(re.sub(r'\s+', ' ', name.strip().lower()), name.strip())
-
-
+# --- lettura del testo ----------------------------------------------------------------------------
 def _clean(text):
     text = str(text or '').replace('\r', '')
-    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
-    text = re.sub(r'</?b>', '', text)
-    text = re.sub(r'[ \t]+', ' ', text)
+    text = '\n'.join(re.sub(r'[ \t]+', ' ', line).strip() for line in text.split('\n'))
     return re.sub(r'\n{3,}', '\n\n', text).strip()
 
 
-def plain_version(text):
-    """Testo visibile (versione 1 senza grassetto)."""
-    text = _OUTLET.sub(lambda m: m.group(1).strip(), _clean(text))
-    return _NAME.sub(lambda m: m.group(1).strip(), text).replace('{', '').replace('}', '')
+def blocks(text):
+    """[(etichetta, testo)]: le righe COMPLETO / 240 da sole dividono i blocchi ('' se non ce ne sono)."""
+    out, label, lines = [], '', []
+    for line in _clean(text).split('\n'):
+        if _LABEL.match(line) and not _THEME.match(line):
+            if '\n'.join(lines).strip():
+                out.append((label, '\n'.join(lines).strip()))
+            label, lines = line.strip(), []
+        else:
+            lines.append(line)
+    if '\n'.join(lines).strip():
+        out.append((label, '\n'.join(lines).strip()))
+    return out
 
 
-def x_version(text):
-    text = _OUTLET.sub(lambda m: x_outlet(m.group(1)), _clean(text))
-    return _NAME.sub(lambda m: x_name(m.group(1).strip(), m.group(2)), text).replace('{', '').replace('}', '')
-
-
-def _lead_emoji(text):
-    """(emoji iniziali, resto del testo)."""
-    gs = graphemes(text)
+def _lead(line):
+    """(emoji iniziali, resto della riga)."""
+    gs = graphemes(line)
     i = 0
     while i < len(gs) and _is_emoji(gs[i]):
         i += 1
-    return gs[:i], ''.join(gs[i:])
+    return ''.join(gs[:i]), ''.join(gs[i:])
 
 
+def _parts(block):
+    """Righe del blocco come pezzi: ('head', emoji, spazio, chi parla, resto) / ('theme', tema, resto) / ('text', riga)."""
+    lines = block.split('\n')
+    has_themes = any(_THEME.match(line) for line in lines)
+    out = []
+    for n, line in enumerate(lines):
+        lead, rest = _lead(line)
+        theme = _THEME.match(line)
+        if lead and n == 0:
+            gap = rest[:len(rest) - len(rest.lstrip())]
+            rest = rest.lstrip()
+            m = _SPEAKER.match(rest)
+            who, rest = (m.group(0), rest[m.end():]) if m else ('', rest)
+            if has_themes and rest and not rest.rstrip().endswith(':'):   # come il canale: "dopo #JuveOmonia:"
+                rest = rest.rstrip() + ':'
+            out.append(('head', lead, gap, who, rest))
+        elif theme:
+            out.append(('theme', theme.group(1).strip(), theme.group(2)))
+        else:
+            out.append(('text', line))
+    return out
+
+
+def _outside_quotes(text, fn):
+    """Applica fn solo fuori dalle virgolette (“…” e "…")."""
+    pieces = re.split(r'(“[^”]*”|"[^"]*")', text)
+    return ''.join(p if i % 2 else fn(p) for i, p in enumerate(pieces))
+
+
+# --- le due versioni ------------------------------------------------------------------------------
 def _premium(g):
-    """Emoji iniziale come la usa il canale: bandiere animate e le emoji del pack."""
+    """Emoji come la usa il canale: bandiere animate e le emoji del pack."""
     import caption
     custom = {k.replace('️', ''): v for k, v in CUSTOM_EMOJI.items()}.get(g.replace('️', ''))
     if custom:
@@ -209,195 +167,80 @@ def _premium(g):
     return caption.PREMIUM.get(g, g)
 
 
-def telegram_version(text, sign=True):
-    """Versione 1 in HTML di Telegram: nomi in grassetto, emoji del canale, firma in fondo."""
-    import caption
-    lead, rest = _lead_emoji(_clean(text))
-    pieces, pos = [], 0
-    for m in re.finditer(f'{_NAME.pattern}|{_OUTLET.pattern}', rest):
-        pieces.append(html.escape(rest[pos:m.start()], quote=False))
-        if m.group(1) is not None:
-            pieces.append(f'<b>{html.escape(m.group(1).strip(), quote=False)}</b>')
+def _tg_text(text, outlets=False):
+    """Escape HTML, parlato in corsivo come il canale (<i>“…”.</i>, punto compreso) e, nella riga di chi
+    parla, la testata in corsivo (a <i>Sky Sport</i>)."""
+    pieces = re.split(r'(“[^”]*”\.?|"[^"]*"\.?)', text)
+    out = []
+    for i, piece in enumerate(pieces):
+        piece = html.escape(piece, quote=False)
+        if i % 2:
+            out.append(f'<i>{piece}</i>')
         else:
-            pieces.append(html.escape(m.group(3).strip(), quote=False))
-        pos = m.end()
-    pieces.append(html.escape(rest[pos:], quote=False))
-    body = ''.join(_premium(g) for g in lead) + ''.join(pieces).replace('{', '').replace('}', '')
+            out.append(_OUTLET_RE.sub(lambda m: f'<i>{m.group(1)}</i>', piece) if outlets else piece)
+    return ''.join(out)
+
+
+def telegram_version(block, sign=True):
+    """HTML di Telegram: emoji del canale, chi parla e i temi in grassetto, parlato in corsivo, firma in fondo."""
+    import caption
+    lines = []
+    for p in _parts(block):
+        if p[0] == 'head':
+            _, lead, gap, who, rest = p
+            lines.append(''.join(_premium(g) for g in graphemes(lead)) + gap
+                         + (f'<b>{html.escape(who, quote=False)}</b>' if who else '') + _tg_text(rest, outlets=True))
+        elif p[0] == 'theme':
+            lines.append(f'<b>{html.escape(p[1], quote=False)}</b> – {_tg_text(p[2])}')
+        else:
+            lines.append(_tg_text(p[1]))
+    body = '\n'.join(lines)
     return f'{body}\n\n{caption.SIGN} @Juventus_Reborn' if sign else body
 
 
-def render(item):
-    """Proposta di Claude -> le due versioni pronte, con i caratteri contati."""
-    raw = _clean(item.get('testo'))
-    v1, v2 = plain_version(raw), x_version(raw)
-    l1, l2 = x_length(v1), x_length(v2)
-    return {'tema': str(item.get('tema') or '').strip()[:40], 'raw': raw, 'tg': telegram_version(raw),
-            'tg_text': v1, 'x': v2, 'tg_len': l1, 'x_len': l2, 'limit': LIMIT, 'over': max(l1, l2) > LIMIT}
-
-
-# --- partita vicina (per #JuveOmonia, pre/dopo) ---------------------------------------------------
-def match_context(fixtures, now=None):
-    """Righe sulle partite Juve di questi giorni, da dare a Claude ('' se il calendario non risponde)."""
-    if fixtures is None:
-        return ''
-    from zoneinfo import ZoneInfo
-    now = now or datetime.now(ZoneInfo('Europe/Rome'))
-    try:
-        rows = fixtures((now - timedelta(days=3)).strftime('%Y-%m-%d'), (now + timedelta(days=3)).strftime('%Y-%m-%d'))
-    except Exception:  # noqa: BLE001 - senza calendario si va avanti lo stesso
-        return ''
+def x_version(block):
+    """Testo per X: hashtag sul cognome di chi parla, testata con la sua pagina, niente firma."""
+    import caption
     lines = []
-    for m in rows or []:
-        try:
-            from livescore.core import team_names
-            other = m.get('opponent_espn') or m.get('opponent') or ''
-            home, away = ('Juventus', other) if m.get('side') == 'home' else (other, 'Juventus')
-            tag = html.unescape(team_names.build_hashtag(home, away))
-        except Exception:  # noqa: BLE001
-            continue
-        lines.append(f"- {tag}: {m.get('date')} ore {m.get('time')}")
+    for p in _parts(block):
+        if p[0] == 'head':
+            _, lead, gap, who, rest = p
+            rest = _outside_quotes(rest, lambda s: _OUTLET_RE.sub(
+                lambda m: next(v for k, v in OUTLETS.items() if k.lower() == m.group(1).lower()), s))
+            lines.append(lead + gap + (caption.x_person(who) if who else '') + rest)
+        elif p[0] == 'theme':
+            lines.append(f'{p[1]} – {p[2]}')
+        else:
+            lines.append(p[1])
     return '\n'.join(lines)
 
 
-# --- Claude --------------------------------------------------------------------------------------
-def _client():
-    if not os.environ.get('ANTHROPIC_API_KEY'):
-        raise ValueError('Manca la chiave di Claude: aggiungi il secret ANTHROPIC_API_KEY al repo di ImageGEN.')
-    import anthropic
-    return anthropic.Anthropic(timeout=150, max_retries=2)
+def render(label, block):
+    import caption
+    tg = telegram_version(block)
+    x = x_version(block)
+    limit = int(label) if label.isdigit() else None
+    x_len = x_length(x)
+    return {'tema': label or 'Testo', 'raw': block, 'tg': tg, 'x': x,
+            'tg_len': x_length(caption.plain(telegram_version(block, sign=False))), 'x_len': x_len,
+            'limit': limit, 'over': bool(limit and x_len > limit)}
 
 
-def _ask(client, messages):
-    import anthropic
-    try:
-        response = client.beta.messages.create(
-            model=MODEL,
-            max_tokens=16000,
-            betas=['server-side-fallback-2026-07-01'],
-            fallbacks='default',
-            system=[{'type': 'text', 'text': system_prompt(), 'cache_control': {'type': 'ephemeral'}}],
-            output_config={'effort': 'medium', 'format': {'type': 'json_schema', 'schema': SCHEMA}},
-            messages=messages,
-        )
-    except anthropic.AuthenticationError as exc:
-        raise ValueError('Chiave di Claude non valida: controlla il secret ANTHROPIC_API_KEY.') from exc
-    except anthropic.PermissionDeniedError as exc:
-        raise ValueError('La chiave di Claude non ha i permessi (o il credito è finito).') from exc
-    except anthropic.RateLimitError as exc:
-        raise ValueError('Claude è occupato. Riprova tra un minuto.') from exc
-    except anthropic.APIStatusError as exc:
-        raise ValueError(f'Claude non ha risposto (errore {exc.status_code}). Riprova.') from exc
-    except anthropic.APIConnectionError as exc:
-        raise ValueError('Claude non raggiungibile. Riprova tra poco.') from exc
-    if response.stop_reason == 'refusal':
-        raise ValueError('Claude non ha voluto scrivere questo testo.')
-    text = next((b.text for b in response.content if getattr(b, 'type', '') == 'text'), '')
-    try:
-        items = json.loads(text).get('proposte') or []
-    except (ValueError, AttributeError) as exc:
-        raise ValueError('Risposta di Claude non leggibile. Riprova.') from exc
-    return response, [i for i in items if isinstance(i, dict) and str(i.get('testo') or '').strip()]
-
-
-def _request(text, note, context, today):
-    parts = [f'Oggi è {today}.']
-    if context:
-        parts.append(f'Partite della Juventus di questi giorni (per l\'hashtag e per pre/dopo):\n{context}')
-    if note:
-        parts.append(f'Nota di chi incolla (chi parla, dove, quando): {note}')
-    parts.append(f'TESTO DA CONVERTIRE:\n"""\n{text}\n"""')
-    return '\n\n'.join(parts)
-
-
-def convert(text, note='', fixtures=None, client=None, now=None):
-    """{'posts': [...]} con 1-3 proposte; ognuna ha la versione Telegram (HTML, firma compresa) e X."""
-    text = str(text or '').replace('\r', '').strip()
-    note = re.sub(r'\s+', ' ', str(note or '')).strip()[:300]
-    if len(text) < 20:
-        raise ValueError('Incolla il testo della conferenza o dell’intervista.')
+def convert(text):
+    """{'posts': [...]}: una proposta per blocco, con le due versioni pronte."""
+    text = str(text or '')
+    if len(text.strip()) < 5:
+        raise ValueError('Incolla il testo da sistemare.')
     if len(text) > MAX_TEXT:
         raise ValueError(f'Testo troppo lungo (massimo {MAX_TEXT} caratteri).')
-    client = client or _client()
-    from zoneinfo import ZoneInfo
-    now = now or datetime.now(ZoneInfo('Europe/Rome'))
-    messages = [{'role': 'user', 'content': _request(text, note, match_context(fixtures, now),
-                                                     now.strftime('%d/%m/%Y %H:%M'))}]
-    response, items = _ask(client, messages)
-    posts = [render(i) for i in items[:MAX_POSTS]]
-    over = [(n, p) for n, p in enumerate(posts, 1) if p['over']]
-    if over:                                           # una seconda volta, con i conti fatti qui
-        counts = ', '.join(f"proposta {n}: {max(p['tg_len'], p['x_len'])}/{LIMIT}" for n, p in over)
-        messages += [{'role': 'assistant', 'content': response.content},
-                     {'role': 'user', 'content': f'Troppo lunghe ({counts}, contate come X). Restituisci di nuovo '
-                                                 f'tutte le proposte, quelle lunghe accorciate sotto {LIMIT} '
-                                                 'senza perdere il senso e le informazioni importanti.'}]
-        try:
-            _, again = _ask(client, messages)
-            fixed = [render(i) for i in again[:MAX_POSTS]]
-            if fixed and sum(p['over'] for p in fixed) < len(over):
-                posts = fixed
-        except ValueError:
-            pass
-    if not posts:
-        raise ValueError('Claude non ha scritto nessuna proposta. Riprova.')
-    return {'posts': posts}
-
-
-# --- lavoro in sottofondo: il tunnel chiude le richieste dopo ~100 s, Claude può metterci di più ----
-_JOBS: dict[str, dict] = {}
-_JOBS_LOCK = threading.Lock()
-JOB_TTL = 900
-
-
-def start(text, note='', fixtures=None, client=None):
-    """Fa partire convert() in sottofondo e restituisce {'job': codice} (controlli veloci prima)."""
-    text = str(text or '').strip()
-    if len(text) < 20:
-        raise ValueError('Incolla il testo della conferenza o dell’intervista.')
-    if len(text) > MAX_TEXT:
-        raise ValueError(f'Testo troppo lungo (massimo {MAX_TEXT} caratteri).')
-    client = client or _client()
-    job = secrets.token_hex(8)
-    with _JOBS_LOCK:
-        for key in [k for k, v in _JOBS.items() if time.time() - v['at'] > JOB_TTL]:
-            del _JOBS[key]
-        _JOBS[job] = {'at': time.time(), 'done': False}
-
-    def run():
-        try:
-            out = {'done': True, **convert(text, note, fixtures=fixtures, client=client)}
-        except ValueError as exc:
-            out = {'done': True, 'error': str(exc)}
-        except Exception as exc:  # noqa: BLE001 - qualsiasi guasto torna alla Mini App come errore
-            out = {'done': True, 'error': f'Notizia non scritta ({type(exc).__name__}). Riprova.'}
-        with _JOBS_LOCK:
-            if job in _JOBS:
-                _JOBS[job].update(out)
-
-    threading.Thread(target=run, name='dichiarazioni', daemon=True).start()
-    return {'job': job}
-
-
-def status(job):
-    """{'done': False} finché Claude scrive; poi le proposte (o ValueError con il motivo)."""
-    with _JOBS_LOCK:
-        state = dict(_JOBS.get(str(job or '')) or {})
-    if not state:
-        raise ValueError('Richiesta scaduta. Premi di nuovo “Scrivi la notizia”.')
-    if not state['done']:
-        return {'done': False}
-    with _JOBS_LOCK:
-        _JOBS.pop(str(job), None)
-    if state.get('error'):
-        raise ValueError(state['error'])
-    return {'done': True, 'posts': state.get('posts') or []}
+    return {'posts': [render(label, block) for label, block in blocks(text)]}
 
 
 def send(telegram, post):
     """Bot JR: versione Telegram (pronta per il canale) e, in risposta, la versione per X. -> id."""
     raw = _clean((post or {}).get('raw'))
     if not raw:
-        raise ValueError('Nessuna proposta scelta.')
+        raise ValueError('Nessun testo scelto.')
     first = int(telegram.copy_text(telegram_version(raw)))
     second = int(telegram.copy_text(html.escape(x_version(raw), quote=False), reply_to=first))
     return [first, second]

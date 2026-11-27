@@ -11,5 +11,3 @@ rembg==2.0.86
 onnxruntime==1.31.0
 # Lettura dei commenti dagli screenshot di Instagram (modelli inclusi, niente servizi esterni).
 rapidocr==3.10.0
-# Dichiarazioni: conferenze e interviste -> notizia in due versioni (Claude, secret ANTHROPIC_API_KEY).
-anthropic==2.14.0

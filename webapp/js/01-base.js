@@ -123,7 +123,7 @@ const REQUESTS = [
   {id:'igq',    kind:'igq',   icon:'igq', title:'Citazione Instagram', desc:'Post, storia o commento scelto'},
   {id:'xq',     kind:'xq',    icon:'xq', title:'Citazione X',  desc:'Post X: testo, account e foto (o sfondo)'},
   {id:'thq',    kind:'thq',   icon:'thq', title:'Citazione Threads', desc:'Post Threads: testo, account e foto (o sfondo)'},
-  {id:'dich',   kind:'dich',  icon:'dich', title:'Dichiarazioni', desc:'Conferenze e interviste: notizia per Telegram e X, solo testo'},
+  {id:'dich',   kind:'dich',  icon:'dich', title:'Dichiarazioni', desc:'Testo già scritto: post per Telegram (grassetto) e X (hashtag)'},
   {id:'sent',   kind:'sent',  icon:'sent', title:'Ultimi invii', desc:'Rimanda o modifica le grafiche già inviate'},
   {id:'ita',    kind:'ita',   icon:'ita', title:'Italia',       desc:'Grafiche della Nazionale'}
 ];

@@ -717,7 +717,7 @@ function renderFlow() {
   $('backButton').textContent = (!previewMode && flowIndex === 0 && !LIVE) ? '‹ Home' : '‹ Indietro';
   // Calendario compilato da solo: "Modifica" in alto apre l'elenco partite.
   $('previewEdit').hidden = !(previewMode && (kind === 'cal' || kind === 'pxi'));
-  $('nextButton').textContent = previewMode ? sendLabel() : kind === 'sent' ? 'Rimanda' : kind === 'dich' ? (screenName === 'dichout' ? 'Invia al bot' : 'Scrivi la notizia') : (isLastStep() ? 'Anteprima' : 'Avanti ›');
+  $('nextButton').textContent = previewMode ? sendLabel() : kind === 'sent' ? 'Rimanda' : kind === 'dich' ? (screenName === 'dichout' ? 'Invia al bot' : 'Prepara i testi') : (isLastStep() ? 'Anteprima' : 'Avanti ›');
   if (previewMode) galleryPreviewText();
 
   clearError();
