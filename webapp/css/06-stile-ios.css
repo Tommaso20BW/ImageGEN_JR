@@ -221,7 +221,7 @@ button.sp-item:active{background:var(--accent-soft)}
 .hm-item[data-id="saved"] .hm-ico{background:#007AFF}
 .hm-item[data-id="sub"] .hm-ico{padding:4px;background:#1C1C1E}   /* tabellone: triangoli bianchi, uno sale e uno scende */
 html[data-theme="dark"] .hm-item[data-id="sub"] .hm-ico{background:#3A3A3C}
-.hm-item[data-id="stats"] .hm-ico{background:#5856D6}
+.hm-item[data-id="stats"] .hm-ico{background:#AF52DE}
 .hm-item[data-id="motm"] .hm-ico{background:#FFCC00}
 .hm-item[data-id="potm"] .hm-ico{background:#C8A04A}
 .hm-item[data-id="awards"] .hm-ico{background:#FFCC00}
