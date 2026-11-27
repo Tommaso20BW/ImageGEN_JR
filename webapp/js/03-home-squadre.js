@@ -234,6 +234,7 @@ function resetAllData() {
   jrc.key = ''; jrcCloseSheet();
   pxiModule = '';
   pxiPicks = Array(11).fill('');
+  pxiSource = '';
   calMonth = 0;
   tableComp = '';
   tableView = '';

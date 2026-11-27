@@ -47,6 +47,9 @@ E_TOP = emoji('5422354988103901774', '🔝')
 E_EYES = emoji('5424885441100782420', '👀')
 E_SOURCE = emoji('5785366354106261925', '📲')     # fonte del mercato (📲 Fabrizio Romano)
 E_SIGNED = emoji('5470060791883374114', '✍️')
+# Fonti delle probabili (stesse emoji del pack usate dal bot delle notizie): nome, emoji, profilo su X.
+PXI_SOURCES = {'sky': ('Sky Sport', emoji('5974058122984038105', '📰'), '@SkySport'),
+               'gazzetta': ('La Gazzetta dello Sport', emoji('5974032198561439462', '📰'), '@Gazzetta_it')}
 
 
 # --- Modelli dei messaggi (Impostazioni › Messaggi) ---------------------------------------------
@@ -54,7 +57,7 @@ E_SIGNED = emoji('5470060791883374114', '✍️')
 # (☑️ 📝 🆕 ✅ ...) diventano da sole quelle personalizzate. La firma 👉 @Juventus_Reborn si aggiunge sempre.
 TEMPLATE_KINDS = {   # tipo -> (nome nella Mini App, testo di base, segnaposto)
     'squad': ('Convocati', f'☑️📝 I convocati di **{ALLENATORE}** per {{hashtag}}.', ('hashtag', 'avversario')),
-    'pxi': ('Probabile XI', '🆕📋 𝐏𝐑𝐎𝐁𝐀𝐁𝐈𝐋𝐄 𝐗𝐈 {hashtag}', ('hashtag', 'avversario')),
+    'pxi': ('Probabile XI', '🆕📋 𝐏𝐑𝐎𝐁𝐀𝐁𝐈𝐋𝐄 𝐗𝐈 {hashtag}', ('hashtag', 'avversario', 'fonte')),
     'xi': ('XI ufficiale', '✅📋 𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄 {hashtag}', ('hashtag', 'avversario')),
     'conv': ('Convocati nazionali', '🌍📋 I bianconeri convocati dalle rispettive nazionali.', ()),
     'af': ('Here We Go', '✅ HERE WE GO: **{giocatore}** alla **Juventus**.\n\n__📲 Fabrizio Romano__', ('giocatore',)),
@@ -346,7 +349,10 @@ def _match_caption(data):
         if data.get('team') == 'italy':
             return f"✅📋 𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄 𝐈𝐓𝐀𝐋𝐈𝐀\n\n{tail}"
         return _from_template('xi', hashtag=m['tag'], avversario=m['away'] if m['juve_home'] else m['home'])
-    if kind in ('pxi', 'squad'):
+    if kind == 'pxi':
+        return _with_source(data, _from_template(kind, hashtag=m['tag'],
+                                                 avversario=m['away'] if m['juve_home'] else m['home']))
+    if kind == 'squad':
         return _from_template(kind, hashtag=m['tag'], avversario=m['away'] if m['juve_home'] else m['home'])
     if kind == 'md':
         competition = str(data.get('competition') or '')
@@ -600,6 +606,16 @@ def x_person(name):
     return f"{words[0]} {x_tag(' '.join(words[1:]))}"
 
 
+def _with_source(data, text, x=False):
+    """Probabili prese da Sky o Gazzetta: in fondo la fonte con la sua icona, come 📲 Fabrizio Romano
+    (Telegram: corsivo con l'emoji del pack; X: 📰 @SkySport). Se il modello ha {fonte}, va li'."""
+    source = PXI_SOURCES.get(str(data.get('source') or ''))
+    line = '' if not source else (f'📰 {source[2]}' if x else f'<i>{source[1]} {esc(source[0])}</i>')
+    if '{fonte}' in text:
+        return text.replace('{fonte}', line).strip()
+    return f'{text}\n\n{line}' if line else text
+
+
 def _x_template(kind, **values):
     """Modello per X (Impostazioni › Messaggi, scheda 𝕏): testo semplice, segnaposto già pronti."""
     import re
@@ -624,7 +640,9 @@ def _x_match(data):
     home, away = html.unescape(m['home']), html.unescape(m['away'])
     opponent = away if m['juve_home'] else home
     competition = str(data.get('competition') or '')
-    if kind in ('squad', 'pxi', 'xi') and data.get('team') != 'italy':
+    if kind == 'pxi' and data.get('team') != 'italy':
+        return _with_source(data, _x_template(kind, hashtag=tag, avversario=x_tag(opponent)), x=True)
+    if kind in ('squad', 'xi') and data.get('team') != 'italy':
         return _x_template(kind, hashtag=tag, avversario=x_tag(opponent))
     if kind == 'md':
         info = data.get('info') or {}

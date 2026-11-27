@@ -312,6 +312,7 @@ async function loadPxiSource(btn) {
     const lineup = body.lineup;
     $('pxiText').value = lineup.text;
     pxiModuleManual = false;            // vale il modulo del sito
+    pxiSource = src;                    // nel testo la fonte, con la sua icona
     readPxiText();
     all.forEach(b => b.classList.toggle('on', b === btn));
     $('pxiSrcHint').textContent = '';     // il pulsante evidenziato basta: niente riepilogo

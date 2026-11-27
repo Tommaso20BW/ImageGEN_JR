@@ -440,6 +440,7 @@ function initPhotoEditor() {
   $('xiText').addEventListener('input',() => { clearError(); readXiText(); });
   $('pxiText').addEventListener('input',() => {
     clearError(); readPxiText();
+    if (!$('pxiText').value.trim()) pxiSource = '';   // svuotato: niente fonte (correggere un nome la tiene)
     document.querySelectorAll('.src-row .btn').forEach(b => b.classList.remove('on'));
   });
   document.querySelectorAll('.src-row .btn').forEach(b => b.addEventListener('click',() => loadPxiSource(b)));

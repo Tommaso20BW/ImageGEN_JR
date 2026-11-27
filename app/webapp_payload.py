@@ -713,6 +713,8 @@ def _build_state(envelope, catalog, now, expected_session):
             raise ValueError('Lo stesso giocatore è stato scelto due volte.')
         data['module'] = module
         data['players'] = players
+        source = str(incoming.get('source') or '')       # sito da cui e' presa (Sky / Gazzetta)
+        data['source'] = source if source in ('sky', 'gazzetta') else ''
         # Colori UEFA: la maglia serve comunque per le foto dei giocatori.
         if kit in UEFA_THEMES and not friendly:
             shirt = str(incoming.get('shirt') or '')

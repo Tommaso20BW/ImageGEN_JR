@@ -62,6 +62,7 @@ let kitFromMatch = false;   // maglia presa da ESPN (partite giocate): niente pa
 let fixtureList = [];
 let calRows = [];
 let pxiPicks = Array(11).fill('');
+let pxiSource = '';   // PROBABILE XI: sito da cui e' presa (sky / gazzetta): la fonte va nel testo
 let pose = '';
 let moment = '';
 

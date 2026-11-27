@@ -144,6 +144,7 @@ function buildPayload(ghost=false) {
   } else if (kind === 'pxi') {
     data.module = pxiModule;
     data.players = pxiPicks.slice();
+    data.source = pxiSource;
     if (pxiLay.layouts[pxiModule]) data.layout = pxiLay.layouts[pxiModule];
   } else if (kind === 'squad') {
     data.squad = $('squadText').value;
