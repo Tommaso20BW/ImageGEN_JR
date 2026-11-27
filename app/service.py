@@ -113,7 +113,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
-    def _read_envelope(self):
+    def _read_envelope(self, limit=16384):
         if self.headers.get('X-ImageGEN-Session', '') != self.service.session:
             log.warn('RICHIESTA', f'{self.path} respinta: sessione non valida')
             self._json(403, {'ok': False, 'error': 'Sessione non valida.'})
@@ -124,7 +124,7 @@ class _DirectHandler(BaseHTTPRequestHandler):
         except ValueError:
             length = 0
 
-        if length <= 0 or length > 16384:
+        if length <= 0 or length > limit:
             log.warn('RICHIESTA', f'{self.path} respinta: lunghezza {length}')
             self._json(413, {'ok': False, 'error': 'Richiesta non valida.'})
             return None
@@ -389,11 +389,11 @@ class _DirectHandler(BaseHTTPRequestHandler):
             self._upload()
             return
         if path not in ('/preview', '/submit', '/close', '/ghost', '/layout', '/extend', '/settings', '/resend',
-                        '/usesent', '/phrases', '/igpost', '/colors', '/templates', '/playerphoto', '/posethumbs', '/bdayphotos', '/bdaybirths', '/bdoldcut', '/erase', '/tgposts', '/tgphoto', '/translate', '/savefile'):
+                        '/usesent', '/phrases', '/igpost', '/colors', '/templates', '/playerphoto', '/posethumbs', '/bdayphotos', '/bdaybirths', '/bdoldcut', '/erase', '/tgposts', '/tgphoto', '/translate', '/savefile', '/dichiarazioni'):
             self._json(404, {'ok': False, 'error': 'Endpoint non valido.'})
             return
 
-        envelope = self._read_envelope()
+        envelope = self._read_envelope(200000 if path == '/dichiarazioni' else 16384)   # conferenze lunghe
         if envelope is None:
             return
 
@@ -472,6 +472,10 @@ class _DirectHandler(BaseHTTPRequestHandler):
 
             if path == '/translate':
                 self._json(200, {'ok': True, **self.service.translate(envelope)})
+                return
+
+            if path == '/dichiarazioni':
+                self._json(200, {'ok': True, **self.service.dichiarazioni(envelope)})
                 return
 
             if path == '/layout':
@@ -1557,6 +1561,19 @@ class Service:
         """Citazioni: testo tradotto in italiano."""
         import translate
         return translate.to_italian((envelope or {}).get('text'))
+
+    def dichiarazioni(self, envelope):
+        """Conferenze e interviste -> notizia in due versioni scritta da Claude (dichiarazioni.py), in
+        sottofondo: 'text' la fa partire, 'job' chiede se è pronta; 'post' manda la proposta scelta nel bot."""
+        import dichiarazioni
+        envelope = envelope or {}
+        if envelope.get('post'):
+            ids = dichiarazioni.send(self.telegram, envelope['post'])
+            self.generated_message_ids.extend(ids)     # via a fine sessione, come gli altri testi da copiare
+            return {'sent': len(ids)}
+        if envelope.get('job'):                        # la Mini App chiede se Claude ha finito
+            return dichiarazioni.status(envelope['job'])
+        return dichiarazioni.start(envelope.get('text'), envelope.get('note'), fixtures=self.fixtures)
 
     def _remember_ig_name(self, data):
         """Citazione IG inviata con un nome diverso dall'username: la prossima volta arriva già."""

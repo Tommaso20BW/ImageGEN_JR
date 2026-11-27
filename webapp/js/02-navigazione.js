@@ -286,6 +286,7 @@ function buildFlow() {
   else if (kind === 'potm') flow = ['awkind','awplayer','potminfo','bdophoto'];
   else if (kind === 'af') flow = ['afinfo','bdophoto','bdpos'];
   else if (kind === 'free') flow = ['fredit'];
+  else if (kind === 'dich') flow = ['dichtext','dichout'];          // solo testo: niente anteprima
   else if (kind === 'motm') flow = ['awkind',...pick(base),'awplayer','motminfo','bdophoto','bdpos'];
   else if (kind === 'bday') flow = bd.mode === 'old' ? ['bdmode','bdoname','bdophoto','bdpos'] : ['bdmode','bdplayer',bd.manual ? 'bdophoto' : 'bdphoto','bdinfo','bdpos'];
   else if (kind === 'igbn') flow = igPicking ? ['igcontent', {tg:'igtg', phr:'igphr'}[igPicking] || 'igsent'] : ['igcontent'];
@@ -406,7 +407,7 @@ function renderSteps() {
   if (list.dataset.key !== key) {
     list.dataset.key = key;
     list.innerHTML = '';
-    [...flow,null].forEach((step,i) => {
+    [...flow,...(kind === 'dich' ? [] : [null])].forEach((step,i) => {     // Dichiarazioni: niente anteprima
       const li = document.createElement('li');
       const b = document.createElement('button');
       b.type = 'button';
@@ -661,6 +662,7 @@ function renderFlow() {
   if (screenName === 'iqmode' || screenName === 'iqurl' || screenName === 'iqpick' || screenName === 'iqshot' || screenName === 'iqtext') iqTexts();
   // Matchday / Starting XI: la foto è quella del giocatore scelto, qui solo spostare e zoomare.
   if (screenName === 'photo') { $('photoPick').hidden = kind === 'md' || kind === 'xi'; if (isQuoteKind(kind)) iqSyncPhoto(); updatePhotoOverlay(); requestAnimationFrame(layoutPhoto); }
+  if (screenName === 'dichout') dichRender();
   if (screenName === 'mdplayer') { mdpRender(); mdpLoad(); }
   if (screenName === 'bdplayer') { bdRender(); bdLoad(); bdLoadBirths(); }
   if (screenName === 'bdinfo') bdEmoLoad();
@@ -715,7 +717,7 @@ function renderFlow() {
   $('backButton').textContent = (!previewMode && flowIndex === 0 && !LIVE) ? '‹ Home' : '‹ Indietro';
   // Calendario compilato da solo: "Modifica" in alto apre l'elenco partite.
   $('previewEdit').hidden = !(previewMode && (kind === 'cal' || kind === 'pxi'));
-  $('nextButton').textContent = previewMode ? sendLabel() : kind === 'sent' ? 'Rimanda' : (isLastStep() ? 'Anteprima' : 'Avanti ›');
+  $('nextButton').textContent = previewMode ? sendLabel() : kind === 'sent' ? 'Rimanda' : kind === 'dich' ? (screenName === 'dichout' ? 'Invia al bot' : 'Scrivi la notizia') : (isLastStep() ? 'Anteprima' : 'Avanti ›');
   if (previewMode) galleryPreviewText();
 
   clearError();

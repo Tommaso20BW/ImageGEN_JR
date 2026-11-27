@@ -170,10 +170,12 @@ async function nextField(validate=true) {
     if (step === 'lineup' && !(await askMissingNumbers())) return;
     if (step === 'convlist' && !(await askConvNames())) return;
     if (step === 'iqurl' && !(await iqLoad())) return;
+    if (step === 'dichtext' && !(await dichConvert())) return;
     if (!validateCurrent()) return;
   }
 
   if (kind === 'sent') { if (flow[flowIndex] === 'sentitem') resendRecent(); return; }
+  if (kind === 'dich' && flow[flowIndex] === 'dichout') { dichSend(); return; }
   if (flowIndex >= flow.length - 1) { previewGraphic(); return; }
   flowIndex += 1;
   renderFlow();

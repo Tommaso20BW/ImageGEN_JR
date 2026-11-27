@@ -583,6 +583,29 @@
             </div>
           </section>
 
+          <section class="screen" data-screen="dichtext">
+            <div class="eyebrow">Dichiarazioni</div>
+            <h1>Incolla il testo</h1>
+            <p class="lead">Conferenza o intervista, anche lunga: Claude scrive la notizia per Telegram e per X.</p>
+            <textarea id="dichText" class="field-input" style="min-height:220px" spellcheck="true" placeholder="Testo della conferenza o dell’intervista"></textarea>
+            <div class="field-label gap">Chi parla e dove (facoltativo)</div>
+            <div class="ios-list">
+              <label class="ios-row"><input id="dichNote" class="ios-in" maxlength="120" autocomplete="off" placeholder="es. Spalletti a Sky Sport dopo la partita"></label>
+            </div>
+            <p id="dichHint" class="note"></p>
+          </section>
+
+          <section class="screen" data-screen="dichout">
+            <div class="eyebrow">Dichiarazioni</div>
+            <h1>Scegli la notizia</h1>
+            <p class="lead">Tocca la proposta da usare: arriva nel bot, prima Telegram e poi X in risposta.</p>
+            <p id="dichEmpty" class="note">Nessuna proposta. Torna indietro e riprova.</p>
+            <div id="dichList" class="dich-list"></div>
+            <div class="ios-list">
+              <button id="dichRetry" class="ios-row ios-act" type="button">Rifai le proposte</button>
+            </div>
+          </section>
+
           <section class="screen" data-screen="iqcshot">
             <div class="eyebrow">Commento Instagram</div>
             <h1>Scegli il commento</h1>
@@ -1013,7 +1036,7 @@
 <script>
   // Codice della Mini App (webapp/js): file caricati in ordine, con la versione della pagina.
   (function () { var v = (new URLSearchParams(location.search).get('v') || Date.now());
-    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '05b-emoji.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '09b-compleanno.js', '14-editor.js', '10-avvio.js', '11-invii.js', '12-citazione.js', '13-convocati.js'].forEach(function (f) {
+    ['01-base.js', '02-navigazione.js', '03-home-squadre.js', '04-dati-partita.js', '05-impostazioni.js', '05b-emoji.js', '06-calendario-liste.js', '07-foto-post.js', '08-fasi-foto.js', '09-rete.js', '09-nazionale.js', '09b-compleanno.js', '14-editor.js', '10-avvio.js', '11-invii.js', '12-citazione.js', '13-convocati.js', '15-dichiarazioni.js'].forEach(function (f) {
       document.write('<script src="webapp/js/' + f + '?v=' + v + '"><\/script>'); }); })();
 </script>
 </body>
