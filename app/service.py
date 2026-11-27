@@ -1430,7 +1430,7 @@ class Service:
                 raise
 
     def _send_copy_texts(self, data, text, photo_id):
-        """Dopo la foto (la sua didascalia è il testo IG/Telegram): in risposta, il testo per X nel riquadro."""
+        """Dopo la foto (la sua didascalia è il testo IG/Telegram): in risposta, il testo per X come testo normale."""
         x_body = caption.copy_messages(data, text)[1]
         if not x_body:
             return

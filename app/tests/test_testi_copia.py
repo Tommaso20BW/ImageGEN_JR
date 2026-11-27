@@ -126,12 +126,12 @@ class CopyTextsTest(unittest.TestCase):
         with mock.patch('caption.x_text', return_value='☑️📝 I convocati di #Spalletti & co.'):
             tg, xb = caption.copy_messages(data, tg_text)
         self.assertEqual(tg, tg_text)                      # come la didascalia, senza scritte sopra
-        self.assertEqual(xb, '<pre>☑️📝 I convocati di #Spalletti &amp; co.</pre>')
+        self.assertEqual(xb, '☑️📝 I convocati di #Spalletti &amp; co.')
 
     def test_live_only_end_of_halves_go_to_x(self):
         self.assertEqual(caption.copy_messages({'kind': 'goal'}, '<b>GOAL</b>'), ('<b>GOAL</b>', ''))
         with mock.patch('caption.x_text', return_value='FINE PARTITA 🏁'):
-            self.assertEqual(caption.copy_messages({'kind': 'full'}, 'FT')[1], '<pre>FINE PARTITA 🏁</pre>')
+            self.assertEqual(caption.copy_messages({'kind': 'full'}, 'FT')[1], 'FINE PARTITA 🏁')
 
     def test_no_caption_no_message(self):
         self.assertEqual(caption.copy_messages({'kind': 'jr'}, ''), ('', ''))
@@ -144,7 +144,7 @@ class CopyTextsTest(unittest.TestCase):
         with mock.patch('caption.x_text', return_value='FINE PARTITA 🏁'):
             service.Service._send_copy_texts(fake, {'kind': 'full'}, '<b>FINE PARTITA</b>', 40)
             service.Service._send_copy_texts(fake, {'kind': 'goal'}, '<b>GOAL</b>', 41)   # su X no
-        self.assertEqual(sent, [('<pre>FINE PARTITA 🏁</pre>', 40)])     # la foto ha già il testo Telegram
+        self.assertEqual(sent, [('FINE PARTITA 🏁', 40)])     # la foto ha già il testo Telegram
         self.assertEqual(fake.generated_message_ids, [12])
 
     def test_telegram_sends_html_silently_and_replies(self):

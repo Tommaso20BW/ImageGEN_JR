@@ -534,12 +534,22 @@ async function downloadStory(url, prefix='storia') {
   a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   return true;
 }
-// Fatto: la Mini App si chiude da sola.
-function closeMiniAppSoon() {
-  setTimeout(() => {
-    try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}
-    try { if (tg && typeof tg.close === 'function') tg.close(); } catch (_) {}
-  }, 900);
+/* Fatto: la Mini App si chiude da sola. Mentre Telegram mostra la finestra del salvataggio
+   (o scarica ancora) la chiusura puo' andare a vuoto: si riprova qualche volta e di nuovo
+   quando la Mini App torna in primo piano. */
+let closingMiniApp = false;
+function closeMiniAppNow() {
+  try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}
+  try { if (tg && typeof tg.close === 'function') tg.close(); } catch (_) {}
+}
+function closeMiniAppSoon(first=900) {
+  if (closingMiniApp) return;
+  closingMiniApp = true;
+  [first, 2000, 3500, 6000, 10000].forEach(ms => setTimeout(closeMiniAppNow, ms));
+  try { if (tg && tg.onEvent) tg.onEvent('activated', () => setTimeout(closeMiniAppNow, 150)); } catch (_) {}
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') setTimeout(closeMiniAppNow, 150);
+  });
 }
 /* Foto del post appena inviato (1, o 2 per l'album): anche nella galleria, una alla volta,
    prima la 1 e poi la 2 (Telegram chiede conferma per ognuna). Il post è già partito:
@@ -673,10 +683,7 @@ async function submitPreviewGraphic() {
     $('busyTitle').textContent = LIVE ? 'Confermata ✓' : 'Inviata ✓';
     $('busySub').textContent = LIVE ? 'Il bot la userà per la grafica al fischio.' : 'Trovi la foto nella chat del bot e nella galleria.';
     haptic('success');
-    setTimeout(() => {
-      try { if (tg && typeof tg.disableClosingConfirmation === 'function') tg.disableClosingConfirmation(); } catch (_) {}
-      try { if (tg && typeof tg.close === 'function') tg.close(); } catch (_) {}
-    }, 700);
+    closeMiniAppSoon(700);
   } catch (error) {
     hideBusy();
     $('nextButton').disabled = sessionExpired();
