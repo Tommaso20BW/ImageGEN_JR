@@ -441,6 +441,13 @@ class Renderer:
         goal_type = data.get('goal_type', 'goal')
         suffix = {'own': ' (AUTOGOL)', 'penalty': ' (RIGORE)'}.get(goal_type, '') if kind == 'goal' else ''
 
+        if kind == 'sub':
+            # CAMBIO: la stessa grafica del LiveScore (SUB/SUBS, IN sopra e OUT sotto).
+            from livescore.graphics import substitution
+            pairs = [tuple((str(number), name.split()[-1], name) for number, name in pair)
+                     for pair in data['subs']]
+            return substitution.render_png(pairs, **common)
+
         if kind in ('goal', 'saved') and (italy or goal_type in ('own', 'nophoto')):
             # Italia, autogol, gol senza foto: card senza foto (effetto eco).
             score = data.get('score') or (None, None)

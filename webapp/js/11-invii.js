@@ -17,7 +17,7 @@ const writeJson = (key, value) => { try { localStorage.setItem(key, JSON.stringi
 // Grafiche che "Modifica" sa riaprire: senza foto caricate (quelle restano solo nel servizio).
 function editableSnapshot() {
   if (nat) return null;
-  if (kind === 'goal' || kind === 'saved') return true;
+  if (kind === 'goal' || kind === 'saved' || kind === 'sub') return true;
   return kind === 'match' && (!PHOTO_PHASES.has(phase) || isFriendly());
 }
 
@@ -34,6 +34,7 @@ function rememberSent(messageId) {
       player: selectedPlayer ? selectedPlayer.name : '',
       typed: $('natPlayer').value, pose, minute: $('minute').value,
       ev, sc, pens: [$('homePens').value, $('awayPens').value], pensOn, etOn,
+      ...(kind === 'sub' ? {subs: subSnapshot()} : {}),
     };
     const ids = Object.keys(store.items);
     ids.slice(0, Math.max(0, ids.length - 30)).forEach(id => delete store.items[id]);
@@ -189,8 +190,9 @@ async function editRecent() {
   put(['homePens','awayPens'], snap.pens);
   pensOn = !!snap.pensOn;
   etOn = !!snap.etOn;
+  if (snap.subs) subRestore(snap.subs);
   buildFlow();
-  const target = ['minute', 'score'].find(s => flow.includes(s));
+  const target = ['minute', 'score', 'subs'].find(s => flow.includes(s));
   flowIndex = target ? flow.indexOf(target) : flow.length - 1;
   refreshSearchSummaries();
   if (typeof updatePhaseUI === 'function') updatePhaseUI();

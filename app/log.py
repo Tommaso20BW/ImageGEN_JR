@@ -18,7 +18,7 @@ _BOT_TOKEN_RE = re.compile(r'(?<!\d)\d{6,}:[A-Za-z0-9_-]{30,}')
 
 # Nome di ogni grafica come nella Mini App.
 KIND_NAMES = {
-    'goal': 'Gol', 'saved': 'Parata', 'stats': 'Statistiche',
+    'goal': 'Gol', 'saved': 'Parata', 'sub': 'Cambio', 'stats': 'Statistiche',
     'kick': 'Kick Off', 'half': 'Half Time', 'second': '2nd Half', 'end_of_90': 'End Of 90’', 'full': 'Full Time',
     'md': 'Matchday', 'pxi': 'Probabile XI', 'squad': 'Squad List', 'xi': 'Starting XI',
     'cal': 'Calendario', 'table': 'Classifica', 'conv': 'Convocati', 'jr': 'Post', 'igbn': 'Storia Instagram', 'rin': 'Rinnovo', 'bday': 'Compleanno', 'bdold': 'Compleanno ex giocatore', 'motm': 'Man of the Match', 'potm': 'Player of the Month', 'af': 'Here We Go', 'free': 'Editor libero', 'igq': 'Citazione Instagram', 'igc': 'Commento Instagram', 'xq': 'Citazione X', 'thq': 'Citazione Threads',

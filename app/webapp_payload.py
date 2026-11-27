@@ -165,6 +165,36 @@ def _lineup_name(catalog, value):
     return name
 
 
+MAX_SUBS = 5
+
+
+def _subs(catalog, value):
+    """CAMBIO: da 1 a 5 coppie (esce, entra), ogni giocatore [numero di maglia, nome].
+    Chi è in rosa prende il nome del catalogo; un nome scritto a mano (es. un ragazzo della
+    Primavera) resta come scritto."""
+    if not isinstance(value, list) or not 1 <= len(value) <= MAX_SUBS:
+        raise ValueError(f'Scegli da 1 a {MAX_SUBS} cambi.')
+    pairs, seen = [], set()
+    for item in value:
+        if not isinstance(item, dict):
+            raise ValueError('Cambio non valido.')
+        pair = []
+        for side in ('out', 'in'):
+            player = item.get(side)
+            if not isinstance(player, dict):
+                raise ValueError('Scegli chi entra e chi esce.')
+            name = _lineup_name(catalog, player.get('name'))
+            number = str(player.get('number') or '').strip()
+            if not re.fullmatch(r'[1-9]\d?', number):
+                raise ValueError(f'Manca il numero di maglia di {name}.')
+            if name in seen:
+                raise ValueError(f'{name} è stato scelto due volte.')
+            seen.add(name)
+            pair.append([int(number), name])
+        pairs.append(pair)
+    return pairs
+
+
 def _photo_id(value):
     value = str(value or '')
     if not re.fullmatch(r'[0-9a-f]{16}', value):
@@ -657,6 +687,11 @@ def _build_state(envelope, catalog, now, expected_session):
             if player and pose not in (g.available_poses(player, kit, assets) or ()):
                 raise ValueError(f'Manca questa esultanza di {player.name} con questa maglia: scegli un\'altra posa.')
         data['pose'] = pose
+
+    elif kind == 'sub':
+        # CAMBIO: coppie (esce, entra) con numero e nome; il minuto va solo nel testo.
+        data['subs'] = _subs(catalog, incoming.get('subs'))
+        data['minute'] = parse_minute(str(incoming.get('minute') or ''))
 
     elif kind in ('second', 'half', 'full', 'end_of_90'):
         data['score'] = _score(incoming.get('score'))

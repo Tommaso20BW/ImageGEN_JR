@@ -122,6 +122,9 @@ function buildPayload(ghost=false) {
     data.score = scorePair('evHomeScore','evAwayScore',true);
     data.pose = pose;
     if (kind === 'goal' && goalType === 'penalty') data.goal_type = 'penalty';
+  } else if (kind === 'sub') {
+    data.subs = subPayload();
+    data.minute = $('subMinute').value.trim();
   } else if (kind === 'match' && phase !== 'kick') {
     data.score = scorePair('homeScore','awayScore',true);
     if (phase === 'full' && etOn) data.extra_time = true;

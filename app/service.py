@@ -1065,7 +1065,7 @@ class Service:
         return self.ghost_cache[key]
 
     def _remember_shirts(self, lineup):
-        """Numeri nuovi o cambiati della Starting XI inviata -> repository."""
+        """Numeri nuovi o cambiati della Starting XI o del Cambio inviati -> repository."""
         try:
             import logo_bundle
             import shirt_numbers
@@ -1367,6 +1367,9 @@ class Service:
                                  daemon=True).start()
             if data['kind'] == 'xi':
                 threading.Thread(target=self._remember_shirts, args=(data['lineup'],), daemon=True).start()
+            if data['kind'] == 'sub':   # numeri scritti per il cambio: valgono anche le prossime volte
+                players = [tuple(p) for pair in data['subs'] for p in pair]
+                threading.Thread(target=self._remember_shirts, args=(players,), daemon=True).start()
             if data['kind'] == 'conv':
                 threading.Thread(target=self._remember_names, args=(data['players'],), daemon=True).start()
             took = time.time() - sending
@@ -2077,6 +2080,19 @@ def _jpeg(raw, size, quality):
         return b''
 
 
+def _short_name(name):
+    """Cognome come nella Mini App (Kolo Muani, Thuram, Yıldız); fuori rosa: senza il nome."""
+    from graphics import probabili
+    from livescore.graphics import goal as g
+    player = next((p for p in g.load_players() if p.name == name), None)
+    if player is None:
+        return probabili.guest_surname(name)
+    if player.slug in probabili.SHORT_NAMES:
+        return probabili.SHORT_NAMES[player.slug]
+    singles = [a for a in player.aliases if '.' not in a and ' ' not in a.strip()]
+    return singles[-1] if singles else name.split()[-1]
+
+
 def _send_detail(data):
     """Dati mostrati in "Ultimi invii", separati: la Mini App li mette su due righe
     (giocatore e minuto; risultato e avversario, oppure `note`). Il nome dell'avversario è
@@ -2145,6 +2161,12 @@ def _send_detail(data):
     if kind == 'stats':
         moment = {'HT': 'Primo tempo', '2H_END': 'Fine 90’', 'FT': 'Finale'}.get(data.get('moment'), '')
         return {**empty, 'player': moment, 'opponent': team}
+    if kind == 'sub':
+        subs = data.get('subs') or []
+        ins = ', '.join(_short_name(inn[1]) for _out, inn in subs)
+        outs = ', '.join(_short_name(out[1]) for out, _inn in subs)
+        return {**empty, 'player': f'IN {ins} · OUT {outs}',
+                'minute': f"{data['minute']}'" if data.get('minute') else '', 'opponent': team}
     pens = data.get('shootout')
     if isinstance(pens, (list, tuple)) and len(pens) == 2 and isinstance(score, (list, tuple)) and len(score) == 2:
         score = (f'{score[0]}', f'{score[1]} ({pens[0]}-{pens[1]} rig.)')

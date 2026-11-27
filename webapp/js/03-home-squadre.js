@@ -13,6 +13,7 @@ const BUSY_SUB = {
   table:'Scarico la classifica aggiornata da Diretta.it.',
   conv:'Compongo i convocati con bandiere e foto.',
   saved:'Compongo la grafica con foto e posa del portiere.',
+  sub:'Compongo la grafica del cambio.',
   kick:'Preparo la grafica del calcio d’inizio.',
   second:'Preparo la grafica dell’inizio del secondo tempo.',
   half:'Avvio la generazione…',
@@ -20,7 +21,7 @@ const BUSY_SUB = {
   full:'Avvio la generazione…',
   stats:'Preparo la tabella delle statistiche.'
 };
-const DEFAULT_MS = {ppcut:12000, potmall:16000, goal:4000, saved:4000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, igbn:4000, rin:3000, pxi:9000, cal:5000, table:35000, bracket:45000, conv:9000, half:6000, end_of_90:6000, full:6000, submit:2500};
+const DEFAULT_MS = {ppcut:12000, potmall:16000, goal:4000, saved:4000, sub:3000, kick:4000, second:4000, stats:7000, squad:6000, xi:8000, md:7000, jr:4000, igbn:4000, rin:3000, pxi:9000, cal:5000, table:35000, bracket:45000, conv:9000, half:6000, end_of_90:6000, full:6000, submit:2500};
 const DURATIONS_KEY = 'imagegen-jr-durations';
 const SLOW_SUB = 'Ci sta mettendo più del solito: attendi ancora qualche secondo.';
 const RING_C = 2 * Math.PI * 42;
@@ -233,6 +234,7 @@ function resetAllData() {
   Object.assign(jrb,{style:'', ratio:'', title:'', tcolor:'#ffffff', cards:[], bg:'', sel:-1, uploading:0, tpl:0, order:null, swap:-1, csel:-1, tpls:null});
   jrc.key = ''; jrcCloseSheet();
   if (typeof dichReset === 'function') dichReset();
+  if (typeof subReset === 'function') subReset();
   pxiModule = '';
   pxiPicks = Array(11).fill('');
   pxiSource = '';

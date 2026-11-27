@@ -326,6 +326,12 @@ def _match_caption(data):
             head, line = f"<b>PARATA · {minute}' 🧤</b>", f"🧤 <i>{_player(data.get('player'))}</i>"
             board = _score(m, score) if score else ''
         return f"{head}\n\n" + (f"{board}\n" if board else '') + f"{line}\n\n{tail}"
+    if kind == 'sub':
+        # Come il messaggio CAMBIO del LiveScore: chi entra (🔺) e chi esce (🔻).
+        subs = data.get('subs') or []
+        ins = ', '.join(esc(_player(inn[1])) for _out, inn in subs)
+        outs = ', '.join(esc(_player(out[1])) for out, _inn in subs)
+        return f"<b>CAMBIO JUVENTUS · {esc(data.get('minute'))}' 🔄</b>\n\n🔺 {ins}\n🔻 {outs}\n\n{tail}"
     if kind == 'kick':
         return f"<b>{PHASES[kind]}</b>\n\n{m['home']} - {m['away']}\n\n{tail}"
     if kind in PHASES:
@@ -530,12 +536,12 @@ def _other_caption(data):
     return ''
 
 
-MATCH_KINDS = {'goal', 'saved', 'kick', 'half', 'second', 'end_of_90', 'full', 'stats', 'xi', 'pxi',
+MATCH_KINDS = {'goal', 'saved', 'sub', 'kick', 'half', 'second', 'end_of_90', 'full', 'stats', 'xi', 'pxi',
                'squad', 'md'}
 
 
 # Post della diretta (come quelli di LiveScore): sul canale non hanno la firma.
-LIVE_KINDS = {'goal', 'saved', 'kick', 'half', 'second', 'end_of_90', 'full', 'stats'}
+LIVE_KINDS = {'goal', 'saved', 'sub', 'kick', 'half', 'second', 'end_of_90', 'full', 'stats'}
 X_LIVE_KINDS = {'half', 'end_of_90', 'full'}      # su X solo le fine dei tempi
 
 

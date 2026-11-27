@@ -5,6 +5,7 @@ import re
 KINDS = [
     ('GOAL', 'goal'),
     ('SAVED', 'saved'),
+    ('CAMBIO', 'sub'),
     ('KICK OFF', 'kick'),
     ('HALF TIME', 'half'),
     ('2ND HALF', 'second'),

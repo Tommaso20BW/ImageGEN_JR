@@ -118,6 +118,7 @@ function validateCurrent() {
   }
 
   if (step === 'convlist' && !convValidate()) return false;
+  if (step === 'subs' && !subValidate()) return false;
 
   if (step === 'xi11') {
     const n = pxiRead.length;
@@ -162,13 +163,14 @@ async function nextField(validate=true) {
 
   if (validate) {
     const step = flow[flowIndex];
-    if ((step === 'opponent' && !teamsLoaded) || ((step === 'player' || step === 'convlist') && !playersLoaded) ||
+    if ((step === 'opponent' && !teamsLoaded) || ((step === 'player' || step === 'convlist' || step === 'subs') && !playersLoaded) ||
         (step === 'calmonth' && !teamsLoaded)) {
       await loadCatalogs();
       refreshSearchSummaries();
     }
     if (step === 'lineup' && !(await askMissingNumbers())) return;
     if (step === 'convlist' && !(await askConvNames())) return;
+    if (step === 'subs' && !(await askSubNumbers())) return;
     if (step === 'iqurl' && !(await iqLoad())) return;
     if (step === 'dichtext' && !(await dichConvert())) return;
     if (!validateCurrent()) return;
