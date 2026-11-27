@@ -134,7 +134,7 @@ const HOME_GROUPS = [
   {icon:'g-play', title:'In partita',            ids:['goal','saved','stats']},
   {icon:'motm', title:'Giocatori',               ids:['awards','af','rin','bday']},
   {icon:'jr', title:'Post e storie',             ids:['jr','igbn']},
-  {icon:'igq', title:'Citazioni',                ids:['igq','xq','thq','dich']},
+  {icon:'igq', title:'Citazioni',                ids:['dich','igq','xq','thq']},
   {icon:'cal', title:'Calendario e classifiche', ids:['cal','table']},
   {icon:'ita', title:'Nazionale',                ids:['ita','conv']},
   {icon:'free', title:'Altro',                   ids:['free']}          // Ultimi invii: in Impostazioni
