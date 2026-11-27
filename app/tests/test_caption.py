@@ -139,8 +139,7 @@ class TemplateCaptionTest(unittest.TestCase):
     def test_default_templates_keep_channel_emoji(self):
         text = caption.build({'kind': 'squad', 'competition': 'ita.1', 'side': 'home', 'opponent': FIO})
         self.assertTrue(text.startswith('<tg-emoji emoji-id="5454096630372379732">☑️</tg-emoji>'
-                                        '<tg-emoji emoji-id="5334882760735598374">📝</tg-emoji> I convocati di '
-                                        '<b>Spalletti</b> per #JuveFiorentina.'), text)
+                                        '<tg-emoji emoji-id="5334882760735598374">📝</tg-emoji> I convocati per #JuveFiorentina.'), text)
 
     def test_custom_template(self):
         caption.CUSTOM = {'pxi': 'Ecco la **probabile** contro {avversario} <3 __{hashtag}__ ✅ {boh}'}

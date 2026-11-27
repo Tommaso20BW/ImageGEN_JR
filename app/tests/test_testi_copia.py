@@ -17,7 +17,7 @@ def x(data):
 class XTextTest(unittest.TestCase):
     def test_squad_xi_pxi(self):
         data = {'competition': 'ita.1', 'side': 'away', 'opponent': FIO}
-        self.assertEqual(x({**data, 'kind': 'squad'}), '☑️📝 I convocati di #Spalletti per #FiorentinaJuve.')
+        self.assertEqual(x({**data, 'kind': 'squad'}), '☑️📝 I convocati per #FiorentinaJuve.')
         self.assertEqual(x({**data, 'kind': 'xi'}), '✅📋 𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄 #FiorentinaJuve')
         self.assertEqual(x({**data, 'kind': 'pxi'}), '🆕📋 𝐏𝐑𝐎𝐁𝐀𝐁𝐈𝐋𝐄 𝐗𝐈 #FiorentinaJuve')
 

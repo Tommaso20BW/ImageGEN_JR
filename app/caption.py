@@ -10,8 +10,6 @@ Convocati, XI, Here We Go, MOTM e POTM seguono i modelli di Impostazioni › Mes
 """
 import html
 
-ALLENATORE = 'Spalletti'          # nel testo della Squad List ("I convocati di Spalletti")
-
 
 def emoji(emoji_id, fallback):
     """Emoji personalizzata di Telegram (chi non la vede legge `fallback`)."""
@@ -56,7 +54,7 @@ PXI_SOURCES = {'sky': ('Sky Sport', emoji('5974058122984038105', '📰'), '@SkyS
 # Testo semplice scritto nella Mini App: **grassetto**, __corsivo__, {segnaposto}. Le emoji del canale
 # (☑️ 📝 🆕 ✅ ...) diventano da sole quelle personalizzate. La firma 👉 @Juventus_Reborn si aggiunge sempre.
 TEMPLATE_KINDS = {   # tipo -> (nome nella Mini App, testo di base, segnaposto)
-    'squad': ('Convocati', f'☑️📝 I convocati di **{ALLENATORE}** per {{hashtag}}.', ('hashtag', 'avversario')),
+    'squad': ('Convocati', '☑️📝 I convocati per {hashtag}.', ('hashtag', 'avversario')),
     'pxi': ('Probabile XI', '🆕📋 𝐏𝐑𝐎𝐁𝐀𝐁𝐈𝐋𝐄 𝐗𝐈 {hashtag}', ('hashtag', 'avversario', 'fonte')),
     'xi': ('XI ufficiale', '✅📋 𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄 {hashtag}', ('hashtag', 'avversario')),
     'conv': ('Convocati nazionali', '🌍📋 I bianconeri convocati dalle rispettive nazionali.', ()),
@@ -71,7 +69,7 @@ TEMPLATE_KINDS = {   # tipo -> (nome nella Mini App, testo di base, segnaposto)
 # Gli stessi modelli per X (scheda 𝕏 di Impostazioni › Messaggi), come i post di @Juventus_Reborn:
 # emoji normali, niente firma, hashtag al posto del grassetto. {giocatore} = Nick #Woltemade.
 X_TEMPLATES = {
-    'squad': f'☑️📝 I convocati di #{ALLENATORE} per {{hashtag}}.',
+    'squad': '☑️📝 I convocati per {hashtag}.',
     'pxi': '🆕📋 𝐏𝐑𝐎𝐁𝐀𝐁𝐈𝐋𝐄 𝐗𝐈 {hashtag}',
     'xi': '✅📋 𝐗𝐈 𝐔𝐅𝐅𝐈𝐂𝐈𝐀𝐋𝐄 {hashtag}',
     'conv': '🌍📋 I bianconeri convocati dalle rispettive nazionali.',
