@@ -6,7 +6,9 @@ riga (COMPLETO, 240...). Ogni blocco diventa una proposta:
             (<b>PARTITA</b> – <i>“…”.</i>),
             firma 👉 @Juventus_Reborn in fondo, come i post del canale;
   X:        chi parla con l'hashtag sul cognome e la testata con la sua pagina, come il profilo:
-            🇮🇹🗣️ Luciano #Spalletti a @SkySport dopo #JuveOmonia: “…”.
+            🇮🇹🗣️ Luciano #Spalletti a @SkySport post #JuveOmonia: “…”.
+Chi parla sempre con nome e cognome (rosa del motore grafico + staff). Prima di una partita
+"pre #Hashtag", dopo "post #Hashtag" (mai prima/dopo); senza hashtag della partita resta com'è.
 Dentro le virgolette non si tocca niente. Un'etichetta numerica (240) è il limite di caratteri,
 contato come X (emoji = 2).
 """
@@ -39,6 +41,10 @@ CHANNEL_FLAGS = {
     'TR': '5789644098583404844', 'CO': '5789843990656328355', 'BA': '5789842410108361950',
     'SN': '5816763346724069174', 'CL': '5222427035023977899', 'GB-ENG': '5789901070771691820',
 }
+
+# Allenatore e dirigenti come li scrive il canale (i giocatori arrivano dalla rosa del motore grafico).
+STAFF = ['Luciano Spalletti', 'Giovanni Carnevali', 'Frederic Massara', 'Giorgio Chiellini', 'Gianluca Ferrero',
+         'Damien Comolli', 'John Elkann']
 
 _UP = 'A-ZÀ-ÖØ-Þ'
 _LABEL = re.compile(rf'^[{_UP}0-9][{_UP}0-9 ]{{0,24}}$')                     # COMPLETO, 240 (da sola sulla riga)
@@ -129,7 +135,8 @@ def _parts(block):
             gap = rest[:len(rest) - len(rest.lstrip())]
             rest = rest.lstrip()
             m = _SPEAKER.match(rest)
-            who, rest = (m.group(0), rest[m.end():]) if m else ('', rest)
+            who, rest = (full_name(m.group(0)), rest[m.end():]) if m else ('', rest)
+            rest = _outside_quotes(rest, _pre_post)
             if has_themes and rest and not rest.rstrip().endswith(':'):   # come il canale: "dopo #JuveOmonia:"
                 rest = rest.rstrip() + ':'
             out.append(('head', lead, gap, who, rest))
@@ -138,6 +145,44 @@ def _parts(block):
         else:
             out.append(('text', line))
     return out
+
+
+def _key(text):
+    import unicodedata
+    text = unicodedata.normalize('NFKD', str(text or '')).encode('ascii', 'ignore').decode()
+    return re.sub(r'[^a-z]', '', text.lower())
+
+
+def _people():
+    """{cognome (o alias) senza accenti -> nome e cognome}: rosa del motore grafico + staff."""
+    out = {}
+    try:
+        from livescore.graphics import goal as g
+        for player in g.load_players():
+            names = [player.name, *(getattr(player, 'aliases', None) or [])]
+            for alias in names:
+                if alias and not re.match(r'^\w\.', alias):
+                    out.setdefault(_key(alias), player.name)
+            out.setdefault(_key(player.name.split()[-1]), player.name)
+    except Exception:  # noqa: BLE001 - senza rosa i nomi restano come scritti
+        pass
+    for name in STAFF:
+        out.setdefault(_key(name.split()[-1]), name)
+        out.setdefault(_key(name), name)
+    return out
+
+
+def full_name(name):
+    """'Spalletti' -> 'Luciano Spalletti', 'Kolo Muani' -> 'Randal Kolo Muani' (anche su X serve nome e
+    cognome); chi non è nella rosa né nello staff resta com'è."""
+    found = _people().get(_key(name))
+    return found if found and len(found.split()) > len(name.split()) else name
+
+
+def _pre_post(text):
+    """Come il canale: "pre #JuveOmonia" e "post #JuveOmonia" (non prima/dopo), fuori dalle virgolette."""
+    text = re.sub(r'\b(?:dopo|post)\s+(?:la\s+partita\s+)?(?=#\w)', 'post ', text, flags=re.I)
+    return re.sub(r'\b(?:prima\s+(?:della\s+partita\s+|di\s+)?|pre\s+)(?=#\w)', 'pre ', text, flags=re.I)
 
 
 def _outside_quotes(text, fn):
