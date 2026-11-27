@@ -192,7 +192,7 @@ async function editRecent() {
   etOn = !!snap.etOn;
   if (snap.subs) subRestore(snap.subs);
   buildFlow();
-  const target = ['minute', 'score', 'subs'].find(s => flow.includes(s));
+  const target = ['minute', 'score', 'submin'].find(s => flow.includes(s));
   flowIndex = target ? flow.indexOf(target) : flow.length - 1;
   refreshSearchSummaries();
   if (typeof updatePhaseUI === 'function') updatePhaseUI();

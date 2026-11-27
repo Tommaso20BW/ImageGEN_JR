@@ -264,7 +264,7 @@ function buildFlow() {
   else if (kind === 'kick') flow = pick(base);
   else if (kind === 'match' && phase === 'kick') flow = pick(base);
   else if (kind === 'match') flow = [...pick([...(italy ? withKit : base),'score']),...(PHOTO_PHASES.has(phase) && !friendly ? ['phasephoto'] : [])];
-  else if (kind === 'sub') flow = pick([...(subNeedsKit() ? withKit : base),'subs']);
+  else if (kind === 'sub') flow = pick([...(subNeedsKit() ? withKit : base),'subout','subin','submin']);
   else if (kind === 'stats') flow = pick([...(italy ? withKit : base),'moment','stats']);
   else if (PREMATCH.includes(kind)) {
     // Matchday / Starting XI di una partita UEFA: niente passo "Maglia" (colori della coppa).
@@ -322,7 +322,7 @@ function stepValue(step) {
       return min ? `${h || 0}-${a || 0} · ${min}'` : '';
     }
     case 'pose': return labelOf(POSES,pose);
-    case 'subs': return subStepValue();
+    case 'subout': case 'subin': case 'submin': return subStepValue(step);
     case 'score': {
       const h = $('homeScore').value.trim(), a = $('awayScore').value.trim();
       let out = h !== '' && a !== '' ? `${h} – ${a}` : '';
@@ -709,7 +709,7 @@ function renderFlow() {
   if (screenName === 'calrows') renderCalRows();
   else closeCalSheet();
   if (screenName === 'convlist') { if (!playersLoaded) loadCatalogs().then(readConv); else readConv(); }
-  if (screenName === 'subs') { if (!playersLoaded) loadCatalogs().then(renderSubs); else renderSubs(); }
+  if (['subout','subin','submin'].includes(screenName)) subEnter(screenName);
   if (screenName === 'xi11') { readPxiText(); loadPxiUpdates(); loadLayouts().then(() => { syncModules(); readPxiText(); }); }
   lastRenderedScreen = screenName || '';
   lastRenderedFlowIndex = flowIndex;

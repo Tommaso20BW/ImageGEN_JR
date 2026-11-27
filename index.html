@@ -111,15 +111,45 @@
             <div id="playerList" class="results"></div>
           </section>
 
-          <section class="screen" data-screen="subs">
+          <section class="screen" data-screen="subout">
             <div class="eyebrow">Cambio</div>
             <div class="photo-head">
-              <h1>Cambi</h1>
+              <h1>Chi esce</h1>
               <div class="head-icos">
-                <button id="subManual" class="head-ico" type="button" aria-label="Giocatore fuori rosa" title="Giocatore fuori rosa"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+                <button class="head-ico sub-guest" data-side="out" type="button" aria-label="Giocatore fuori rosa" title="Giocatore fuori rosa"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
               </div>
             </div>
-            <p class="lead">Tocca Entra ed Esce sui giocatori: il primo che entra prende il posto del primo che esce. Da 1 a 5 cambi. Tocca un nome nei cambi per correggere il numero; con + un giocatore fuori rosa.</p>
+            <p class="lead">Tocca chi esce, da 1 a <span id="subMax">5</span>. Con + un giocatore fuori rosa.</p>
+            <label class="search sub-search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="subOutSearch" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Cerca giocatore…">
+            </label>
+            <div id="subOutSummary" class="hint"></div>
+            <div id="subOutList" class="results"></div>
+          </section>
+
+          <section class="screen" data-screen="subin">
+            <div class="eyebrow">Cambio</div>
+            <div class="photo-head">
+              <h1>Chi entra</h1>
+              <div class="head-icos">
+                <button class="head-ico sub-guest" data-side="in" type="button" aria-label="Giocatore fuori rosa" title="Giocatore fuori rosa"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+              </div>
+            </div>
+            <p class="lead">Tocca chi entra, nello stesso ordine. Con + un giocatore fuori rosa.</p>
+            <div id="subNext" class="sub-next"></div>
+            <label class="search sub-search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="subInSearch" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Cerca giocatore…">
+            </label>
+            <div id="subInSummary" class="hint"></div>
+            <div id="subInList" class="results"></div>
+          </section>
+
+          <section class="screen" data-screen="submin">
+            <div class="eyebrow">Cambio</div>
+            <h1>Minuto</h1>
+            <p class="lead">Il minuto va nel messaggio. Tocca un giocatore per correggere il numero di maglia.</p>
             <div class="ios-list">
               <label class="ios-row"><span>Minuto</span><input id="subMinute" class="ios-in" inputmode="numeric" enterkeyhint="done" placeholder="67 o 90+4" autocomplete="off"></label>
             </div>
@@ -129,13 +159,8 @@
               <button type="button" data-v="105+">105+</button>
               <button type="button" data-v="120+">120+</button>
             </div>
-            <div id="subPairs" class="sub-pairs" hidden></div>
-            <label class="search sub-search">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-              <input id="subSearch" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="Cerca giocatore…">
-            </label>
-            <div id="subSummary" class="hint"></div>
-            <div id="subList" class="results"></div>
+            <div class="field-label gap">Cambi</div>
+            <div id="subPairs" class="sub-pairs"></div>
           </section>
 
           <section class="screen" data-screen="natkind">

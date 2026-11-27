@@ -118,7 +118,7 @@ function validateCurrent() {
   }
 
   if (step === 'convlist' && !convValidate()) return false;
-  if (step === 'subs' && !subValidate()) return false;
+  if (['subout','subin','submin'].includes(step) && !subValidate(step)) return false;
 
   if (step === 'xi11') {
     const n = pxiRead.length;
@@ -163,14 +163,14 @@ async function nextField(validate=true) {
 
   if (validate) {
     const step = flow[flowIndex];
-    if ((step === 'opponent' && !teamsLoaded) || ((step === 'player' || step === 'convlist' || step === 'subs') && !playersLoaded) ||
+    if ((step === 'opponent' && !teamsLoaded) || ((step === 'player' || step === 'convlist' || step === 'subout' || step === 'subin') && !playersLoaded) ||
         (step === 'calmonth' && !teamsLoaded)) {
       await loadCatalogs();
       refreshSearchSummaries();
     }
     if (step === 'lineup' && !(await askMissingNumbers())) return;
     if (step === 'convlist' && !(await askConvNames())) return;
-    if (step === 'subs' && !(await askSubNumbers())) return;
+    if ((step === 'subout' || step === 'subin') && !(await askSubNumbers(step))) return;
     if (step === 'iqurl' && !(await iqLoad())) return;
     if (step === 'dichtext' && !(await dichConvert())) return;
     if (!validateCurrent()) return;
