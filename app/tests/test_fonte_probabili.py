@@ -38,5 +38,23 @@ class FontePxiTest(unittest.TestCase):
         self.assertEqual(text.count('Sky Sport'), 1)
 
 
+    def test_coppa_italia_matchday_tv_is_sportmediaset(self):
+        from unittest import mock
+        with mock.patch('team_emoji.find', return_value=None):
+            text = caption.x_text({'kind': 'md', 'competition': 'ita.coppa_italia', 'side': 'home',
+                                   'opponent': FIO, 'info': {'stadium': 'ALLIANZ STADIUM', 'time': '21:00'}})
+        self.assertIn('📺 @sportmediaset', text)
+        self.assertIn('📲 #JuveFiorentina', text)          # l'hashtag della partita resta com'e'
+
+    def test_sources_written_in_a_template_become_profiles(self):
+        caption.CUSTOM = {'x:potm': '{giocatore} eletto.\n\n__📰 Sky Sport__\n📲 Gianluca Di Marzio\n📰 Il Bianconero'}
+        text = caption.x_text({'kind': 'potm', 'name': 'NICK', 'surname': 'WOLTEMADE'},
+                              caption.build({'kind': 'potm', 'name': 'NICK', 'surname': 'WOLTEMADE'}))
+        self.assertIn('📲 @SkySport', text)
+        self.assertIn('📲 @DiMarzio', text)
+        self.assertIn('📲 Il Bianconero', text)            # senza profilo noto: il nome, con 📲
+        self.assertNotIn('📰', text)
+
+
 if __name__ == '__main__':
     unittest.main()

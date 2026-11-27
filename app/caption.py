@@ -576,7 +576,21 @@ X_FLAGS = {'ita.1': '🇮🇹', 'ita.coppa_italia': '🇮🇹', 'ita.super_cup':
            'uefa.europa': '🇪🇺', 'uefa.europa.conf': '🇪🇺', 'uefa.super_cup': '🇪🇺', 'fifa.cwc': '🌍',
            'club.friendly': '🤝'}
 X_TABLES = {'SA': ('🇮🇹', '#SerieA'), 'UCL': ('🇪🇺', '#UCL'), 'UEL': ('🇪🇺', '#UEL'), 'UECL': ('🇪🇺', '#UECL')}
-X_TV = {'DAZN': '@DAZN_IT', 'Sky Sport': '@SkySport'}       # come sul profilo; gli altri restano scritti
+X_TV = {'DAZN': '@DAZN_IT', 'Sky Sport': '@SkySport', 'Mediaset': '@sportmediaset'}   # come sul profilo
+# Fonti scritte nel testo (📲 Fabrizio Romano, 📰 Sky Sport...): su X il profilo, sempre con 📲.
+X_SOURCES = {'Fabrizio Romano': '@FabrizioRomano', 'Sky Sport': '@SkySport', 'Gazzetta': '@Gazzetta_it',
+             'La Gazzetta dello Sport': '@Gazzetta_it', 'Gianluca Di Marzio': '@DiMarzio',
+             'Alfredo Pedullà': '@AlfredoPedulla', 'Corriere dello Sport': '@CorSport',
+             'Tuttosport': '@tuttosport', 'Mediaset': '@sportmediaset', 'Sport Mediaset': '@sportmediaset'}
+
+
+def _x_sources(text):
+    """Righe con una fonte (📲 / 📰 Nome) -> 📲 @profilo; le fonti sconosciute restano scritte, con 📲."""
+    import re
+    def one(m):
+        name = m.group(2).strip()
+        return f"📲 {X_SOURCES.get(name, name)}"
+    return re.sub(r'^(📲|📰)️?\s*(.+?)\s*$', one, text, flags=re.M)
 
 
 def plain(text):
@@ -719,7 +733,7 @@ def x_text(data, telegram_text=None):
         text = plain(telegram_text)
         if text.endswith(SIGN_PLAIN):
             text = text[:-len(SIGN_PLAIN)].rstrip()
-    return text.strip()
+    return _x_sources(text).strip()
 
 
 def copy_messages(data, telegram_text):
