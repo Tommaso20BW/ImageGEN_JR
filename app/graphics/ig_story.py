@@ -551,7 +551,7 @@ def render(*, text='', photo=None, color='black', label=DEFAULT_LABEL, seed=None
     for i, p in enumerate(parts):
         ph = p.height + 32
         pw = p.width + 2 * LABEL_PAD
-        ang = float(sign * (-1) ** i * rng.uniform(1.5, 2.5))
+        ang = float(sign * (-1) ** i * rng.uniform(4, 7))   # ben storte: si vede che cambiano a ogni grafica
         img = _piece(img, p, (shift + rights[i] - pw / 2, yy + ph / 2), ang, block, letters,
                      int(rng.integers(1 << 20)), pad=(LABEL_PAD, 16), tear=2,
                      sh=(6, 10, 8, .4), breakup=.08, fringe=True)
