@@ -49,6 +49,15 @@ class BlocchiTest(unittest.TestCase):
         only_full = d.convert(TEXT.split('\n\n240')[0])['post']        # solo COMPLETO: anche X dal completo
         self.assertTrue(only_full['x'].startswith('🗣️ Luciano #Spalletti a @SkySport post #JuveOmonia:\n\nPARTITA'))
 
+    def test_two_versions_without_labels(self):
+        bare = TEXT.replace('COMPLETO\n\n', '').replace('240\n\n', '')
+        for text in (bare, '\n\n'.join(bare.rsplit('\n\n', 1)[::-1])):
+            p = d.convert(text)['post']
+            self.assertIn('<b>PARTITA</b>', p['tg'])
+            self.assertNotIn('Ekhator merita', p['tg'])
+            self.assertTrue(p['x'].startswith('🇮🇹🗣️ Luciano #Spalletti'))
+        self.assertEqual(len(d.blocks(TEXT.split('\n\n240')[0].replace('COMPLETO\n\n', ''))), 1)
+
     def test_over_limit_and_outlets_only_outside_quotes(self):
         p = d.convert('240\n\n⚪🗣️ Kenan Yildiz a DAZN: “Guardo Sky Sport. ' + 'parola ' * 40 + '”.')['post']
         self.assertTrue(p['over'])

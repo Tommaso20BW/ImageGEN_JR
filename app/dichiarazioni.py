@@ -111,7 +111,29 @@ def blocks(text):
             lines.append(line)
     if '\n'.join(lines).strip():
         out.append((label, '\n'.join(lines).strip()))
+    if len(out) == 1 and not out[0][0]:
+        return _split_versions(out[0][1])
     return out
+
+
+def _is_head(line):
+    """Riga d'apertura: emoji e poi chi parla (🇮🇹🗣️ Spalletti a Sky Sport…)."""
+    lead, rest = _lead(line)
+    return bool(lead and _SPEAKER.match(rest.strip()))
+
+
+def _split_versions(block):
+    """Senza COMPLETO / 240: una nuova riga d'apertura dopo una riga vuota è un'altra versione.
+    La più lunga è il completo (Telegram), la più corta la breve (X)."""
+    lines, starts = block.split('\n'), [0]
+    for n in range(1, len(lines)):
+        if not lines[n - 1].strip() and _is_head(lines[n]):
+            starts.append(n)
+    if len(starts) != 2:
+        return [('', block)]
+    a, b = ('\n'.join(lines[i:j]).strip() for i, j in zip(starts, starts[1:] + [len(lines)]))
+    full, short = (a, b) if x_length(a) >= x_length(b) else (b, a)
+    return [('COMPLETO', full), ('BREVE', short)]
 
 
 def _lead(line):
@@ -266,7 +288,7 @@ def pick(parts):
     if not parts:
         return None, None
     tg = next((p for p in parts if not p[0].isdigit()), parts[0])
-    x = next((p for p in parts if p[0].isdigit()), tg)
+    x = next((p for p in parts if p[0].isdigit() or p[0] == 'BREVE'), tg)
     return tg, x
 
 
