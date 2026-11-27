@@ -136,16 +136,16 @@ class CopyTextsTest(unittest.TestCase):
     def test_no_caption_no_message(self):
         self.assertEqual(caption.copy_messages({'kind': 'jr'}, ''), ('', ''))
 
-    def test_x_box_is_a_reply(self):
-        import threading
+    def test_only_x_box_as_reply_to_photo(self):
         import service
         sent = []
         fake = mock.Mock(generated_message_ids=[])
-        fake.telegram.copy_text.side_effect = lambda body, reply_to=None: sent.append((body, reply_to)) or 10 + len(sent)
+        fake.telegram.copy_text.side_effect = lambda body, reply_to=None: sent.append((body, reply_to)) or 12
         with mock.patch('caption.x_text', return_value='FINE PARTITA 🏁'):
-            service.Service._send_copy_texts(fake, {'kind': 'full'}, '<b>FINE PARTITA</b>')
-        self.assertEqual(sent, [('<b>FINE PARTITA</b>', None), ('<pre>FINE PARTITA 🏁</pre>', 11)])
-        self.assertEqual(fake.generated_message_ids, [11, 12])
+            service.Service._send_copy_texts(fake, {'kind': 'full'}, '<b>FINE PARTITA</b>', 40)
+            service.Service._send_copy_texts(fake, {'kind': 'goal'}, '<b>GOAL</b>', 41)   # su X no
+        self.assertEqual(sent, [('<pre>FINE PARTITA 🏁</pre>', 40)])     # la foto ha già il testo Telegram
+        self.assertEqual(fake.generated_message_ids, [12])
 
     def test_telegram_sends_html_silently_and_replies(self):
         import json

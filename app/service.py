@@ -1358,8 +1358,9 @@ class Service:
                         self.post_files.pop(next(iter(self.post_files)))
             self._remember_send(message_id, data, png, text)
             self._remember_ig_name(data)
-            if text:   # testi da copiare per X e Telegram/IG, in messaggi a parte dopo la foto
-                threading.Thread(target=self._send_copy_texts, args=(data, text), daemon=True).start()
+            if text:   # testo da copiare per X, in risposta alla foto
+                threading.Thread(target=self._send_copy_texts, args=(data, text, int(message_id)),
+                                 daemon=True).start()
             if data['kind'] == 'xi':
                 threading.Thread(target=self._remember_shirts, args=(data['lineup'],), daemon=True).start()
             if data['kind'] == 'conv':
@@ -1428,16 +1429,13 @@ class Service:
                                   f'({type(exc).__name__}, {time.time() - started:.1f} s, {log.kb(len(png))})')
                 raise
 
-    def _send_copy_texts(self, data, text):
-        """Dopo la foto: il testo IG/Telegram com'è e, in risposta, quello per X nel riquadro."""
-        tg_body, x_body = caption.copy_messages(data, text)
-        if not tg_body:
+    def _send_copy_texts(self, data, text, photo_id):
+        """Dopo la foto (la sua didascalia è il testo IG/Telegram): in risposta, il testo per X nel riquadro."""
+        x_body = caption.copy_messages(data, text)[1]
+        if not x_body:
             return
         try:
-            tg_id = int(self.telegram.copy_text(tg_body))
-            self.generated_message_ids.append(tg_id)
-            if x_body:
-                self.generated_message_ids.append(int(self.telegram.copy_text(x_body, reply_to=tg_id)))
+            self.generated_message_ids.append(int(self.telegram.copy_text(x_body, reply_to=photo_id)))
         except Exception as exc:  # noqa: BLE001 - la foto è già partita: il testo non è indispensabile
             log.warn('INVIO', f'{log.graphic_name(data)}: testi da copiare non inviati ({type(exc).__name__}: {exc})')
 
