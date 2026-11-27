@@ -219,7 +219,7 @@ button.sp-item:active{background:var(--accent-soft)}
 .hm-item[data-id="full"] .hm-ico{background:#FF3B30}
 .hm-item[data-id="goal"] .hm-ico{background:#FF3B30}
 .hm-item[data-id="saved"] .hm-ico{background:#007AFF}
-.hm-item[data-id="sub"] .hm-ico{background:#34C759}
+.hm-item[data-id="sub"] .hm-ico{background:linear-gradient(90deg,#34C759 50%,#FF3B30 50%)}   /* freccia su verde, giù rossa */
 .hm-item[data-id="stats"] .hm-ico{background:#5856D6}
 .hm-item[data-id="motm"] .hm-ico{background:#FFCC00}
 .hm-item[data-id="potm"] .hm-ico{background:#C8A04A}
