@@ -24,7 +24,7 @@ class FontePxiTest(unittest.TestCase):
     def test_x_uses_the_profile(self):
         text = caption.build({**PXI, 'source': 'gazzetta'})
         x = caption.copy_messages({**PXI, 'source': 'gazzetta'}, text)[1]
-        self.assertTrue(x.rstrip().endswith('📰 @Gazzetta_it'), x)
+        self.assertTrue(x.rstrip().endswith('📲 @Gazzetta_it'), x)
 
     def test_no_source_no_line(self):
         self.assertNotIn('📰', caption.build({**PXI, 'source': ''}))

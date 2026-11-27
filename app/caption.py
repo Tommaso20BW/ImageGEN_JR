@@ -606,9 +606,9 @@ def x_person(name):
 
 def _with_source(data, text, x=False):
     """Probabili prese da Sky o Gazzetta: in fondo la fonte con la sua icona, come 📲 Fabrizio Romano
-    (Telegram: corsivo con l'emoji del pack; X: 📰 @SkySport). Se il modello ha {fonte}, va li'."""
+    (Telegram: corsivo con l'emoji del pack; X: 📲 @SkySport, come tutte le fonti). Se il modello ha {fonte}, va li'."""
     source = PXI_SOURCES.get(str(data.get('source') or ''))
-    line = '' if not source else (f'📰 {source[2]}' if x else f'<i>{source[1]} {esc(source[0])}</i>')
+    line = '' if not source else (f'📲 {source[2]}' if x else f'<i>{source[1]} {esc(source[0])}</i>')
     if '{fonte}' in text:
         return text.replace('{fonte}', line).strip()
     return f'{text}\n\n{line}' if line else text
