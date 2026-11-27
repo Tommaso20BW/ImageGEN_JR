@@ -62,7 +62,7 @@ const ICONS = {
   'goal':'<circle cx="12" cy="12" r="9"/><path d="M12 8.2l3.4 2.5-1.3 4h-4.2l-1.3-4zM12 8.2V3.1M15.4 10.7l5-1.9M14.1 14.7l3.4 4.4M9.9 14.7l-3.4 4.4M8.6 10.7l-5-1.9"/>',
   'saved':'<path d="M7 14V8a1.5 1.5 0 013 0v3.5M10 11V5.5a1.5 1.5 0 013 0V11M13 11V6.5a1.5 1.5 0 013 0V12M16 12V9.5a1.5 1.5 0 013 0V15c0 4-3 6.5-7 6.5-2.6 0-4.3-1-5.6-2.6l-3-3.6a1.5 1.5 0 012.3-1.9L7 15"/>',
   'stats':'<path d="M5 20v-9M12 20V5M19 20v-6"/>',
-  'sub':'<path d="M6 17V7M3 10l3-3 3 3M18 7v10M15 14l3 3 3-3"/>',   // su a sinistra e giù a destra, al centro di ogni metà
+  'sub':'<path d="M1.5 16.5 6.5 7.5l5 9z" fill="#34C759" stroke="none"/><path d="M12.5 7.5h10l-5 9z" fill="#FF3B30" stroke="none"/>',   // tabellone: sale verde, scende rosso
   'af':'<path d="M5.5 12.6l4.3 4.3L18.6 7.6" stroke-width="2.8"/>',     // spunta del ✅, bianca sul verde
   'free':'<path d="M4 20l1.2-4.6L15.8 4.8a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M13.8 6.8l3.4 3.4"/>',
   'potm':'<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4v3h-4z"/>',
