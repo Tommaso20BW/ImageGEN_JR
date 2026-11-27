@@ -99,7 +99,7 @@ const svgIcon = (id, cls) => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidde
 const REQUESTS = [
   {id:'goal',   kind:'goal',  icon:'goal', title:'Gol',          desc:'Giocatore, minuto e risultato'},
   {id:'saved',  kind:'saved', icon:'saved', title:'Parata',       desc:'Il portiere protagonista'},
-  {id:'sub',    kind:'sub',   icon:'sub', title:'Cambio',       desc:'Chi entra e chi esce, da 1 a 5 cambi'},
+  {id:'sub',    kind:'sub',   icon:'sub', title:'Cambio',       desc:'Chi entra e chi esce: 5 cambi, 11 in amichevole'},
   {id:'stats',  kind:'stats', icon:'stats', title:'Statistiche',  desc:'Possesso, tiri, xG e altri numeri'},
   {id:'awards', kind:'award', icon:'motm', title:'Premi', desc:'Man of the Match o Player of the Month'},
   {id:'potm',   kind:'potm',  icon:'potm', title:'Player of the Month', desc:'Poster oro del giocatore del mese, con la sua foto'},

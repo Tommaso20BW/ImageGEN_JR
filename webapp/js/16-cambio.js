@@ -5,10 +5,10 @@
    1. "Chi esce": si toccano i giocatori (1, 2, 3… nell'ordine dei tocchi);
    2. "Chi entra": stesso ordine, in alto si vede al posto di chi entra il prossimo;
    3. "Minuto": il minuto e il riepilogo, dove si tocca un giocatore per correggere il numero.
-   Da 1 a 5 cambi. Niente è spuntato all'inizio. Numeri dalla rosa o dai numeri
+   Da 1 a 5 cambi, 11 in amichevole. Niente è spuntato all'inizio. Numeri dalla rosa o dai numeri
    salvati; quelli che mancano si chiedono (e il servizio li salva). Con + un giocatore fuori rosa
    (es. Primavera). Il minuto va solo nel testo del messaggio. */
-const subMax = () => 5;
+const subMax = () => isFriendly() ? 11 : 5;     // in amichevole si può cambiare tutta la squadra
 let subIns = [], subOuts = [];                  // [{name, label, number, player}] nell'ordine dei tocchi
 const SUB_IDS = {out:['subOutSearch','subOutSummary','subOutList'], in:['subInSearch','subInSummary','subInList']};
 
@@ -32,7 +32,7 @@ function subToggle(entry, side) {
     list.splice(at, 1);
     if (side === 'out') subIns.splice(at, 1);       // via anche chi entrava al suo posto
   } else if (side === 'out' && list.length >= subMax()) {
-    showError(`Al massimo ${subMax()} cambi.`); return;
+    showError(`Al massimo ${subMax()} cambi${isFriendly() ? '' : ' (11 solo in amichevole)'}.`); return;
   } else if (side === 'in' && list.length >= subOuts.length) {
     showError(`Escono in ${subOuts.length}: hai già scelto chi entra per tutti.`); return;
   } else list.push(entry);
@@ -192,7 +192,7 @@ const subNumberOk = list => {
 function subValidate(step) {
   if (step === 'subout') {
     if (!subOuts.length) { showError('Tocca chi esce.'); return false; }
-    if (subOuts.length > subMax()) { showError(`Al massimo ${subMax()} cambi.`); return false; }
+    if (subOuts.length > subMax()) { showError(`Al massimo ${subMax()} cambi: 11 solo in amichevole.`); return false; }
     return subNumberOk(subOuts);
   }
   if (step === 'subin') {

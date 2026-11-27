@@ -166,14 +166,16 @@ def _lineup_name(catalog, value):
 
 
 MAX_SUBS = 5
+MAX_SUBS_FRIENDLY = 11                  # in amichevole si può cambiare tutta la squadra
 
 
-def _subs(catalog, value):
-    """CAMBIO: da 1 a 5 coppie (esce, entra), ogni giocatore [numero di maglia, nome].
+def _subs(catalog, value, competition=''):
+    """CAMBIO: da 1 a 5 coppie (esce, entra), 11 in amichevole; ogni giocatore [numero di maglia, nome].
     Chi è in rosa prende il nome del catalogo; un nome scritto a mano (es. un ragazzo della
     Primavera) resta come scritto."""
-    if not isinstance(value, list) or not 1 <= len(value) <= MAX_SUBS:
-        raise ValueError(f'Scegli da 1 a {MAX_SUBS} cambi.')
+    limit = MAX_SUBS_FRIENDLY if 'friendly' in competition else MAX_SUBS
+    if not isinstance(value, list) or not 1 <= len(value) <= limit:
+        raise ValueError(f'Scegli da 1 a {limit} cambi.')
     pairs, seen = [], set()
     for item in value:
         if not isinstance(item, dict):
@@ -690,7 +692,7 @@ def _build_state(envelope, catalog, now, expected_session):
 
     elif kind == 'sub':
         # CAMBIO: coppie (esce, entra) con numero e nome; il minuto va solo nel testo.
-        data['subs'] = _subs(catalog, incoming.get('subs'))
+        data['subs'] = _subs(catalog, incoming.get('subs'), competition)
         data['minute'] = parse_minute(str(incoming.get('minute') or ''))
 
     elif kind in ('second', 'half', 'full', 'end_of_90'):

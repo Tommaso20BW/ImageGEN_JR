@@ -52,6 +52,13 @@ class PayloadTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'da 1 a 5 cambi'):
                 parse(subs)
 
+    def test_eleven_in_friendlies(self):
+        names = [f'Giocatore {k}' for k in range(24)]
+        subs = [pair(names[k], k + 1, names[k + 12], k + 40) for k in range(12)]
+        self.assertEqual(len(parse(subs[:11], competition='club.friendly')['subs']), 11)
+        with self.assertRaisesRegex(ValueError, 'da 1 a 11 cambi'):
+            parse(subs, competition='club.friendly')
+
     def test_number_and_duplicates_and_minute(self):
         with self.assertRaisesRegex(ValueError, 'numero di maglia di Nick Woltemade'):
             parse([pair('Kenan Yildiz', '10', 'Nick Woltemade', '')])
